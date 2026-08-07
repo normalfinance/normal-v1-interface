@@ -110,7 +110,7 @@ except the component tests.
 | 43 | Remove dead `xbull`/`hana` wallet types + restore-switch branches | S |
 | T1 | ~~Test foundation: Jest wired (`yarn test`), first suite on `normalize.ts`~~ **done 2026-08-06** — 16 cases, all anchored to shipped bugs | done |
 | T2 | **Test wave 2:** `wallet-ownership.ts`, `reconcile` edge cases as found, `describePsbt` against the real failing-PSBT fixture, low-S normalisation | S |
-| T3 | **Test wave 3 (components):** the external-wallet swap gate (the decision that was already lost once in a squash), savings card loading states | M |
+| T3 | ~~Test wave 3 (components)~~ **swap-gate test DONE 2026-08-07** — 5 cases incl. the invisible enabled:false contract; scaffolding paid for savings-card/memo-gate/pending-badge tests to copy. Bonus: .gitattributes ends the Windows CRLF prettier churn | done / S rest |
 | T4 | Stale Playwright specs — `tests/*.spec.ts` target a deleted `/explore` page; delete or rewrite as smoke tests against today's pages | S |
 
 ## Block G — capacity (before the 10k push)
