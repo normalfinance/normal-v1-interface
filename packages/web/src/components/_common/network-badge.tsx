@@ -11,10 +11,14 @@ export type AssetNetwork = 'Bitcoin' | 'Stellar' | 'Ethereum' | 'Solana';
 
 export function getAssetNetwork(token: { contract: string }): AssetNetwork {
   switch (token.contract) {
-    case '__btc__': return 'Bitcoin';
-    case '__eth__': return 'Ethereum';
-    case '__sol__': return 'Solana';
-    default: return 'Stellar';
+    case '__btc__':
+      return 'Bitcoin';
+    case '__eth__':
+      return 'Ethereum';
+    case '__sol__':
+      return 'Solana';
+    default:
+      return 'Stellar';
   }
 }
 
@@ -47,7 +51,10 @@ export function NetworkBadge({ network }: { network: AssetNetwork }) {
         flexShrink: 0,
       }}
     >
-      <Box component="span" sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: s.dot, flexShrink: 0 }} />
+      <Box
+        component="span"
+        sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: s.dot, flexShrink: 0 }}
+      />
       {network}
     </Box>
   );

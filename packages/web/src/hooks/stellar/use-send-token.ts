@@ -89,10 +89,13 @@ export function useSendToken(): ReturnType {
         const spendable = spendableXlm(rawBalance, account.subentry_count);
         if (BigNumber(args.amount).gt(spendable)) {
           throw new Error(
-            t('Insufficient balance. You can send at most {{max}} XLM (minimum reserve: {{reserve}} XLM)', {
-              max: spendable.toFixed(7, BigNumber.ROUND_DOWN),
-              reserve: stellarMinReserve(account.subentry_count).toFixed(1),
-            })
+            t(
+              'Insufficient balance. You can send at most {{max}} XLM (minimum reserve: {{reserve}} XLM)',
+              {
+                max: spendable.toFixed(7, BigNumber.ROUND_DOWN),
+                reserve: stellarMinReserve(account.subentry_count).toFixed(1),
+              }
+            )
           );
         }
       }
@@ -150,10 +153,7 @@ export function useSendToken(): ReturnType {
         throw new Error('Transaction signing failed — no signed XDR returned');
       }
 
-      const transaction = TransactionBuilder.fromXDR(
-        signedXDR,
-        config.NETWORK_PASSPHRASE
-      );
+      const transaction = TransactionBuilder.fromXDR(signedXDR, config.NETWORK_PASSPHRASE);
 
       const result = await horizonServer.submitTransaction(transaction);
 

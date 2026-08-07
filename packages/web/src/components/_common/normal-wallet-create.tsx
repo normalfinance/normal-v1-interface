@@ -11,7 +11,8 @@ import {
   getRandomVerificationWords,
 } from '@normalfinance/utils';
 
-import { Box ,
+import {
+  Box,
   Stack,
   Paper,
   Alert,

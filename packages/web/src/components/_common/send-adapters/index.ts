@@ -6,14 +6,14 @@ import type { ChainId } from '@/lib/chains/registry';
 
 export interface SendParams {
   token: Token;
-  amount: string;  // coin units (e.g. "0.001" for BTC or "10.5" for USDC)
+  amount: string; // coin units (e.g. "0.001" for BTC or "10.5" for USDC)
   destination: string;
   memo?: string;
 }
 
 export interface AdapterFeeInfo {
-  label: string;      // "0.0002 XLM"  /  "~1,234 sat"
-  fiatLabel: string;  // "($0.01)"
+  label: string; // "0.0002 XLM"  /  "~1,234 sat"
+  fiatLabel: string; // "($0.01)"
   tooltip: string;
 }
 

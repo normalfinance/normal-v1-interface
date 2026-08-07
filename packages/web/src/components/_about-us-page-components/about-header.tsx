@@ -139,261 +139,258 @@ export const AboutHeader: React.FC = () => {
             alignItems: 'center',
           }}
         >
-              {/* Left: text */}
-              <Box>
-                {/* Tagline pill — matches landing page "8% APY • live now" style */}
-                <Box
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    px: '16px',
-                    py: '8px',
-                    borderRadius: '100px',
-                    bgcolor: 'rgba(255,255,255,0.07)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    color: 'rgba(255,255,255,0.75)',
-                    mb: '28px',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: '50%',
-                      bgcolor: '#4ADE80',
-                      flexShrink: 0,
-                      boxShadow: '0 0 0 2px rgba(74,222,128,0.3)',
-                    }}
-                  />
-                  About Normal
-                </Box>
+          {/* Left: text */}
+          <Box>
+            {/* Tagline pill — matches landing page "8% APY • live now" style */}
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                px: '16px',
+                py: '8px',
+                borderRadius: '100px',
+                bgcolor: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: 'rgba(255,255,255,0.75)',
+                mb: '28px',
+              }}
+            >
+              <Box
+                sx={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  bgcolor: '#4ADE80',
+                  flexShrink: 0,
+                  boxShadow: '0 0 0 2px rgba(74,222,128,0.3)',
+                }}
+              />
+              About Normal
+            </Box>
 
-                <Typography
-                  component="h1"
-                  sx={{
-                    fontWeight: 500,
-                    fontSize: { xs: '2.5rem', sm: '3.25rem', md: '3.75rem', lg: '4.25rem' },
-                    lineHeight: 1.05,
-                    letterSpacing: '-0.03em',
-                    mb: '24px',
-                    color: '#FFFFFF',
-                  }}
-                >
-                  Making Crypto{' '}
-                  <Box
-                    component="span"
-                    sx={{
-                      background: GRADIENT,
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                    }}
-                  >
-                    Feel Normal
-                  </Box>
-                </Typography>
-
-                <Typography
-                  sx={{
-                    fontSize: '16px',
-                    color: 'rgba(255,255,255,0.5)',
-                    lineHeight: 1.75,
-                    mb: '36px',
-                    maxWidth: '480px',
-                  }}
-                >
-                  {t(
-                    "At Normal, our mission is to make crypto normal — starting with a savings account that pays real yield, works for everyone, and puts you in full control of your money."
-                  )}
-                </Typography>
-
-                <Stack direction="row" gap="12px" flexWrap="wrap">
-                  <Button
-                    variant="contained"
-                    onClick={() => router.push('/savings')}
-                    sx={{
-                      bgcolor: '#FFFFFF',
-                      color: '#0A0A0F',
-                      borderRadius: '100px',
-                      px: '28px',
-                      py: '12px',
-                      fontWeight: 700,
-                      fontSize: '15px',
-                      textTransform: 'none',
-                      boxShadow: 'none',
-                      letterSpacing: '-0.01em',
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.9)', boxShadow: 'none' },
-                    }}
-                  >
-                    Start saving →
-                  </Button>
-                  <Button
-                    variant="contained"
-                    onClick={() => router.push('/roadmap')}
-                    sx={{
-                      bgcolor: 'rgba(255,255,255,0.1)',
-                      color: '#FFFFFF',
-                      borderRadius: '100px',
-                      px: '28px',
-                      py: '12px',
-                      fontWeight: 700,
-                      fontSize: '15px',
-                      textTransform: 'none',
-                      boxShadow: 'none',
-                      letterSpacing: '-0.01em',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.15)',
-                        boxShadow: 'none',
-                      },
-                    }}
-                  >
-                    Roadmap
-                  </Button>
-                </Stack>
-
-                {/* Meta row */}
-                <Box
-                  sx={{
-                    display: 'flex',
-                    gap: { xs: '24px', sm: '36px' },
-                    mt: '44px',
-                    pt: '28px',
-                    borderTop: '1px solid rgba(255,255,255,0.08)',
-                    flexWrap: 'wrap',
-                    alignItems: 'flex-end',
-                  }}
-                >
-                  {META.map((item) => (
-                    <Box key={item.label}>
-                      <Box
-                        sx={{
-                          fontSize: '10px',
-                          color: 'rgba(255,255,255,0.3)',
-                          letterSpacing: '0.1em',
-                          textTransform: 'uppercase',
-                          mb: '5px',
-                        }}
-                      >
-                        {item.label}
-                      </Box>
-                      <Box
-                        sx={{
-                          fontSize: '24px',
-                          fontWeight: 400,
-                          color: '#FFFFFF',
-                          letterSpacing: '-0.02em',
-                          fontFamily: '"Geist Mono", "Courier New", monospace',
-                        }}
-                      >
-                        {item.value}
-                      </Box>
-                    </Box>
-                  ))}
-
-                  {/* Team avatars */}
-                  <Box>
-                    <Box
-                      sx={{
-                        fontSize: '10px',
-                        color: 'rgba(255,255,255,0.3)',
-                        letterSpacing: '0.1em',
-                        textTransform: 'uppercase',
-                        mb: '5px',
-                      }}
-                    >
-                      Team
-                    </Box>
-                    <Box sx={{ display: 'flex' }}>
-                      {TEAM_AVATARS.map((src, i) => (
-                        <Box
-                          key={i}
-                          component="img"
-                          src={src}
-                          alt={`Team member ${i + 1}`}
-                          sx={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                            objectPosition: 'top',
-                            border: '2px solid rgba(255,255,255,0.15)',
-                            ml: i === 0 ? 0 : '-12px',
-                          }}
-                        />
-                      ))}
-                    </Box>
-                  </Box>
-                </Box>
+            <Typography
+              component="h1"
+              sx={{
+                fontWeight: 500,
+                fontSize: { xs: '2.5rem', sm: '3.25rem', md: '3.75rem', lg: '4.25rem' },
+                lineHeight: 1.05,
+                letterSpacing: '-0.03em',
+                mb: '24px',
+                color: '#FFFFFF',
+              }}
+            >
+              Making Crypto{' '}
+              <Box
+                component="span"
+                sx={{
+                  background: GRADIENT,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                Feel Normal
               </Box>
+            </Typography>
 
-              {/* Right: image + floating stat */}
-              <Box sx={{ position: 'relative' }}>
-                <Box
-                  component="img"
-                  src={cdn('about-page/meridian.webp')}
-                  alt="Normal team at Meridian"
-                  sx={{
-                    width: '100%',
-                    aspectRatio: '16 / 9',
-                    objectFit: 'cover',
-                    borderRadius: '18px',
-                    display: 'block',
-                  }}
-                />
+            <Typography
+              sx={{
+                fontSize: '16px',
+                color: 'rgba(255,255,255,0.5)',
+                lineHeight: 1.75,
+                mb: '36px',
+                maxWidth: '480px',
+              }}
+            >
+              {t(
+                'At Normal, our mission is to make crypto normal — starting with a savings account that pays real yield, works for everyone, and puts you in full control of your money.'
+              )}
+            </Typography>
 
-                {/* Floating stat card */}
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    bottom: { xs: '-16px', md: '-24px' },
-                    left: { xs: '-12px', md: '-24px' },
-                    bgcolor: 'rgba(255,255,255,0.07)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    borderRadius: '16px',
-                    px: '20px',
-                    py: '14px',
-                    minWidth: '140px',
-                  }}
-                >
+            <Stack direction="row" gap="12px" flexWrap="wrap">
+              <Button
+                variant="contained"
+                onClick={() => router.push('/savings')}
+                sx={{
+                  bgcolor: '#FFFFFF',
+                  color: '#0A0A0F',
+                  borderRadius: '100px',
+                  px: '28px',
+                  py: '12px',
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  textTransform: 'none',
+                  boxShadow: 'none',
+                  letterSpacing: '-0.01em',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.9)', boxShadow: 'none' },
+                }}
+              >
+                Start saving →
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => router.push('/roadmap')}
+                sx={{
+                  bgcolor: 'rgba(255,255,255,0.1)',
+                  color: '#FFFFFF',
+                  borderRadius: '100px',
+                  px: '28px',
+                  py: '12px',
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  textTransform: 'none',
+                  boxShadow: 'none',
+                  letterSpacing: '-0.01em',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  '&:hover': {
+                    bgcolor: 'rgba(255,255,255,0.15)',
+                    boxShadow: 'none',
+                  },
+                }}
+              >
+                Roadmap
+              </Button>
+            </Stack>
+
+            {/* Meta row */}
+            <Box
+              sx={{
+                display: 'flex',
+                gap: { xs: '24px', sm: '36px' },
+                mt: '44px',
+                pt: '28px',
+                borderTop: '1px solid rgba(255,255,255,0.08)',
+                flexWrap: 'wrap',
+                alignItems: 'flex-end',
+              }}
+            >
+              {META.map((item) => (
+                <Box key={item.label}>
                   <Box
                     sx={{
                       fontSize: '10px',
-                      color: 'rgba(255,255,255,0.4)',
-                      letterSpacing: '0.08em',
+                      color: 'rgba(255,255,255,0.3)',
+                      letterSpacing: '0.1em',
                       textTransform: 'uppercase',
                       mb: '5px',
                     }}
                   >
-                    Backed by
+                    {item.label}
                   </Box>
                   <Box
                     sx={{
-                      fontSize: '22px',
+                      fontSize: '24px',
                       fontWeight: 400,
                       color: '#FFFFFF',
-                      letterSpacing: '-0.03em',
-                      lineHeight: 1,
+                      letterSpacing: '-0.02em',
                       fontFamily: '"Geist Mono", "Courier New", monospace',
                     }}
                   >
-                    Stellar · Draper
+                    {item.value}
                   </Box>
                 </Box>
+              ))}
+
+              {/* Team avatars */}
+              <Box>
+                <Box
+                  sx={{
+                    fontSize: '10px',
+                    color: 'rgba(255,255,255,0.3)',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    mb: '5px',
+                  }}
+                >
+                  Team
+                </Box>
+                <Box sx={{ display: 'flex' }}>
+                  {TEAM_AVATARS.map((src, i) => (
+                    <Box
+                      key={i}
+                      component="img"
+                      src={src}
+                      alt={`Team member ${i + 1}`}
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        objectPosition: 'top',
+                        border: '2px solid rgba(255,255,255,0.15)',
+                        ml: i === 0 ? 0 : '-12px',
+                      }}
+                    />
+                  ))}
+                </Box>
               </Box>
+            </Box>
+          </Box>
+
+          {/* Right: image + floating stat */}
+          <Box sx={{ position: 'relative' }}>
+            <Box
+              component="img"
+              src={cdn('about-page/meridian.webp')}
+              alt="Normal team at Meridian"
+              sx={{
+                width: '100%',
+                aspectRatio: '16 / 9',
+                objectFit: 'cover',
+                borderRadius: '18px',
+                display: 'block',
+              }}
+            />
+
+            {/* Floating stat card */}
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: { xs: '-16px', md: '-24px' },
+                left: { xs: '-12px', md: '-24px' },
+                bgcolor: 'rgba(255,255,255,0.07)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '16px',
+                px: '20px',
+                py: '14px',
+                minWidth: '140px',
+              }}
+            >
+              <Box
+                sx={{
+                  fontSize: '10px',
+                  color: 'rgba(255,255,255,0.4)',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  mb: '5px',
+                }}
+              >
+                Backed by
+              </Box>
+              <Box
+                sx={{
+                  fontSize: '22px',
+                  fontWeight: 400,
+                  color: '#FFFFFF',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1,
+                  fontFamily: '"Geist Mono", "Courier New", monospace',
+                }}
+              >
+                Stellar · Draper
+              </Box>
+            </Box>
+          </Box>
         </Box>
       </Box>
 
       {/* ── TrustedBy ── */}
-      <Box
-        component="section"
-        sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
-      >
+      <Box component="section" sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}>
         <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
           {/* Header */}
           <Box sx={{ mb: '40px' }}>
@@ -429,7 +426,8 @@ export const AboutHeader: React.FC = () => {
                 maxWidth: '520px',
               }}
             >
-              Infrastructure, security, and capital partners that share our conviction in open finance.
+              Infrastructure, security, and capital partners that share our conviction in open
+              finance.
             </Typography>
           </Box>
 

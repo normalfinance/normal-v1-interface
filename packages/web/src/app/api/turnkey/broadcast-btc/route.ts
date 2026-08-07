@@ -55,7 +55,7 @@ export const POST = withAuth(async (request: NextRequest) => {
       logger.error('[broadcast-btc] Mempool rejected tx:', responseText);
       return NextResponse.json(
         { error: responseText || `Broadcast failed (${res.status})` },
-        { status: 502 },
+        { status: 502 }
       );
     }
 

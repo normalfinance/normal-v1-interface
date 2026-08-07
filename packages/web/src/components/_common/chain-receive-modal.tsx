@@ -71,8 +71,17 @@ export function ChainReceiveModal({
       slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
     >
       <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
-        <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+        <Box
+          sx={{
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Typography
+            sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+          >
             {t('Receive {{symbol}}', { symbol })}
           </Typography>
           <Box
@@ -98,7 +107,9 @@ export function ChainReceiveModal({
             <Iconify icon="mingcute:close-line" width={16} />
           </Box>
         </Box>
-        <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}>
+        <Typography
+          sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}
+        >
           {t('Scan the QR code or copy your {{chain}} address', { chain: chainLabel })}
         </Typography>
       </DialogTitle>
@@ -120,7 +131,12 @@ export function ChainReceiveModal({
             }}
           >
             {qrCodeUrl ? (
-              <Box component="img" src={qrCodeUrl} alt={`${chainLabel} address QR`} sx={{ maxWidth: '100%', borderRadius: '4px' }} />
+              <Box
+                component="img"
+                src={qrCodeUrl}
+                alt={`${chainLabel} address QR`}
+                sx={{ maxWidth: '100%', borderRadius: '4px' }}
+              />
             ) : (
               <CircularProgress size={36} sx={{ color: 'rgba(10,10,15,0.3)' }} />
             )}
@@ -140,7 +156,11 @@ export function ChainReceiveModal({
               width: '100%',
             }}
           >
-            <Iconify icon="eva:alert-triangle-outline" width={15} sx={{ color: 'warning.main', flexShrink: 0 }} />
+            <Iconify
+              icon="eva:alert-triangle-outline"
+              width={15}
+              sx={{ color: 'warning.main', flexShrink: 0 }}
+            />
             <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.5 }}>
               {warning}
             </Typography>
@@ -158,7 +178,14 @@ export function ChainReceiveModal({
               wordBreak: 'break-all',
             }}
           >
-            <Typography sx={{ fontSize: '12px', color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace', lineHeight: 1.6 }}>
+            <Typography
+              sx={{
+                fontSize: '12px',
+                color: '#0A0A0F',
+                fontFamily: '"Geist Mono", "Courier New", monospace',
+                lineHeight: 1.6,
+              }}
+            >
               {address}
             </Typography>
           </Box>

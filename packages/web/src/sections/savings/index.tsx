@@ -22,7 +22,9 @@ import { SavingsHistoryCard } from './savings-history-card';
 
 export default function SavingsView() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { user } = useSupabaseAuth();
   const [walletSetupOpen, setWalletSetupOpen] = useState(false);
@@ -39,10 +41,7 @@ export default function SavingsView() {
     () => Math.max(parseFloat(userPosition?.totalDeposited || '0'), 0),
     [userPosition]
   );
-  const earnings = useMemo(
-    () => parseFloat(userPosition?.earnings || '0'),
-    [userPosition]
-  );
+  const earnings = useMemo(() => parseFloat(userPosition?.earnings || '0'), [userPosition]);
   const apy = vaultInfo ? Number(vaultInfo.apy) : null;
   const heroLoading = fetching || positionFetching;
 
@@ -76,10 +75,29 @@ export default function SavingsView() {
   if (!mounted || (!firstPaintDone && heroLoading)) {
     return (
       <DashboardContent maxWidth="xl">
-        <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }} />
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px', mt: '20px' }}>
-          <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
-          <Skeleton variant="rectangular" height={200} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+        <Skeleton
+          variant="rectangular"
+          height={220}
+          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }}
+        />
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
+            gap: '20px',
+            mt: '20px',
+          }}
+        >
+          <Skeleton
+            variant="rectangular"
+            height={320}
+            sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          />
+          <Skeleton
+            variant="rectangular"
+            height={200}
+            sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          />
         </Box>
       </DashboardContent>
     );
@@ -171,7 +189,9 @@ export default function SavingsView() {
     <DashboardContent maxWidth="xl">
       {/* Page title */}
       <Stack spacing={0.5} sx={{ mb: '24px' }}>
-        <Typography sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+        <Typography
+          sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+        >
           Savings
         </Typography>
         <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)' }}>

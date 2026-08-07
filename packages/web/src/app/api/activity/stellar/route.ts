@@ -115,6 +115,9 @@ export async function GET(request: NextRequest) {
     } catch {
       /* ignore */
     }
-    return NextResponse.json({ success: false, error: 'Failed to fetch activity' }, { status: 502 });
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch activity' },
+      { status: 502 }
+    );
   }
 }

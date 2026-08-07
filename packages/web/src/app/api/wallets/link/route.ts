@@ -172,7 +172,7 @@ export async function PATCH(request: NextRequest) {
         { error: 'Invalid request body', details: validation.error.errors },
         { status: 400 }
       );
-    } 
+    }
 
     const { walletAddress, walletName } = validation.data;
 

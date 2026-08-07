@@ -16,9 +16,7 @@ import { getLinkedWallets } from '@/services/linked-wallets';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import {
-  useNormalWallet,
-} from '@/hooks/stellar/use-normal-wallet';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
@@ -55,7 +53,15 @@ import OnboardingWizard, { type WizardStep } from '@/components/_common/onboardi
 
 import { AccountButton } from './account-button';
 
-function WalletConnected({ address, drawerOpen, addresses }: { address: string; drawerOpen: boolean; addresses: ChainAddresses | null | undefined }) {
+function WalletConnected({
+  address,
+  drawerOpen,
+  addresses,
+}: {
+  address: string;
+  drawerOpen: boolean;
+  addresses: ChainAddresses | null | undefined;
+}) {
   const { setGlobalIsLoading } = useAppStore();
 
   const {
@@ -132,7 +138,11 @@ function WalletConnected({ address, drawerOpen, addresses }: { address: string; 
   );
 
   const assetsBalance = useMemo(
-    () => allTokens.reduce((acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)), BigNumber(0)),
+    () =>
+      allTokens.reduce(
+        (acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)),
+        BigNumber(0)
+      ),
     [allTokens]
   );
 
@@ -231,7 +241,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
     // rather than the Turnkey address (see finding #40).
     const addr = id === 'stellar' ? connectedAddress : getChainAddress(turnkeyAddresses, id);
     if (!addr) return [];
-    return [{ id: id as string, name: chain.name as string, color: chain.brandColor as string, addr }];
+    return [
+      { id: id as string, name: chain.name as string, color: chain.brandColor as string, addr },
+    ];
   });
 
   // Turnkey lookup not resolved yet (still loading, or the API errored — e.g.
@@ -320,13 +332,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
     // Open the wizard so the user can pick their wallet
     setWizardInitialStep('linked-accounts');
     setShowLoginModal(true);
-  }, [
-    session,
-    normalPublicKey,
-    isNormalConnected,
-    disconnectNormalWallet,
-    persist,
-  ]);
+  }, [session, normalPublicKey, isNormalConnected, disconnectNormalWallet, persist]);
 
   /** Handle Normal wallet creation success */
   const handleNormalWalletCreated = async () => {
@@ -367,7 +373,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
   // Tracks showLoginModal without adding it as an effect dependency (avoids
   // the effect re-firing and immediately closing the modal on open).
   const showLoginModalRef = useRef(showLoginModal);
-  useEffect(() => { showLoginModalRef.current = showLoginModal; }, [showLoginModal]);
+  useEffect(() => {
+    showLoginModalRef.current = showLoginModal;
+  }, [showLoginModal]);
 
   useEffect(() => {
     const passwordResetParam = searchParams.get('passwordResetSuccess');
@@ -388,7 +396,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
     // on /savings itself, so just land the user there — the savings card guides
     // the next step based on real account state.
     router.replace(paths.savings, { scroll: false });
-     
   }, [searchParams, router]);
 
   useEffect(() => {
@@ -509,7 +516,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <IconButton
               onClick={onClose}
               data-testid="close-drawer-button"
-              sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
+              sx={{
+                color: '#6B6B76',
+                borderRadius: '8px',
+                '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
+              }}
             >
               <CloseOutlined sx={{ fontSize: 20 }} />
             </IconButton>
@@ -528,11 +539,17 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       stopNavigatingToSettings();
                       onClose();
                     }}
-                    sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
+                    sx={{
+                      color: '#6B6B76',
+                      borderRadius: '8px',
+                      '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
+                    }}
                   >
-                    {isNavigatingToSettings
-                      ? <CircularProgress size={18} color="inherit" />
-                      : <SettingsOutlined sx={{ fontSize: 20 }} />}
+                    {isNavigatingToSettings ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <SettingsOutlined sx={{ fontSize: 20 }} />
+                    )}
                   </IconButton>
                 </span>
               </Tooltip>
@@ -545,7 +562,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     setShowLoginModal(true);
                     onClose();
                   }}
-                  sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
+                  sx={{
+                    color: '#6B6B76',
+                    borderRadius: '8px',
+                    '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
+                  }}
                 >
                   <AddOutlined sx={{ fontSize: 20 }} />
                 </IconButton>
@@ -559,7 +580,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     setShowLoginModal(true);
                     onClose();
                   }}
-                  sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
+                  sx={{
+                    color: '#6B6B76',
+                    borderRadius: '8px',
+                    '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
+                  }}
                 >
                   <SyncOutlined sx={{ fontSize: 20 }} />
                 </IconButton>
@@ -586,7 +611,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   minWidth: 'unset',
                   boxShadow: 'none',
                   '&:hover': { bgcolor: '#1a1a22', boxShadow: 'none' },
-                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.4)', color: 'rgba(255,255,255,0.6)' },
+                  '&.Mui-disabled': {
+                    bgcolor: 'rgba(10,10,15,0.4)',
+                    color: 'rgba(255,255,255,0.6)',
+                  },
                 }}
               >
                 {t('Logout')}
@@ -605,7 +633,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     sx={{ width: 44, height: 44, flexShrink: 0 }}
                   />
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ fontSize: '15px', fontWeight: 600, letterSpacing: '-0.01em', color: '#0A0A0F' }}>
+                    <Typography
+                      sx={{
+                        fontSize: '15px',
+                        fontWeight: 600,
+                        letterSpacing: '-0.01em',
+                        color: '#0A0A0F',
+                      }}
+                    >
                       {displayName}
                     </Typography>
                     <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '1px' }}>
@@ -623,9 +658,31 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   <Box sx={{ mt: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {chainRows.map(({ id, name, color, addr }) => (
                       <Stack key={id} direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>{name}</Box>
-                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Box
+                          sx={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            bgcolor: color,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>
+                          {name}
+                        </Box>
+                        <Box
+                          sx={{
+                            fontFamily: '"Geist Mono", ui-monospace, monospace',
+                            fontSize: '11.5px',
+                            color: '#2A2A33',
+                            letterSpacing: '-0.01em',
+                            flex: 1,
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {`${addr.slice(0, 8)}...${addr.slice(-6)}`}
                         </Box>
                         <CopyIconButton value={addr} alert={`${name} address copied`} />
@@ -653,7 +710,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 // Any wallet (incl. a Turnkey-only BTC/ETH/SOL user with no
                 // Stellar address yet) → the real drawer. Savings-specific setup
                 // is no longer nagged here; it lives on /savings, on demand.
-                <WalletConnected address={connectedAddress ?? ''} drawerOpen={open} addresses={turnkeyAddresses} />
+                <WalletConnected
+                  address={connectedAddress ?? ''}
+                  drawerOpen={open}
+                  addresses={turnkeyAddresses}
+                />
               ) : turnkeyAuthFailed ? (
                 // The server rejected our session token (revoked elsewhere, or
                 // expired) — the wallets are NOT gone, so never show the $0
@@ -714,7 +775,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     {session ? (
                       <>
                         <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260 }}>
-                          {t('Pick an asset to get started — we’ll set up your wallet for it in one tap.')}
+                          {t(
+                            'Pick an asset to get started — we’ll set up your wallet for it in one tap.'
+                          )}
                         </Typography>
                         <Button
                           variant="contained"

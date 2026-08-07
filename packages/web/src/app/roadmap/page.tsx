@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Roadmap | Normal',
     description:
-      "See what’s next on the Normal roadmap – new features, DeFi integrations, and savings yield improvements.",
+      'See what’s next on the Normal roadmap – new features, DeFi integrations, and savings yield improvements.',
     images: ['/og/home.png'],
   },
   robots: {

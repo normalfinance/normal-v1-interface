@@ -64,7 +64,11 @@ const LINK_COLUMNS = [
     title: 'Protocol',
     links: [
       { label: 'Developers', href: paths.docs, target: '_blank' },
-      { label: 'Whitepaper', href: 'https://normalfi.substack.com/p/making-crypto-normal-simple-safe', target: '_blank' },
+      {
+        label: 'Whitepaper',
+        href: 'https://normalfi.substack.com/p/making-crypto-normal-simple-safe',
+        target: '_blank',
+      },
     ],
   },
   {
@@ -226,7 +230,7 @@ export function FooterSection({ sx }: FooterProps = {}) {
             flexWrap: 'wrap',
           }}
         >
-          { }
+          {}
           <Typography sx={{ fontSize: 13, color: '#8a8a93' }}>
             © 2026 Normal Finance Inc.
           </Typography>
@@ -234,7 +238,6 @@ export function FooterSection({ sx }: FooterProps = {}) {
           <Typography sx={{ fontSize: 13, color: '#8a8a93' }}>
             {t('Built on Stellar · Audited by Halborn')}
           </Typography>
-
         </Box>
       </Box>
     </Box>

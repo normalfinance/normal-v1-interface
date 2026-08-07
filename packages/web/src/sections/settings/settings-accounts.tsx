@@ -125,7 +125,12 @@ export function SettingsAccounts() {
         {[1, 2].map((index) => (
           <Box
             key={index}
-            sx={{ p: '22px', borderRadius: '22px', border: '1px solid rgba(10,10,15,0.08)', bgcolor: '#FFFFFF' }}
+            sx={{
+              p: '22px',
+              borderRadius: '22px',
+              border: '1px solid rgba(10,10,15,0.08)',
+              bgcolor: '#FFFFFF',
+            }}
           >
             <Skeleton variant="text" width={160} height={24} sx={{ mb: '16px' }} />
             <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mb: '16px' }} />
@@ -192,7 +197,11 @@ export function SettingsAccounts() {
             transition: 'border-color 150ms ease',
           }}
         >
-          <Iconify icon="eva:search-fill" width={17} sx={{ color: 'rgba(10,10,15,0.3)', flexShrink: 0 }} />
+          <Iconify
+            icon="eva:search-fill"
+            width={17}
+            sx={{ color: 'rgba(10,10,15,0.3)', flexShrink: 0 }}
+          />
           <Box
             component="input"
             type="text"
@@ -286,25 +295,39 @@ export function SettingsAccounts() {
                 onClick={() => handleSaveName(wallet.walletAddress)}
                 disabled={isSavingName}
                 sx={{
-                  width: 32, height: 32, borderRadius: '8px', border: 'none',
-                  bgcolor: '#0A0A0F', color: '#FFFFFF',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 32,
+                  height: 32,
+                  borderRadius: '8px',
+                  border: 'none',
+                  bgcolor: '#0A0A0F',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   cursor: isSavingName ? 'not-allowed' : 'pointer',
                   opacity: isSavingName ? 0.5 : 1,
                 }}
               >
-                {isSavingName
-                  ? <CircularProgress size={14} color="inherit" />
-                  : <Iconify icon="solar:check-circle-bold" width={16} />}
+                {isSavingName ? (
+                  <CircularProgress size={14} color="inherit" />
+                ) : (
+                  <Iconify icon="solar:check-circle-bold" width={16} />
+                )}
               </Box>
               <Box
                 component="button"
                 onClick={handleCancelEdit}
                 disabled={isSavingName}
                 sx={{
-                  width: 32, height: 32, borderRadius: '8px', border: 'none',
-                  bgcolor: 'rgba(10,10,15,0.06)', color: '#0A0A0F',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 32,
+                  height: 32,
+                  borderRadius: '8px',
+                  border: 'none',
+                  bgcolor: 'rgba(10,10,15,0.06)',
+                  color: '#0A0A0F',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   cursor: isSavingName ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -313,16 +336,30 @@ export function SettingsAccounts() {
             </Stack>
           ) : (
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: '16px' }}>
-              <Typography sx={{ fontSize: '15px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em', flex: 1 }}>
+              <Typography
+                sx={{
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  color: '#0A0A0F',
+                  letterSpacing: '-0.01em',
+                  flex: 1,
+                }}
+              >
                 {wallet.walletName || t('Unnamed Account')}
               </Typography>
               <Box
                 component="button"
                 onClick={() => handleEditName(wallet)}
                 sx={{
-                  width: 28, height: 28, borderRadius: '8px', border: 'none',
-                  bgcolor: 'rgba(10,10,15,0.06)', color: '#0A0A0F',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: '8px',
+                  border: 'none',
+                  bgcolor: 'rgba(10,10,15,0.06)',
+                  color: '#0A0A0F',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   cursor: 'pointer',
                   '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
                 }}
@@ -336,12 +373,27 @@ export function SettingsAccounts() {
 
           {/* Details */}
           <Stack spacing={0} sx={{ mb: '16px' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: '10px', borderBottom: '1px solid rgba(10,10,15,0.06)' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                py: '10px',
+                borderBottom: '1px solid rgba(10,10,15,0.06)',
+              }}
+            >
               <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
                 {t('Account ID')}
               </Typography>
               <Stack direction="row" spacing={0.5} alignItems="center">
-                <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
+                <Typography
+                  sx={{
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: '#0A0A0F',
+                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                  }}
+                >
                   {format.fTruncate(wallet.walletAddress, 20)}
                 </Typography>
                 <CopyIconButton value={wallet.walletAddress} alert={t('ID copied')} />
@@ -349,7 +401,15 @@ export function SettingsAccounts() {
             </Box>
 
             {wallet.lastUsedAt && (
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: '10px', borderBottom: '1px solid rgba(10,10,15,0.06)' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: '10px',
+                  borderBottom: '1px solid rgba(10,10,15,0.06)',
+                }}
+              >
                 <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
                   {t('Last Used')}
                 </Typography>
@@ -423,7 +483,9 @@ export function SettingsAccounts() {
       >
         <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}>
+            <Typography
+              sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+            >
               {t('Disconnect Account')}
             </Typography>
             <Box
@@ -431,9 +493,15 @@ export function SettingsAccounts() {
               onClick={() => setUnlinkDialogOpen(false)}
               disabled={isUnlinking}
               sx={{
-                width: 28, height: 28, borderRadius: '8px', border: 'none',
-                bgcolor: 'rgba(10,10,15,0.06)', color: '#0A0A0F',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 28,
+                height: 28,
+                borderRadius: '8px',
+                border: 'none',
+                bgcolor: 'rgba(10,10,15,0.06)',
+                color: '#0A0A0F',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 cursor: isUnlinking ? 'not-allowed' : 'pointer',
                 '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
               }}
@@ -454,7 +522,11 @@ export function SettingsAccounts() {
               border: '1px solid rgba(239,68,68,0.15)',
             }}
           >
-            <Iconify icon="eva:alert-triangle-outline" width={16} sx={{ color: '#DC2626', flexShrink: 0, mt: '1px' }} />
+            <Iconify
+              icon="eva:alert-triangle-outline"
+              width={16}
+              sx={{ color: '#DC2626', flexShrink: 0, mt: '1px' }}
+            />
             <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
               {t('Are you sure you want to disconnect this account? This action cannot be undone.')}
             </Typography>
@@ -467,9 +539,16 @@ export function SettingsAccounts() {
             onClick={() => setUnlinkDialogOpen(false)}
             disabled={isUnlinking}
             sx={{
-              flex: 1, py: '12px', borderRadius: '12px', border: '1px solid rgba(10,10,15,0.12)',
-              bgcolor: '#FFFFFF', color: '#0A0A0F', fontSize: '14px', fontWeight: 600,
-              cursor: isUnlinking ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+              flex: 1,
+              py: '12px',
+              borderRadius: '12px',
+              border: '1px solid rgba(10,10,15,0.12)',
+              bgcolor: '#FFFFFF',
+              color: '#0A0A0F',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: isUnlinking ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
               opacity: isUnlinking ? 0.5 : 1,
               '&:hover': { bgcolor: '#F4F4F7' },
             }}
@@ -480,11 +559,22 @@ export function SettingsAccounts() {
             variant="contained"
             onClick={handleUnlinkConfirm}
             disabled={isUnlinking}
-            startIcon={isUnlinking ? <CircularProgress size={15} color="inherit" /> : <Iconify icon="solar:trash-bin-trash-bold" width={15} />}
+            startIcon={
+              isUnlinking ? (
+                <CircularProgress size={15} color="inherit" />
+              ) : (
+                <Iconify icon="solar:trash-bin-trash-bold" width={15} />
+              )
+            }
             sx={{
-              flex: 1, py: '12px', borderRadius: '12px',
-              bgcolor: '#DC2626', fontWeight: 700, fontSize: '14px',
-              textTransform: 'none', letterSpacing: '-0.01em',
+              flex: 1,
+              py: '12px',
+              borderRadius: '12px',
+              bgcolor: '#DC2626',
+              fontWeight: 700,
+              fontSize: '14px',
+              textTransform: 'none',
+              letterSpacing: '-0.01em',
               '&:hover': { bgcolor: '#B91C1C' },
               '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
             }}

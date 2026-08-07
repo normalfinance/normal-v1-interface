@@ -1,4 +1,4 @@
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 import type { WalletActivityItem } from '@/types/wallet-activity';
 
 import { prisma } from '@/lib/prisma';
@@ -85,9 +85,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Wallet activity error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to load activity' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to load activity' }, { status: 500 });
   }
 }

@@ -51,7 +51,11 @@ async function readSacAllowance(
       timebounds: { minTime: 0, maxTime: 0 },
     })
       .addOperation(
-        new Contract(usdcSac).call('allowance', new Address(from).toScVal(), new Address(spender).toScVal())
+        new Contract(usdcSac).call(
+          'allowance',
+          new Address(from).toScVal(),
+          new Address(spender).toScVal()
+        )
       )
       .build();
     const sim = await server.simulateTransaction(tx);
@@ -78,16 +82,20 @@ export interface StellarBurnParams {
   onStep?: (step: 'approve' | 'burn') => void;
 }
 
-async function submitSigned(server: rpc.Server, signedXdr: string, passphrase: string, label: string) {
+async function submitSigned(
+  server: rpc.Server,
+  signedXdr: string,
+  passphrase: string,
+  label: string
+) {
   const tx = TransactionBuilder.fromXDR(signedXdr, passphrase);
   const sent = await server.sendTransaction(tx);
   if (sent.status === 'ERROR') {
     throw new Error(`${label} submit failed: ${JSON.stringify(sent.errorResult ?? sent)}`);
   }
   for (let i = 0; i < 60; i++) {
-     
     await new Promise((res) => setTimeout(res, 2000));
-     
+
     const res = await server.getTransaction(sent.hash);
     if (res.status === 'SUCCESS') return sent.hash;
     if (res.status === 'FAILED') throw new Error(`${label} failed on-chain (${sent.hash})`);

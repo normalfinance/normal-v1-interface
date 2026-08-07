@@ -134,9 +134,7 @@ export interface PsbtSummary {
  */
 export function describePsbt(psbtHex: string): PsbtSummary {
   try {
-    const bytes = new Uint8Array(
-      (psbtHex.match(/.{2}/g) ?? []).map((h) => parseInt(h, 16))
-    );
+    const bytes = new Uint8Array((psbtHex.match(/.{2}/g) ?? []).map((h) => parseInt(h, 16)));
     const r = new Reader(bytes);
     r.bytes(5); // magic: 70736274ff
 

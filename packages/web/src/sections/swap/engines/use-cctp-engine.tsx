@@ -109,7 +109,10 @@ export function useCctpEngine({
   const cancelled = useRef(false);
 
   const evmAddress = addresses.ETH; // the Base pivot is always the user's own EVM address
-  const nativeAddress = direction === 'in' ? addresses[fromSymbol as CrosschainSymbol] : addresses[toSymbol as CrosschainSymbol];
+  const nativeAddress =
+    direction === 'in'
+      ? addresses[fromSymbol as CrosschainSymbol]
+      : addresses[toSymbol as CrosschainSymbol];
 
   // ---- quote ------------------------------------------------------------------
   // in : LI.FI native → USDC_BASE (leg 1); CCTP + optional XLM leg estimated.
@@ -120,7 +123,10 @@ export function useCctpEngine({
   useEffect(() => {
     const value = BigNumber(debouncedAmount || 0);
     const ready =
-      enabled && evmAddress && value.gt(0) && (direction === 'in' ? !!nativeAddress : !!nativeAddress);
+      enabled &&
+      evmAddress &&
+      value.gt(0) &&
+      (direction === 'in' ? !!nativeAddress : !!nativeAddress);
     if (!ready) {
       setQuote(null);
       setQuoteError(null);
@@ -178,7 +184,8 @@ export function useCctpEngine({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, debouncedAmount, direction, fromSymbol, toSymbol, nativeAddress, evmAddress]);
 
-  const usdcOutMin = quote && direction === 'in' ? BigNumber(quote.estimate.toAmountMin).dividedBy(1e6) : null;
+  const usdcOutMin =
+    quote && direction === 'in' ? BigNumber(quote.estimate.toAmountMin).dividedBy(1e6) : null;
   const toAmount =
     direction === 'in'
       ? usdcOutMin // inbound always delivers USDC on Stellar
@@ -189,7 +196,8 @@ export function useCctpEngine({
         : null;
 
   const insufficient = amount.gt(0) && amount.gt(fromBalance);
-  const needsTrustline = direction === 'in' && !isCheckingAccount && accountExists && !hasUsdcTrustline;
+  const needsTrustline =
+    direction === 'in' && !isCheckingAccount && accountExists && !hasUsdcTrustline;
   const missingStellar = !stellarAddress || (!isCheckingAccount && !accountExists);
 
   // MAX leaves the source chain's network fee behind. Outbound USDC needs no
@@ -220,52 +228,56 @@ export function useCctpEngine({
   };
 
   // ---- shared helpers -----------------------------------------------------------
-  const makePatcher = useCallback(async (transferId: string) => {
-    const headers = await buildAuthHeaders();
-    return {
-      headers,
-      patch: (body: Record<string, string>) =>
-        fetch(`/api/cctp/transfers/${transferId}`, {
-          method: 'PATCH',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify(body),
-        }).catch(() => {}),
-      pollStatus: async (target: string, intervalMs: number) => {
-        for (;;) {
-          if (cancelled.current) throw new Error('cancelled');
-          let status: string | undefined;
-          let detail: string | undefined;
-          try {
-            const res = await fetch(`/api/cctp/transfers/${transferId}`, {
-              headers,
-              credentials: 'include',
-              signal: AbortSignal.timeout(20_000),
-            });
-            const data = await res.json();
-            status = data?.transfer?.status;
-            detail = data?.transfer?.errorDetail;
-          } catch {
-            /* transient (timeout / hung server) — the cron keeps advancing it; just retry */
+  const makePatcher = useCallback(
+    async (transferId: string) => {
+      const headers = await buildAuthHeaders();
+      return {
+        headers,
+        patch: (body: Record<string, string>) =>
+          fetch(`/api/cctp/transfers/${transferId}`, {
+            method: 'PATCH',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify(body),
+          }).catch(() => {}),
+        pollStatus: async (target: string, intervalMs: number) => {
+          for (;;) {
+            if (cancelled.current) throw new Error('cancelled');
+            let status: string | undefined;
+            let detail: string | undefined;
+            try {
+              const res = await fetch(`/api/cctp/transfers/${transferId}`, {
+                headers,
+                credentials: 'include',
+                signal: AbortSignal.timeout(20_000),
+              });
+              const data = await res.json();
+              status = data?.transfer?.status;
+              detail = data?.transfer?.errorDetail;
+            } catch {
+              /* transient (timeout / hung server) — the cron keeps advancing it; just retry */
+            }
+            if (status === target) return;
+            if (status === 'FAILED') throw new Error(detail ?? 'transfer failed');
+            await new Promise((r) => setTimeout(r, intervalMs));
           }
-          if (status === target) return;
-          if (status === 'FAILED') throw new Error(detail ?? 'transfer failed');
-          await new Promise((r) => setTimeout(r, intervalMs));
-        }
-      },
-      topUp: async () => {
-        const res = await fetch('/api/cctp/gas-topup', {
-          method: 'POST',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify({ transferId }),
-          signal: AbortSignal.timeout(30_000),
-        });
-        if (!res.ok && res.status !== 409) throw new Error(t('Gas top-up failed — try again in a moment.'));
-        await new Promise((r) => setTimeout(r, 8_000));
-      },
-    };
-  }, [t]);
+        },
+        topUp: async () => {
+          const res = await fetch('/api/cctp/gas-topup', {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify({ transferId }),
+            signal: AbortSignal.timeout(30_000),
+          });
+          if (!res.ok && res.status !== 409)
+            throw new Error(t('Gas top-up failed — try again in a moment.'));
+          await new Promise((r) => setTimeout(r, 8_000));
+        },
+      };
+    },
+    [t]
+  );
 
   const finish = useCallback(() => {
     setStage('done');
@@ -275,7 +287,9 @@ export function useCctpEngine({
     // separate portfolio hook — refresh that chain now so the received amount
     // shows promptly instead of on its next poll cycle.
     if (direction === 'out') {
-      const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[toSymbol as CrosschainSymbol];
+      const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+        toSymbol as CrosschainSymbol
+      ];
       if (chain) refetchChain?.(chain).catch(() => {});
     }
     window.dispatchEvent(new Event('nf:activity-updated'));
@@ -385,7 +399,9 @@ export function useCctpEngine({
           .toFixed();
         await patch({ dstAmount });
         if (toSymbol === 'BTC') {
-          enqueueSnackbar(t('BTC is on its way — delivery takes a few minutes.'), { variant: 'info' });
+          enqueueSnackbar(t('BTC is on its way — delivery takes a few minutes.'), {
+            variant: 'info',
+          });
         }
         finish();
       } catch (e: any) {
@@ -436,7 +452,20 @@ export function useCctpEngine({
       console.error('[cctp engine] execute failed:', e); // surface stack
       setStageError(String(e?.message ?? e));
     }
-  }, [quote, direction, amount, evmAddress, stellarAddress, nativeAddress, fromSymbol, toSymbol, feePercent, runInbound, runOutbound, t]);
+  }, [
+    quote,
+    direction,
+    amount,
+    evmAddress,
+    stellarAddress,
+    nativeAddress,
+    fromSymbol,
+    toSymbol,
+    feePercent,
+    runInbound,
+    runOutbound,
+    t,
+  ]);
 
   // ---- UI contract ------------------------------------------------------------------
   const etaMinutes = quote
@@ -460,7 +489,9 @@ export function useCctpEngine({
       };
     if (!nativeAddress)
       return {
-        label: t('Set up {{sym}} wallet first', { sym: direction === 'in' ? fromSymbol : toSymbol }),
+        label: t('Set up {{sym}} wallet first', {
+          sym: direction === 'in' ? fromSymbol : toSymbol,
+        }),
         action: null,
         loading: false,
       };
@@ -471,11 +502,14 @@ export function useCctpEngine({
         loading: false,
         helper: (
           <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
-            {t('The route travels via your own Base address — create your Ethereum wallet from the Receive menu once.')}
+            {t(
+              'The route travels via your own Base address — create your Ethereum wallet from the Receive menu once.'
+            )}
           </Typography>
         ),
       };
-    if (missingStellar) return { label: t('Set up Stellar wallet first'), action: null, loading: false };
+    if (missingStellar)
+      return { label: t('Set up Stellar wallet first'), action: null, loading: false };
     if (needsTrustline)
       return {
         label: t('Add USDC Trustline first'),
@@ -483,17 +517,39 @@ export function useCctpEngine({
         loading: false,
         helper: (
           <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
-            {t('Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.')}
+            {t(
+              'Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.'
+            )}
           </Typography>
         ),
       };
     if (amount.lte(0)) return { label: t('Enter an amount'), action: null, loading: false };
     if (insufficient) return { label: t('Insufficient balance'), action: null, loading: false };
-    if (stage && stage !== 'done') return { label: t('Swap in progress…'), action: null, loading: true };
+    if (stage && stage !== 'done')
+      return { label: t('Swap in progress…'), action: null, loading: true };
     if (quoteError) return { label: t('Try a different amount'), action: null, loading: false };
-    if (quoteLoading || !quote) return { label: t('Fetching quote…'), action: null, loading: false };
+    if (quoteLoading || !quote)
+      return { label: t('Fetching quote…'), action: null, loading: false };
     return { label: t('Swap'), action: handleExecute, loading: false };
-  }, [enabled, network, nativeAddress, evmAddress, missingStellar, needsTrustline, amount, insufficient, stage, quoteError, quoteLoading, quote, handleExecute, t, direction, fromSymbol, toSymbol]);
+  }, [
+    enabled,
+    network,
+    nativeAddress,
+    evmAddress,
+    missingStellar,
+    needsTrustline,
+    amount,
+    insufficient,
+    stage,
+    quoteError,
+    quoteLoading,
+    quote,
+    handleExecute,
+    t,
+    direction,
+    fromSymbol,
+    toSymbol,
+  ]);
 
   const routeLabel =
     direction === 'in'
@@ -504,11 +560,17 @@ export function useCctpEngine({
     <Stack spacing={0.75}>
       <Stack direction="row" justifyContent="space-between">
         <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{t('Route')}</Typography>
-        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>{routeLabel}</Typography>
+        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+          {routeLabel}
+        </Typography>
       </Stack>
       <Stack direction="row" justifyContent="space-between">
-        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{t('Bridge (Circle CCTP)')}</Typography>
-        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>{t('Free')}</Typography>
+        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+          {t('Bridge (Circle CCTP)')}
+        </Typography>
+        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+          {t('Free')}
+        </Typography>
       </Stack>
       {feePercent > 0 && amount.gt(0) && (
         <Stack direction="row" justifyContent="space-between">
@@ -517,13 +579,17 @@ export function useCctpEngine({
           </Typography>
           <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
             −{amount.multipliedBy(feePercent).toFixed(6)} {fromSymbol}
-            {fromPrice.gt(0) ? ` (${fCurrency(amount.multipliedBy(feePercent).multipliedBy(fromPrice))})` : ''}
+            {fromPrice.gt(0)
+              ? ` (${fCurrency(amount.multipliedBy(feePercent).multipliedBy(fromPrice))})`
+              : ''}
           </Typography>
         </Stack>
       )}
       {etaMinutes && (
         <Stack direction="row" justifyContent="space-between">
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{t('Estimated time')}</Typography>
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+            {t('Estimated time')}
+          </Typography>
           <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
             ~{etaMinutes} {t('min')}
           </Typography>

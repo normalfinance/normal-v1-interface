@@ -17,7 +17,12 @@ export interface ToeknsTabsProps {
   loading?: boolean;
 }
 
-const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace', fontFeatureSettings: '"ss01","ss02","zero"', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' } as const;
+const MONO = {
+  fontFamily: '"Geist Mono", ui-monospace, monospace',
+  fontFeatureSettings: '"ss01","ss02","zero"',
+  fontVariantNumeric: 'tabular-nums',
+  letterSpacing: '-0.01em',
+} as const;
 
 export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsProps) {
   const { t } = useTranslate('auto');
@@ -32,7 +37,13 @@ export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsPr
         {[0, 1, 2].map((i) => (
           <Box
             key={i}
-            sx={{ display: 'flex', padding: '12px 8px', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}
+            sx={{
+              display: 'flex',
+              padding: '12px 8px',
+              width: '100%',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
           >
             <Box display="flex" alignItems="center" gap="12px">
               <Skeleton variant="circular" width={32} height={32} />
@@ -67,8 +78,20 @@ export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsPr
               role="button"
               tabIndex={0}
               onClick={() => router.push(paths.assets.details(token.symbol))}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(paths.assets.details(token.symbol)); }}
-              sx={{ display: 'flex', padding: '12px 8px', width: '100%', alignItems: 'center', justifyContent: 'space-between', borderRadius: '12px', cursor: 'pointer', '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' } }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ')
+                  router.push(paths.assets.details(token.symbol));
+              }}
+              sx={{
+                display: 'flex',
+                padding: '12px 8px',
+                width: '100%',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' },
+              }}
             >
               <Box display="flex" alignItems="center" gap="12px">
                 <Box
@@ -77,7 +100,15 @@ export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsPr
                   sx={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
                 />
                 <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                  <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                  <Typography
+                    sx={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#0A0A0F',
+                      letterSpacing: '-0.01em',
+                      lineHeight: 1.3,
+                    }}
+                  >
                     {token.symbol.startsWith('sn') && (
                       <Chip label="Short" color="error" size="small" variant="soft" />
                     )}{' '}

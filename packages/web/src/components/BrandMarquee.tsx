@@ -67,7 +67,9 @@ const MarqueeTrack = styled('div')(({ theme }) => ({
 const REPETITIONS = 4;
 
 export default function BrandMarquee() {
-  const allBrands = Array(REPETITIONS).fill([...BRANDS]).flat() as string[];
+  const allBrands = Array(REPETITIONS)
+    .fill([...BRANDS])
+    .flat() as string[];
 
   return (
     <Box

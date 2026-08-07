@@ -118,7 +118,15 @@ export const CtaImage: React.FC<CtaImageProps> = (sectionProps) => {
             }}
           />
           {apy == null ? (
-            <Skeleton variant="text" width={90} sx={{ bgcolor: 'rgba(255,255,255,0.12)', display: 'inline-block', verticalAlign: 'middle' }} />
+            <Skeleton
+              variant="text"
+              width={90}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.12)',
+                display: 'inline-block',
+                verticalAlign: 'middle',
+              }}
+            />
           ) : (
             `${Number(apy).toFixed(2)}% APY · live now`
           )}
@@ -141,7 +149,8 @@ export const CtaImage: React.FC<CtaImageProps> = (sectionProps) => {
           <Box
             component="span"
             sx={{
-              background: 'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)',
+              background:
+                'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -170,7 +179,15 @@ export const CtaImage: React.FC<CtaImageProps> = (sectionProps) => {
         </Box>
 
         {/* Buttons */}
-        <Box sx={{ mt: '30px', display: 'inline-flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <Box
+          sx={{
+            mt: '30px',
+            display: 'inline-flex',
+            gap: '10px',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+          }}
+        >
           <Box
             component="a"
             href={paths.savings}

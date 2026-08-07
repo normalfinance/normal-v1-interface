@@ -38,9 +38,24 @@ export function MySavingsSection({
   const hasPosition = userPosition && parseFloat(userPosition.currentValue) > 0;
 
   const rows = [
-    { label: t('Current Value'), value: userPosition?.currentValue, prefix: '', color: 'text.primary' as const },
-    { label: t('Total Deposited'), value: userPosition?.totalDeposited, prefix: '', color: 'text.primary' as const },
-    { label: t('Earnings'), value: userPosition?.earnings, prefix: '+', color: 'success.main' as const },
+    {
+      label: t('Current Value'),
+      value: userPosition?.currentValue,
+      prefix: '',
+      color: 'text.primary' as const,
+    },
+    {
+      label: t('Total Deposited'),
+      value: userPosition?.totalDeposited,
+      prefix: '',
+      color: 'text.primary' as const,
+    },
+    {
+      label: t('Earnings'),
+      value: userPosition?.earnings,
+      prefix: '+',
+      color: 'success.main' as const,
+    },
   ];
 
   return (

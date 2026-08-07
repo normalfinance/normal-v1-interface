@@ -48,13 +48,11 @@ jobs:
         run: npx turbo build --filter="!@normalfinance/web" --cache-dir=.turbo
 
       # ---------- Quality Gates ----------
-      # NON-BLOCKING until the scheduled repo-wide reformat lands: 321 files
-      # currently fail this check, and it has been the wall that skipped every
-      # gate below since at least July. Flip back to blocking the moment the
-      # reformat commit is in.
-      - name: Prettier – formatting check (non-blocking, see comment)
+      # Blocking since 2026-08-07: the repo-wide reformat landed, so an
+      # unformatted file is now a real defect, not legacy noise. `yarn fm:fix`
+      # locally is the remedy.
+      - name: Prettier – formatting check
         working-directory: packages/web
-        continue-on-error: true
         run: yarn fm:check
 
       - name: ESLint – code-quality check

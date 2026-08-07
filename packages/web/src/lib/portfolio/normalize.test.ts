@@ -6,7 +6,11 @@ import type { SavingsPosition } from '@/types/savings';
 // show phantom "Cannot find name 'describe'" errors in the IDE. @jest/globals
 // carries its own types, so the file is self-contained everywhere.
 import { it, expect, describe } from '@jest/globals';
-import { buildAsset, applyStaleFallback, reconcileSavingsPosition } from '@/lib/portfolio/normalize';
+import {
+  buildAsset,
+  applyStaleFallback,
+  reconcileSavingsPosition,
+} from '@/lib/portfolio/normalize';
 
 // ---------------------------------------------------------------------------
 // First real test suite in the app, and deliberately on this module: it is
@@ -140,10 +144,7 @@ describe('applyStaleFallback', () => {
     const prior = ok('ETH', '2');
     const errored = buildAsset('ETH', '0xabc', null, 3000);
 
-    const { merged } = applyStaleFallback(
-      { updatedAt: 2, assets: [errored] },
-      { ETH: prior }
-    );
+    const { merged } = applyStaleFallback({ updatedAt: 2, assets: [errored] }, { ETH: prior });
 
     expect(merged.assets[0].balance).toBe('2');
     expect(merged.assets[0].status).toBe('stale');
@@ -153,10 +154,7 @@ describe('applyStaleFallback', () => {
     const prior = { ...ok('ETH', '2'), price: '1000' };
     const errored = buildAsset('ETH', '0xabc', null, 3000);
 
-    const { merged } = applyStaleFallback(
-      { updatedAt: 2, assets: [errored] },
-      { ETH: prior }
-    );
+    const { merged } = applyStaleFallback({ updatedAt: 2, assets: [errored] }, { ETH: prior });
 
     expect(merged.assets[0].price).toBe('3000');
   });

@@ -1,7 +1,11 @@
 'use client';
 
 import { SESSION_BASED_WALLET_TYPES } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { usePersistStore, useNormalWalletStore, useStellarWalletKitStore } from '@normalfinance/state';
+import {
+  usePersistStore,
+  useNormalWalletStore,
+  useStellarWalletKitStore,
+} from '@normalfinance/state';
 import {
   isSessionError,
   WalletSessionExpiredError,

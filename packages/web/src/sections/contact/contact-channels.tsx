@@ -65,7 +65,14 @@ const ChannelCard: React.FC<{ channel: Channel }> = ({ channel }) => (
     }}
   >
     {/* Top row: icon + arrow */}
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: '20px' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        mb: '20px',
+      }}
+    >
       {/* Icon box */}
       <Box
         sx={{

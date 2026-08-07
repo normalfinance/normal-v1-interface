@@ -114,7 +114,9 @@ export async function getTurnkeyWalletInfo(): Promise<TurnkeyWalletInfo | null> 
 }
 
 /** True when the given Stellar address is signed by the user's Turnkey passkey. */
-export async function isTurnkeyStellarAddress(address: string | null | undefined): Promise<boolean> {
+export async function isTurnkeyStellarAddress(
+  address: string | null | undefined
+): Promise<boolean> {
   if (!address) return false;
   const info = await getTurnkeyWalletInfo();
   return !!info?.stellarAddress && info.stellarAddress === address;

@@ -36,7 +36,7 @@ const POLL_INTERVAL_MS = 20_000;
  */
 export function useBtcAddressWatch(
   address: string | null | undefined,
-  enabled: boolean,
+  enabled: boolean
 ): UseBtcAddressWatchResult {
   const [incomingTxs, setIncomingTxs] = useState<BtcWatchTx[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -50,9 +50,7 @@ export function useBtcAddressWatch(
   const mergeIncoming = useCallback(
     (txs: BtcWatchTx[]) => {
       if (!address) return;
-      const incoming = txs.filter((tx) =>
-        tx.vout?.some((o) => o.scriptpubkey_address === address),
-      );
+      const incoming = txs.filter((tx) => tx.vout?.some((o) => o.scriptpubkey_address === address));
       if (incoming.length === 0) return;
       setIncomingTxs((prev) => {
         const seen = new Set(prev.map((t) => t.txid));
@@ -60,16 +58,14 @@ export function useBtcAddressWatch(
         return fresh.length > 0 ? [...prev, ...fresh] : prev;
       });
     },
-    [address],
+    [address]
   );
 
   // HTTP fetch of current mempool txs for the address
   const fetchMempool = useCallback(async () => {
     if (cancelledRef.current || !address) return;
     try {
-      const res = await fetch(
-        `https://mempool.space/api/address/${address}/txs/mempool`,
-      );
+      const res = await fetch(`https://mempool.space/api/address/${address}/txs/mempool`);
       if (!res.ok || cancelledRef.current) return;
       const txs: BtcWatchTx[] = await res.json();
       mergeIncoming(txs);
@@ -95,7 +91,10 @@ export function useBtcAddressWatch(
     wsRef.current = ws;
 
     ws.onopen = () => {
-      if (cancelledRef.current) { ws.close(); return; }
+      if (cancelledRef.current) {
+        ws.close();
+        return;
+      }
       setIsConnected(true);
       ws.send(JSON.stringify({ action: 'init' }));
       ws.send(JSON.stringify({ action: 'track-address', data: address }));
@@ -105,10 +104,8 @@ export function useBtcAddressWatch(
       if (cancelledRef.current) return;
       try {
         const msg = JSON.parse(event.data) as Record<string, unknown>;
-        const newTxs =
-          (msg['address-transactions'] as BtcWatchTx[] | undefined) ?? [];
-        const blockTxs =
-          (msg['address-block-transactions'] as BtcWatchTx[] | undefined) ?? [];
+        const newTxs = (msg['address-transactions'] as BtcWatchTx[] | undefined) ?? [];
+        const blockTxs = (msg['address-block-transactions'] as BtcWatchTx[] | undefined) ?? [];
         mergeIncoming([...newTxs, ...blockTxs]);
       } catch {
         // ignore malformed frames

@@ -127,12 +127,16 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       if (!res.ok) return;
       const data = await res.json();
       const now = Date.now();
-      const shown: TransferRow[] = (data.transfers ?? []).filter((tr: TransferRow) => phaseOf(tr, now) !== 'hidden');
+      const shown: TransferRow[] = (data.transfers ?? []).filter(
+        (tr: TransferRow) => phaseOf(tr, now) !== 'hidden'
+      );
       setTransfers(shown);
       // Poke any 'auto' (post-burn) transfer so its status advances between cron ticks.
       const auto = shown.find((tr) => phaseOf(tr, now) === 'auto');
       if (auto) {
-        fetch(`/api/cctp/transfers/${auto.id}`, { headers, credentials: 'include' }).catch(() => {});
+        fetch(`/api/cctp/transfers/${auto.id}`, { headers, credentials: 'include' }).catch(
+          () => {}
+        );
       }
     } catch {
       /* transient */
@@ -148,7 +152,12 @@ export function CctpRecoveryBanner({ addresses }: Props) {
 
   const patch = useCallback(
     (id: string, headers: HeadersInit, body: Record<string, string>) =>
-      fetch(`/api/cctp/transfers/${id}`, { method: 'PATCH', headers, credentials: 'include', body: JSON.stringify(body) }),
+      fetch(`/api/cctp/transfers/${id}`, {
+        method: 'PATCH',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(body),
+      }),
     []
   );
 
@@ -179,23 +188,41 @@ export function CctpRecoveryBanner({ addresses }: Props) {
             stellarRecipient: tr.destAddress,
           });
           await patch(tr.id, headers, { burnTxHash, dstAmount: wireToUsdc(bal) });
-          enqueueSnackbar(t('Bridging your USDC to Stellar — completes automatically (~20 min).'), { variant: 'info' });
+          enqueueSnackbar(t('Bridging your USDC to Stellar — completes automatically (~20 min).'), {
+            variant: 'info',
+          });
         } else {
           // OUTBOUND: swap the minted USDC on Base into the target asset via LI.FI.
           const toSymbol = tr.dstAsset as CrosschainSymbol;
           const toAddress = addresses?.[toSymbol] ?? null;
-          if (!toAddress) throw new Error(t('Set up your {{sym}} wallet first to receive the funds.', { sym: tr.dstAsset }));
+          if (!toAddress)
+            throw new Error(
+              t('Set up your {{sym}} wallet first to receive the funds.', { sym: tr.dstAsset })
+            );
           const bal = await readBaseUsdc(network, tr.destAddress);
-          if (bal === 0n) throw new Error(t('No USDC found on Base — it may already be on its way.'));
-          const result = await executePivotSwap({ evmAddress: tr.destAddress, toSymbol, toAddress, amountWire: bal });
-          const dstAmount = BigNumber(result.toAmountMin).dividedBy(BigNumber(10).pow(NATIVE_DECIMALS[toSymbol])).toFixed();
+          if (bal === 0n)
+            throw new Error(t('No USDC found on Base — it may already be on its way.'));
+          const result = await executePivotSwap({
+            evmAddress: tr.destAddress,
+            toSymbol,
+            toAddress,
+            amountWire: bal,
+          });
+          const dstAmount = BigNumber(result.toAmountMin)
+            .dividedBy(BigNumber(10).pow(NATIVE_DECIMALS[toSymbol]))
+            .toFixed();
           await patch(tr.id, headers, { dstSwapTxHash: result.txHash, dstAmount });
-          enqueueSnackbar(t('{{sym}} is on its way to your wallet.', { sym: tr.dstAsset }), { variant: 'info' });
+          enqueueSnackbar(t('{{sym}} is on its way to your wallet.', { sym: tr.dstAsset }), {
+            variant: 'info',
+          });
         }
         refresh();
       } catch (e: any) {
         console.error('[cctp recovery] failed:', e); // surface stack
-        enqueueSnackbar(e?.message ?? t('Recovery failed — your funds are safe; please try again.'), { variant: 'error' });
+        enqueueSnackbar(
+          e?.message ?? t('Recovery failed — your funds are safe; please try again.'),
+          { variant: 'error' }
+        );
       } finally {
         setBusyId(null);
       }
@@ -236,7 +263,8 @@ export function CctpRecoveryBanner({ addresses }: Props) {
           }),
         });
         const createData = await createRes.json();
-        if (!createRes.ok || !createData.id) throw new Error(createData.error ?? t('Could not start the refund.'));
+        if (!createRes.ok || !createData.id)
+          throw new Error(createData.error ?? t('Could not start the refund.'));
         const newId: string = createData.id;
         // Relayer gas for the new burn (route tops up the Base address), then burn.
         await fetch('/api/cctp/gas-topup', {
@@ -256,11 +284,16 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         await patch(newId, headers, { burnTxHash, dstAmount: wireToUsdc(bal) });
         // Retire the original outbound swap as refunded.
         await patch(tr.id, headers, { markRefunded: 'true' });
-        enqueueSnackbar(t('Bringing your USDC back to Stellar — completes automatically (~20 min).'), { variant: 'info' });
+        enqueueSnackbar(
+          t('Bringing your USDC back to Stellar — completes automatically (~20 min).'),
+          { variant: 'info' }
+        );
         refresh();
       } catch (e: any) {
         console.error('[cctp refund] failed:', e); // surface stack
-        enqueueSnackbar(e?.message ?? t('Refund failed — your funds are safe; please try again.'), { variant: 'error' });
+        enqueueSnackbar(e?.message ?? t('Refund failed — your funds are safe; please try again.'), {
+          variant: 'error',
+        });
       } finally {
         setBusyId(null);
       }
@@ -272,7 +305,15 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   const now = Date.now();
 
   return (
-    <Box sx={{ mb: '12px', p: '12px 16px', borderRadius: '14px', bgcolor: 'rgba(110,139,255,0.07)', border: '1px solid rgba(110,139,255,0.25)' }}>
+    <Box
+      sx={{
+        mb: '12px',
+        p: '12px 16px',
+        borderRadius: '14px',
+        bgcolor: 'rgba(110,139,255,0.07)',
+        border: '1px solid rgba(110,139,255,0.25)',
+      }}
+    >
       {transfers.map((tr) => {
         const phase = phaseOf(tr, now);
         const isHalt = phase === 'halt-receive' || phase === 'halt-finish';
@@ -280,19 +321,35 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         return (
           <Stack key={tr.id} direction="row" spacing={1.5} alignItems="center" sx={{ py: '5px' }}>
             {isHalt ? (
-              <Box sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: '#F59E0B', flexShrink: 0 }} />
+              <Box
+                sx={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  bgcolor: '#F59E0B',
+                  flexShrink: 0,
+                }}
+              />
             ) : (
               <CircularProgress size={14} sx={{ color: '#3E51B1', flexShrink: 0 }} />
             )}
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F' }}>
-                {t('{{amount}} USDC · {{from}} → {{to}}', { amount: usd, from: tr.srcAsset, to: tr.dstAsset })}
+                {t('{{amount}} USDC · {{from}} → {{to}}', {
+                  amount: usd,
+                  from: tr.srcAsset,
+                  to: tr.dstAsset,
+                })}
               </Typography>
               <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.5)' }}>
                 {phase === 'halt-receive'
-                  ? t('Your USDC is safe in your own Base account — finish delivering it to Stellar')
+                  ? t(
+                      'Your USDC is safe in your own Base account — finish delivering it to Stellar'
+                    )
                   : phase === 'halt-finish'
-                    ? t('Your USDC is safe in your own Base account — finish the swap to {{sym}}', { sym: tr.dstAsset })
+                    ? t('Your USDC is safe in your own Base account — finish the swap to {{sym}}', {
+                        sym: tr.dstAsset,
+                      })
                     : t('Completing automatically — no action needed')}
               </Typography>
             </Box>
@@ -335,7 +392,10 @@ export function CctpRecoveryBanner({ addresses }: Props) {
                       px: '10px',
                       border: '1px solid rgba(10,10,15,0.2)',
                       '&:hover': { bgcolor: 'rgba(10,10,15,0.04)' },
-                      '&.Mui-disabled': { color: 'rgba(10,10,15,0.3)', borderColor: 'rgba(10,10,15,0.1)' },
+                      '&.Mui-disabled': {
+                        color: 'rgba(10,10,15,0.3)',
+                        borderColor: 'rgba(10,10,15,0.1)',
+                      },
                     }}
                   >
                     {t('Bring back as USDC')}

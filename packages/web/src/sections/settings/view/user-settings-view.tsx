@@ -19,7 +19,11 @@ import { SettingsSecurity } from '../settings-security';
 
 const TABS = [
   { value: 'general', label: 'General', icon: <PersonOutlinedIcon sx={{ fontSize: 17 }} /> },
-  { value: 'accounts', label: 'Accounts', icon: <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 17 }} /> },
+  {
+    value: 'accounts',
+    label: 'Accounts',
+    icon: <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 17 }} />,
+  },
   { value: 'security', label: 'Security', icon: <LockOutlinedIcon sx={{ fontSize: 17 }} /> },
 ];
 
@@ -31,7 +35,9 @@ export function UserSettingsView() {
     <DashboardContent maxWidth="xl">
       {/* Page title */}
       <Stack spacing={0.5} sx={{ mb: '24px' }}>
-        <Typography sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+        <Typography
+          sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+        >
           {t('Settings')}
         </Typography>
         <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)' }}>

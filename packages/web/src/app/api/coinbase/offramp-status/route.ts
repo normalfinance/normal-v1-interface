@@ -47,7 +47,11 @@ export async function GET(req: NextRequest) {
     if (!resp.ok) {
       logger.error('[coinbase/offramp-status] Coinbase API error:', resp.status, text);
       let errorPayload: unknown = text;
-      try { errorPayload = JSON.parse(text); } catch { /* keep raw */ }
+      try {
+        errorPayload = JSON.parse(text);
+      } catch {
+        /* keep raw */
+      }
       return NextResponse.json(
         { error: errorPayload || 'Status fetch failed' },
         { status: resp.status }

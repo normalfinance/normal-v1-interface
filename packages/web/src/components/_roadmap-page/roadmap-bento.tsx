@@ -81,7 +81,9 @@ export const RoadmapBento: React.FC = () => (
             borderRadius: '22px',
             p: '28px',
             transition: 'box-shadow 250ms ease',
-            '&:hover': { boxShadow: '0 1px 2px rgba(10,10,15,0.04), 0 8px 32px rgba(10,10,15,0.05)' },
+            '&:hover': {
+              boxShadow: '0 1px 2px rgba(10,10,15,0.04), 0 8px 32px rgba(10,10,15,0.05)',
+            },
           }}
         >
           <Typography
@@ -194,7 +196,9 @@ export const RoadmapBento: React.FC = () => (
               borderRadius: '22px',
               p: '28px',
               transition: 'box-shadow 250ms ease',
-              '&:hover': { boxShadow: '0 1px 2px rgba(10,10,15,0.04), 0 8px 32px rgba(10,10,15,0.05)' },
+              '&:hover': {
+                boxShadow: '0 1px 2px rgba(10,10,15,0.04), 0 8px 32px rgba(10,10,15,0.05)',
+              },
             }}
           >
             <Typography

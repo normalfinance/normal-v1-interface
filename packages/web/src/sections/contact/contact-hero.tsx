@@ -142,8 +142,8 @@ export const ContactHero: React.FC = () => {
                 maxWidth: '480px',
               }}
             >
-              Whether you have a question about savings, want to report a bug, or are
-              interested in partnering — drop us a line and a real human will respond.
+              Whether you have a question about savings, want to report a bug, or are interested in
+              partnering — drop us a line and a real human will respond.
             </Typography>
 
             {/* Meta row */}

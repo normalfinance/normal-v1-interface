@@ -191,14 +191,10 @@ const StatusTag: React.FC<{ status: MilestoneStatus }> = ({ status }) => {
 export const Roadmap: React.FC = () => {
   const [filter, setFilter] = useState<FilterKey>('all');
 
-  const filtered =
-    filter === 'all' ? MILESTONES : MILESTONES.filter((m) => m.status === filter);
+  const filtered = filter === 'all' ? MILESTONES : MILESTONES.filter((m) => m.status === filter);
 
   return (
-    <Box
-      component="section"
-      sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
-    >
+    <Box component="section" sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}>
       <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
         {/* Header */}
         <Box
@@ -292,10 +288,7 @@ export const Roadmap: React.FC = () => {
           />
 
           {filtered.map((item, i) => (
-            <Box
-              key={i}
-              sx={{ position: 'relative', pb: '12px' }}
-            >
+            <Box key={i} sx={{ position: 'relative', pb: '12px' }}>
               {/* Dot */}
               <Box
                 sx={{

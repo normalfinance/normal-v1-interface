@@ -176,7 +176,8 @@ export async function signLifiBtcPsbt(
     const valid = psbt.validateSignaturesOfInput(index, (pubkey, msghash, signature) =>
       secp256k1.verify(signature, msghash, pubkey)
     );
-    if (!valid) throw new Error(`Signature for input ${index} failed validation — not broadcasting`);
+    if (!valid)
+      throw new Error(`Signature for input ${index} failed validation — not broadcasting`);
   });
 
   return psbt.toHex();

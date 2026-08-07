@@ -16,7 +16,14 @@ import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 
 import { stellarContractToBytes32 } from './addresses';
 import { bytesToHex, encodeStellarHookData } from './hookdata';
-import { EVM_CCTP, EVM_USDC, CCTP_DOMAIN, STELLAR_CCTP, CCTP_MAX_FEE, CCTP_MIN_FINALITY_THRESHOLD } from './config';
+import {
+  EVM_CCTP,
+  EVM_USDC,
+  CCTP_DOMAIN,
+  STELLAR_CCTP,
+  CCTP_MAX_FEE,
+  CCTP_MIN_FINALITY_THRESHOLD,
+} from './config';
 
 const DEPOSIT_FOR_BURN_WITH_HOOK_ABI = [
   {
@@ -108,7 +115,12 @@ export async function burnUsdcOnEvm(params: EvmBurnParams): Promise<{
   };
 
   const readAllowance = () =>
-    client.readContract({ address: usdc, abi: erc20Abi, functionName: 'allowance', args: [from, tokenMessenger] });
+    client.readContract({
+      address: usdc,
+      abi: erc20Abi,
+      functionName: 'allowance',
+      args: [from, tokenMessenger],
+    });
 
   // 1) approve, only when the current allowance is insufficient. Approve MAX so
   // the exact burn amount can never be one unit short and repeat burns skip it.
@@ -121,7 +133,11 @@ export async function burnUsdcOnEvm(params: EvmBurnParams): Promise<{
     params.onStep?.('approve');
     approveTxHash = await signAndSend(
       usdc,
-      encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [tokenMessenger, MAX_UINT256] }),
+      encodeFunctionData({
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [tokenMessenger, MAX_UINT256],
+      }),
       'approve'
     );
     // Read-after-write: wait until the approve is visible to the RPC before the

@@ -32,7 +32,12 @@ import { useCctpEngine } from './engines/use-cctp-engine';
 import { useSoroswapEngine } from './engines/use-soroswap-engine';
 import { canPair, pairTypeOf, SWAP_ASSETS, assetBySymbol, counterpartOf } from './engines/types';
 
-import type { SwapSymbol, StellarSymbol, CrosschainSymbol, SwapEngineButton } from './engines/types';
+import type {
+  SwapSymbol,
+  StellarSymbol,
+  CrosschainSymbol,
+  SwapEngineButton,
+} from './engines/types';
 
 // ---------------------------------------------------------------------------
 // Unified swap card. One asset picker over all five assets; the source's group
@@ -203,7 +208,12 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         loading: false,
         helper: (
           <Typography
-            sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', lineHeight: 1.5 }}
+            sx={{
+              fontSize: '12px',
+              color: 'rgba(10,10,15,0.5)',
+              textAlign: 'center',
+              lineHeight: 1.5,
+            }}
           >
             {t(
               'Your connected wallet can only swap XLM ↔ USDC. Swapping BTC, ETH or SOL signs on other chains, which needs your Normal passkey wallet.'
@@ -295,7 +305,9 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           src={tk.icon ?? getCryptoIconUrl(sym)}
           sx={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }}
         />
-        <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em' }}>
+        <Typography
+          sx={{ fontSize: '14px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+        >
           {sym}
         </Typography>
         <Iconify icon="eva:chevron-down-fill" width={18} sx={{ color: 'rgba(10,10,15,0.4)' }} />
@@ -307,235 +319,352 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     <Box sx={{ minWidth: 0 }}>
       <CctpRecoveryBanner addresses={addresses} />
       <Box sx={{ ...CARD_SX, minWidth: 0 }}>
-      {/* From */}
-      <Box sx={{ p: '16px', borderRadius: '16px', bgcolor: '#FAFAFB', border: '1px solid rgba(10,10,15,0.08)' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '12px', flexWrap: 'wrap', gap: '8px' }}>
-          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            {t('You pay')}
-          </Typography>
-          <Typography component="div" sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {t('Balance:')}
-            {fromLoading ? (
-              <Skeleton variant="text" width={64} sx={{ fontSize: '12px' }} />
-            ) : (
-              <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 600 }}>
-                {isFiatMode && fromPrice.gt(0)
-                  ? fCurrency(fromBalance.multipliedBy(fromPrice))
-                  : `${fromBalance.toFixed(6, BigNumber.ROUND_DOWN)} ${fromSymbol}`}
-              </Box>
-            )}
-          </Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <AssetSelector side="from" />
+        {/* From */}
+        <Box
+          sx={{
+            p: '16px',
+            borderRadius: '16px',
+            bgcolor: '#FAFAFB',
+            border: '1px solid rgba(10,10,15,0.08)',
+          }}
+        >
           <Box
-            component="button"
-            onClick={handleMax}
             sx={{
-              border: 'none',
-              bgcolor: 'rgba(10,10,15,0.06)',
-              color: '#0A0A0F',
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              px: '8px',
-              py: '4px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: '12px',
+              flexWrap: 'wrap',
+              gap: '8px',
             }}
           >
-            MAX
+            <Typography
+              sx={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: 'rgba(10,10,15,0.45)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}
+            >
+              {t('You pay')}
+            </Typography>
+            <Typography
+              component="div"
+              sx={{
+                fontSize: '12px',
+                color: 'rgba(10,10,15,0.45)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              {t('Balance:')}
+              {fromLoading ? (
+                <Skeleton variant="text" width={64} sx={{ fontSize: '12px' }} />
+              ) : (
+                <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 600 }}>
+                  {isFiatMode && fromPrice.gt(0)
+                    ? fCurrency(fromBalance.multipliedBy(fromPrice))
+                    : `${fromBalance.toFixed(6, BigNumber.ROUND_DOWN)} ${fromSymbol}`}
+                </Box>
+              )}
+            </Typography>
           </Box>
-        </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', mt: '12px' }}>
-          {isFiatMode && (
-            <Typography sx={{ fontSize: '24px', fontWeight: 600, color: insufficient ? '#DC2626' : 'rgba(10,10,15,0.35)', letterSpacing: '-0.02em', lineHeight: 1, ...MONO }}>
-              $
-            </Typography>
-          )}
           <Box
-            component="input"
-            type="number"
-            value={amountIn}
-            placeholder="0"
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmountIn(sanitizeAmountInput(e.target.value))}
-            onKeyDown={(e: React.KeyboardEvent) => e.key === '-' && e.preventDefault()}
             sx={{
-              flex: 1,
-              border: 'none',
-              outline: 'none',
-              bgcolor: 'transparent',
-              fontSize: '24px',
-              fontWeight: 600,
-              color: insufficient ? '#DC2626' : '#0A0A0F',
-              letterSpacing: '-0.02em',
-              ...MONO,
-              width: '100%',
-              minWidth: 0,
-              '&::placeholder': { color: 'rgba(10,10,15,0.2)' },
-              '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': { appearance: 'none' },
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '10px',
+              flexWrap: 'wrap',
             }}
-          />
-          {!isFiatMode && (
-            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: 'rgba(10,10,15,0.45)', flexShrink: 0 }}>
-              {fromSymbol}
-            </Typography>
-          )}
-          <Tooltip title={t('Toggle USD / crypto')}>
+          >
+            <AssetSelector side="from" />
             <Box
               component="button"
-              onClick={toggleMode}
+              onClick={handleMax}
               sx={{
-                width: 28,
-                height: 28,
                 border: 'none',
                 bgcolor: 'rgba(10,10,15,0.06)',
                 color: '#0A0A0F',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+                px: '8px',
+                py: '4px',
+                borderRadius: '6px',
                 cursor: 'pointer',
-                flexShrink: 0,
                 fontFamily: 'inherit',
                 '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
               }}
             >
-              <Iconify icon="solar:transfer-vertical-bold-duotone" width={16} />
+              MAX
             </Box>
-          </Tooltip>
-        </Box>
-        <Typography sx={{ fontSize: '12px', color: insufficient ? '#DC2626' : 'rgba(10,10,15,0.45)', mt: '4px' }}>
-          {insufficient
-            ? t('Exceeds available balance')
-            : amount.gt(0) && fromPrice.gt(0)
-              ? isFiatMode
-                ? `≈ ${amount.toFixed(Math.min(fromDecimals, 6), BigNumber.ROUND_DOWN)} ${fromSymbol}`
-                : `≈ ${fCurrency(fiatAmount)}`
-              : t('Enter amount above')}
-        </Typography>
-      </Box>
+          </Box>
 
-      {/* Flip */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', my: '10px' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', mt: '12px' }}>
+            {isFiatMode && (
+              <Typography
+                sx={{
+                  fontSize: '24px',
+                  fontWeight: 600,
+                  color: insufficient ? '#DC2626' : 'rgba(10,10,15,0.35)',
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1,
+                  ...MONO,
+                }}
+              >
+                $
+              </Typography>
+            )}
+            <Box
+              component="input"
+              type="number"
+              value={amountIn}
+              placeholder="0"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setAmountIn(sanitizeAmountInput(e.target.value))
+              }
+              onKeyDown={(e: React.KeyboardEvent) => e.key === '-' && e.preventDefault()}
+              sx={{
+                flex: 1,
+                border: 'none',
+                outline: 'none',
+                bgcolor: 'transparent',
+                fontSize: '24px',
+                fontWeight: 600,
+                color: insufficient ? '#DC2626' : '#0A0A0F',
+                letterSpacing: '-0.02em',
+                ...MONO,
+                width: '100%',
+                minWidth: 0,
+                '&::placeholder': { color: 'rgba(10,10,15,0.2)' },
+                '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': {
+                  appearance: 'none',
+                },
+              }}
+            />
+            {!isFiatMode && (
+              <Typography
+                sx={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: 'rgba(10,10,15,0.45)',
+                  flexShrink: 0,
+                }}
+              >
+                {fromSymbol}
+              </Typography>
+            )}
+            <Tooltip title={t('Toggle USD / crypto')}>
+              <Box
+                component="button"
+                onClick={toggleMode}
+                sx={{
+                  width: 28,
+                  height: 28,
+                  border: 'none',
+                  bgcolor: 'rgba(10,10,15,0.06)',
+                  color: '#0A0A0F',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  fontFamily: 'inherit',
+                  '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+                }}
+              >
+                <Iconify icon="solar:transfer-vertical-bold-duotone" width={16} />
+              </Box>
+            </Tooltip>
+          </Box>
+          <Typography
+            sx={{
+              fontSize: '12px',
+              color: insufficient ? '#DC2626' : 'rgba(10,10,15,0.45)',
+              mt: '4px',
+            }}
+          >
+            {insufficient
+              ? t('Exceeds available balance')
+              : amount.gt(0) && fromPrice.gt(0)
+                ? isFiatMode
+                  ? `≈ ${amount.toFixed(Math.min(fromDecimals, 6), BigNumber.ROUND_DOWN)} ${fromSymbol}`
+                  : `≈ ${fCurrency(fiatAmount)}`
+                : t('Enter amount above')}
+          </Typography>
+        </Box>
+
+        {/* Flip */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: '10px' }}>
+          <Box
+            component="button"
+            onClick={handleFlip}
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: '10px',
+              border: '1px solid rgba(10,10,15,0.1)',
+              bgcolor: '#FFFFFF',
+              color: '#0A0A0F',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              transition: 'all 150ms ease',
+              '&:hover': { bgcolor: '#F4F4F7' },
+            }}
+          >
+            <SwapVertOutlined sx={{ fontSize: 18 }} />
+          </Box>
+        </Box>
+
+        {/* To */}
         <Box
-          component="button"
-          onClick={handleFlip}
           sx={{
-            width: 36,
-            height: 36,
-            borderRadius: '10px',
-            border: '1px solid rgba(10,10,15,0.1)',
-            bgcolor: '#FFFFFF',
-            color: '#0A0A0F',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            transition: 'all 150ms ease',
-            '&:hover': { bgcolor: '#F4F4F7' },
+            p: '16px',
+            borderRadius: '16px',
+            bgcolor: '#FAFAFB',
+            border: '1px solid rgba(10,10,15,0.08)',
           }}
         >
-          <SwapVertOutlined sx={{ fontSize: 18 }} />
-        </Box>
-      </Box>
-
-      {/* To */}
-      <Box sx={{ p: '16px', borderRadius: '16px', bgcolor: '#FAFAFB', border: '1px solid rgba(10,10,15,0.08)' }}>
-        <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '12px' }}>
-          {t('You receive')}
-        </Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <AssetSelector side="to" />
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '8px', mt: '12px' }}>
+          <Typography
+            sx={{
+              fontSize: '12px',
+              fontWeight: 500,
+              color: 'rgba(10,10,15,0.45)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              mb: '12px',
+            }}
+          >
+            {t('You receive')}
+          </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '10px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <AssetSelector side="to" />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '8px', mt: '12px' }}>
+            {quoteLoading ? (
+              <Skeleton variant="text" width={150} sx={{ fontSize: '24px', borderRadius: '6px' }} />
+            ) : (
+              <Typography
+                sx={{
+                  fontSize: '24px',
+                  fontWeight: 600,
+                  color: toAmount ? '#0A0A0F' : 'rgba(10,10,15,0.25)',
+                  letterSpacing: '-0.02em',
+                  ...MONO,
+                }}
+              >
+                {toAmount ? toAmount.toFixed(6, BigNumber.ROUND_DOWN) : '0'}
+              </Typography>
+            )}
+            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: 'rgba(10,10,15,0.45)' }}>
+              {toSymbol}
+            </Typography>
+          </Box>
           {quoteLoading ? (
-            <Skeleton variant="text" width={150} sx={{ fontSize: '24px', borderRadius: '6px' }} />
+            <Skeleton variant="text" width={70} sx={{ fontSize: '12px', mt: '4px' }} />
           ) : (
-            <Typography sx={{ fontSize: '24px', fontWeight: 600, color: toAmount ? '#0A0A0F' : 'rgba(10,10,15,0.25)', letterSpacing: '-0.02em', ...MONO }}>
-              {toAmount ? toAmount.toFixed(6, BigNumber.ROUND_DOWN) : '0'}
-            </Typography>
+            toAmount &&
+            toPrice.gt(0) && (
+              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', mt: '4px' }}>
+                ≈ {fCurrency(toAmount.multipliedBy(toPrice))}
+              </Typography>
+            )
           )}
-          <Typography sx={{ fontSize: '14px', fontWeight: 600, color: 'rgba(10,10,15,0.45)' }}>
-            {toSymbol}
-          </Typography>
         </Box>
-        {quoteLoading ? (
-          <Skeleton variant="text" width={70} sx={{ fontSize: '12px', mt: '4px' }} />
-        ) : (
-          toAmount && toPrice.gt(0) && (
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', mt: '4px' }}>
-              ≈ {fCurrency(toAmount.multipliedBy(toPrice))}
-            </Typography>
-          )
+
+        {/* Quote details */}
+        {engine.details && !quoteLoading && (
+          <Box
+            sx={{
+              mt: '12px',
+              p: '12px 14px',
+              borderRadius: '12px',
+              bgcolor: '#FAFAFB',
+              border: '1px solid rgba(10,10,15,0.06)',
+            }}
+          >
+            {engine.details}
+          </Box>
         )}
-      </Box>
 
-      {/* Quote details */}
-      {engine.details && !quoteLoading && (
-        <Box sx={{ mt: '12px', p: '12px 14px', borderRadius: '12px', bgcolor: '#FAFAFB', border: '1px solid rgba(10,10,15,0.06)' }}>
-          {engine.details}
-        </Box>
-      )}
+        {/* Quote error */}
+        {quoteError && !quoteLoading && (
+          <Box
+            sx={{
+              mt: '12px',
+              px: '12px',
+              py: '10px',
+              borderRadius: '10px',
+              bgcolor: 'rgba(220,38,38,0.05)',
+              border: '1px solid rgba(220,38,38,0.15)',
+            }}
+          >
+            <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.5 }}>
+              {quoteError}
+            </Typography>
+          </Box>
+        )}
 
-      {/* Quote error */}
-      {quoteError && !quoteLoading && (
-        <Box sx={{ mt: '12px', px: '12px', py: '10px', borderRadius: '10px', bgcolor: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.15)' }}>
-          <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.5 }}>
-            {quoteError}
-          </Typography>
-        </Box>
-      )}
+        {/* Gating notice (trustline / activation / external-wallet block) */}
+        {button.helper && <Box sx={{ mt: '14px' }}>{button.helper}</Box>}
 
-      {/* Gating notice (trustline / activation / external-wallet block) */}
-      {button.helper && <Box sx={{ mt: '14px' }}>{button.helper}</Box>}
-
-      {/* CTA — `button`, never `engine.button`: the external-wallet gate above
+        {/* CTA — `button`, never `engine.button`: the external-wallet gate above
           overrides the engine's own state machine and must win. */}
-      <Button
-        fullWidth
-        variant="contained"
-        size="large"
-        disabled={!button.action || button.loading}
-        onClick={() => button.action?.()}
-        startIcon={button.loading ? <CircularProgress size={16} color="inherit" /> : undefined}
-        sx={{
-          mt: button.helper ? '10px' : '14px',
-          borderRadius: '12px',
-          bgcolor: '#0A0A0F',
-          fontWeight: 700,
-          fontSize: '15px',
-          py: '13px',
-          textTransform: 'none',
-          letterSpacing: '-0.01em',
-          '&:hover': { bgcolor: '#1a1a25' },
-          '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
-        }}
-      >
-        {button.label}
-      </Button>
+        <Button
+          fullWidth
+          variant="contained"
+          size="large"
+          disabled={!button.action || button.loading}
+          onClick={() => button.action?.()}
+          startIcon={button.loading ? <CircularProgress size={16} color="inherit" /> : undefined}
+          sx={{
+            mt: button.helper ? '10px' : '14px',
+            borderRadius: '12px',
+            bgcolor: '#0A0A0F',
+            fontWeight: 700,
+            fontSize: '15px',
+            py: '13px',
+            textTransform: 'none',
+            letterSpacing: '-0.01em',
+            '&:hover': { bgcolor: '#1a1a25' },
+            '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+          }}
+        >
+          {button.label}
+        </Button>
 
-      {engine.footer}
+        {engine.footer}
 
-      <PickToken
-        open={pickerSide !== null}
-        onClose={() => setPickerSide(null)}
-        buttonSource="unified-swap"
-        tokens={pickerSide === 'to' ? toPickerTokens : fromPickerTokens}
-        onTokenSelect={(tk) => {
-          const sym = tk.symbol as SwapSymbol;
-          if (pickerSide === 'from') selectFrom(sym);
-          else selectTo(sym);
-          setPickerSide(null);
-        }}
-      />
+        <PickToken
+          open={pickerSide !== null}
+          onClose={() => setPickerSide(null)}
+          buttonSource="unified-swap"
+          tokens={pickerSide === 'to' ? toPickerTokens : fromPickerTokens}
+          onTokenSelect={(tk) => {
+            const sym = tk.symbol as SwapSymbol;
+            if (pickerSide === 'from') selectFrom(sym);
+            else selectTo(sym);
+            setPickerSide(null);
+          }}
+        />
 
-      {engine.modals}
+        {engine.modals}
       </Box>
     </Box>
   );

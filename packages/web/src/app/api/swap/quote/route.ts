@@ -1,4 +1,4 @@
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
@@ -61,10 +61,12 @@ export async function POST(request: NextRequest) {
 
     const apiBaseUrl = process.env.SOROSWAP_API_BASE_URL || DEFAULT_SOROSWAP_API_BASE_URL;
     const cookieStore = await cookies();
-    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as 'mainnet' | 'testnet';
+    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as
+      | 'mainnet'
+      | 'testnet';
     const tradeType = mode === 'strict-send' ? 'EXACT_IN' : 'EXACT_OUT';
 
-    const resolveAddress = (addr: string) => addr === 'native' ? XLM_CONTRACT[network] : addr;
+    const resolveAddress = (addr: string) => (addr === 'native' ? XLM_CONTRACT[network] : addr);
 
     const quotePayload = {
       assetIn: resolveAddress(token_in_address),

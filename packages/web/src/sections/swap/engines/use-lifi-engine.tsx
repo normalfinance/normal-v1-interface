@@ -110,7 +110,9 @@ export function useLifiEngine({
     onTerminal: (st) => {
       if (st === 'done')
         enqueueSnackbar(
-          t('Swap complete — {{symbol}} delivered to your wallet.', { symbol: statusTx?.toSymbol ?? toSymbol }),
+          t('Swap complete — {{symbol}} delivered to your wallet.', {
+            symbol: statusTx?.toSymbol ?? toSymbol,
+          }),
           { variant: 'success' }
         );
       else if (st === 'refunded')
@@ -120,7 +122,8 @@ export function useLifiEngine({
           }),
           { variant: 'warning' }
         );
-      else enqueueSnackbar(t('Cross-chain swap failed — no funds were moved.'), { variant: 'error' });
+      else
+        enqueueSnackbar(t('Cross-chain swap failed — no funds were moved.'), { variant: 'error' });
     },
   });
 
@@ -268,13 +271,22 @@ export function useLifiEngine({
       };
     if (amount.lte(0)) return { label: t('Enter an amount'), action: null, loading: false };
     if (insufficient)
-      return { label: t('Insufficient {{symbol}} balance', { symbol: fromSymbol }), action: null, loading: false };
+      return {
+        label: t('Insufficient {{symbol}} balance', { symbol: fromSymbol }),
+        action: null,
+        loading: false,
+      };
     if (belowMinimum)
-      return { label: t('Minimum swap is ${{min}}', { min: MIN_SWAP_USD }), action: null, loading: false };
+      return {
+        label: t('Minimum swap is ${{min}}', { min: MIN_SWAP_USD }),
+        action: null,
+        loading: false,
+      };
     if (quoteLoading) return { label: t('Fetching quote…'), action: null, loading: false };
     if (quoteError) return { label: t('Quote unavailable'), action: null, loading: false };
     if (!quote) return { label: t('Fetching quote…'), action: null, loading: false };
-    if (executing) return { label: t('Confirm in your passkey prompt…'), action: null, loading: true };
+    if (executing)
+      return { label: t('Confirm in your passkey prompt…'), action: null, loading: true };
     return { label: t('Swap with passkey'), action: handleExecute, loading: false };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -300,7 +312,9 @@ export function useLifiEngine({
       <Stack spacing={0.75}>
         {rate && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{t('Rate')}</Typography>
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+              {t('Rate')}
+            </Typography>
             <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
               1 {fromSymbol} ≈ {rate.toFixed(6)} {toSymbol}
             </Typography>
@@ -318,7 +332,9 @@ export function useLifiEngine({
         )}
         {feeToken && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{feeLabel}</Typography>
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+              {feeLabel}
+            </Typography>
             <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
               −{feeToken.toFixed(6, BigNumber.ROUND_DOWN)} {fromSymbol}
               {feeUsd ? ` (${fCurrency(feeUsd)})` : ''}
@@ -326,8 +342,12 @@ export function useLifiEngine({
           </Box>
         )}
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{t('Route')}</Typography>
-          <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F' }}>{quote.tool}</Typography>
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+            {t('Route')}
+          </Typography>
+          <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F' }}>
+            {quote.tool}
+          </Typography>
         </Box>
         {etaMinutes !== null && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -343,7 +363,15 @@ export function useLifiEngine({
     ) : null;
 
   const footer = (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', mt: '12px', justifyContent: 'center' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        mt: '12px',
+        justifyContent: 'center',
+      }}
+    >
       <Iconify icon="eva:info-outline" width={13} sx={{ color: 'rgba(10,10,15,0.35)' }} />
       <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
         {t('{{symbol}} is delivered to your own Normal wallet address.', { symbol: toSymbol })}

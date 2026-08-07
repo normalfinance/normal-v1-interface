@@ -68,7 +68,10 @@ export async function GET(request: NextRequest) {
     const url = `https://api.helius.xyz/v0/addresses/${address}/transactions?api-key=${apiKey}&limit=25`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
-      return NextResponse.json({ success: false, error: `Helius error (${res.status})` }, { status: 502 });
+      return NextResponse.json(
+        { success: false, error: `Helius error (${res.status})` },
+        { status: 502 }
+      );
     }
     const txs: HeliusTx[] = await res.json();
 
@@ -99,7 +102,12 @@ export async function GET(request: NextRequest) {
         address: counterparty || address,
         txHash: tx.signature,
         confirmed: true,
-        token: { address: '__sol__', symbol: 'SOL', iconUrl: SOL_ICON, amount: Math.abs(net) / 1e9 },
+        token: {
+          address: '__sol__',
+          symbol: 'SOL',
+          iconUrl: SOL_ICON,
+          amount: Math.abs(net) / 1e9,
+        },
       });
     }
 
@@ -113,6 +121,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, items });
   } catch (error) {
     logger.error('[activity/solana] error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch activity' }, { status: 502 });
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch activity' },
+      { status: 502 }
+    );
   }
 }

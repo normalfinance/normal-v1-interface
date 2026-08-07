@@ -51,12 +51,20 @@ function fmtStat(v: number): string {
 function fmtDate(t: number, now: number): string {
   const diff = now - t;
   if (diff < 7 * 24 * 3600 * 1000) {
-    return new Date(t).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return new Date(t).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
   }
   if (diff < 365 * 24 * 3600 * 1000) {
     return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
-  return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return new Date(t).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 // ─── Data helpers ──────────────────────────────────────────────────────────────
@@ -120,7 +128,11 @@ function filterByWindow(points: ChartPoint[], filter: TimeFilter, now: number): 
   const before = points.filter((p) => p.t < cutoff);
   const startV = before.length > 0 ? before[before.length - 1].v : 0;
 
-  if (after.length === 0) return [{ t: cutoff, v: startV }, { t: now, v: startV }];
+  if (after.length === 0)
+    return [
+      { t: cutoff, v: startV },
+      { t: now, v: startV },
+    ];
   return [{ t: cutoff, v: startV }, ...after];
 }
 
@@ -142,11 +154,7 @@ interface SavingsChartProps {
   apy?: number | null;
 }
 
-export function SavingsChart({
-  walletAddress,
-  currentEarnings,
-  apy,
-}: SavingsChartProps) {
+export function SavingsChart({ walletAddress, currentEarnings, apy }: SavingsChartProps) {
   const [filter, setFilter] = useState<TimeFilter>('1W');
   const { recentActivity, isLoading } = useUserActivity(walletAddress);
 
@@ -155,8 +163,7 @@ export function SavingsChart({
   const savingsActivity = useMemo(
     () =>
       recentActivity.filter(
-        (a): a is SavingsActivity =>
-          a.type === 'Savings Deposit' || a.type === 'Savings Withdraw'
+        (a): a is SavingsActivity => a.type === 'Savings Deposit' || a.type === 'Savings Withdraw'
       ),
     [recentActivity]
   );
@@ -172,15 +179,18 @@ export function SavingsChart({
   );
 
   // Period earnings from curve — one value per filter
-  const periodEarnings = useMemo(() => ({
-    '1W': getPeriodEarnings(allPoints, 7 * 24 * 3600 * 1000, now),
-    '1M': getPeriodEarnings(allPoints, 30 * 24 * 3600 * 1000, now),
-    '3M': getPeriodEarnings(allPoints, 90 * 24 * 3600 * 1000, now),
-    '6M': getPeriodEarnings(allPoints, 180 * 24 * 3600 * 1000, now),
-    '1Y': getPeriodEarnings(allPoints, 365 * 24 * 3600 * 1000, now),
-    '5Y': getPeriodEarnings(allPoints, 5 * 365 * 24 * 3600 * 1000, now),
-    'ALL': currentEarnings,
-  }), [allPoints, currentEarnings, now]);
+  const periodEarnings = useMemo(
+    () => ({
+      '1W': getPeriodEarnings(allPoints, 7 * 24 * 3600 * 1000, now),
+      '1M': getPeriodEarnings(allPoints, 30 * 24 * 3600 * 1000, now),
+      '3M': getPeriodEarnings(allPoints, 90 * 24 * 3600 * 1000, now),
+      '6M': getPeriodEarnings(allPoints, 180 * 24 * 3600 * 1000, now),
+      '1Y': getPeriodEarnings(allPoints, 365 * 24 * 3600 * 1000, now),
+      '5Y': getPeriodEarnings(allPoints, 5 * 365 * 24 * 3600 * 1000, now),
+      ALL: currentEarnings,
+    }),
+    [allPoints, currentEarnings, now]
+  );
 
   const PERIOD_LABEL: Record<TimeFilter, string> = {
     '1W': '7 Days',
@@ -189,7 +199,7 @@ export function SavingsChart({
     '6M': '6 Months',
     '1Y': '1 Year',
     '5Y': '5 Years',
-    'ALL': 'All Time',
+    ALL: 'All Time',
   };
 
   // Tight y-range: scale to visible data, not 0→globalMax
@@ -204,8 +214,7 @@ export function SavingsChart({
   // SVG coordinate functions
   const minT = chartPoints.length > 0 ? chartPoints[0].t : now - WINDOW_MS['1W']!;
   const maxT = now;
-  const xFn = (t: number) =>
-    maxT === minT ? CHART_W / 2 : ((t - minT) / (maxT - minT)) * CHART_W;
+  const xFn = (t: number) => (maxT === minT ? CHART_W / 2 : ((t - minT) / (maxT - minT)) * CHART_W);
   const yFn = (v: number) =>
     yHigh === yLow ? CHART_H / 2 : CHART_H - 4 - ((v - yLow) / (yHigh - yLow)) * (CHART_H - 10);
 
@@ -258,17 +267,21 @@ export function SavingsChart({
           fontWeight: 600,
           fontFamily: MONO,
           letterSpacing: '-0.01em',
-          color: accent ? '#4ADE80' : estimated ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.85)',
+          color: accent
+            ? '#4ADE80'
+            : estimated
+              ? 'rgba(255,255,255,0.5)'
+              : 'rgba(255,255,255,0.85)',
         }}
       >
-        {estimated ? '~' : ''}{fmtStat(value)}
+        {estimated ? '~' : ''}
+        {fmtStat(value)}
       </Typography>
     </Box>
   );
 
   return (
     <Box sx={{ mt: '20px', pt: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-
       {/* Stats + filter row */}
       <Box
         sx={{
@@ -379,7 +392,10 @@ export function SavingsChart({
                 {gridYs.map((gy, i) => (
                   <line
                     key={i}
-                    x1="0" y1={gy} x2={CHART_W} y2={gy}
+                    x1="0"
+                    y1={gy}
+                    x2={CHART_W}
+                    y2={gy}
                     stroke="rgba(255,255,255,0.05)"
                     strokeWidth="1"
                   />
@@ -405,8 +421,14 @@ export function SavingsChart({
                   </>
                 ) : (
                   <line
-                    x1="0" y1={CHART_H * 0.72} x2={CHART_W} y2={CHART_H * 0.72}
-                    stroke="#4ADE80" strokeWidth="1.5" strokeDasharray="7 5" strokeOpacity="0.2"
+                    x1="0"
+                    y1={CHART_H * 0.72}
+                    x2={CHART_W}
+                    y2={CHART_H * 0.72}
+                    stroke="#4ADE80"
+                    strokeWidth="1.5"
+                    strokeDasharray="7 5"
+                    strokeOpacity="0.2"
                   />
                 )}
               </svg>

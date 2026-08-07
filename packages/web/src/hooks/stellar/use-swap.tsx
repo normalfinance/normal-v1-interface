@@ -164,10 +164,7 @@ export function useSwap(): UseSwapReturn {
           const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signed = normalizeSignedXDR(signResult);
           if (!signed) throw new Error('Transaction signing failed — no signed XDR returned');
-          const signedTx = TransactionBuilder.fromXDR(
-            signed,
-            config.NETWORK_PASSPHRASE
-          );
+          const signedTx = TransactionBuilder.fromXDR(signed, config.NETWORK_PASSPHRASE);
           return horizonServer.submitTransaction(signedTx);
         };
 

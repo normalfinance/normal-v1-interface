@@ -307,7 +307,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         // 3. Sign + submit the deposit
         let depositResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
         try {
-          depositResult = await signAndSubmit(depositData.xdr, () => setTxStep('deposit_broadcast'));
+          depositResult = await signAndSubmit(depositData.xdr, () =>
+            setTxStep('deposit_broadcast')
+          );
         } catch (depositErr: any) {
           throw new Error(
             `${parseHorizonError(depositErr)} (Normal fee already charged — tx ${feeResult.hash})`
@@ -339,8 +341,12 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           // absolute target rather than a delta applied to whatever the value
           // happens to be now. If a refresh already landed with the deposit
           // included, this writes the same number instead of adding it twice.
-          const base =
-            positionBefore ?? { shares: '0', currentValue: '0', totalDeposited: '0', earnings: '0' };
+          const base = positionBefore ?? {
+            shares: '0',
+            currentValue: '0',
+            totalDeposited: '0',
+            earnings: '0',
+          };
           savingsRef.current.setPosition({
             ...base,
             currentValue: (parseFloat(base.currentValue) + netAmount).toFixed(7),
@@ -481,7 +487,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         setTxStep('withdraw_sign');
         let withdrawResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
         try {
-          withdrawResult = await signAndSubmit(withdrawData.xdr, () => setTxStep('withdraw_broadcast'));
+          withdrawResult = await signAndSubmit(withdrawData.xdr, () =>
+            setTxStep('withdraw_broadcast')
+          );
         } catch (withdrawErr: any) {
           throw new Error(parseSigningError(withdrawErr));
         }
@@ -509,7 +517,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           setTxStep('commission_sign');
           let commissionResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
           try {
-            commissionResult = await signAndSubmit(commissionData.xdr, () => setTxStep('commission_broadcast'));
+            commissionResult = await signAndSubmit(commissionData.xdr, () =>
+              setTxStep('commission_broadcast')
+            );
           } catch (commissionErr: any) {
             throw new Error(`Yield commission payment failed: ${parseSigningError(commissionErr)}`);
           }

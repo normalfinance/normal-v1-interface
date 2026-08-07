@@ -437,7 +437,9 @@ export const useNormalWallet = () => {
     isTurnkeyStellarAddress(addr).then((managed) => {
       if (!cancelled) setIsTurnkeyManaged(managed);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [normalWalletStore.publicKey]);
 
   // canSign is true when the wallet can sign transactions: a keypair is in

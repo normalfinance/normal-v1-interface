@@ -86,13 +86,19 @@ export async function POST(req: Request) {
       to: evmTarget as `0x${string}`,
       amountWei: shortfall,
     });
-    await prisma.cctpTransfer.update({ where: { id: transfer.id }, data: { gasTopUpTxHash: txHash } });
+    await prisma.cctpTransfer.update({
+      where: { id: transfer.id },
+      data: { gasTopUpTxHash: txHash },
+    });
     return NextResponse.json({ txHash, amountWei: shortfall.toString() });
   } catch (e: any) {
     // Release the lock back to its prior value so a retry can reclaim + re-fund.
     await prisma.cctpTransfer.update({
       where: { id: transfer.id },
-      data: { gasTopUpTxHash: prior === 'pending' ? null : prior, errorDetail: String(e?.message ?? e).slice(0, 500) },
+      data: {
+        gasTopUpTxHash: prior === 'pending' ? null : prior,
+        errorDetail: String(e?.message ?? e).slice(0, 500),
+      },
     });
     return NextResponse.json({ error: 'top-up failed' }, { status: 502 });
   }

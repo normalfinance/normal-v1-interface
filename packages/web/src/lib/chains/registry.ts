@@ -162,12 +162,15 @@ export const ADDRESS_FIELDS = Array.from(
  * Prisma `select` fragment for the address columns, so queries don't list them
  * by hand: `select: { subOrgId: true, ...ADDRESS_SELECT }`.
  */
-export const ADDRESS_SELECT = Object.fromEntries(
-  ADDRESS_FIELDS.map((f) => [f, true])
-) as Record<AddressField, true>;
+export const ADDRESS_SELECT = Object.fromEntries(ADDRESS_FIELDS.map((f) => [f, true])) as Record<
+  AddressField,
+  true
+>;
 
 /** Pull just the address fields off a wallet row, for API responses. */
-export function pickAddresses(row: ChainAddresses | null | undefined): Record<AddressField, string | null> {
+export function pickAddresses(
+  row: ChainAddresses | null | undefined
+): Record<AddressField, string | null> {
   return Object.fromEntries(ADDRESS_FIELDS.map((f) => [f, row?.[f] ?? null])) as Record<
     AddressField,
     string | null

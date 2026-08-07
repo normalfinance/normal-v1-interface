@@ -111,7 +111,12 @@ export async function GET(request: NextRequest) {
           address: nonUserOutputs[0]?.scriptpubkey_address ?? tx.txid,
           txHash: tx.txid,
           confirmed: isConfirmed,
-          token: { address: '__btc__', symbol: 'BTC', iconUrl: btcIcon, amount: sentToOthers / 1e8 },
+          token: {
+            address: '__btc__',
+            symbol: 'BTC',
+            iconUrl: btcIcon,
+            amount: sentToOthers / 1e8,
+          },
         });
       } else if (receivedByUser > 0) {
         const senderAddress = isFromUser
@@ -150,6 +155,9 @@ export async function GET(request: NextRequest) {
     } catch {
       /* ignore */
     }
-    return NextResponse.json({ success: false, error: 'Failed to fetch activity' }, { status: 502 });
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch activity' },
+      { status: 502 }
+    );
   }
 }

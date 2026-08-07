@@ -74,9 +74,7 @@ export const GET = withAuth(async (request: NextRequest) => {
   try {
     // 1) Community directory — covers exchanges that never set the on-chain
     //    flag (empirically including Coinbase).
-    const dir = await fetchWithTimeout(
-      `https://api.stellar.expert/explorer/directory/${address}`
-    );
+    const dir = await fetchWithTimeout(`https://api.stellar.expert/explorer/directory/${address}`);
     if (dir.ok) {
       const entry = await dir.json();
       if (Array.isArray(entry?.tags) && entry.tags.includes('memo-required')) {

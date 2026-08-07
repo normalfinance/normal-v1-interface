@@ -49,11 +49,7 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise
 
 function parseEventAmount(event: any): number {
   const raw =
-    event.amount ??
-    event.assetAmount ??
-    event.assets?.[0]?.amount ??
-    event.underlyingAmount ??
-    0;
+    event.amount ?? event.assetAmount ?? event.assets?.[0]?.amount ?? event.underlyingAmount ?? 0;
   return Number(raw) || 0;
 }
 
@@ -80,7 +76,9 @@ async function fetchAllEvents(
   let offset = 0;
 
   while (true) {
-    const url = new URL(`${DEFINDEX_API_BASE}/account/${walletAddress}/vault/${vaultAddress}/events`);
+    const url = new URL(
+      `${DEFINDEX_API_BASE}/account/${walletAddress}/vault/${vaultAddress}/events`
+    );
     url.searchParams.set('network', network);
     url.searchParams.set('limit', String(PAGE_SIZE));
     url.searchParams.set('offset', String(offset));
@@ -176,50 +174,57 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch on-chain balance, events, DB records, and account position (lifetime earnings) in parallel.
-    const [balanceResult, eventsResult, depositRecords, accountPositionResult] = await Promise.allSettled([
-      withRateLimitRetry(
-        () => withTimeout(sdk.getVaultBalance(VAULT_ADDRESS, userAddress), 25_000, 'getVaultBalance'),
-        'getVaultBalance'
-      ),
-      cachedEventsTotal != null
-        ? Promise.resolve([] as any[])
-        : withRateLimitRetry(
-            () =>
-              withTimeout(
-                fetchAllEvents(userAddress, VAULT_ADDRESS, networkParam, process.env.DEFINDEX_API_KEY),
-                15_000,
-                'fetchAllEvents'
-              ),
-            'fetchAllEvents'
-          ),
-      prisma.vaultDeposit.findMany({
-        where: { walletAddress: userAddress, vaultAddress: VAULT_ADDRESS },
-        select: { type: true, amount: true },
-      }),
-      withTimeout(
-        fetch(
-          `${DEFINDEX_API_BASE}/account/${userAddress}/vault/${VAULT_ADDRESS}?network=${networkParam}`,
-          {
-            headers: process.env.DEFINDEX_API_KEY
-              ? { Authorization: `Bearer ${process.env.DEFINDEX_API_KEY}` }
-              : {},
-            next: { revalidate: 0 },
-          }
-        ).then(async (res) => {
-          if (!res.ok) return null;
-          const json = await res.json();
-          const perf = json?.performance ?? {};
-          const earned = perf.totalInterestEarned;
-          const deposited = perf.totalDeposited;
-          return {
-            totalInterestEarned: earned != null ? Number(earned) / DECIMALS : null,
-            totalDeposited: deposited != null ? Number(deposited) / DECIMALS : null,
-          };
+    const [balanceResult, eventsResult, depositRecords, accountPositionResult] =
+      await Promise.allSettled([
+        withRateLimitRetry(
+          () =>
+            withTimeout(sdk.getVaultBalance(VAULT_ADDRESS, userAddress), 25_000, 'getVaultBalance'),
+          'getVaultBalance'
+        ),
+        cachedEventsTotal != null
+          ? Promise.resolve([] as any[])
+          : withRateLimitRetry(
+              () =>
+                withTimeout(
+                  fetchAllEvents(
+                    userAddress,
+                    VAULT_ADDRESS,
+                    networkParam,
+                    process.env.DEFINDEX_API_KEY
+                  ),
+                  15_000,
+                  'fetchAllEvents'
+                ),
+              'fetchAllEvents'
+            ),
+        prisma.vaultDeposit.findMany({
+          where: { walletAddress: userAddress, vaultAddress: VAULT_ADDRESS },
+          select: { type: true, amount: true },
         }),
-        10_000,
-        'fetchAccountPosition'
-      ),
-    ]);
+        withTimeout(
+          fetch(
+            `${DEFINDEX_API_BASE}/account/${userAddress}/vault/${VAULT_ADDRESS}?network=${networkParam}`,
+            {
+              headers: process.env.DEFINDEX_API_KEY
+                ? { Authorization: `Bearer ${process.env.DEFINDEX_API_KEY}` }
+                : {},
+              next: { revalidate: 0 },
+            }
+          ).then(async (res) => {
+            if (!res.ok) return null;
+            const json = await res.json();
+            const perf = json?.performance ?? {};
+            const earned = perf.totalInterestEarned;
+            const deposited = perf.totalDeposited;
+            return {
+              totalInterestEarned: earned != null ? Number(earned) / DECIMALS : null,
+              totalDeposited: deposited != null ? Number(deposited) / DECIMALS : null,
+            };
+          }),
+          10_000,
+          'fetchAccountPosition'
+        ),
+      ]);
 
     if (balanceResult.status === 'rejected') {
       console.error('[user-position] getVaultBalance failed:', String(balanceResult.reason));
@@ -252,7 +257,10 @@ export async function GET(request: NextRequest) {
       accountPositionResult.status === 'fulfilled' ? accountPositionResult.value : null;
 
     if (accountPositionResult.status === 'rejected') {
-      console.error('[user-position] fetchAccountPosition failed:', String(accountPositionResult.reason));
+      console.error(
+        '[user-position] fetchAccountPosition failed:',
+        String(accountPositionResult.reason)
+      );
     } else {
       console.log('[user-position] accountPosition:', JSON.stringify(accountPosition));
     }
@@ -288,7 +296,9 @@ export async function GET(request: NextRequest) {
       } else {
         totalDeposited = records.reduce(
           (sum: number, r: { type: string; amount: string }) =>
-            r.type === 'deposit' ? sum + (parseFloat(r.amount) || 0) : sum - (parseFloat(r.amount) || 0),
+            r.type === 'deposit'
+              ? sum + (parseFloat(r.amount) || 0)
+              : sum - (parseFloat(r.amount) || 0),
           0
         );
         if (totalDeposited < 0) totalDeposited = 0;
@@ -301,7 +311,10 @@ export async function GET(request: NextRequest) {
     // Do NOT return null when the balance is a legitimate 0 (e.g. after a full withdrawal) —
     // in that case fall through and return a proper zero position so the UI shows 0s.
     if (balanceResult.status === 'rejected') {
-      console.warn('[user-position] getVaultBalance failed, preserving client cache for', userAddress);
+      console.warn(
+        '[user-position] getVaultBalance failed, preserving client cache for',
+        userAddress
+      );
       return NextResponse.json({ success: true, userPosition: null });
     }
 

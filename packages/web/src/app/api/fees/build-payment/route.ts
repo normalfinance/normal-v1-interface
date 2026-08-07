@@ -50,7 +50,10 @@ export async function POST(request: NextRequest) {
       if (clientAssetIssuer) {
         if (clientAssetIssuer !== canonicalIssuer && clientAssetIssuer !== blendIssuer) {
           return NextResponse.json(
-            { success: false, error: 'assetIssuer does not match a known USDC issuer for this network' },
+            {
+              success: false,
+              error: 'assetIssuer does not match a known USDC issuer for this network',
+            },
             { status: 400 }
           );
         }

@@ -98,7 +98,10 @@ export async function POST(request: NextRequest) {
     // 1011 = integrator fee wallet not configured for this chain in the
     // LI.FI portal — retry without the fee rather than blocking the swap.
     if (!res.ok && fee) {
-      const err = await res.clone().json().catch(() => null);
+      const err = await res
+        .clone()
+        .json()
+        .catch(() => null);
       if (err?.code === 1011) {
         logger.warn('[lifi/quote] Integrator fee not configured for chain, retrying feeless', {
           fromSymbol,
@@ -118,7 +121,7 @@ export async function POST(request: NextRequest) {
       const noRoute = res.status === 404 || /no (available )?(quote|route)/i.test(raw);
       const error = noRoute
         ? 'No route found for this amount — try a larger amount or a different pair.'
-        : err.message ?? `Quote failed (${res.status})`;
+        : (err.message ?? `Quote failed (${res.status})`);
       return NextResponse.json({ success: false, error }, { status: res.status });
     }
 

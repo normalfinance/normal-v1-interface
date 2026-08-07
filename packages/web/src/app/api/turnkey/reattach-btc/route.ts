@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
       });
       if (
         accounts.some(
-          (a) => a.address === address && a.addressFormat === 'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH'
+          (a) =>
+            a.address === address && a.addressFormat === 'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH'
         )
       ) {
         found = true;

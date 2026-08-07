@@ -31,23 +31,48 @@ function PortfolioSkeleton() {
   return (
     <DashboardContent maxWidth="xl">
       {/* Hero skeleton */}
-      <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }} />
+      <Skeleton
+        variant="rectangular"
+        height={220}
+        sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }}
+      />
 
       {/* Holdings + Savings skeleton */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px', mt: '20px' }}>
-        <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
-        <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
+          gap: '20px',
+          mt: '20px',
+        }}
+      >
+        <Skeleton
+          variant="rectangular"
+          height={320}
+          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+        />
+        <Skeleton
+          variant="rectangular"
+          height={320}
+          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+        />
       </Box>
 
       {/* Activity skeleton */}
-      <Skeleton variant="rectangular" height={280} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }} />
+      <Skeleton
+        variant="rectangular"
+        height={280}
+        sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }}
+      />
     </DashboardContent>
   );
 }
 
 export default function PortfolioView() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { user } = useSupabaseAuth();
   // Single source of truth for all balances + savings.
@@ -79,7 +104,6 @@ export default function PortfolioView() {
     if (!balancesLoading && !savings.positionLoading) setFirstPaintDone(true);
   }, [balancesLoading, savings.positionLoading]);
 
-
   // ONE source for every chain, including XLM/USDC.
   //
   // This page used to read Stellar assets from the persisted token store while
@@ -91,9 +115,7 @@ export default function PortfolioView() {
   const walletTokens = useMemo(
     () =>
       (['XLM', 'USDC', 'BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[])
-        .filter(
-          (a): a is PortfolioAsset => !!a && a.balance != null && BigNumber(a.balance).gt(0)
-        )
+        .filter((a): a is PortfolioAsset => !!a && a.balance != null && BigNumber(a.balance).gt(0))
         .map(portfolioAssetToToken),
     [getAsset]
   );

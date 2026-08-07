@@ -47,7 +47,11 @@ export default function MyHoldingsTableRow({ holding }: MyHoldingsTableRowProps)
   const balanceDisplay = BigNumber(token.balance).toFixed(token.decimals > 4 ? 4 : token.decimals);
 
   return (
-    <TableRow hover onClick={handleRowClick} sx={{ cursor: isSavings || isNormal ? 'pointer' : 'default' }}>
+    <TableRow
+      hover
+      onClick={handleRowClick}
+      sx={{ cursor: isSavings || isNormal ? 'pointer' : 'default' }}
+    >
       {/* Asset name + icon */}
       <TableCell>
         <Stack direction="row" spacing={1.5} alignItems="center">

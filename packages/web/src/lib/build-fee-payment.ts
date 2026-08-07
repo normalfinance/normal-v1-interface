@@ -31,7 +31,14 @@ export interface BuildFeePaymentParams {
  * commissions as a separate pre-step around Soroban invocations.
  */
 export async function buildFeePaymentXdr(params: BuildFeePaymentParams): Promise<string> {
-  const { caller, destination, amount, assetCode, assetIssuer, config = constants.StellarConfig } = params;
+  const {
+    caller,
+    destination,
+    amount,
+    assetCode,
+    assetIssuer,
+    config = constants.StellarConfig,
+  } = params;
 
   if (!isValidStellarAddress(caller)) {
     throw new Error('Invalid caller address');

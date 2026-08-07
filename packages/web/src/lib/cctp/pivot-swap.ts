@@ -58,13 +58,19 @@ export async function executePivotSwap(params: {
     }),
   });
   const data = await res.json();
-  if (!res.ok || !data.success) throw new Error(data.error ?? 'No route from Base — try again shortly');
+  if (!res.ok || !data.success)
+    throw new Error(data.error ?? 'No route from Base — try again shortly');
   const quote = data.quote;
   const approvalAddress: `0x${string}` | undefined = quote.estimate?.approvalAddress;
   const txr = quote.transactionRequest;
   if (!txr?.to || !txr?.data) throw new Error('LI.FI returned no executable transaction');
 
-  const signAndSend = async (to: `0x${string}`, dataHex: `0x${string}`, value: bigint, gasHint?: bigint) => {
+  const signAndSend = async (
+    to: `0x${string}`,
+    dataHex: `0x${string}`,
+    value: bigint,
+    gasHint?: bigint
+  ) => {
     const [nonce, fees, gas] = await Promise.all([
       client.getTransactionCount({ address: from, blockTag: 'pending' }),
       client.estimateFeesPerGas(),

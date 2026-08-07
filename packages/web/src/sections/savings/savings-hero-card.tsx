@@ -25,7 +25,6 @@ interface SavingsHeroCardProps {
   walletAddress?: string;
 }
 
-
 export function SavingsHeroCard({
   currentValue,
   totalDeposited,
@@ -34,12 +33,11 @@ export function SavingsHeroCard({
   loading,
   walletAddress,
 }: SavingsHeroCardProps) {
-  const earningsPct =
-    totalDeposited > 0 ? ((earnings / totalDeposited) * 100).toFixed(2) : '0.00';
+  const earningsPct = totalDeposited > 0 ? ((earnings / totalDeposited) * 100).toFixed(2) : '0.00';
 
   const estAnnual = apy !== null ? currentValue * (apy / 100) : null;
-  const estWeekly = apy !== null ? currentValue * (apy / 100) / 52 : null;
-  const estMonthly = apy !== null ? currentValue * (apy / 100) / 12 : null;
+  const estWeekly = apy !== null ? (currentValue * (apy / 100)) / 52 : null;
+  const estMonthly = apy !== null ? (currentValue * (apy / 100)) / 12 : null;
 
   const fmt = (n: number) =>
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -85,17 +83,47 @@ export function SavingsHeroCard({
       >
         {/* Current Balance — dollar value large, 7-decimal USDC below */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.02em' }}>
+          <Typography
+            sx={{
+              fontSize: '12px',
+              fontWeight: 500,
+              color: 'rgba(255,255,255,0.45)',
+              letterSpacing: '0.02em',
+            }}
+          >
             Current Balance
           </Typography>
           {loading && currentValue === 0 ? (
-            <Skeleton variant="text" width={90} height={28} sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+            <Skeleton
+              variant="text"
+              width={90}
+              height={28}
+              sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+            />
           ) : (
             <>
-              <Typography sx={{ fontSize: '22px', fontWeight: 700, fontFamily: MONO, letterSpacing: '-0.03em', color: '#FFFFFF', lineHeight: 1.1 }}>
+              <Typography
+                sx={{
+                  fontSize: '22px',
+                  fontWeight: 700,
+                  fontFamily: MONO,
+                  letterSpacing: '-0.03em',
+                  color: '#FFFFFF',
+                  lineHeight: 1.1,
+                }}
+              >
                 ${fmt(currentValue)}
               </Typography>
-              <Typography sx={{ fontSize: '12px', fontWeight: 500, fontFamily: MONO, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
+              <Typography
+                sx={{
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  fontFamily: MONO,
+                  letterSpacing: '-0.01em',
+                  color: 'rgba(255,255,255,0.35)',
+                  lineHeight: 1,
+                }}
+              >
                 {fmt7(currentValue)} USDC
               </Typography>
             </>
@@ -106,17 +134,47 @@ export function SavingsHeroCard({
 
         {/* Current Earnings */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.02em' }}>
+          <Typography
+            sx={{
+              fontSize: '12px',
+              fontWeight: 500,
+              color: 'rgba(255,255,255,0.45)',
+              letterSpacing: '0.02em',
+            }}
+          >
             {`Current Earnings (+${earningsPct}%)`}
           </Typography>
           {loading && earnings === 0 ? (
-            <Skeleton variant="text" width={90} height={28} sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+            <Skeleton
+              variant="text"
+              width={90}
+              height={28}
+              sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+            />
           ) : (
             <>
-              <Typography sx={{ fontSize: '22px', fontWeight: 700, fontFamily: MONO, letterSpacing: '-0.03em', color: earnings > 0 ? '#4ADE80' : '#FFFFFF', lineHeight: 1.1 }}>
+              <Typography
+                sx={{
+                  fontSize: '22px',
+                  fontWeight: 700,
+                  fontFamily: MONO,
+                  letterSpacing: '-0.03em',
+                  color: earnings > 0 ? '#4ADE80' : '#FFFFFF',
+                  lineHeight: 1.1,
+                }}
+              >
                 ${fmt(earnings)}
               </Typography>
-              <Typography sx={{ fontSize: '12px', fontWeight: 500, fontFamily: MONO, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
+              <Typography
+                sx={{
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  fontFamily: MONO,
+                  letterSpacing: '-0.01em',
+                  color: 'rgba(255,255,255,0.35)',
+                  lineHeight: 1,
+                }}
+              >
                 {fmt7(earnings)} USDC
               </Typography>
             </>
@@ -128,31 +186,85 @@ export function SavingsHeroCard({
         {/* Est. column: Annual (big) + Weekly / Monthly side by side (sub) */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <Box>
-            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.02em', mb: '4px' }}>
+            <Typography
+              sx={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: 'rgba(255,255,255,0.45)',
+                letterSpacing: '0.02em',
+                mb: '4px',
+              }}
+            >
               Est. Annual
             </Typography>
             {estAnnual === null || loading ? (
-              <Skeleton variant="text" width={90} height={28} sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+              <Skeleton
+                variant="text"
+                width={90}
+                height={28}
+                sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+              />
             ) : (
-              <Typography sx={{ fontSize: '22px', fontWeight: 700, fontFamily: MONO, letterSpacing: '-0.03em', color: '#FFFFFF', lineHeight: 1.1 }}>
+              <Typography
+                sx={{
+                  fontSize: '22px',
+                  fontWeight: 700,
+                  fontFamily: MONO,
+                  letterSpacing: '-0.03em',
+                  color: '#FFFFFF',
+                  lineHeight: 1.1,
+                }}
+              >
                 ${fmt(estAnnual)}
               </Typography>
             )}
           </Box>
           <Box sx={{ display: 'flex', gap: '16px' }}>
             <Box>
-              <Typography sx={{ fontSize: '11px', fontWeight: 500, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.02em', mb: '2px' }}>
+              <Typography
+                sx={{
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  color: 'rgba(255,255,255,0.3)',
+                  letterSpacing: '0.02em',
+                  mb: '2px',
+                }}
+              >
                 Est. Weekly
               </Typography>
-              <Typography sx={{ fontSize: '14px', fontWeight: 600, fontFamily: MONO, letterSpacing: '-0.02em', color: 'rgba(255,255,255,0.6)' }}>
+              <Typography
+                sx={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  fontFamily: MONO,
+                  letterSpacing: '-0.02em',
+                  color: 'rgba(255,255,255,0.6)',
+                }}
+              >
                 ~${fmt(estWeekly ?? 0)}
               </Typography>
             </Box>
             <Box>
-              <Typography sx={{ fontSize: '11px', fontWeight: 500, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.02em', mb: '2px' }}>
+              <Typography
+                sx={{
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  color: 'rgba(255,255,255,0.3)',
+                  letterSpacing: '0.02em',
+                  mb: '2px',
+                }}
+              >
                 Est. Monthly
               </Typography>
-              <Typography sx={{ fontSize: '14px', fontWeight: 600, fontFamily: MONO, letterSpacing: '-0.02em', color: 'rgba(255,255,255,0.6)' }}>
+              <Typography
+                sx={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  fontFamily: MONO,
+                  letterSpacing: '-0.02em',
+                  color: 'rgba(255,255,255,0.6)',
+                }}
+              >
                 ~${fmt(estMonthly ?? 0)}
               </Typography>
             </Box>
@@ -163,15 +275,45 @@ export function SavingsHeroCard({
 
         {/* APY */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.02em' }}>
+          <Typography
+            sx={{
+              fontSize: '12px',
+              fontWeight: 500,
+              color: 'rgba(255,255,255,0.45)',
+              letterSpacing: '0.02em',
+            }}
+          >
             Current APY
           </Typography>
           {apy === null ? (
-            <Skeleton variant="text" width={80} height={28} sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+            <Skeleton
+              variant="text"
+              width={80}
+              height={28}
+              sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+            />
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#4ADE80', flexShrink: 0, boxShadow: '0 0 0 2px rgba(74,222,128,0.25)' }} />
-              <Typography sx={{ fontSize: '22px', fontWeight: 700, fontFamily: MONO, letterSpacing: '-0.03em', color: '#4ADE80', lineHeight: 1.1 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: '#4ADE80',
+                  flexShrink: 0,
+                  boxShadow: '0 0 0 2px rgba(74,222,128,0.25)',
+                }}
+              />
+              <Typography
+                sx={{
+                  fontSize: '22px',
+                  fontWeight: 700,
+                  fontFamily: MONO,
+                  letterSpacing: '-0.03em',
+                  color: '#4ADE80',
+                  lineHeight: 1.1,
+                }}
+              >
                 {Number(apy).toFixed(2)}%
               </Typography>
             </Box>

@@ -37,7 +37,12 @@ export function inspectRateLimit(error: unknown): RateLimitInfo {
     return none;
   }
 
-  const err = error as { statusCode?: number; status?: number; retryAfter?: number; message?: string };
+  const err = error as {
+    statusCode?: number;
+    status?: number;
+    retryAfter?: number;
+    message?: string;
+  };
   const status = err.statusCode ?? err.status;
   const messageHas429 = typeof err.message === 'string' && err.message.includes('429');
 

@@ -33,7 +33,7 @@ function bytesToHex(bytes: Uint8Array): string {
 
 export function createSolanaAdapter(
   solanaAddress: string,
-  onError?: (msg: string) => void,
+  onError?: (msg: string) => void
 ): SendAdapter {
   return {
     network: 'solana',
@@ -83,7 +83,7 @@ export function createSolanaAdapter(
         // ed25519 signs the raw message, no pre-hashing.
         const rpId =
           typeof window !== 'undefined'
-            ? process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname
+            ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
             : 'localhost';
         const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
         const { TurnkeyClient } = await import('@turnkey/http');

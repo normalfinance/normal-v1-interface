@@ -70,11 +70,7 @@ export default function MoneyGramPendingBanner() {
         ))}
       </Stack>
 
-      <MoneyGramDetailModal
-        open={!!detailId}
-        txId={detailId}
-        onClose={() => setDetailId(null)}
-      />
+      <MoneyGramDetailModal open={!!detailId} txId={detailId} onClose={() => setDetailId(null)} />
     </>
   );
 }

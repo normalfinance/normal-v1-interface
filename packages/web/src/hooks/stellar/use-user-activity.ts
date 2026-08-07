@@ -161,7 +161,9 @@ function mapCctpTransfer(tr: CctpTransferRow): Extract<Activity, { type: 'Swap' 
   const outbound = tr.direction === 'stellar_to_crosschain';
   const refunded = tr.status === 'REFUNDED';
   const failed = tr.status === 'FAILED';
-  const succeeded = outbound ? tr.status === 'COMPLETED' && !!tr.dstSwapTxHash : tr.status === 'COMPLETED';
+  const succeeded = outbound
+    ? tr.status === 'COMPLETED' && !!tr.dstSwapTxHash
+    : tr.status === 'COMPLETED';
   return {
     id: `cctp:${tr.id}`,
     timestamp: Date.parse(tr.createdAt),
@@ -215,12 +217,9 @@ function mapMgiDbToActivity(rows: MgiDbTransaction[]): Activity[] {
         pending: PENDING_MGI_STATUSES.has(tx.status),
         failed: FAILED_MGI_STATUSES.has(tx.status),
       };
-      return tx.kind === 'deposit'
-        ? { ...base, type: 'Buy' }
-        : { ...base, type: 'Sell' };
+      return tx.kind === 'deposit' ? { ...base, type: 'Buy' } : { ...base, type: 'Sell' };
     });
 }
-
 
 async function fetchWalletActivity(url: string): Promise<Activity[]> {
   const res = await fetch(url);
@@ -301,13 +300,21 @@ export function useUserActivity(
   // cache across tabs and — critically — have a server-side timeout. The
   // dedupe windows match each route's TTL: 60s for Stellar, 45s for Bitcoin
   // (shorter because that feed carries pending transactions).
-  const { data: stellarData, isLoading: stellarLoading, mutate: mutateStellar } = useSWR<Activity[]>(
+  const {
+    data: stellarData,
+    isLoading: stellarLoading,
+    mutate: mutateStellar,
+  } = useSWR<Activity[]>(
     walletAddress ? `${CHAINS.stellar.activityPath}?address=${walletAddress}` : null,
     fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 60_000 }
   );
 
-  const { data: btcData, isLoading: btcLoading, mutate: mutateBtc } = useSWR<Activity[]>(
+  const {
+    data: btcData,
+    isLoading: btcLoading,
+    mutate: mutateBtc,
+  } = useSWR<Activity[]>(
     bitcoinAddress ? `${CHAINS.bitcoin.activityPath}?address=${bitcoinAddress}` : null,
     fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 45_000 }
@@ -318,13 +325,21 @@ export function useUserActivity(
   // that only produces round-trips that return the same bytes. The dedupe
   // window matches the TTL; freshness after a user action comes from the
   // `nf:activity-updated` handler below, which re-fetches with `refresh=1`.
-  const { data: ethData, isLoading: ethLoading, mutate: mutateEth } = useSWR<Activity[]>(
+  const {
+    data: ethData,
+    isLoading: ethLoading,
+    mutate: mutateEth,
+  } = useSWR<Activity[]>(
     ethereumAddress ? `${CHAINS.ethereum.activityPath}?address=${ethereumAddress}` : null,
     fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 300_000 }
   );
 
-  const { data: solData, isLoading: solLoading, mutate: mutateSol } = useSWR<Activity[]>(
+  const {
+    data: solData,
+    isLoading: solLoading,
+    mutate: mutateSol,
+  } = useSWR<Activity[]>(
     solanaAddress ? `${CHAINS.solana.activityPath}?address=${solanaAddress}` : null,
     fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 300_000 }
@@ -372,7 +387,11 @@ export function useUserActivity(
 
   // CCTP cross-ecosystem swaps (any signed-in user with a wallet). Refetches on
   // focus/interval so an in-flight swap flips from Pending to done on its own.
-  const { data: cctpTransfers, isLoading: cctpLoading, mutate: mutateCctp } = useSWR<CctpTransferRow[]>(
+  const {
+    data: cctpTransfers,
+    isLoading: cctpLoading,
+    mutate: mutateCctp,
+  } = useSWR<CctpTransferRow[]>(
     walletAddress || solanaAddress || ethereumAddress || bitcoinAddress ? 'cctp-activity' : null,
     fetchCctpTransfers,
     { revalidateOnFocus: true, dedupingInterval: 20_000, refreshInterval: 30_000 }
