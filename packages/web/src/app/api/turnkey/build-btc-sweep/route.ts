@@ -1,11 +1,10 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { Psbt, networks, payments } from 'bitcoinjs-lib';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ---------------------------------------------------------------------------
 // POST /api/turnkey/build-btc-sweep
@@ -34,11 +33,7 @@ function p2wpkhOutputScript(addr: string): Buffer {
   return Buffer.from(output);
 }
 
-export async function POST(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   let body: { fromAddress?: string };
   try {
     body = await request.json();
@@ -146,4 +141,4 @@ export async function POST(request: NextRequest) {
     const detail = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: `Failed to build sweep: ${detail}` }, { status: 500 });
   }
-}
+});

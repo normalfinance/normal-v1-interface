@@ -4,11 +4,10 @@ import type { NetworkType } from '@normalfinance/utils';
 import type { PortfolioAsset } from '@/types/portfolio';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { redis } from '@/server/rateLimiter';
 import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { CHAIN_IDS, ADDRESS_SELECT, getChainAddress } from '@/lib/chains/registry';
 import { aggregatePortfolio, applyStaleFallback } from '@/lib/portfolio/aggregate';
 
@@ -28,12 +27,8 @@ export const dynamic = 'force-dynamic';
 const RESPONSE_TTL_SECONDS = 15;
 const SNAPSHOT_TTL_SECONDS = 3600;
 
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req: NextRequest, { user }) => {
   try {
-    const token = getAccessToken(req);
-    const user = await getAuthenticatedUser(token);
-    if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-
     const networkParam = req.nextUrl.searchParams.get('network');
     const network: NetworkType = networkParam === 'testnet' ? 'testnet' : 'mainnet';
     const stellarParam = req.nextUrl.searchParams.get('stellar');
@@ -109,4 +104,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

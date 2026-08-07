@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { getClientIP } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
-import { getClientIP, getAccessToken } from '@/utils/http';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 const ActivateReferralSchema = z.object({
@@ -14,16 +14,8 @@ const ActivateReferralSchema = z.object({
   refereeWalletAddress: z.string().min(1, 'Referee wallet address is required'),
 });
 
-async function activateReferralHandler(request: NextRequest) {
+const activateReferralHandler = withAuth(async (request: NextRequest, { user }) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     const validation = ActivateReferralSchema.safeParse(body);
 
@@ -111,6 +103,6 @@ async function activateReferralHandler(request: NextRequest) {
 
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
 export const POST = createEdgeConfigHandler(activateReferralHandler, 'referral-activate');

@@ -6,6 +6,7 @@ import type { SwapMode, SwapQuote, SwapDisplayMeta } from '@/types/swap';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useState, useCallback } from 'react';
+import { buildAuthHeaders } from '@/utils/http';
 import { usePersistStore } from '@normalfinance/state';
 import { getSwapFeeAmount } from '@/utils/normal-fees';
 import { postTransactionLog } from '@/lib/log-transaction';
@@ -86,7 +87,7 @@ export function useSwap(): UseSwapReturn {
 
         const response = await fetch('/api/swap/quote', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             token_in_address: tokenIn,
             token_out_address: tokenOut,
@@ -193,7 +194,7 @@ export function useSwap(): UseSwapReturn {
         // 1. Build + sign + submit the Normal fee payment first
         const feeResponse = await fetch('/api/fees/build-payment', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             caller: walletAddress,
             amount: feeAmount.toFixed(7),
@@ -222,7 +223,7 @@ export function useSwap(): UseSwapReturn {
 
         const quoteResponse = await fetch('/api/swap/quote', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             token_in_address: swapQuote.tokenIn,
             token_out_address: swapQuote.tokenOut,

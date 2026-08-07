@@ -446,7 +446,7 @@ export function useUserActivity(
     async () => {
       const res = await fetch('/api/lifi/statuses', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           swaps: lifiSwaps.map((s) => ({
             txHash: s.txHash,

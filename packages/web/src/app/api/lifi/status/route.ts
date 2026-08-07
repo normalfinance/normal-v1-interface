@@ -1,13 +1,23 @@
 import type { NextRequest } from 'next/server';
 
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { rateLimiter } from '@/server/rateLimiter';
 
 // ---------------------------------------------------------------------------
 // GET /api/lifi/status?txHash=…&fromChain=…&toChain=…
 // Proxies LI.FI's cross-chain status endpoint (key stays server-side).
 // ---------------------------------------------------------------------------
 
-export async function GET(request: NextRequest) {
+// Unauthenticated until 2026-08-07 (finding #50): any anonymous caller could
+// drive this route — and with it, quota we pay for. Its only legitimate
+// callers are signed-in app flows, which send auth headers.
+export const GET = withAuth(async (request: NextRequest, { user }) => {
+  const { success: withinLimit } = await rateLimiter.limit(user.id);
+  if (!withinLimit) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   const txHash = request.nextUrl.searchParams.get('txHash');
   const fromChain = request.nextUrl.searchParams.get('fromChain');
   const toChain = request.nextUrl.searchParams.get('toChain');
@@ -40,4 +50,4 @@ export async function GET(request: NextRequest) {
   } catch {
     return NextResponse.json({ success: false, error: 'Failed to fetch status' }, { status: 502 });
   }
-}
+});

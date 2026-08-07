@@ -1,26 +1,21 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { getAccessToken } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { isValidStellarAddress } from '@/utils/stellar-address';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 function isValidTokenRef(ref: string): boolean {
   return ref === 'native' || isValidStellarAddress(ref);
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   try {
     // This route writes financial records that feed the public Dune dashboard.
     // It was open to anyone — verified on staging, where an unauthenticated
     // POST reached validation instead of being rejected.
-    const user = await getAuthenticatedUser(getAccessToken(request));
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
 
     const body = await request.json();
     const {
@@ -106,4 +101,4 @@ export async function POST(request: NextRequest) {
     console.error('Swap log transaction error:', error);
     return NextResponse.json({ success: false, error: 'Failed to log swap' }, { status: 500 });
   }
-}
+});

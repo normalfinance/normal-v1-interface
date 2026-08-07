@@ -1,6 +1,7 @@
 import type { NetworkType } from '@normalfinance/utils';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 // Dust-gas top-up for the burn chain. In the inbound flow (BTC/ETH/SOL →
 // Stellar) the user's swapped USDC lands on Base where they hold zero ETH, so
 // the relayer fronts enough gas for their approve + burn/pivot transactions.
@@ -8,8 +9,6 @@ import { prisma } from '@/lib/prisma';
 // CURRENT balance and re-funds a still-short address, instead of skipping after
 // the first send. Cost is priced into the quote.
 import { NextResponse } from 'next/server';
-import { getAccessToken } from '@/utils/http';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { sendGasTopUp, computeTopUpShortfall } from '@/lib/cctp/executor';
 
 export const dynamic = 'force-dynamic';
@@ -22,10 +21,7 @@ export const dynamic = 'force-dynamic';
 const OUTBOUND_GAS_ESTIMATE = 2_000_000n; // pivot (approve + Mayan/LI.FI swap)
 const INBOUND_GAS_ESTIMATE = 600_000n; // approve + depositForBurnWithHook
 
-export async function POST(req: Request) {
-  const user = await getAuthenticatedUser(getAccessToken(req));
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (req: Request, { user }) => {
   const { transferId } = await req.json();
   const transfer = await prisma.cctpTransfer.findUnique({ where: { id: transferId } });
   if (!transfer || transfer.userId !== user.id) {
@@ -102,4 +98,4 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ error: 'top-up failed' }, { status: 502 });
   }
-}
+});

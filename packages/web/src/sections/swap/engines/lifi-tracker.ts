@@ -116,7 +116,8 @@ async function pollBridge(
   for (let i = 0; i < 80 && !stop(); i++) {
     try {
       const res = await fetch(
-        `/api/lifi/status?txHash=${txHash}&fromChain=${fromChainId}&toChain=${toChainId}`
+        `/api/lifi/status?txHash=${txHash}&fromChain=${fromChainId}&toChain=${toChainId}`,
+        { headers: await buildAuthHeaders() }
       );
       if (res.ok) {
         const data = await res.json();

@@ -1,22 +1,16 @@
+import { j } from '@/utils/http';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { j, getAccessToken } from '@/utils/http';
 import { mgiApiBase } from '@/lib/mgi/server-base';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
  * POST /api/mgi/sep24/withdraw
  * Body: { token: string; account: string; amount: string|number; lang?: string }
  */
-export async function POST(req: Request) {
+export const POST = withAuth(async (req: Request, { user }) => {
   try {
     // Authenticate
-    const accessToken = getAccessToken(req);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const {
       token,
@@ -121,4 +115,4 @@ export async function POST(req: Request) {
   } catch (e: any) {
     return j(500, { error: e?.message || 'Server error', stack: e?.stack });
   }
-}
+});

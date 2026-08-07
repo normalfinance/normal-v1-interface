@@ -504,3 +504,15 @@ anyone), `lifi/status` (unthrottled LI.FI proxy; its sibling `statuses` IS
 limited), `portfolio/activity` (the old activity system, fully open). No fund
 movement — quota-burn and probing surface. Scheduled into the withAuth sweep,
 DeFindex pair first. Sev 2 · Lik 2 · Eff 1-2.
+
+
+## #50 — CLOSED 2026-08-07 (withAuth sweep)
+
+All 37 authed route files migrated onto withAuth (40+ handlers; three shapes:
+standard, edge-config composition, custom pair). The naked routes got auth +
+per-user rate limits; six client fetch sites gained auth headers. TWO MORE
+found during the sweep: `lifi/statuses` (flagged by the new conformance test
+on its first run) and `referral/user` POST (fully unauthenticated DB write,
+hidden behind an authed sibling handler in the same file). Permanent guard:
+`route-auth-conformance.test.ts` — every route must be wrapped or allowlisted
+with a written reason; runs in CI. 94/94 tests green.

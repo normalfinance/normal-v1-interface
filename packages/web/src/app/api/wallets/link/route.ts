@@ -1,12 +1,11 @@
 import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { faucetRateLimiter } from '@/server/faucet-rate-limiter';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const LinkWalletSchema = z.object({
   walletAddress: z
@@ -30,16 +29,8 @@ const UpdateWalletSchema = z.object({
  * Link a wallet to the authenticated user's account
  * Admin can bypass rate limits by using ADMIN_SECRET and providing userId in body
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, { user, accessToken }) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Check if admin bypass (admin_secret as auth token)
     const isAdminRequest = accessToken === process.env.ADMIN_SECRET;
     const isDev = process.env.NODE_ENV === 'development';
@@ -147,22 +138,14 @@ export async function POST(request: NextRequest) {
     console.log('[API /wallets/link] Error linking wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
 /**
  * PATCH /api/wallets/link
  * Update a linked wallet (name, lastUsedAt)
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAuth(async (request: NextRequest, { user }) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Parse and validate request body
     const body = await request.json();
     const validation = UpdateWalletSchema.safeParse(body);
@@ -201,22 +184,14 @@ export async function PATCH(request: NextRequest) {
     console.log('[API /wallets/link] Error updating wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
 /**
  * DELETE /api/wallets/link
  * Unlink a wallet from the authenticated user's account
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request: NextRequest, { user }) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Get wallet address from query params
     const { searchParams } = new URL(request.url);
     const walletAddress = searchParams.get('walletAddress');
@@ -245,4 +220,4 @@ export async function DELETE(request: NextRequest) {
     console.log('[API /wallets/link] Error unlinking wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});

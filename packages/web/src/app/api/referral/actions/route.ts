@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { getClientIP } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
-import { getClientIP, getAccessToken } from '@/utils/http';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 const RecordActionSchema = z.object({
@@ -26,16 +26,8 @@ const GetActionsSchema = z.object({
   referralCode: z.string().optional(),
 });
 
-async function recordActionHandler(request: NextRequest) {
+const recordActionHandler = withAuth(async (request: NextRequest, { user }) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     const validation = RecordActionSchema.safeParse(body);
 
@@ -161,18 +153,10 @@ async function recordActionHandler(request: NextRequest) {
 
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
-async function getActionsHandler(request: NextRequest) {
+const getActionsHandler = withAuth(async (request: NextRequest, { user }) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const userWalletAddress = searchParams.get('userWalletAddress');
     const referralCode = searchParams.get('referralCode');
@@ -249,7 +233,7 @@ async function getActionsHandler(request: NextRequest) {
     await logWithConfig('error', 'Error fetching referral actions', { error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
 export const POST = createEdgeConfigHandler(recordActionHandler, 'referral-actions');
 export const GET = createEdgeConfigHandler(getActionsHandler, 'referral-actions');

@@ -1,11 +1,10 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { Psbt, networks, payments } from 'bitcoinjs-lib';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -43,11 +42,7 @@ function p2wpkhOutputScript(addr: string): Buffer {
 // Body: { destination: string, amountSat: number }
 // Response: { psbtHex, subOrgId, estimatedFeeSat, feeRateSatPerVbyte, changeAmountSat }
 // ---------------------------------------------------------------------------
-export async function POST(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   let body: { destination: string; amountSat: number };
   try {
     body = await request.json();
@@ -179,4 +174,4 @@ export async function POST(request: NextRequest) {
     logger.error('[build-btc-tx] Error:', error);
     return NextResponse.json({ error: 'Failed to build transaction' }, { status: 500 });
   }
-}
+});

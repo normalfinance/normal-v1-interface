@@ -31,8 +31,12 @@ type AuthedUser = NonNullable<Awaited<ReturnType<typeof getAuthenticatedUser>>>;
 
 export interface AuthedContext {
   user: AuthedUser;
-  /** Dynamic segment params for routes like /api/thing/[id]. */
-  params?: Record<string, string>;
+  /** Dynamic segment params for routes like /api/thing/[id]. Empty object on
+   *  static routes, so `params.id` reads cleanly where the segment exists. */
+  params: Record<string, string>;
+  /** The raw bearer token, for the rare route that needs it beyond auth
+   *  (e.g. wallets/link compares it against ADMIN_SECRET). */
+  accessToken: string | undefined;
 }
 
 type AuthedHandler = (request: NextRequest, context: AuthedContext) => Promise<Response> | Response;
@@ -42,10 +46,11 @@ export function withAuth(handler: AuthedHandler) {
     request: NextRequest,
     routeContext?: { params?: Record<string, string> }
   ): Promise<Response> => {
-    const user = await getAuthenticatedUser(getAccessToken(request));
+    const accessToken = getAccessToken(request);
+    const user = await getAuthenticatedUser(accessToken);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    return handler(request, { user, params: routeContext?.params });
+    return handler(request, { user, params: routeContext?.params ?? {}, accessToken });
   };
 }

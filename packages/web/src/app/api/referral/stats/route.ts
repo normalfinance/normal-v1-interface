@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { getClientIP } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
-import { getClientIP, getAccessToken } from '@/utils/http';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 export const dynamic = 'force-dynamic';
@@ -15,16 +15,8 @@ const GetStatsSchema = z.object({
   walletAddress: z.string().min(1, 'Wallet address is required'),
 });
 
-async function getReferralStatsHandler(request: NextRequest) {
+const getReferralStatsHandler = withAuth(async (request: NextRequest, { user }) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const walletAddress = request.nextUrl.searchParams.get('walletAddress');
 
     const validation = GetStatsSchema.safeParse({ walletAddress });
@@ -100,6 +92,6 @@ async function getReferralStatsHandler(request: NextRequest) {
     await logWithConfig('error', 'Error fetching referral stats', { error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
 export const GET = createEdgeConfigHandler(getReferralStatsHandler, 'referral-stats');

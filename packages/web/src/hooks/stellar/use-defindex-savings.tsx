@@ -10,6 +10,7 @@ import type { VaultInfo, SavingsPosition } from '@/types/savings';
 // deposit/withdraw transaction engine.
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
+import { buildAuthHeaders } from '@/utils/http';
 import { usePersistStore } from '@normalfinance/state';
 import { postTransactionLog } from '@/lib/log-transaction';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
@@ -266,7 +267,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         // getSavingsUsdcIssuer resolves to the right issuer for this network.
         const feeResponse = await fetch('/api/fees/build-payment', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             caller: walletAddress,
             amount: feeAmount.toFixed(7),
@@ -290,7 +291,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         // 2. Build the DeFindex deposit XDR for the NET amount (fresh sequence)
         const depositResponse = await fetch('/api/savings/deposit', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
           body: JSON.stringify({ amount: netAmount.toFixed(7), caller: walletAddress }),
         });
         const depositData = await depositResponse.json();
@@ -473,7 +474,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         // they deposited their entire balance.
         const withdrawResponse = await fetch('/api/savings/withdraw', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
           body: JSON.stringify({ amount, caller: walletAddress }),
         });
         const withdrawData = await withdrawResponse.json();
@@ -501,7 +502,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         if (commissionAmount > 0) {
           const commissionResponse = await fetch('/api/fees/build-payment', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
             body: JSON.stringify({
               caller: walletAddress,
               amount: commissionAmount.toFixed(7),

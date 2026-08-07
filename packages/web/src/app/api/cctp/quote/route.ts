@@ -5,10 +5,9 @@ import type { NetworkType } from '@normalfinance/utils';
 // protocol level, but carries ETA + relayer gas pricing + fee policy), and the
 // LI.FI quote (existing route, where our single 0.5% integrator fee lives).
 import { cookies } from 'next/headers';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { getAccessToken } from '@/utils/http';
 import { CCTP_DOMAIN, CCTP_ETA_SECONDS } from '@/lib/cctp/config';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,10 +28,7 @@ const DEST_COSTS: Record<'base' | 'ethereum' | 'stellar', { gasUsd: number; topU
   stellar: { gasUsd: 0.01, topUpUsd: 0 }, // relayer XLM dust; no top-up (Soroswap fees ~dust)
 };
 
-export async function POST(req: Request) {
-  const user = await getAuthenticatedUser(getAccessToken(req));
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (req: Request) => {
   const body = await req.json();
   const { sourceDomain, destDomain, amountWire } = body ?? {};
 
@@ -83,4 +79,4 @@ export async function POST(req: Request) {
     minAmountWire: MIN_WIRE.toString(),
     maxAmountWire: maxWire?.toString() ?? null,
   });
-}
+});

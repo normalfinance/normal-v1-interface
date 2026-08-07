@@ -1,26 +1,21 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { getAccessToken } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { isValidStellarAddress } from '@/utils/stellar-address';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ----------------------------------------------------------------------
 
 const VALID_TYPES = ['deposit', 'withdraw'] as const;
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   try {
     // This route writes vault_deposits, the fallback source for totalDeposited
     // — the figure users read as their savings. It was open to anyone, so its
     // integrity affects money on screen, not just analytics.
-    const user = await getAuthenticatedUser(getAccessToken(request));
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
 
     const body = await request.json();
     const { walletAddress, vaultAddress, type, amount, txHash, feeAmount, feeTxHash } = body;
@@ -91,4 +86,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -1,23 +1,17 @@
+import { j } from '@/utils/http';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { j, getAccessToken } from '@/utils/http';
 import { mgiApiBase } from '@/lib/mgi/server-base';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // We send only `asset_code: 'USDC'`; MoneyGram resolves the issuer for its
 // network, so no hardcoded (testnet) issuer is needed here.
 
-export async function POST(req: Request) {
+export const POST = withAuth(async (req: Request, { user }) => {
   const t0 = Date.now();
 
   try {
     // Authenticate
-    const accessToken = getAccessToken(req);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const body = await req.json().catch(() => ({}));
     const {
@@ -135,4 +129,4 @@ export async function POST(req: Request) {
     console.error('[MGI] /api/mgi/sep24/deposit crashed:', e);
     return j(500, { error: e?.message || 'Server error', stack: e?.stack });
   }
-}
+});
