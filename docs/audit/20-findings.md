@@ -554,3 +554,18 @@ throws StaleSavingsReadError at resolve-time if it moved — before
 reconciliation, before any cache write. SWR's retry then refetches under the
 current epoch. Fourth instance of the "timer/ordering standing in for a real
 signal" root cause. 4-case unit suite, incl. per-address isolation.
+
+## #53 — Savings chart is a rescaled simulation, not recorded history (OPEN)
+
+The earnings curve replays deposit/withdraw events, simulates compound
+interest at the CURRENT APY, and rescales the whole curve so the endpoint
+equals real current earnings. Consequences observed after heavy testing
+(2026-08-07): the "past" redraws when new transactions change the inputs, and
+the 50-row activity feed cap lets test spam crowd out older events —
+shrinking the simulated total, inflating the anchor-rescale multiplier, and
+exaggerating the recent slope ~3x vs true accrual (~1.1 c/day shown vs ~0.34
+c/day real at $20 / 6.17%). Not a money bug — the anchor value is real.
+
+Fix path: plot RECORDED earnings snapshots once roadmap #27 (durable server
+records) lands; interim option: label the curve "estimated". Sev 2 · Lik 3 ·
+Eff 2 (proper) / 1 (interim label).
