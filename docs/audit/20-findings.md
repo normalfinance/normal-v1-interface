@@ -536,3 +536,21 @@ as `cause`. Wired into stellar-signer (all Stellar passkey signing: savings,
 swap fees, MGI, CCTP burns) and evm-signer (CCTP pivot). 6-case unit suite,
 incl. the no-overlap and no-retry-after-cancel invariants. Send adapters can
 adopt in a follow-up line each — single-ceremony flows, lower exposure.
+
+## #52 — Rapid savings actions stick a wrong "Your Deposits" (FIXED 2026-08-07)
+
+Observed live: fast deposit/withdraw cycles left totalDeposited missing one
+action, with the difference displayed as earnings (+14.46%), stuck for
+minutes. Mechanism: each action launches a fresh position read; network
+reordering let a read STARTED BEFORE action N resolve AFTER it. Pre-action
+data carries a genuinely-lower value — not the indexer-lag shape the
+reconciler forgives — so it was accepted AND persisted to the position cache,
+poisoning `prev` for every later reconcile until DeFindex's indexer caught up.
+(The server events cache was checked and cleared — refresh=1 bypasses it.)
+
+Fix: `lib/savings-read-guard.ts` — deposits/withdraws bump a per-address
+epoch BEFORE announcing; every position read snapshots the epoch at start and
+throws StaleSavingsReadError at resolve-time if it moved — before
+reconciliation, before any cache write. SWR's retry then refetches under the
+current epoch. Fourth instance of the "timer/ordering standing in for a real
+signal" root cause. 4-case unit suite, incl. per-address isolation.

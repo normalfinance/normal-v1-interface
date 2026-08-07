@@ -31,6 +31,8 @@ function parseSigningError(err: any): string {
   return parseHorizonError(err);
 }
 
+import { bumpSavingsReadEpoch } from '@/lib/savings-read-guard';
+
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 
@@ -353,6 +355,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             currentValue: (parseFloat(base.currentValue) + netAmount).toFixed(7),
             totalDeposited: (parseFloat(base.totalDeposited) + netAmount).toFixed(7),
           });
+          // Invalidate any position read still in flight from BEFORE this action
+          // (finding #52: a pre-action read resolving late overwrote the
+          // correct figure and stuck). Bump BEFORE announcing.
+          bumpSavingsReadEpoch(walletAddress);
           window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
         }
 
@@ -556,6 +562,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             totalDeposited: preTD.toFixed(7),
             earnings: Math.max(preCV - preTD, 0).toFixed(7),
           });
+          // Invalidate any position read still in flight from BEFORE this action
+          // (finding #52: a pre-action read resolving late overwrote the
+          // correct figure and stuck). Bump BEFORE announcing.
+          bumpSavingsReadEpoch(walletAddress);
           window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
         }
 

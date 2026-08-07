@@ -1,7 +1,9 @@
+// Each test gets a fresh module: the guard's queue is module-level state.
+import type * as WebauthnGuardModule from '@/lib/turnkey/webauthn-guard';
+
 import { it, jest, expect, describe, afterEach, beforeEach } from '@jest/globals';
 
-// Each test gets a fresh module: the guard's queue is module-level state.
-type Guard = typeof import('@/lib/turnkey/webauthn-guard');
+type Guard = typeof WebauthnGuardModule;
 
 function freshGuard(): Guard {
   jest.resetModules();

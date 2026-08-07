@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { useMemo, useEffect } from 'react';
 import { reconcileSavingsPosition } from '@/lib/portfolio/normalize';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { savingsReadEpoch, assertReadStillFresh } from '@/lib/savings-read-guard';
 
 // ---------------------------------------------------------------------------
 // Deduped savings read — vault metadata (fast) + the user's vault position
@@ -109,6 +110,10 @@ async function fetchUserPosition(
   network: string,
   fresh = false
 ): Promise<SavingsPosition> {
+  // Snapshot the action epoch BEFORE the request: if a deposit/withdraw
+  // settles while this read is in flight, the response describes a stale
+  // world and must be discarded (see lib/savings-read-guard.ts).
+  const epochAtStart = savingsReadEpoch(address);
   const res = await fetchWithTimeout(
     `/api/savings/user-position?user=${address}&network=${network}${fresh ? '&refresh=1' : ''}`,
     30_000 // Soroban RPC on mainnet can take 15-25s
@@ -127,14 +132,20 @@ async function fetchUserPosition(
   // someone's money, which is exactly what this whole path exists to avoid.
   // Throwing instead keeps SWR in its loading/retry state until a real answer
   // arrives, so the UI shows a skeleton rather than a wrong number.
+  // The discard MUST happen before reconciliation and before the cache write:
+  // a pre-action read that gets this far carries a genuinely-lower value the
+  // reconciler would rightly accept — and would then persist. This was the
+  // stuck wrong "Your Deposits" after rapid deposit/withdraw (finding #52).
+  assertReadStillFresh(address, epochAtStart);
+
   const cachedPosition = getCachedPosition(address);
   if (data.userPosition == null && !cachedPosition) {
     throw new Error('Position unavailable — upstream read failed and no cached value');
   }
 
   // Reconcile against the cached value (never clobber a held position with a
-  // transient 0; handle indexer lag) — pure logic in ./normalize (not yet
-  // covered by tests; no runner is configured in this package).
+  // transient 0; handle indexer lag) — pure logic in ./normalize, covered by
+  // normalize.test.ts.
   const result = reconcileSavingsPosition(data.userPosition, cachedPosition);
   setCachedPosition(address, result);
   return result;
