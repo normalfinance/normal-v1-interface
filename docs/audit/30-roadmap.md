@@ -101,7 +101,11 @@ except the component tests.
 | 47 | **Send visibility** — sends fire no `nf:activity-updated`, so no refresh and no pending row; found by live testing (5 XLM to Coinbase: success toast, then nothing until reload + cache TTL). Plan: [48-send-visibility-plan.md](48-send-visibility-plan.md). Phases A (announce, S) + C (portfolio refresh bypass, S) close the incident; B (pending-sends ledger, M) makes BTC/ETH sends honest. **Ranked first in this block: user-visible money feedback** | S+S+M |
 | 44 | ~~broadcast-btc open relay~~ **fixed in tree** — goes out with the next push | done |
 | 45 | ~~btc-pubkey format-only account match~~ **fixed in tree** — same push | done |
-| 46 | **`withAuth` route wrapper** — third unauthenticated-route finding (#3, Block C #2, #44); make auth the default, public routes the explicit exception, then sweep all routes onto it | S |
+| 49 | ~~CI red 40/40 runs~~ **fixed 2026-08-06** — jest now a blocking gate; prettier+build non-blocking w/ scheduled follow-ups. [50-ci-and-withauth-plan.md](50-ci-and-withauth-plan.md) | done |
+| 50 | **Unprotected builder/proxy routes** — savings/deposit+withdraw (DeFindex key!), fees/build-payment, lifi/status, portfolio/activity: no auth, no rate limit. Into the withAuth sweep, DeFindex pair first | S |
+| — | **Repo-wide prettier reformat** (321 files) — AFTER merge policy fixed; then flip CI prettier to blocking | S |
+| — | **USER, GitHub settings:** merge-commit policy for living branches · branch protection requiring the web check · CI secrets to unlock the build gate | user |
+| 46 | **`withAuth` route wrapper** — third unauthenticated-route finding (#3, Block C #2, #44); make auth the default, public routes the explicit exception, then sweep all routes onto it. **Wrapper + tests + 3 exemplar routes DONE 2026-08-06; the 37-route sweep is scheduled right after the merge policy is fixed** (a 37-file mechanical diff under squash-merges = conflict bomb) | S done / M sweep |
 | 42 | **Self-heal repro** — Freighter + provisioned BTC, disconnect, reload; does the Turnkey Stellar address silently take over? Fix designed only after the repro | S |
 | 43 | Remove dead `xbull`/`hana` wallet types + restore-switch branches | S |
 | T1 | ~~Test foundation: Jest wired (`yarn test`), first suite on `normalize.ts`~~ **done 2026-08-06** — 16 cases, all anchored to shipped bugs | done |

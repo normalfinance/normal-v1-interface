@@ -80,7 +80,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     txStep,
     deposit,
     withdraw,
-    refreshVaultInfo,
   } = useDefindexSavings();
 
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');

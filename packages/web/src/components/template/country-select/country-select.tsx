@@ -90,7 +90,7 @@ export function CountrySelect({
         </li>
       );
     },
-    [getCountry]
+    [getCountry, t]
   );
 
   const renderInput = useCallback(

@@ -35,7 +35,7 @@ export const MomentsDefaults: Props = {
 };
 
 export const Moments: React.FC<MomentsProps> = (props) => {
-  const { heading, description, images, ...sectionProps } = {
+  const { description, images, ...sectionProps } = {
     ...MomentsDefaults,
     ...props,
   };

@@ -481,3 +481,26 @@ ecosystem's own guard is empirically insufficient.
 Unit-tested with the incident address itself as the fixture. Recovery of the
 5 XLM: Coinbase support ticket with the tx hash (manual attribution, not
 guaranteed).
+
+## #49 — CI red on every run since at least July 25 (FIXED 2026-08-06)
+
+`web-ci.yml` had failed 40/40 recent runs, all at the Prettier step (321
+unformatted files) — and GitHub skips subsequent steps, so **ESLint, tsc and
+the build had not run in CI at all** in that window. The July gate deletion
+(PR #466) and every squash-merge accident happened with no automated witness.
+Fix: prettier and build made non-blocking with dated comments (reformat and
+CI-secrets are scheduled follow-ups), jest added as a blocking gate, PR
+trigger enabled, push trigger narrowed, concurrency added. Every blocking
+step verified green locally before flipping. Sev 3 · Lik 3 (it was certain) ·
+Eff 1.
+
+## #50 — Unprotected builder/proxy routes (OPEN, scheduled)
+
+Found by the withAuth inventory of all 59 routes: five routes with neither
+auth nor rate limiting — `savings/deposit` + `savings/withdraw` (instantiate
+the DeFindex SDK with OUR API key for anonymous callers: open proxy for the
+quota behind the 429 incident), `fees/build-payment` (builds XDRs for
+anyone), `lifi/status` (unthrottled LI.FI proxy; its sibling `statuses` IS
+limited), `portfolio/activity` (the old activity system, fully open). No fund
+movement — quota-burn and probing surface. Scheduled into the withAuth sweep,
+DeFindex pair first. Sev 2 · Lik 2 · Eff 1-2.

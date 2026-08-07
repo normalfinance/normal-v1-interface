@@ -1,3 +1,5 @@
+import type { format } from '@normalfinance/utils';
+
 export type IPaymentCard = {
   id: string;
   cardType: string;
@@ -17,7 +19,7 @@ export type IAddressItem = {
 
 export type IDateValue = string | number | null;
 
-export type IDatePickerControl = import('@normalfinance/utils').format.DatePickerFormat;
+export type IDatePickerControl = format.DatePickerFormat;
 
 export type ISocialLink = {
   twitter: string;

@@ -1,11 +1,10 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
+import { withAuth } from '@/lib/with-auth';
 import { redis } from '@/server/rateLimiter';
 import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { KNOWN_MEMO_REQUIRED } from '@/lib/stellar/memo-required-list';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ---------------------------------------------------------------------------
 // GET /api/stellar/memo-required?address=G…
@@ -51,10 +50,7 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   }
 }
 
-export async function GET(request: NextRequest) {
-  const user = await getAuthenticatedUser(getAccessToken(request));
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const GET = withAuth(async (request: NextRequest) => {
   const address = request.nextUrl.searchParams.get('address')?.trim().toUpperCase() ?? '';
   if (!STELLAR_ADDRESS.test(address)) {
     return NextResponse.json({ error: 'Invalid Stellar address' }, { status: 400 });
@@ -110,4 +106,4 @@ export async function GET(request: NextRequest) {
     // Fail open: the client seed list + the SDK's submit-time check remain.
     return NextResponse.json({ required: false, degraded: true });
   }
-}
+});

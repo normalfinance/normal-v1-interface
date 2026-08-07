@@ -34,7 +34,6 @@ import {
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
-import { useSnackbar } from '@/components/template/snackbar';
 
 export type NormalWalletImportProps = {
   open: boolean;
@@ -55,7 +54,6 @@ export default function NormalWalletImport({
   onBack,
 }: NormalWalletImportProps) {
   const { t } = useTranslate();
-  const { enqueueSnackbar } = useSnackbar();
   const { importWalletFromMnemonic, importWalletFromPrivateKey } = useNormalWallet();
   const { session } = useSupabaseAuth();
 

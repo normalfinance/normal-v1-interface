@@ -1,10 +1,9 @@
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
+import { withAuth } from '@/lib/with-auth';
 import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { Psbt, networks } from 'bitcoinjs-lib';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ---------------------------------------------------------------------------
 // POST /api/turnkey/broadcast-btc
@@ -17,12 +16,7 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 // Bitcoin relay — strangers proxying arbitrary transactions through our server
 // IP, whose abuse or rate-limit flags land on us, not them.
 // ---------------------------------------------------------------------------
-export async function POST(request: NextRequest) {
-  const user = await getAuthenticatedUser(getAccessToken(request));
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request: NextRequest) => {
   let body: { signedTxHex: string };
   try {
     body = await request.json();
@@ -74,4 +68,4 @@ export async function POST(request: NextRequest) {
     logger.error('[broadcast-btc] Error:', error);
     return NextResponse.json({ error: 'Failed to broadcast transaction' }, { status: 500 });
   }
-}
+});

@@ -80,7 +80,7 @@ function tryParseJwtExpMs(token: string): number | undefined {
     }
     const json = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
     return typeof json?.exp === 'number' ? json.exp * 1000 : undefined;
-  } catch (_err) {
+  } catch {
     // Not a JWT (or malformed) — just fall back to default TTL
     return undefined;
   }
@@ -335,7 +335,7 @@ export async function openTxInAnchorUI(
         enqueueSnackbar?.(`MoneyGram: transaction is ${status}`, { variant: 'success' });
         break;
       }
-    } catch (_e) {
+    } catch {
       // Some browsers block programmatic focus; safe to ignore.
       NOOP();
     }
