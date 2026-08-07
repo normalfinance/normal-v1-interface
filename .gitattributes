@@ -1,4 +1,17 @@
+# Yarn internals: keep out of language stats and diffs (original entries).
 /.yarn/**            linguist-vendored
 /.yarn/releases/*    binary
 /.yarn/plugins/**/*  binary
 /.pnp.*              binary linguist-generated
+
+# Normalize line endings (added 2026-08-07): committed content is LF — CI
+# checks out LF and prettier passes there. Without this, Windows checkouts
+# materialized CRLF and local prettier flagged dozens of files nobody
+# touched, over and over. eol=lf makes every machine check out LF.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
