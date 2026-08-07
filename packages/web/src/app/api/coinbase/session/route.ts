@@ -1,11 +1,11 @@
 import type { NextRequest } from 'next/server';
 
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { getClientIP, getAccessToken } from '@/utils/http';
+import { getClientIP } from '@/utils/http';
 import { logger, getCdpBearerToken } from '@normalfinance/utils';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req: NextRequest) => {
   try {
     const { address, asset = 'USDC', blockchain = 'stellar' } = await req.json();
 
@@ -14,13 +14,6 @@ export async function POST(req: NextRequest) {
     }
     if (!['stellar', 'bitcoin', 'ethereum', 'solana'].includes(blockchain)) {
       return NextResponse.json({ error: 'Unsupported blockchain' }, { status: 400 });
-    }
-
-    const token = getAccessToken(req);
-    const user = await getAuthenticatedUser(token);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const { jwt, host, path } = await getCdpBearerToken();
@@ -72,4 +65,4 @@ export async function POST(req: NextRequest) {
     logger.error('Coinbase session exception:', err);
     return NextResponse.json({ error: err?.message ?? 'Internal error' }, { status: 500 });
   }
-}
+});

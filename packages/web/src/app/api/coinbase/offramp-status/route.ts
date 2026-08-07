@@ -1,9 +1,8 @@
 import type { NextRequest } from 'next/server';
 
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { getAccessToken } from '@/utils/http';
 import { logger, getCdpBearerToken } from '@normalfinance/utils';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ---------------------------------------------------------------------------
 // GET /api/coinbase/offramp-status
@@ -21,12 +20,8 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req: NextRequest, { user }) => {
   try {
-    const token = getAccessToken(req);
-    const user = await getAuthenticatedUser(token);
-    if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-
     // partnerUserRef = the same value the offramp URL was generated with: the
     // Supabase user UUID. It is URL-safe, so the JWT path matches the request
     // path exactly (an email's encoded '@' breaks that match → Coinbase 401).
@@ -87,4 +82,4 @@ export async function GET(req: NextRequest) {
     logger.error('[coinbase/offramp-status] exception:', err);
     return NextResponse.json({ error: err?.message ?? 'Internal error' }, { status: 500 });
   }
-}
+});

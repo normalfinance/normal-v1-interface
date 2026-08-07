@@ -1,7 +1,6 @@
-import { NextResponse } from 'next/server';
-import { j, getAccessToken } from '@/utils/http';
+import { j } from '@/utils/http';
+import { withAuth } from '@/lib/with-auth';
 import { mgiApiBase } from '@/lib/mgi/server-base';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
  * POST /api/mgi/sep24/transaction/moreinfo
@@ -10,15 +9,9 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
  * Uses the anchor's `GET /sep24/transaction?id=...` with SEP-10 Bearer token
  * and returns a fresh more_info_url (these JWT URLs can expire quickly).
  */
-export async function POST(req: Request) {
+export const POST = withAuth(async (req: Request) => {
   try {
     // Authenticate
-    const accessToken = getAccessToken(req);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { token, id } = (await req.json()) as { token?: string; id?: string };
     if (!token) return j(400, { error: 'Missing token' });
@@ -64,4 +57,4 @@ export async function POST(req: Request) {
   } catch (e: any) {
     return j(500, { error: e?.message || 'Server error', stack: e?.stack });
   }
-}
+});

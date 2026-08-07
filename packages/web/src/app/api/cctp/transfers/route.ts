@@ -4,20 +4,16 @@ import { prisma } from '@/lib/prisma';
 // CCTP transfers — create (persist burn intent BEFORE broadcasting the burn)
 // and list the caller's in-flight transfers (drives the recovery banner).
 import { cookies } from 'next/headers';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { getAccessToken } from '@/utils/http';
 import { CCTP_DOMAIN } from '@/lib/cctp/config';
 import { PENDING_STATUSES } from '@/lib/cctp/state';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export const dynamic = 'force-dynamic';
 
 const VALID_DOMAINS = new Set<number>(Object.values(CCTP_DOMAIN));
 
-export async function POST(req: Request) {
-  const user = await getAuthenticatedUser(getAccessToken(req));
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (req: Request, { user }) => {
   const body = await req.json();
   const {
     direction,
@@ -93,12 +89,9 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ id: transfer.id, status: transfer.status });
-}
+});
 
-export async function GET(req: Request) {
-  const user = await getAuthenticatedUser(getAccessToken(req));
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const GET = withAuth(async (req: Request, { user }) => {
   // ?history=1 → all recent transfers (every status) for the Activity feed;
   // default → in-flight only, for the resume banner.
   const history = new URL(req.url).searchParams.get('history') === '1';
@@ -110,4 +103,4 @@ export async function GET(req: Request) {
     take: history ? 30 : 20,
   });
   return NextResponse.json({ transfers });
-}
+});

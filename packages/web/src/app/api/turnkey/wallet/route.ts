@@ -1,11 +1,10 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { turnkey, buildPasskeyRootUser } from '@/lib/turnkey/server';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { CHAINS, pickAddresses, ADDRESS_SELECT } from '@/lib/chains/registry';
 import {
   XLM_ACCOUNT,
@@ -27,11 +26,7 @@ type Chain = keyof typeof CHAIN_SPECS;
 // GET /api/turnkey/wallet
 // Returns the authenticated user's Turnkey wallet addresses (or null)
 // ---------------------------------------------------------------------------
-export async function GET(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const GET = withAuth(async (request: NextRequest, { user }) => {
   const wallet = await prisma.turnkeyWallet.findUnique({
     where: { supabaseUid: user.id },
     // Address columns come from the registry, so a new chain's column is
@@ -40,18 +35,14 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json({ wallet: wallet ?? null });
-}
+});
 
 // ---------------------------------------------------------------------------
 // POST /api/turnkey/wallet
 // Creates a Turnkey sub-org + BTC/ETH/XLM wallet for the authenticated user.
 // Body: { challenge: string, attestation: { credentialId, clientDataJson, attestationObject, transports } }
 // ---------------------------------------------------------------------------
-export async function POST(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   // Idempotent — return existing wallet if already provisioned
   const existing = await prisma.turnkeyWallet.findUnique({ where: { supabaseUid: user.id } });
   if (existing) {
@@ -126,4 +117,4 @@ export async function POST(request: NextRequest) {
     logger.error('[turnkey/wallet] Error creating sub-org:', error);
     return NextResponse.json({ error: 'Failed to create wallet' }, { status: 500 });
   }
-}
+});

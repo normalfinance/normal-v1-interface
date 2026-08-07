@@ -2,11 +2,10 @@ import type { NextRequest } from 'next/server';
 import type { ChainId, AddressField } from '@/lib/chains/registry';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { turnkey } from '@/lib/turnkey/server';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { CHAINS, CHAIN_IDS, isChainId, pickAddresses } from '@/lib/chains/registry';
 
 // ---------------------------------------------------------------------------
@@ -19,11 +18,7 @@ import { CHAINS, CHAIN_IDS, isChainId, pickAddresses } from '@/lib/chains/regist
 // straight from Turnkey (parent orgs have read access to sub-orgs), so a
 // client can't write spoofed addresses into its row.
 // ---------------------------------------------------------------------------
-export async function POST(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   let body: { walletId?: string; expectedStellarAddress?: string; chain?: string };
   try {
     body = await request.json();
@@ -136,4 +131,4 @@ export async function POST(request: NextRequest) {
     const detail = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: `Failed to import wallet: ${detail}` }, { status: 500 });
   }
-}
+});

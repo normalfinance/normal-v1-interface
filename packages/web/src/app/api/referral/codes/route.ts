@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { getClientIP } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
-import { getClientIP, getAccessToken } from '@/utils/http';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 const CreateReferralSchema = z.object({
@@ -20,16 +20,8 @@ const GetReferralSchema = z.object({
   code: z.string().min(1, 'Referral code is required'),
 });
 
-async function createReferralHandler(request: NextRequest) {
+const createReferralHandler = withAuth(async (request: NextRequest) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     const validation = CreateReferralSchema.safeParse(body);
 
@@ -104,18 +96,10 @@ async function createReferralHandler(request: NextRequest) {
 
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
-async function getReferralHandler(request: NextRequest) {
+const getReferralHandler = withAuth(async (request: NextRequest) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
 
@@ -176,7 +160,7 @@ async function getReferralHandler(request: NextRequest) {
     await logWithConfig('error', 'Error fetching referral code', { error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
 export const POST = createEdgeConfigHandler(createReferralHandler, 'referral-codes');
 export const GET = createEdgeConfigHandler(getReferralHandler, 'referral-codes');

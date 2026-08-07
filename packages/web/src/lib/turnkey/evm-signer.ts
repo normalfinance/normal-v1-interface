@@ -22,19 +22,24 @@ export async function signEvmTxWithTurnkey(
     new WebauthnStamper({ rpId })
   );
 
-  const result = await client.signTransaction({
-    type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
-    timestampMs: String(Date.now()),
-    organizationId: subOrgId,
-    parameters: {
-      signWith,
-      // Turnkey expects the serialized tx without the 0x prefix
-      unsignedTransaction: unsignedSerialized.startsWith('0x')
-        ? unsignedSerialized.slice(2)
-        : unsignedSerialized,
-      type: 'TRANSACTION_TYPE_ETHEREUM',
-    },
-  });
+  // Serialized against other passkey prompts (CCTP outbound signs Stellar
+  // burns then this pivot in one flow) — see webauthn-guard.ts.
+  const { runWebauthnCeremony } = await import('./webauthn-guard');
+  const result = await runWebauthnCeremony(() =>
+    client.signTransaction({
+      type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
+      timestampMs: String(Date.now()),
+      organizationId: subOrgId,
+      parameters: {
+        signWith,
+        // Turnkey expects the serialized tx without the 0x prefix
+        unsignedTransaction: unsignedSerialized.startsWith('0x')
+          ? unsignedSerialized.slice(2)
+          : unsignedSerialized,
+        type: 'TRANSACTION_TYPE_ETHEREUM',
+      },
+    })
+  );
 
   const signed = result?.activity?.result?.signTransactionResult?.signedTransaction;
   if (!signed) throw new Error('Turnkey signing failed — no signed transaction returned');

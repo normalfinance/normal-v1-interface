@@ -1,7 +1,7 @@
+import { j } from '@/utils/http';
 import { NextResponse } from 'next/server';
-import { j, getAccessToken } from '@/utils/http';
+import { withAuth } from '@/lib/with-auth';
 import { mgiApiBase } from '@/lib/mgi/server-base';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
  * POST /api/mgi/sep24/withdraw/cancel
@@ -12,15 +12,9 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
  * custom extension, not standard SEP-24 — confirmed still needed on their
  * Anchor Platform, but re-test it after any platform change on their side.
  */
-export async function POST(req: Request) {
+export const POST = withAuth(async (req: Request) => {
   try {
     // Authenticate
-    const accessToken = getAccessToken(req);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const {
       token,
@@ -96,4 +90,4 @@ export async function POST(req: Request) {
   } catch (e: any) {
     return j(500, { error: e?.message || 'Server error', stack: e?.stack });
   }
-}
+});

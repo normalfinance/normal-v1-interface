@@ -3,32 +3,24 @@ import type { NetworkType } from '@normalfinance/utils';
 import type { NetworkConfig } from '@normalfinance/types';
 
 import { cookies } from 'next/headers';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { getClientIP } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ContractErrorType } from '@normalfinance/types';
-import { getClientIP, getAccessToken } from '@/utils/http';
 import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logger, parseError, getStellarConfigForNetwork } from '@normalfinance/utils';
 import { logWithConfig, createNodeConfigHandler } from '@/lib/edge-config-middleware';
 
 export const runtime = 'nodejs';
 
-async function transactionHandler(req: NextRequest) {
+const transactionHandler = withAuth(async (req: NextRequest, { user }) => {
   try {
     const cookieStore = await cookies();
     const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as NetworkType;
     const config: NetworkConfig = getStellarConfigForNetwork(network);
-
-    // Authenticate
-    const token = getAccessToken(req);
-    const user = await getAuthenticatedUser(token);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     // Validate params
     const { walletAddress, signedTransactionXDR, transactionType } = await req.json();
@@ -262,7 +254,7 @@ async function transactionHandler(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // export const POST = createEdgeConfigHandler(transactionHandler, 'transaction');
 export const POST = createNodeConfigHandler(transactionHandler, 'transaction');

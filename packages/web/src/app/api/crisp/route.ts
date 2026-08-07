@@ -1,19 +1,12 @@
 import type { NextRequest } from 'next/server';
 
 import crypto from 'crypto';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { getAccessToken } from '@/utils/http';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   try {
     // Authenticate
-    const token = getAccessToken(request);
-    const user = await getAuthenticatedUser(token);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const secretKey = process.env.CRISP_SECRET_KEY;
 
@@ -34,4 +27,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

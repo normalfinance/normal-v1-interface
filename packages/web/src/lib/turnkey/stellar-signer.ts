@@ -3,6 +3,8 @@
 import { constants } from '@normalfinance/utils';
 import { xdr, Keypair, TransactionBuilder } from '@stellar/stellar-sdk';
 
+import { runWebauthnCeremony } from './webauthn-guard';
+
 // ---------------------------------------------------------------------------
 // Signs a Stellar transaction with the user's Turnkey-held key via passkey.
 //
@@ -33,17 +35,23 @@ export async function signStellarXdrWithTurnkey(
   const stamper = new WebauthnStamper({ rpId });
   const client = new TurnkeyClient({ baseUrl: 'https://api.turnkey.com' }, stamper);
 
-  const result = await client.signRawPayload({
-    type: 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2',
-    timestampMs: String(Date.now()),
-    organizationId: subOrgId,
-    parameters: {
-      signWith: stellarAddress,
-      payload,
-      encoding: 'PAYLOAD_ENCODING_HEXADECIMAL',
-      hashFunction: 'HASH_FUNCTION_NOT_APPLICABLE',
-    },
-  });
+  // Serialized + fast-fail-retried: savings signs two transactions
+  // back-to-back, and overlapping/immediately-successive ceremonies are what
+  // produced the intermittent "operation either timed out or was not
+  // allowed" (see webauthn-guard.ts).
+  const result = await runWebauthnCeremony(() =>
+    client.signRawPayload({
+      type: 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2',
+      timestampMs: String(Date.now()),
+      organizationId: subOrgId,
+      parameters: {
+        signWith: stellarAddress,
+        payload,
+        encoding: 'PAYLOAD_ENCODING_HEXADECIMAL',
+        hashFunction: 'HASH_FUNCTION_NOT_APPLICABLE',
+      },
+    })
+  );
 
   const sig = result?.activity?.result?.signRawPayloadResult;
   if (!sig?.r || !sig?.s) throw new Error('Turnkey signing failed — no signature returned');

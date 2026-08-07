@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { getClientIP } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ReferralService } from '@/lib/referral-service';
-import { getClientIP, getAccessToken } from '@/utils/http';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
 const GetUserSchema = z.object({
@@ -17,16 +17,8 @@ const CreateUserSchema = z.object({
   walletAddress: z.string().min(1, 'Wallet address is required'),
 });
 
-async function getUserHandler(request: NextRequest) {
+const getUserHandler = withAuth(async (request: NextRequest) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const supabaseUser = await getAuthenticatedUser(accessToken);
-
-    if (!supabaseUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const walletAddress = searchParams.get('walletAddress');
 
@@ -108,9 +100,12 @@ async function getUserHandler(request: NextRequest) {
     await logWithConfig('error', 'Error fetching referral user', { error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
-async function createUserHandler(request: NextRequest) {
+// POST was fully unauthenticated before 2026-08-07 — an anonymous caller could
+// create referral user rows. Its only legitimate callers are signed-in flows,
+// which already send auth headers.
+const createUserHandler = withAuth(async (request: NextRequest) => {
   try {
     const body = await request.json();
     const validation = CreateUserSchema.safeParse(body);
@@ -179,7 +174,7 @@ async function createUserHandler(request: NextRequest) {
     await logWithConfig('error', 'Error creating referral user', { error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
 export const GET = createEdgeConfigHandler(getUserHandler, 'referral-user');
 export const POST = createEdgeConfigHandler(createUserHandler, 'referral-user');

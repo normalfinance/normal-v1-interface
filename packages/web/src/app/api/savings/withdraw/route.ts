@@ -1,13 +1,23 @@
 import type { NextRequest } from 'next/server';
 
 import { cookies } from 'next/headers';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { rateLimiter } from '@/server/rateLimiter';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 // ----------------------------------------------------------------------
 
-export async function POST(request: NextRequest) {
+// Unauthenticated until 2026-08-07 (finding #50): any anonymous caller could
+// drive this route — and with it, quota we pay for. Its only legitimate
+// callers are signed-in app flows, which send auth headers.
+export const POST = withAuth(async (request: NextRequest, { user }) => {
+  const { success: withinLimit } = await rateLimiter.limit(user.id);
+  if (!withinLimit) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const cookieStore = await cookies();
     const network = cookieStore.get('normal-network')?.value ?? 'testnet';
@@ -82,4 +92,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

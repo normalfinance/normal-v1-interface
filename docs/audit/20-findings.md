@@ -504,3 +504,53 @@ anyone), `lifi/status` (unthrottled LI.FI proxy; its sibling `statuses` IS
 limited), `portfolio/activity` (the old activity system, fully open). No fund
 movement — quota-burn and probing surface. Scheduled into the withAuth sweep,
 DeFindex pair first. Sev 2 · Lik 2 · Eff 1-2.
+
+
+## #50 — CLOSED 2026-08-07 (withAuth sweep)
+
+All 37 authed route files migrated onto withAuth (40+ handlers; three shapes:
+standard, edge-config composition, custom pair). The naked routes got auth +
+per-user rate limits; six client fetch sites gained auth headers. TWO MORE
+found during the sweep: `lifi/statuses` (flagged by the new conformance test
+on its first run) and `referral/user` POST (fully unauthenticated DB write,
+hidden behind an authed sibling handler in the same file). Permanent guard:
+`route-auth-conformance.test.ts` — every route must be wrapped or allowlisted
+with a written reason; runs in CI. 94/94 tests green.
+
+## #51 — Intermittent passkey NotAllowedError on savings (FIXED 2026-08-07)
+
+The long-watched tester report ("operation either timed out or was not
+allowed", cleared by retry) diagnosed and fixed. Cause: savings deposit/
+withdraw run TWO WebAuthn ceremonies back-to-back (fee payment, then vault
+op); browsers — Chrome + Windows Hello especially — instantly reject a
+ceremony that starts during the previous native dialog's teardown or while
+another request is pending. NOT a timeout (stamper allows 5 min); the failure
+is instant and no prompt is shown, which is why retrying always worked.
+
+Fix: `lib/turnkey/webauthn-guard.ts` — (1) all our ceremonies serialize
+through a queue, (2) 350ms settle delay between successive prompts, (3) ONE
+silent retry only when the failure was fast (<2s = no human saw a dialog); a
+slow failure means the user cancelled, and re-prompting after a deliberate
+cancel is hostile. Surviving errors rethrow with a human message + original
+as `cause`. Wired into stellar-signer (all Stellar passkey signing: savings,
+swap fees, MGI, CCTP burns) and evm-signer (CCTP pivot). 6-case unit suite,
+incl. the no-overlap and no-retry-after-cancel invariants. Send adapters can
+adopt in a follow-up line each — single-ceremony flows, lower exposure.
+
+## #52 — Rapid savings actions stick a wrong "Your Deposits" (FIXED 2026-08-07)
+
+Observed live: fast deposit/withdraw cycles left totalDeposited missing one
+action, with the difference displayed as earnings (+14.46%), stuck for
+minutes. Mechanism: each action launches a fresh position read; network
+reordering let a read STARTED BEFORE action N resolve AFTER it. Pre-action
+data carries a genuinely-lower value — not the indexer-lag shape the
+reconciler forgives — so it was accepted AND persisted to the position cache,
+poisoning `prev` for every later reconcile until DeFindex's indexer caught up.
+(The server events cache was checked and cleared — refresh=1 bypasses it.)
+
+Fix: `lib/savings-read-guard.ts` — deposits/withdraws bump a per-address
+epoch BEFORE announcing; every position read snapshots the epoch at start and
+throws StaleSavingsReadError at resolve-time if it moved — before
+reconciliation, before any cache write. SWR's retry then refetches under the
+current epoch. Fourth instance of the "timer/ordering standing in for a real
+signal" root cause. 4-case unit suite, incl. per-address isolation.

@@ -13,6 +13,7 @@ deeper only where you need to:
 | `46-external-wallets.md` | external wallets, the full capability matrix |
 | `49-sends-explained.md` | the sends work: pending rows + the exchange-memo guard |
 | `51-ci-quality-explained.md` | CI, withAuth, lint zero, the merge-commit story |
+| `52-withauth-sweep-explained.md` | every route authed by default + the test that enforces it |
 | `20-findings.md` | the ranked register, every finding with severity |
 | `30-roadmap.md` | what is scheduled next, and why in that order |
 | `42-tester-guide.html` | the tester-facing version, printable to PDF |

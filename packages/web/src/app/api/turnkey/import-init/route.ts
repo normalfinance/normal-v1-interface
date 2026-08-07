@@ -2,11 +2,10 @@ import type { NextRequest } from 'next/server';
 import type { PasskeyAttestation } from '@/lib/turnkey/server';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { XLM_ACCOUNT } from '@/lib/turnkey/account-specs';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { turnkey, getSubOrgRootUserId, buildPasskeyRootUser } from '@/lib/turnkey/server';
 
 // ---------------------------------------------------------------------------
@@ -22,11 +21,7 @@ import { turnkey, getSubOrgRootUserId, buildPasskeyRootUser } from '@/lib/turnke
 //   (ORGANIZATION_MISMATCH), and this keeps the mnemonic flow end-to-end
 //   client-side anyway.
 // ---------------------------------------------------------------------------
-export async function POST(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   let body: { challenge?: string; attestation?: PasskeyAttestation } = {};
   try {
     body = await request.json();
@@ -92,4 +87,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

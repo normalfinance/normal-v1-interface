@@ -2,12 +2,18 @@ import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+// Unauthenticated until 2026-08-07 (finding #50): any anonymous caller could
+// drive this route — and with it, quota we pay for. Its only legitimate
+// callers are signed-in app flows, which send auth headers.
+// NOTE: zero client callers found — deletion belongs to the #7/#12 activity
+// consolidation; authing it is the stopgap.
+export const GET = withAuth(async (request: NextRequest) => {
   try {
     const cookieStore = await cookies();
     const { searchParams } = new URL(request.url);
@@ -105,4 +111,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

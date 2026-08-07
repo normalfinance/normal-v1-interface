@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>52-withauth-sweep-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>52 — The withAuth sweep, explained</h1>
+<p>Companion to <a href="50-ci-and-withauth-plan.md">50-ci-and-withauth-plan.md</a> (the</p>
+<p>inventory and decisions). This explains the batch that finished the job: every</p>
+<p>API route now authenticates by default, and a test makes that permanent.</p>
+<hr />
+<h2>1. What problem this finishes</h2>
+<p>Next.js routes are <strong>born public</strong> — authentication exists only where a</p>
+<p>developer remembered to paste the check. Across this project that produced</p>
+<p>four incidents (log-transaction, wallet/activity, broadcast-btc, and the</p>
+<p>referral POST found <em>during this very sweep</em>). The <code>withAuth</code> wrapper from the</p>
+<p>last batch inverted the default for three routes; this batch made it the rule</p>
+<p>for all of them.</p>
+<p>A route now reads:</p>
+<pre>export const POST = withAuth(async (request, { user }) =&gt; { ... });</pre>
+<p>The wrapper authenticates before the handler runs and hands over the verified</p>
+<p><code>user</code>. Forgetting auth is no longer a thing that can happen silently — an</p>
+<p>unwrapped route <em>looks</em> different, and (section 4) a test fails if one appears.</p>
+<h2>2. What was migrated — 40+ handlers across 37 files</h2>
+<p>Three shapes existed, and each needed its own treatment:</p>
+<ul>
+<li><strong>The standard shape</strong> (28 files): handler starts with the copy-pasted</li>
+</ul>
+<p>  token-fetch → user-fetch → <code>if (!user) return 401</code> block. A script stripped</p>
+<p>  the block and wrapped the handler; TypeScript then re-verified every file.</p>
+<ul>
+<li><strong>The edge-config family</strong> (7 files: send, transaction, referral/*): these</li>
+</ul>
+<p>  already compose through <code>createEdgeConfigHandler(innerHandler)</code>. The inner</p>
+<p>  handlers got wrapped, so the chain is now <em>edge-config → withAuth → logic</em> —</p>
+<p>  their logging/kill-switch layer still runs first, auth still precedes any</p>
+<p>  route logic.</p>
+<ul>
+<li><strong>The custom pair</strong>: <code>cctp/transfers/[id]</code> authenticated inside a helper</li>
+</ul>
+<p>  shared by GET and PATCH — the helper now takes a <code>userId</code> and only answers</p>
+<p>  ownership, while withAuth owns authentication. And <code>wallets/link</code> compares</p>
+<p>  the raw token against an admin secret, so the wrapper's context now carries</p>
+<p>  <code>accessToken</code> for exactly this kind of rare need.</p>
+<p><strong>A subtle ordering change, accepted on purpose:</strong> requests that are both</p>
+<p>unauthenticated <em>and</em> malformed used to sometimes get the "malformed" error;</p>
+<p>now they always get 401 first. We do zero work for anonymous callers.</p>
+<h2>3. The doors that were fully open (finding #50 — all closed)</h2>
+<p>The route inventory found routes with <strong>no auth and no rate limit at all</strong>:</p>
+<table>
+<tr><th>Route</th><th>What an anonymous caller could do</th><th>Now</th></tr>
+<tr><td><code>savings/deposit</code> / <code>savings/withdraw</code></td><td>burn our DeFindex API quota — the exact quota behind the 429 incident</td><td>auth + per-user rate limit</td></tr>
+<tr><td><code>fees/build-payment</code></td><td>have us build transactions for free</td><td>auth + per-user rate limit</td></tr>
+<tr><td><code>lifi/status</code></td><td>drain LI.FI quota through our key</td><td>auth + per-user rate limit</td></tr>
+<tr><td><code>lifi/statuses</code> (batch)</td><td>same — <strong>caught by the new test on its first run</strong></td><td>auth</td></tr>
+<tr><td><code>referral/user</code> POST</td><td>create database rows anonymously — found mid-sweep</td><td>auth</td></tr>
+<tr><td><code>portfolio/activity</code></td><td>read the old activity system</td><td>auth (stopgap — the route's real fate is deletion in the scheduled consolidation)</td></tr>
+</table>
+<p>None of these could move funds — they build <em>unsigned</em> transactions or read</p>
+<p>status — so this was quota-theft and probing surface, not theft. But the</p>
+<p>DeFindex pair meant a stranger with a loop could recreate the savings outage</p>
+<p>on demand. Not anymore.</p>
+<p><strong>The other half of each fix was client-side:</strong> these routes' callers had</p>
+<p>never needed to prove who they were, so six fetch sites (savings deposit /</p>
+<p>withdraw / fees ×2, both LI.FI status polls) now send the auth headers the</p>
+<p>rest of the app already sends everywhere.</p>
+<h2>4. The test that makes this permanent</h2>
+<p><code>src/app/api/route-auth-conformance.test.ts</code> — the most important artifact of</p>
+<p>the batch. It walks <strong>every</strong> <code>route.ts</code> under the API directory and asserts,</p>
+<p>for each: either the file uses <code>withAuth</code>, or the route is in a short</p>
+<p>allowlist <strong>with a written reason</strong> (public quotes shown before a wallet</p>
+<p>exists, address-keyed public chain data, cron-secret routes…).</p>
+<p>Three properties worth understanding:</p>
+<ul>
+<li><strong>A new public-by-accident route fails CI on the PR that adds it.</strong> The</li>
+</ul>
+<p>  error message tells the author exactly what to do: wrap it, or allowlist it</p>
+<p>  with a reason a reviewer can judge.</p>
+<ul>
+<li><strong>The allowlist keeps itself honest</strong>: a route that gains auth but stays</li>
+</ul>
+<p>  listed also fails — the list can only contain real exceptions — and a</p>
+<p>  listed route that stops existing fails too.</p>
+<ul>
+<li><strong>It proved itself immediately</strong>: on its very first run it flagged</li>
+</ul>
+<p>  <code>lifi/statuses</code>, which every human pass over the inventory had missed.</p>
+<p>It reads source text rather than importing the routes — importing would drag</p>
+<p>prisma and Supabase into jest for no extra proof.</p>
+<h2>5. What to take away</h2>
+<ul>
+<li><strong>Defaults beat discipline.</strong> Four incidents came from one wrong default.</li>
+</ul>
+<p>  The fix wasn't "be more careful" — it was making the safe thing the path of</p>
+<p>  least resistance and the unsafe thing loud.</p>
+<ul>
+<li><strong>Inventories find what reviews miss.</strong> Both bonus finds (<code>lifi/statuses</code>,</li>
+</ul>
+<p>  the referral POST) came from mechanical enumeration, not from reading code</p>
+<p>  "carefully".</p>
+<ul>
+<li><strong>A guard that only exists in people's heads dies with their attention.</strong></li>
+</ul>
+<p>  The conformance test is the sweep's memory, running on every PR forever.</p>
+</body></html>

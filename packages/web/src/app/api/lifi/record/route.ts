@@ -1,10 +1,9 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ---------------------------------------------------------------------------
 // POST /api/lifi/record
@@ -16,11 +15,7 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 // Body: { fromSymbol, toSymbol, amountIn, amountOut, txHash }
 // ---------------------------------------------------------------------------
 
-export async function POST(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   let body: {
     fromSymbol?: string;
     toSymbol?: string;
@@ -68,4 +63,4 @@ export async function POST(request: NextRequest) {
     logger.error('[lifi/record] Failed to record swap:', error);
     return NextResponse.json({ error: 'Failed to record swap' }, { status: 500 });
   }
-}
+});

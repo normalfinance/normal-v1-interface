@@ -1,7 +1,7 @@
+import { j } from '@/utils/http';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { j, getAccessToken } from '@/utils/http';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,13 +15,8 @@ export const dynamic = 'force-dynamic';
  * stays visible without a passkey ceremony. MoneyGram remains the source of
  * truth; `updatedAt` says how fresh a row is.
  */
-export async function GET(req: Request) {
+export const GET = withAuth(async (req: Request, { user }) => {
   try {
-    const user = await getAuthenticatedUser(getAccessToken(req));
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const transactions = await prisma.moneyGramTransaction.findMany({
       where: { supabaseUid: user.id },
       orderBy: { createdAt: 'desc' },
@@ -32,4 +27,4 @@ export async function GET(req: Request) {
   } catch (e: any) {
     return j(500, { error: e?.message || 'Server error' });
   }
-}
+});

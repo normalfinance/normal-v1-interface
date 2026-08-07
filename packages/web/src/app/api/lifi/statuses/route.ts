@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { redis } from '@/server/rateLimiter';
 
@@ -69,7 +70,9 @@ async function lookupStatus(txHash: string, fromSymbol: string, toSymbol: string
   return status;
 }
 
-export async function POST(request: NextRequest) {
+// Authed since 2026-08-07: proxies LI.FI with our key; caller is the
+// signed-in activity feed.
+export const POST = withAuth(async (request: NextRequest) => {
   let body: { swaps?: { txHash: string; fromSymbol: string; toSymbol: string }[] };
   try {
     body = await request.json();
@@ -85,4 +88,4 @@ export async function POST(request: NextRequest) {
   );
 
   return NextResponse.json({ success: true, statuses: Object.fromEntries(entries) });
-}
+});

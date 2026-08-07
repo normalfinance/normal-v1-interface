@@ -1,9 +1,8 @@
 import { cookies } from 'next/headers';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { getAccessToken } from '@/utils/http';
 import { mgiApiBase } from '@/lib/mgi/server-base';
 import { Keypair, Transaction } from '@stellar/stellar-sdk';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import {
   type NetworkType,
   getCurrentNetwork,
@@ -19,15 +18,9 @@ import {
  * - Posts to MGI /auth as application/x-www-form-urlencoded (transaction=<xdr>)
  * - Bubbles up MoneyGram's exact error body so you can see what's wrong
  */
-export async function POST(req: Request) {
+export const POST = withAuth(async (req: Request, { user }) => {
   try {
     // Authenticate
-    const accessToken = getAccessToken(req);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { userSignedXDR } = (await req.json()) as { userSignedXDR?: string };
     if (!userSignedXDR) {
@@ -103,4 +96,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-}
+});

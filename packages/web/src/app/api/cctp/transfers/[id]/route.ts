@@ -2,26 +2,24 @@ import { prisma } from '@/lib/prisma';
 // Single CCTP transfer: status reads advance the state machine opportunistically
 // (so an open swap UI drives progress even between cron ticks), and PATCH lets
 // the client attach tx hashes as it executes its side (burn, source swap).
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { getAccessToken } from '@/utils/http';
 import { advanceTransfer } from '@/lib/cctp/state';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 export const dynamic = 'force-dynamic';
 
-async function loadOwned(req: Request, id: string) {
-  const user = await getAuthenticatedUser(getAccessToken(req));
-  if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+// Auth moved out to withAuth on the handlers; this helper only answers
+// "does this transfer exist and belong to this user".
+async function loadOwned(userId: string, id: string) {
   const transfer = await prisma.cctpTransfer.findUnique({ where: { id } });
-  if (!transfer || transfer.userId !== user.id) {
+  if (!transfer || transfer.userId !== userId) {
     return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) };
   }
   return { transfer };
 }
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const { transfer, error } = await loadOwned(req, id);
+export const GET = withAuth(async (req, { user, params }) => {
+  const { transfer, error } = await loadOwned(user.id, params.id);
   if (error) return error;
 
   // Detail views pass ?noAdvance=1 for a fast read: advancing the state machine
@@ -31,11 +29,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const noAdvance = new URL(req.url).searchParams.get('noAdvance') === '1';
   const fresh = noAdvance ? transfer! : await advanceTransfer(transfer!);
   return NextResponse.json({ transfer: fresh });
-}
+});
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const { transfer, error } = await loadOwned(req, id);
+export const PATCH = withAuth(async (req, { user, params }) => {
+  const { transfer, error } = await loadOwned(user.id, params.id);
   if (error) return error;
 
   const body = await req.json();
@@ -66,6 +63,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
   }
 
-  const updated = await prisma.cctpTransfer.update({ where: { id }, data });
+  const updated = await prisma.cctpTransfer.update({ where: { id: params.id }, data });
   return NextResponse.json({ transfer: updated });
-}
+});
