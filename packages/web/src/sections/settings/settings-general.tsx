@@ -107,7 +107,9 @@ export function SettingsGeneral() {
         <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: '20px' }}>
           <Avatar src={userAvatar} alt={displayName} sx={{ width: 64, height: 64 }} />
           <Box>
-            <Typography sx={{ fontSize: '16px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em' }}>
+            <Typography
+              sx={{ fontSize: '16px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+            >
               {displayName}
             </Typography>
             <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '2px' }}>
@@ -166,7 +168,10 @@ export function SettingsGeneral() {
               <Iconify
                 icon="solar:mailbox-bold"
                 width={20}
-                sx={{ color: marketingOptIn ? '#0A0A0F' : 'rgba(10,10,15,0.35)', transition: 'color 200ms ease' }}
+                sx={{
+                  color: marketingOptIn ? '#0A0A0F' : 'rgba(10,10,15,0.35)',
+                  transition: 'color 200ms ease',
+                }}
               />
             </Box>
 
@@ -174,7 +179,9 @@ export function SettingsGeneral() {
               <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>
                 {t('Product updates')}
               </Typography>
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', mt: '2px', lineHeight: 1.4 }}>
+              <Typography
+                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', mt: '2px', lineHeight: 1.4 }}
+              >
                 {t('New features and announcements sent to')}{' '}
                 <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 500 }}>
                   {userEmail}
@@ -184,7 +191,12 @@ export function SettingsGeneral() {
           </Stack>
 
           {isFetchingOptIn ? (
-            <Skeleton variant="rounded" width={44} height={24} sx={{ borderRadius: '12px', flexShrink: 0 }} />
+            <Skeleton
+              variant="rounded"
+              width={44}
+              height={24}
+              sx={{ borderRadius: '12px', flexShrink: 0 }}
+            />
           ) : (
             <Switch
               checked={marketingOptIn}

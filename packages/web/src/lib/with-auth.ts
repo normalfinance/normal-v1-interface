@@ -35,10 +35,7 @@ export interface AuthedContext {
   params?: Record<string, string>;
 }
 
-type AuthedHandler = (
-  request: NextRequest,
-  context: AuthedContext
-) => Promise<Response> | Response;
+type AuthedHandler = (request: NextRequest, context: AuthedContext) => Promise<Response> | Response;
 
 export function withAuth(handler: AuthedHandler) {
   return async (

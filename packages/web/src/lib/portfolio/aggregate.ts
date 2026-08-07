@@ -185,14 +185,14 @@ export async function aggregatePortfolio(
     buildAsset(
       'XLM',
       addresses.stellar,
-      addresses.stellar ? (stellarFailed ? null : stellar?.xlm ?? 0) : null,
+      addresses.stellar ? (stellarFailed ? null : (stellar?.xlm ?? 0)) : null,
       priceOf('XLM'),
       changeOf('XLM')
     ),
     buildAsset(
       'USDC',
       addresses.stellar,
-      addresses.stellar ? (stellarFailed ? null : stellar?.usdc ?? 0) : null,
+      addresses.stellar ? (stellarFailed ? null : (stellar?.usdc ?? 0)) : null,
       priceOf('USDC'),
       changeOf('USDC')
     ),

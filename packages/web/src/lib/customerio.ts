@@ -24,11 +24,7 @@ export async function cioIdentify(
   });
 }
 
-export async function cioSetMarketingOptIn(
-  userId: string,
-  email: string,
-  optIn: boolean
-) {
+export async function cioSetMarketingOptIn(userId: string, email: string, optIn: boolean) {
   await cioIdentify(userId, {
     email,
     marketing_opt_in: optIn,

@@ -54,9 +54,10 @@ export async function GET(req: NextRequest) {
     // editing this map. Stellar keeps its override: the query param covers a
     // connected (non-Turnkey) wallet, falling back to the stored address.
     const addresses = {
-      ...(Object.fromEntries(
-        CHAIN_IDS.map((id) => [id, getChainAddress(wallet, id)])
-      ) as Record<ChainId, string | null>),
+      ...(Object.fromEntries(CHAIN_IDS.map((id) => [id, getChainAddress(wallet, id)])) as Record<
+        ChainId,
+        string | null
+      >),
       stellar,
     };
 
@@ -103,6 +104,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, ...merged });
   } catch (error) {
     logger.error('[wallet/portfolio] error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to load portfolio' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Failed to load portfolio' },
+      { status: 500 }
+    );
   }
 }

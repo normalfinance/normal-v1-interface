@@ -236,8 +236,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
                   '&:hover': {
                     borderRadius: 1,
                     borderColor: theme.vars?.palette.primary.main || theme.palette.primary.main,
-                    backgroundColor:
-                      theme.vars?.palette.action.hover || theme.palette.action.hover,
+                    backgroundColor: theme.vars?.palette.action.hover || theme.palette.action.hover,
                   },
                 }}
               >

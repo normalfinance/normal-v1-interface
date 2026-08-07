@@ -59,7 +59,7 @@ function log(msg: string, extra?: unknown) {
 async function getTurnkeyClient() {
   const rpId =
     typeof window !== 'undefined'
-      ? process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname
+      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
       : 'localhost';
   const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const { TurnkeyClient } = await import('@turnkey/http');
@@ -149,7 +149,9 @@ async function executeEvm(
   // receipt + bridge non-blockingly (a dropped/underpriced tx surfaces there
   // as "Failed", not as a frozen button).
   const hash = await client.sendRawTransaction({
-    serializedTransaction: (signedTx.startsWith('0x') ? signedTx : `0x${signedTx}`) as `0x${string}`,
+    serializedTransaction: (signedTx.startsWith('0x')
+      ? signedTx
+      : `0x${signedTx}`) as `0x${string}`,
   });
   log('ETH: broadcast hash', hash);
   return hash;
@@ -202,7 +204,10 @@ async function executeBtc(
   const psbtDescription =
     `bytes=${psbtHex.length / 2} signWith=${bitcoinAddress} ` +
     `inputs=[${summary.inputs
-      .map((inp) => `#${inp.index} ${inp.witnessUtxoScript ?? 'no-witness_utxo'} {${inp.fields.join(',')}}`)
+      .map(
+        (inp) =>
+          `#${inp.index} ${inp.witnessUtxoScript ?? 'no-witness_utxo'} {${inp.fields.join(',')}}`
+      )
       .join(' | ')}] ` +
     `outputs=[${summary.outputs.map((o) => o.script).join(', ')}]` +
     (summary.error ? ` decodeError=${summary.error}` : '');

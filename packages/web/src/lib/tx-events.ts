@@ -44,10 +44,15 @@ export interface PendingSendInput {
 }
 
 function dispatch(chain?: ChainId): void {
-  window.dispatchEvent(new CustomEvent(ACTIVITY_UPDATED_EVENT, { detail: chain ? { chain } : undefined }));
+  window.dispatchEvent(
+    new CustomEvent(ACTIVITY_UPDATED_EVENT, { detail: chain ? { chain } : undefined })
+  );
 }
 
-export function announceTransaction(opts: { chain: ChainId; pendingSend?: PendingSendInput }): void {
+export function announceTransaction(opts: {
+  chain: ChainId;
+  pendingSend?: PendingSendInput;
+}): void {
   if (typeof window === 'undefined') return;
 
   if (opts.pendingSend) {

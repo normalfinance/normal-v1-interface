@@ -73,11 +73,14 @@ export async function importMnemonicIntoTurnkey(
   // 4 — passkey-stamped Turnkey client against the sub-org
   const rpId =
     typeof window !== 'undefined'
-      ? process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname
+      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
       : 'localhost';
   const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const { TurnkeyClient } = await import('@turnkey/http');
-  const client = new TurnkeyClient({ baseUrl: 'https://api.turnkey.com' }, new WebauthnStamper({ rpId }));
+  const client = new TurnkeyClient(
+    { baseUrl: 'https://api.turnkey.com' },
+    new WebauthnStamper({ rpId })
+  );
 
   // 5 — INIT_IMPORT_WALLET (passkey prompt) → enclave import bundle
   params.onStage?.('authorize');
@@ -87,8 +90,7 @@ export async function importMnemonicIntoTurnkey(
     organizationId: subOrgId,
     parameters: { userId },
   });
-  const importBundle =
-    initActivity?.activity?.result?.initImportWalletResult?.importBundle;
+  const importBundle = initActivity?.activity?.result?.initImportWalletResult?.importBundle;
   if (!importBundle) throw new Error('Turnkey did not return an import bundle');
 
   // 6 — encrypt the mnemonic to the enclave key, in this browser

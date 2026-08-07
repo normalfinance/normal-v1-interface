@@ -25,14 +25,7 @@ import {
 } from '@/utils/token-selectors';
 
 import { keyframes } from '@mui/system';
-import {
-  Box,
-  Stack,
-  Button,
-  Skeleton,
-  Typography,
-  CircularProgress,
-} from '@mui/material';
+import { Box, Stack, Button, Skeleton, Typography, CircularProgress } from '@mui/material';
 
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
@@ -176,8 +169,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   // made the pop-up close mid-poll: each 2.5s re-check briefly looked like "no
   // longer needs setup", which closed it.)
   const [hasCheckedOnce, setHasCheckedOnce] = useState(false);
-  useEffect(() => { setHasCheckedOnce(false); }, [wallet.address]);
-  useEffect(() => { if (!isCheckingAccount) setHasCheckedOnce(true); }, [isCheckingAccount]);
+  useEffect(() => {
+    setHasCheckedOnce(false);
+  }, [wallet.address]);
+  useEffect(() => {
+    if (!isCheckingAccount) setHasCheckedOnce(true);
+  }, [isCheckingAccount]);
 
   // Savings-specific setup: activate the Stellar account (XLM), then add the USDC
   // trustline. `setupComplete` deliberately ignores isCheckingAccount, so a
@@ -257,16 +254,23 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           label: t('Signing yield commission'),
           sub: t('Approve in your wallet · 2 of 2'),
         },
-        { id: 'commission_broadcast', label: t('Broadcasting to Stellar'), sub: 'horizon.stellar.org' },
+        {
+          id: 'commission_broadcast',
+          label: t('Broadcasting to Stellar'),
+          sub: 'horizon.stellar.org',
+        },
       ]
     : [
         { id: 'withdraw_sign', label: t('Signing withdrawal'), sub: t('Approve in your wallet') },
-        { id: 'withdraw_broadcast', label: t('Broadcasting to Stellar'), sub: 'horizon.stellar.org' },
+        {
+          id: 'withdraw_broadcast',
+          label: t('Broadcasting to Stellar'),
+          sub: 'horizon.stellar.org',
+        },
       ];
   const txSteps = mode === 'deposit' ? depositSteps : withdrawSteps;
   const activeStepIdx = txStep ? txSteps.findIndex((s) => s.id === txStep) : -1;
-  const stepsTiming =
-    mode === 'deposit' ? '~30s' : hasWithdrawCommission ? '~20s' : '~10s';
+  const stepsTiming = mode === 'deposit' ? '~30s' : hasWithdrawCommission ? '~20s' : '~10s';
 
   const handleAddTrustline = useCallback(async () => {
     if (!savingsUsdcIssuer) {
@@ -282,7 +286,14 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     } catch (err: any) {
       enqueueSnackbar(err.message || t('Failed to add USDC trustline'), { variant: 'error' });
     }
-  }, [addTrustLine, savingsUsdcIssuer, enqueueSnackbar, t, setNeedsTrustline, refetchAccountStatus]);
+  }, [
+    addTrustLine,
+    savingsUsdcIssuer,
+    enqueueSnackbar,
+    t,
+    setNeedsTrustline,
+    refetchAccountStatus,
+  ]);
 
   const handleTrustlineSuccess = useCallback(async () => {
     setAmount('');
@@ -308,7 +319,11 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
 
   const isWithdrawPositionLoading = mode === 'withdraw' && positionFetching && !userPosition;
   const isActionDisabled =
-    loading || isWithdrawPositionLoading || lowXlmForSavings || isInsufficientBalance || isAmountMissing;
+    loading ||
+    isWithdrawPositionLoading ||
+    lowXlmForSavings ||
+    isInsufficientBalance ||
+    isAmountMissing;
   const actionButtonText = loading
     ? mode === 'deposit'
       ? t('Depositing...')
@@ -760,9 +775,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
 
       {/* Error */}
       {error && (
-        <Typography sx={{ fontSize: '12px', color: 'error.main', mb: '12px' }}>
-          {error}
-        </Typography>
+        <Typography sx={{ fontSize: '12px', color: 'error.main', mb: '12px' }}>{error}</Typography>
       )}
 
       {/* Low-XLM warning — savings fees are paid in XLM, so you can't
@@ -780,15 +793,23 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             ...theme.applyStyles('dark', { bgcolor: 'rgba(245,158,11,0.12)' }),
           })}
         >
-          <Iconify icon="eva:alert-triangle-fill" width={18} sx={{ color: '#B26A00', mt: '1px', flexShrink: 0 }} />
+          <Iconify
+            icon="eva:alert-triangle-fill"
+            width={18}
+            sx={{ color: '#B26A00', mt: '1px', flexShrink: 0 }}
+          />
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#7A4A00', lineHeight: 1.4 }}>
+            <Typography
+              sx={{ fontSize: '13px', fontWeight: 600, color: '#7A4A00', lineHeight: 1.4 }}
+            >
               {mode === 'withdraw'
                 ? t('You need a little XLM to withdraw')
                 : t('You need a little XLM to deposit')}
             </Typography>
             <Typography sx={{ fontSize: '12px', color: '#8A6A2E', lineHeight: 1.5, mt: '2px' }}>
-              {t('Savings network fees are paid in XLM. Add some XLM to your wallet to move money in or out of savings.')}
+              {t(
+                'Savings network fees are paid in XLM. Add some XLM to your wallet to move money in or out of savings.'
+              )}
             </Typography>
             <Stack direction="row" spacing={1} sx={{ mt: '10px' }}>
               <Button
@@ -833,7 +854,15 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       <WalletGate buttonText={t('Connect wallet to save')} fullWidth variant="contained">
         {needsSetup ? (
           <Stack spacing={1.25}>
-            <Typography sx={{ fontSize: '12.5px', color: 'text.secondary', textAlign: 'center', px: 1, lineHeight: 1.55 }}>
+            <Typography
+              sx={{
+                fontSize: '12.5px',
+                color: 'text.secondary',
+                textAlign: 'center',
+                px: 1,
+                lineHeight: 1.55,
+              }}
+            >
               {accountExists
                 ? t('One quick step left — add a USDC trustline to start earning.')
                 : t('Activate your account and add USDC to start earning yield.')}

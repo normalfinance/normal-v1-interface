@@ -61,11 +61,19 @@ export function LifiStatusModal({
   const currentIndex = isFailed ? order.confirming : isRefunded ? order.bridging : order[stage];
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: '22px' } } }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+    >
       <DialogContent sx={{ px: '22px', py: '26px' }}>
         <Stack spacing={2.5}>
           <Box sx={{ textAlign: 'center' }}>
-            <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+            <Typography
+              sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+            >
               {isDone
                 ? t('Swap complete')
                 : isRefunded
@@ -76,7 +84,10 @@ export function LifiStatusModal({
             </Typography>
             <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
               {isRefunded
-                ? t('The bridge couldn’t complete it and returned your {{from}}. No funds were lost — small swaps are sometimes refunded.', { from: fromSymbol })
+                ? t(
+                    'The bridge couldn’t complete it and returned your {{from}}. No funds were lost — small swaps are sometimes refunded.',
+                    { from: fromSymbol }
+                  )
                 : isFailed
                   ? t('The transaction didn’t confirm. No funds were moved — please try again.')
                   : t('You can close this — the swap keeps going on its own.')}
@@ -119,23 +130,33 @@ export function LifiStatusModal({
                     ) : stepActive ? (
                       <CircularProgress size={12} sx={{ color: '#0A0A0F' }} />
                     ) : (
-                      <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'rgba(10,10,15,0.25)' }} />
+                      <Box
+                        sx={{
+                          width: 5,
+                          height: 5,
+                          borderRadius: '50%',
+                          bgcolor: 'rgba(10,10,15,0.25)',
+                        }}
+                      />
                     )}
                   </Box>
                   <Typography
                     sx={{
                       fontSize: '13.5px',
-                      color: stepDone || stepActive
-                        ? '#0A0A0F'
-                        : stepFailed
-                          ? '#B91C1C'
-                          : stepRefunded
-                            ? '#B45309'
-                            : 'rgba(10,10,15,0.4)',
+                      color:
+                        stepDone || stepActive
+                          ? '#0A0A0F'
+                          : stepFailed
+                            ? '#B91C1C'
+                            : stepRefunded
+                              ? '#B45309'
+                              : 'rgba(10,10,15,0.4)',
                       fontWeight: stepActive ? 600 : 400,
                     }}
                   >
-                    {stepRefunded ? t('Refunded — {{from}} returned', { from: fromSymbol }) : step.label}
+                    {stepRefunded
+                      ? t('Refunded — {{from}} returned', { from: fromSymbol })
+                      : step.label}
                   </Typography>
                 </Stack>
               );
@@ -143,8 +164,25 @@ export function LifiStatusModal({
           </Stack>
 
           {/* tx hash */}
-          <Box sx={{ px: '12px', py: '8px', borderRadius: '10px', bgcolor: '#FAFAFB', border: '1px solid rgba(10,10,15,0.08)' }}>
-            <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.5)', fontFamily: '"Geist Mono", monospace', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          <Box
+            sx={{
+              px: '12px',
+              py: '8px',
+              borderRadius: '10px',
+              bgcolor: '#FAFAFB',
+              border: '1px solid rgba(10,10,15,0.08)',
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: '11px',
+                color: 'rgba(10,10,15,0.5)',
+                fontFamily: '"Geist Mono", monospace',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {txHash}
             </Typography>
           </Box>

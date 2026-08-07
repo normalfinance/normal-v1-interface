@@ -68,20 +68,27 @@ function SavingsBigCard({ liveApy }: { liveApy: number | null }) {
       }}
     >
       {/* Radial glow */}
-      <Box sx={{
-        position: 'absolute', inset: 0,
-        background: 'radial-gradient(ellipse at 50% 0%, rgba(110,139,255,0.15) 0%, transparent 65%)',
-        pointerEvents: 'none',
-      }} />
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(ellipse at 50% 0%, rgba(110,139,255,0.15) 0%, transparent 65%)',
+          pointerEvents: 'none',
+        }}
+      />
       {/* Dot grid */}
-      <Box sx={{
-        position: 'absolute', inset: 0,
-        backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
-        backgroundSize: '20px 20px',
-        WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-        maskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-        pointerEvents: 'none',
-      }} />
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+          WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
+          maskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
+          pointerEvents: 'none',
+        }}
+      />
       <Box sx={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <EarnAnimation liveApy={liveApy} />
       </Box>
@@ -98,7 +105,8 @@ const CAROUSEL_SLIDES = [
     href: '/savings',
     eyebrow: 'Normal Savings',
     title: 'Earn yield on your USDC',
-    description: 'Deposit USDC and earn real yield through Blend Protocol — self-custody, no middlemen.',
+    description:
+      'Deposit USDC and earn real yield through Blend Protocol — self-custody, no middlemen.',
     image: cdn('mockups/savings2.webp'),
   },
   {
@@ -142,7 +150,9 @@ function MockupCarouselCard() {
         '&:hover': { boxShadow: '0 8px 32px rgba(10,10,15,0.18)' },
       }}
       onClick={() => router.push(current.href)}
-      onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+      onTouchStart={(e) => {
+        touchStartX.current = e.touches[0].clientX;
+      }}
       onTouchEnd={(e) => {
         const delta = touchStartX.current - e.changedTouches[0].clientX;
         if (Math.abs(delta) > 40) goTo(delta > 0 ? next : prev);
@@ -170,17 +180,31 @@ function MockupCarouselCard() {
       ))}
 
       {/* Dark gradient — bottom portion */}
-      <Box sx={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        background: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)',
-      }} />
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background:
+            'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)',
+        }}
+      />
 
       {/* Bottom overlay — text left, arrows + dots right */}
-      <Box sx={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        px: '20px', pb: '18px',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 2,
-      }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          px: '20px',
+          pb: '18px',
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          gap: 2,
+        }}
+      >
         {/* Text — bottom left */}
         <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ ...CARD_H3_SX, color: '#fff', mb: 0.5, fontSize: '18px' }}>
@@ -192,17 +216,30 @@ function MockupCarouselCard() {
         </Box>
 
         {/* Dots + arrows — bottom right */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', flexShrink: 0 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: '8px',
+            flexShrink: 0,
+          }}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             {CAROUSEL_SLIDES.map((_, i) => (
               <Box
                 key={i}
-                onClick={(e) => { e.stopPropagation(); goTo(i); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goTo(i);
+                }}
                 sx={{
-                  width: i === slide ? 18 : 5, height: 5,
+                  width: i === slide ? 18 : 5,
+                  height: 5,
                   borderRadius: '999px',
                   bgcolor: i === slide ? '#fff' : 'rgba(255,255,255,0.4)',
-                  cursor: 'pointer', transition: 'all 220ms ease',
+                  cursor: 'pointer',
+                  transition: 'all 220ms ease',
                 }}
               />
             ))}
@@ -211,20 +248,30 @@ function MockupCarouselCard() {
             {(['prev', 'next'] as const).map((dir) => (
               <Box
                 key={dir}
-                onClick={(e) => { e.stopPropagation(); goTo(dir === 'prev' ? prev : next); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goTo(dir === 'prev' ? prev : next);
+                }}
                 sx={{
-                  width: 30, height: 30, borderRadius: '50%',
-                  bgcolor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(6px)',
+                  width: 30,
+                  height: 30,
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(6px)',
                   border: '1px solid rgba(255,255,255,0.2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', transition: 'background 150ms, transform 150ms',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'background 150ms, transform 150ms',
                   '&:hover': { bgcolor: 'rgba(255,255,255,0.28)', transform: 'scale(1.08)' },
                 }}
               >
-                {dir === 'prev'
-                  ? <ArrowBackOutlinedIcon sx={{ fontSize: 15, color: '#fff' }} />
-                  : <ArrowForwardOutlinedIcon sx={{ fontSize: 15, color: '#fff' }} />
-                }
+                {dir === 'prev' ? (
+                  <ArrowBackOutlinedIcon sx={{ fontSize: 15, color: '#fff' }} />
+                ) : (
+                  <ArrowForwardOutlinedIcon sx={{ fontSize: 15, color: '#fff' }} />
+                )}
               </Box>
             ))}
           </Box>
@@ -256,7 +303,10 @@ function StellarSpeedCard() {
     >
       <Typography sx={EYEBROW_SX}>Stellar Network</Typography>
       <Typography sx={CARD_H3_SX}>
-        Settle in <Box component="span" sx={{ color: '#9A9AA3' }}>seconds</Box>
+        Settle in{' '}
+        <Box component="span" sx={{ color: '#9A9AA3' }}>
+          seconds
+        </Box>
       </Typography>
       <Typography sx={{ fontSize: '13.5px', color: '#6B6B76', mt: 1, mb: 3, lineHeight: 1.55 }}>
         Stellar finalizes in under 5 seconds — no waiting, no gas wars.
@@ -265,12 +315,20 @@ function StellarSpeedCard() {
       {/* Speed chips */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         <Box sx={KCHIP_SX}>
-          <Box component="span" sx={{ fontSize: '15px' }}>⚡</Box>
-          <Box component="span" sx={KCHIP_TEXT_SX}>avg_settlement:&nbsp;~{(ms / 1000).toFixed(1)}s</Box>
+          <Box component="span" sx={{ fontSize: '15px' }}>
+            ⚡
+          </Box>
+          <Box component="span" sx={KCHIP_TEXT_SX}>
+            avg_settlement:&nbsp;~{(ms / 1000).toFixed(1)}s
+          </Box>
         </Box>
         <Box sx={KCHIP_SX}>
-          <Box component="span" sx={{ fontSize: '15px' }}>💸</Box>
-          <Box component="span" sx={KCHIP_TEXT_SX}>network_fee:&nbsp;&lt;$0.001</Box>
+          <Box component="span" sx={{ fontSize: '15px' }}>
+            💸
+          </Box>
+          <Box component="span" sx={KCHIP_TEXT_SX}>
+            network_fee:&nbsp;&lt;$0.001
+          </Box>
         </Box>
       </Box>
     </Box>
@@ -309,11 +367,10 @@ function BackedByCard() {
       {/* Header */}
       <Box>
         <Typography sx={EYEBROW_SX}>Backed by</Typography>
-        <Typography sx={{ ...CARD_H3_SX, mb: 1 }}>
-          Trusted by leaders.
-        </Typography>
+        <Typography sx={{ ...CARD_H3_SX, mb: 1 }}>Trusted by leaders.</Typography>
         <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.6 }}>
-          The most credible names in crypto and venture — giving you confidence your funds are in safe hands.
+          The most credible names in crypto and venture — giving you confidence your funds are in
+          safe hands.
         </Typography>
       </Box>
 
@@ -375,7 +432,9 @@ function BackedByCard() {
             </Box>
 
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F', lineHeight: 1.2 }}>
+              <Typography
+                sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F', lineHeight: 1.2 }}
+              >
                 {b.name}
               </Typography>
               <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', mt: '3px' }}>
@@ -384,23 +443,37 @@ function BackedByCard() {
             </Box>
 
             {/* Checkmark badge */}
-            <Box sx={{
-              width: 22, height: 22, borderRadius: '50%',
-              bgcolor: 'rgba(26,179,125,0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <Box component="span" sx={{ fontSize: '11px', color: '#1AB37D', lineHeight: 1 }}>✓</Box>
+            <Box
+              sx={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                bgcolor: 'rgba(26,179,125,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Box component="span" sx={{ fontSize: '11px', color: '#1AB37D', lineHeight: 1 }}>
+                ✓
+              </Box>
             </Box>
           </Box>
         ))}
 
         {/* Valuation tag */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', mt: '4px' }}>
-          <Box sx={{
-            width: 6, height: 6, borderRadius: '50%', bgcolor: '#1AB37D', flexShrink: 0,
-            boxShadow: '0 0 0 3px rgba(26,179,125,0.18)',
-          }} />
+          <Box
+            sx={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              bgcolor: '#1AB37D',
+              flexShrink: 0,
+              boxShadow: '0 0 0 3px rgba(26,179,125,0.18)',
+            }}
+          />
           <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>
             $4M valuation round · bridge funding
           </Typography>
@@ -447,9 +520,7 @@ function NonCustodialCard() {
   return (
     <Box sx={{ ...CARD_BASE, gridColumn: { xs: '1 / -1', sm: 'span 1', md: 'span 2' } }}>
       <Typography sx={EYEBROW_SX}>Security</Typography>
-      <Typography sx={{ ...CARD_H3_SX, mb: 1 }}>
-        Non-custodial by design
-      </Typography>
+      <Typography sx={{ ...CARD_H3_SX, mb: 1 }}>Non-custodial by design</Typography>
       <Typography sx={{ fontSize: '13.5px', color: '#6B6B76', lineHeight: 1.6, mb: 3 }}>
         Your keys, your funds. Normal never holds your assets — everything is on-chain on Stellar.
         Withdraw to any wallet, anytime, with no permission needed.
@@ -468,7 +539,9 @@ function NonCustodialCard() {
           >
             🔑
           </Box>
-          <Box component="span" sx={KCHIP_TEXT_SX}>your_private_key.stellar</Box>
+          <Box component="span" sx={KCHIP_TEXT_SX}>
+            your_private_key.stellar
+          </Box>
         </Box>
 
         {/* Self-custody pill */}
@@ -483,7 +556,9 @@ function NonCustodialCard() {
               boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
             }}
           />
-          <Box component="span" sx={KCHIP_TEXT_SX}>self_custody: verified</Box>
+          <Box component="span" sx={KCHIP_TEXT_SX}>
+            self_custody: verified
+          </Box>
         </Box>
       </Box>
     </Box>

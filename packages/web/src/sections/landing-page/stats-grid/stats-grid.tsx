@@ -12,7 +12,8 @@ import { Iconify } from '@/components/template/iconify';
 
 // ----------------------------------------------------------------------
 
-const GRAD = 'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)';
+const GRAD =
+  'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)';
 const MONO = {
   fontFamily: '"Geist Mono", ui-monospace, monospace',
   fontFeatureSettings: '"ss01","ss02","zero"',
@@ -23,10 +24,10 @@ const MONO = {
 // figures), so labels attribute them to LI.FI / Turnkey. Point-in-time values,
 // hardcoded (verified from li.fi + turnkey.com, 2026-06).
 const STATS = [
-  { label: 'LI.FI volume',    value: '$80B+',  hint: 'cross-chain routed' },
-  { label: 'LI.FI transfers', value: '100M+',  hint: 'swaps & bridges' },
-  { label: 'Turnkey volume',  value: '$100B+', hint: 'stablecoin signed' },
-  { label: 'Turnkey uptime',  value: '99.9%',  hint: 'signing infrastructure' },
+  { label: 'LI.FI volume', value: '$80B+', hint: 'cross-chain routed' },
+  { label: 'LI.FI transfers', value: '100M+', hint: 'swaps & bridges' },
+  { label: 'Turnkey volume', value: '$100B+', hint: 'stablecoin signed' },
+  { label: 'Turnkey uptime', value: '99.9%', hint: 'signing infrastructure' },
 ];
 
 // ----------------------------------------------------------------------
@@ -56,52 +57,70 @@ export const StatsGrid: React.FC<StatsGridProps> = (props) => {
 
   return (
     <SectionRoot aria-labelledby="trusted-heading" {...props}>
-
       {/* Aurora glow */}
-      <Box sx={{
-        position: 'absolute', inset: '-10%', zIndex: 0, pointerEvents: 'none',
-        background: [
-          'radial-gradient(closest-side at 15% 30%, rgba(91,207,255,0.22), transparent 60%)',
-          'radial-gradient(closest-side at 85% 70%, rgba(255,176,96,0.16), transparent 60%)',
-          'radial-gradient(closest-side at 60% 15%, rgba(255,123,197,0.16), transparent 60%)',
-          'radial-gradient(closest-side at 35% 85%, rgba(177,123,255,0.22), transparent 60%)',
-        ].join(','),
-        filter: 'blur(40px)',
-        opacity: 0.85,
-      }} />
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: '-10%',
+          zIndex: 0,
+          pointerEvents: 'none',
+          background: [
+            'radial-gradient(closest-side at 15% 30%, rgba(91,207,255,0.22), transparent 60%)',
+            'radial-gradient(closest-side at 85% 70%, rgba(255,176,96,0.16), transparent 60%)',
+            'radial-gradient(closest-side at 60% 15%, rgba(255,123,197,0.16), transparent 60%)',
+            'radial-gradient(closest-side at 35% 85%, rgba(177,123,255,0.22), transparent 60%)',
+          ].join(','),
+          filter: 'blur(40px)',
+          opacity: 0.85,
+        }}
+      />
 
       {/* Dot grid */}
-      <Box sx={{
-        position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
-        backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
-        backgroundSize: '20px 20px',
-        WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-        maskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-      }} />
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+          WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
+          maskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
+        }}
+      />
 
       <Inner>
         {/* Live pill */}
         <Box
           sx={{
-            display: 'inline-flex', alignItems: 'center', gap: '10px',
-            px: '14px', py: '6px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '10px',
+            px: '14px',
+            py: '6px',
             background: 'rgba(255,255,255,0.08)',
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '999px',
-            fontSize: '13px', fontWeight: 500,
+            fontSize: '13px',
+            fontWeight: 500,
             color: 'rgba(255,255,255,0.85)',
             mb: '24px',
           }}
         >
-          <Box sx={{
-            width: 7, height: 7, borderRadius: '50%', bgcolor: '#1AB37D',
-            boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
-            animation: 'statsPulse 2.4s ease-in-out infinite',
-            '@keyframes statsPulse': {
-              '0%,100%': { boxShadow: '0 0 0 3px rgba(26,179,125,0.18)' },
-              '50%': { boxShadow: '0 0 0 6px rgba(26,179,125,0.08)' },
-            },
-          }} />
+          <Box
+            sx={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              bgcolor: '#1AB37D',
+              boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
+              animation: 'statsPulse 2.4s ease-in-out infinite',
+              '@keyframes statsPulse': {
+                '0%,100%': { boxShadow: '0 0 0 3px rgba(26,179,125,0.18)' },
+                '50%': { boxShadow: '0 0 0 6px rgba(26,179,125,0.08)' },
+              },
+            }}
+          />
           Live on Stellar mainnet
         </Box>
 

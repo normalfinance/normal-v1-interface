@@ -49,10 +49,7 @@ async function transactionHandler(req: NextRequest) {
 
     let transaction: Transaction;
     try {
-      transaction = new Transaction(
-        signedTransactionXDR,
-        config.NETWORK_PASSPHRASE
-      );
+      transaction = new Transaction(signedTransactionXDR, config.NETWORK_PASSPHRASE);
     } catch (xdrParseError: any) {
       await logWithConfig('warn', 'Transaction API: invalid XDR', {
         error: xdrParseError?.message,

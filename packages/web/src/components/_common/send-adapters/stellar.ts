@@ -13,10 +13,7 @@ const NETWORK_FEE_XLM = STELLAR_TX_FEE_XLM;
 
 type StellarSendFn = (args: TransferArgs) => Promise<string>;
 
-export function createStellarAdapter(
-  stellarSend: StellarSendFn,
-  xlmPriceUsd: number,
-): SendAdapter {
+export function createStellarAdapter(stellarSend: StellarSendFn, xlmPriceUsd: number): SendAdapter {
   const feeFiat = BigNumber(NETWORK_FEE_XLM).multipliedBy(xlmPriceUsd);
   const feeInfo: AdapterFeeInfo = {
     label: `${NETWORK_FEE_XLM} XLM`,

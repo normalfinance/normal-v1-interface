@@ -27,7 +27,7 @@ export function stellarMinReserve(subentryCount: number): BigNumber {
 export function spendableXlm(balance: BigNumber.Value, subentryCount: number): BigNumber {
   return BigNumber.max(
     BigNumber(balance).minus(stellarMinReserve(subentryCount)).minus(STELLAR_TX_FEE_XLM),
-    0,
+    0
   );
 }
 
@@ -37,9 +37,6 @@ export function spendableXlm(balance: BigNumber.Value, subentryCount: number): B
 export const MIN_XLM_FOR_SAVINGS_TX = 0.5;
 
 /** XLM available (above the minimum reserve) to spend on network/Soroban fees. */
-export function xlmAvailableForFees(
-  xlmBalance: BigNumber.Value,
-  subentryCount = 1,
-): BigNumber {
+export function xlmAvailableForFees(xlmBalance: BigNumber.Value, subentryCount = 1): BigNumber {
   return BigNumber.max(BigNumber(xlmBalance).minus(stellarMinReserve(subentryCount)), 0);
 }

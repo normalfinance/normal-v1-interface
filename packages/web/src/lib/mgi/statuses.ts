@@ -50,8 +50,4 @@ export const FAILED_MGI_STATUSES = new Set([
 ]);
 
 /** Nothing will change anymore — stop polling these. */
-export const TERMINAL_MGI_STATUSES = new Set([
-  'completed',
-  'refunded',
-  ...FAILED_MGI_STATUSES,
-]);
+export const TERMINAL_MGI_STATUSES = new Set(['completed', 'refunded', ...FAILED_MGI_STATUSES]);

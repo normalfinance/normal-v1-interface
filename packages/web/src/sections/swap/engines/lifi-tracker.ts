@@ -40,7 +40,9 @@ export function chainName(id: number): string {
 }
 
 const log = (msg: string, extra?: unknown) =>
-  extra !== undefined ? console.log(`[lifi-swap] ${msg}`, extra) : console.log(`[lifi-swap] ${msg}`);
+  extra !== undefined
+    ? console.log(`[lifi-swap] ${msg}`, extra)
+    : console.log(`[lifi-swap] ${msg}`);
 
 function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -192,7 +194,13 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
       const bridge = await pollBridge(txHash, fromChainId, toChainId, stop);
       if (cancelled) return;
       const final: Stage =
-        bridge === 'DONE' ? 'done' : bridge === 'REFUNDED' ? 'refunded' : bridge === 'FAILED' ? 'failed' : 'bridging';
+        bridge === 'DONE'
+          ? 'done'
+          : bridge === 'REFUNDED'
+            ? 'refunded'
+            : bridge === 'FAILED'
+              ? 'failed'
+              : 'bridging';
       setStage(final);
       handlersRef.current.onActivity();
       if (final !== 'bridging') handlersRef.current.onTerminal(final);

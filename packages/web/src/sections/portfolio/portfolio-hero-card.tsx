@@ -33,7 +33,12 @@ function DonutChart({ holdingsData }: { holdingsData: HoldingData[] }) {
   const total = holdingsData.reduce((s, h) => s + h.value, 0);
   if (total === 0) {
     return (
-      <svg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} width="100%" height="100%" style={{ display: 'block' }}>
+      <svg
+        viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`}
+        width="100%"
+        height="100%"
+        style={{ display: 'block' }}
+      >
         <circle
           cx={DONUT_CX}
           cy={DONUT_CY}
@@ -54,7 +59,12 @@ function DonutChart({ holdingsData }: { holdingsData: HoldingData[] }) {
 
   let cursor = 0;
   return (
-    <svg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} width="100%" height="100%" style={{ display: 'block' }}>
+    <svg
+      viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`}
+      width="100%"
+      height="100%"
+      style={{ display: 'block' }}
+    >
       <circle
         cx={DONUT_CX}
         cy={DONUT_CY}
@@ -114,7 +124,13 @@ export function HeroCard({
   const stats = [
     { label: t('Wallet'), value: fCurrencyTwoDecimals(walletBalance), colored: false, sub: null },
     { label: t('Savings'), value: fCurrencyTwoDecimals(savingsValue), colored: false, sub: null },
-    { label: t('Earnings'), value: fCurrencyTwoDecimals(Math.abs(earnings)), colored: true, positive: earnings >= 0, sub: `${Math.abs(earnings).toFixed(7)} USDC` },
+    {
+      label: t('Earnings'),
+      value: fCurrencyTwoDecimals(Math.abs(earnings)),
+      colored: true,
+      positive: earnings >= 0,
+      sub: `${Math.abs(earnings).toFixed(7)} USDC`,
+    },
   ];
 
   return (
@@ -246,7 +262,14 @@ export function HeroCard({
                       {stat.value}
                     </Box>
                     {stat.sub && (
-                      <Box sx={{ ...MONO, fontSize: '12px', color: 'rgba(255,255,255,0.35)', mt: '4px' }}>
+                      <Box
+                        sx={{
+                          ...MONO,
+                          fontSize: '12px',
+                          color: 'rgba(255,255,255,0.35)',
+                          mt: '4px',
+                        }}
+                      >
                         {stat.sub}
                       </Box>
                     )}

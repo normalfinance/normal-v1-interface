@@ -16,11 +16,7 @@ import React, { useRef, useMemo, useState, useEffect } from 'react';
 import { spendableXlm, SAVINGS_XLM_BUFFER } from '@/utils/stellar-reserve';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import { knownMemoRequirement, fetchMemoRequirement } from '@/lib/stellar/memo-required';
-import {
-  getMaxAmount,
-  getCryptoIconUrl,
-  sanitizeAmountInput,
-} from '@normalfinance/utils';
+import { getMaxAmount, getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 
 import {
   Box,
@@ -79,7 +75,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
 
   const xlmPrice = useMemo(
     () => BigNumber(tokens.find((tok) => tok.symbol === 'XLM')?.price ?? 0).toNumber(),
-    [tokens],
+    [tokens]
   );
 
   const [sendToken, setSendToken] = useState<Token | null>(null);
@@ -126,7 +122,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       (a, b) =>
         BigNumber(b.balance)
           .multipliedBy(b.price)
-          .comparedTo(BigNumber(a.balance).multipliedBy(a.price)) ?? 0,
+          .comparedTo(BigNumber(a.balance).multipliedBy(a.price)) ?? 0
     )[0];
     setSendToken(preselected ?? best ?? sendableTokens[0] ?? null);
   }, [open, sendableTokens, initialSymbol]);
@@ -172,7 +168,18 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       return createSolanaAdapter(solanaAddress, onError);
     }
     return createStellarAdapter(stellarSend, xlmPrice);
-  }, [sendToken, isBtc, isEth, isSol, bitcoinAddress, ethereumAddress, solanaAddress, stellarSend, xlmPrice, enqueueSnackbar]);
+  }, [
+    sendToken,
+    isBtc,
+    isEth,
+    isSol,
+    bitcoinAddress,
+    ethereumAddress,
+    solanaAddress,
+    stellarSend,
+    xlmPrice,
+    enqueueSnackbar,
+  ]);
 
   const xlmSubentriesForAdapter = xlmSubentries ?? undefined;
 
@@ -216,7 +223,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   // Address validation via adapter
   const isAddressValid = useMemo(
     () => (destination ? (adapter?.validateAddress(destination) ?? false) : true),
-    [destination, adapter],
+    [destination, adapter]
   );
 
   // Exchange deposit addresses pool every customer's funds into one account;
@@ -301,9 +308,15 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   const savingsBufferApplies = sendToken?.symbol === 'XLM' && (xlmSubentries ?? 0) > 0;
 
   const toggleMode = () => {
-    if (!sendToken || !amount) { setIsFiatMode((p) => !p); return; }
+    if (!sendToken || !amount) {
+      setIsFiatMode((p) => !p);
+      return;
+    }
     const n = BigNumber(amount);
-    if (n.isNaN() || n.isZero()) { setIsFiatMode((p) => !p); return; }
+    if (n.isNaN() || n.isZero()) {
+      setIsFiatMode((p) => !p);
+      return;
+    }
     if (isFiatMode) {
       setAmount(coinAmount.toFixed(sendToken.decimals));
     } else {
@@ -319,7 +332,8 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       return t('Invalid destination address');
     }
     if (!amount || coinAmount.isZero()) return t('Enter an amount');
-    if (insufficientBalance) return t('Insufficient {{symbol}} balance', { symbol: sendToken.symbol });
+    if (insufficientBalance)
+      return t('Insufficient {{symbol}} balance', { symbol: sendToken.symbol });
     // Fail closed for exchange destinations: without the memo the funds
     // arrive at the exchange but are never credited to the user's account.
     if (memoMissing) return t('Enter the memo from the exchange');
@@ -370,7 +384,9 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       >
         <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}>
+            <Typography
+              sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+            >
               {t('Send')}
             </Typography>
             <Box
@@ -415,20 +431,31 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               {sendToken ? (
                 <>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: '10px' }}>
-                    <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <Typography
+                      sx={{
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: 'rgba(10,10,15,0.45)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                      }}
+                    >
                       {t('Asset')}
                     </Typography>
                     <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
-                      {t('Available:')} {' '}
+                      {t('Available:')}{' '}
                       <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 600 }}>
                         {spendableBalance.toFixed(
                           Math.min(sendToken.decimals, isBtc ? 6 : 4),
-                          BigNumber.ROUND_DOWN,
-                        )} {sendToken.symbol}
+                          BigNumber.ROUND_DOWN
+                        )}{' '}
+                        {sendToken.symbol}
                       </Box>
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box
+                    sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                  >
                     <Box
                       sx={{
                         display: 'inline-flex',
@@ -446,7 +473,14 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                         src={sendToken.icon ?? getCryptoIconUrl(sendToken.symbol)}
                         sx={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }}
                       />
-                      <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em' }}>
+                      <Typography
+                        sx={{
+                          fontSize: '14px',
+                          fontWeight: 700,
+                          color: '#0A0A0F',
+                          letterSpacing: '-0.01em',
+                        }}
+                      >
                         {sendToken.symbol}
                       </Typography>
                       <NetworkBadge network={getAssetNetwork(sendToken)} />
@@ -455,7 +489,10 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       <Box
                         component="button"
                         disabled={maxLoading}
-                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleMaxClick(); }}
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          handleMaxClick();
+                        }}
                         sx={{
                           border: 'none',
                           bgcolor: 'rgba(10,10,15,0.06)',
@@ -475,7 +512,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       >
                         {maxLoading ? '…' : 'MAX'}
                       </Box>
-                      <Iconify icon="eva:chevron-down-fill" width={18} sx={{ color: 'rgba(10,10,15,0.4)' }} />
+                      <Iconify
+                        icon="eva:chevron-down-fill"
+                        width={18}
+                        sx={{ color: 'rgba(10,10,15,0.4)' }}
+                      />
                     </Box>
                   </Box>
                 </>
@@ -500,12 +541,29 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                 },
               }}
             >
-              <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '10px' }}>
+              <Typography
+                sx={{
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  color: 'rgba(10,10,15,0.45)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  mb: '10px',
+                }}
+              >
                 {t('Amount')}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {isFiatMode && (
-                  <Typography sx={{ fontSize: '24px', fontWeight: 600, color: 'rgba(10,10,15,0.35)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                  <Typography
+                    sx={{
+                      fontSize: '24px',
+                      fontWeight: 600,
+                      color: 'rgba(10,10,15,0.35)',
+                      letterSpacing: '-0.02em',
+                      lineHeight: 1,
+                    }}
+                  >
                     $
                   </Typography>
                 )}
@@ -530,11 +588,20 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     width: '100%',
                     minWidth: 0,
                     '&::placeholder': { color: 'rgba(10,10,15,0.2)' },
-                    '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': { appearance: 'none' },
+                    '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': {
+                      appearance: 'none',
+                    },
                   }}
                 />
                 {!isFiatMode && sendToken && (
-                  <Typography sx={{ fontSize: '14px', fontWeight: 600, color: 'rgba(10,10,15,0.45)', flexShrink: 0 }}>
+                  <Typography
+                    sx={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: 'rgba(10,10,15,0.45)',
+                      flexShrink: 0,
+                    }}
+                  >
                     {sendToken.symbol}
                   </Typography>
                 )}
@@ -572,10 +639,10 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                 {insufficientBalance
                   ? t('Exceeds available balance')
                   : sendToken && coinAmount.gt(0)
-                  ? isFiatMode
-                    ? `≈ ${coinAmount.toFixed(isBtc ? 6 : 4)} ${sendToken.symbol}`
-                    : `≈ ${fCurrency(fiatAmount)}`
-                  : t('Enter amount above')}
+                    ? isFiatMode
+                      ? `≈ ${coinAmount.toFixed(isBtc ? 6 : 4)} ${sendToken.symbol}`
+                      : `≈ ${fCurrency(fiatAmount)}`
+                    : t('Enter amount above')}
               </Typography>
             </Box>
 
@@ -589,11 +656,21 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                 borderColor: destination && !isAddressValid ? 'error.main' : 'rgba(10,10,15,0.08)',
                 transition: 'border-color 150ms ease',
                 '&:focus-within': {
-                  borderColor: destination && !isAddressValid ? 'error.main' : 'rgba(10,10,15,0.24)',
+                  borderColor:
+                    destination && !isAddressValid ? 'error.main' : 'rgba(10,10,15,0.24)',
                 },
               }}
             >
-              <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '10px' }}>
+              <Typography
+                sx={{
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  color: 'rgba(10,10,15,0.45)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  mb: '10px',
+                }}
+              >
                 {t('To')}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -620,7 +697,10 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                 />
                 <PasteIconButton
                   alert="Destination pasted"
-                  onSubmit={(v) => { setDestination(v.trim()); return true; }}
+                  onSubmit={(v) => {
+                    setDestination(v.trim());
+                    return true;
+                  }}
                 />
               </Box>
               {destination && !isAddressValid && (
@@ -654,7 +734,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       border: '1px solid rgba(245,158,11,0.35)',
                     }}
                   >
-                    <Iconify icon="eva:alert-triangle-outline" width={18} sx={{ color: '#B45309', mt: '1px', flexShrink: 0 }} />
+                    <Iconify
+                      icon="eva:alert-triangle-outline"
+                      width={18}
+                      sx={{ color: '#B45309', mt: '1px', flexShrink: 0 }}
+                    />
                     <Typography sx={{ fontSize: '12.5px', color: '#78350F', lineHeight: 1.5 }}>
                       {memoRequirement.name
                         ? t(
@@ -685,7 +769,10 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       '&:hover': { color: '#0A0A0F' },
                     }}
                   >
-                    <Iconify icon={showMemo ? 'eva:minus-circle-outline' : 'eva:plus-circle-outline'} width={16} />
+                    <Iconify
+                      icon={showMemo ? 'eva:minus-circle-outline' : 'eva:plus-circle-outline'}
+                      width={16}
+                    />
                     {showMemo ? t('Remove memo') : t('Add memo (optional)')}
                   </Box>
                 )}
@@ -701,7 +788,16 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       '&:focus-within': { borderColor: 'rgba(10,10,15,0.24)' },
                     }}
                   >
-                    <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '10px' }}>
+                    <Typography
+                      sx={{
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: 'rgba(10,10,15,0.45)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        mb: '10px',
+                      }}
+                    >
                       {memoRequirement?.required ? t('Memo (required)') : t('Memo')}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -709,7 +805,9 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                         component="input"
                         type="text"
                         value={memo}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMemo(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setMemo(e.target.value)
+                        }
                         placeholder={t('Exchange ID, note…')}
                         sx={{
                           flex: 1,
@@ -726,7 +824,10 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       />
                       <PasteIconButton
                         alert="Memo pasted"
-                        onSubmit={(v) => { setMemo(v); return true; }}
+                        onSubmit={(v) => {
+                          setMemo(v);
+                          return true;
+                        }}
                       />
                     </Box>
                   </Box>
@@ -745,7 +846,9 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                 }}
               >
                 <Stack spacing={0.75}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
                         {t('Network fee')}
@@ -756,7 +859,14 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                         </Box>
                       </Tooltip>
                     </Box>
-                    <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
+                    <Typography
+                      sx={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: '#0A0A0F',
+                        fontFamily: '"Geist Mono", "Courier New", monospace',
+                      }}
+                    >
                       {feeDisplay.label}{' '}
                       <Box component="span" sx={{ color: 'rgba(10,10,15,0.45)', fontWeight: 400 }}>
                         {feeDisplay.fiatLabel}
@@ -768,24 +878,48 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                   {sendToken?.symbol === 'XLM' && xlmSubentries !== null && (
                     <>
                       <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
                             {t('Minimum reserve')}
                           </Typography>
-                          <Tooltip title={t('Stellar requires every account to keep a minimum XLM balance (2 XLM base + 0.5 XLM per trustline/offer). This amount stays in your account and is not sent.')}>
-                            <Box sx={{ display: 'flex', color: 'rgba(10,10,15,0.3)', cursor: 'help' }}>
+                          <Tooltip
+                            title={t(
+                              'Stellar requires every account to keep a minimum XLM balance (2 XLM base + 0.5 XLM per trustline/offer). This amount stays in your account and is not sent.'
+                            )}
+                          >
+                            <Box
+                              sx={{ display: 'flex', color: 'rgba(10,10,15,0.3)', cursor: 'help' }}
+                            >
                               <Iconify icon="eva:info-outline" width={13} />
                             </Box>
                           </Tooltip>
                         </Box>
-                        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
+                        <Typography
+                          sx={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: '#0A0A0F',
+                            fontFamily: '"Geist Mono", "Courier New", monospace',
+                          }}
+                        >
                           {((2 + xlmSubentries) * 0.5).toFixed(1)} XLM
                         </Typography>
                       </Box>
                       {savingsBufferApplies && (
-                        <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.4 }}>
-                          {t('MAX keeps ~{{buffer}} XLM extra so you can always pay savings deposit & withdrawal fees.', { buffer: SAVINGS_XLM_BUFFER })}
+                        <Typography
+                          sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.4 }}
+                        >
+                          {t(
+                            'MAX keeps ~{{buffer}} XLM extra so you can always pay savings deposit & withdrawal fees.',
+                            { buffer: SAVINGS_XLM_BUFFER }
+                          )}
                         </Typography>
                       )}
                     </>
@@ -796,7 +930,14 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
 
             {/* BTC fee loading indicator */}
             {isBtc && !feeDisplay && (
-              <Box sx={{ p: '12px 14px', borderRadius: '12px', bgcolor: '#FAFAFB', border: '1px solid rgba(10,10,15,0.06)' }}>
+              <Box
+                sx={{
+                  p: '12px 14px',
+                  borderRadius: '12px',
+                  bgcolor: '#FAFAFB',
+                  border: '1px solid rgba(10,10,15,0.06)',
+                }}
+              >
                 <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)' }}>
                   {t('Fetching fee estimate…')}
                 </Typography>

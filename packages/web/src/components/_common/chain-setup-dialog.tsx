@@ -93,7 +93,9 @@ export function ChainSetupDialog({
     >
       <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+          <Typography
+            sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+          >
             {t('Set up your {{chain}} wallet', { chain: label })}
           </Typography>
           <Box
@@ -174,7 +176,14 @@ export function ChainSetupDialog({
               {loading ? t('Setting up…') : t('Set up {{chain}} wallet', { chain: label })}
             </Box>
 
-            <Box sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.4)', textAlign: 'center', lineHeight: 1.5 }}>
+            <Box
+              sx={{
+                fontSize: '11.5px',
+                color: 'rgba(10,10,15,0.4)',
+                textAlign: 'center',
+                lineHeight: 1.5,
+              }}
+            >
               {t('Secured by your device biometrics. No seed phrase required.')}
             </Box>
 

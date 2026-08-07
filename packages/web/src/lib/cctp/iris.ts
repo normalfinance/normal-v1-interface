@@ -42,10 +42,9 @@ export class IrisClient {
    *  while Iris hasn't indexed the tx yet (404). */
   async getMessageByTxHash(sourceDomain: number, txHash: string): Promise<IrisMessage | null> {
     return throttled(async () => {
-      const r = await fetch(
-        `${this.base}/v2/messages/${sourceDomain}?transactionHash=${txHash}`,
-        { cache: 'no-store' }
-      );
+      const r = await fetch(`${this.base}/v2/messages/${sourceDomain}?transactionHash=${txHash}`, {
+        cache: 'no-store',
+      });
       if (r.status === 404) return null;
       if (!r.ok) throw new Error(`iris ${r.status}: ${(await r.text()).slice(0, 200)}`);
       const data = await r.json();

@@ -83,18 +83,68 @@ function buildSteps(tr: CctpTransferDetail, t: Translate): Step[] {
   const attested = !!tr.eventNonce || !!tr.mintTxHash || tr.status === 'COMPLETED';
   if (tr.direction === 'stellar_to_crosschain') {
     return [
-      { key: 'burn', label: t('Bridge USDC (Circle CCTP)'), sub: t('Burn on Stellar'), hash: tr.burnTxHash, explorer: 'stellar' },
-      { key: 'attest', label: t('Circle attestation'), sub: attested ? t('Attested') : t('Awaiting Circle'), hash: null, explorer: null, done: attested },
-      { key: 'mint', label: t('Receive USDC on Base'), sub: t('Mint'), hash: tr.mintTxHash, explorer: 'base' },
-      { key: 'pivot', label: t('Swap USDC → {{asset}}', { asset: tr.dstAsset }), sub: t('Via LI.FI'), hash: tr.dstSwapTxHash, explorer: 'lifi' },
+      {
+        key: 'burn',
+        label: t('Bridge USDC (Circle CCTP)'),
+        sub: t('Burn on Stellar'),
+        hash: tr.burnTxHash,
+        explorer: 'stellar',
+      },
+      {
+        key: 'attest',
+        label: t('Circle attestation'),
+        sub: attested ? t('Attested') : t('Awaiting Circle'),
+        hash: null,
+        explorer: null,
+        done: attested,
+      },
+      {
+        key: 'mint',
+        label: t('Receive USDC on Base'),
+        sub: t('Mint'),
+        hash: tr.mintTxHash,
+        explorer: 'base',
+      },
+      {
+        key: 'pivot',
+        label: t('Swap USDC → {{asset}}', { asset: tr.dstAsset }),
+        sub: t('Via LI.FI'),
+        hash: tr.dstSwapTxHash,
+        explorer: 'lifi',
+      },
     ];
   }
   // inbound: crosschain_to_stellar
   return [
-    { key: 'src', label: t('Swap {{asset}} → USDC', { asset: tr.srcAsset }), sub: t('Via LI.FI'), hash: tr.srcSwapTxHash, explorer: 'lifi' },
-    { key: 'burn', label: t('Bridge USDC (Circle CCTP)'), sub: t('Burn on Base'), hash: tr.burnTxHash, explorer: 'base' },
-    { key: 'attest', label: t('Circle attestation'), sub: attested ? t('Attested') : t('Awaiting Circle (~20 min)'), hash: null, explorer: null, done: attested },
-    { key: 'mint', label: t('Receive USDC on Stellar'), sub: t('Mint'), hash: tr.mintTxHash, explorer: 'stellar' },
+    {
+      key: 'src',
+      label: t('Swap {{asset}} → USDC', { asset: tr.srcAsset }),
+      sub: t('Via LI.FI'),
+      hash: tr.srcSwapTxHash,
+      explorer: 'lifi',
+    },
+    {
+      key: 'burn',
+      label: t('Bridge USDC (Circle CCTP)'),
+      sub: t('Burn on Base'),
+      hash: tr.burnTxHash,
+      explorer: 'base',
+    },
+    {
+      key: 'attest',
+      label: t('Circle attestation'),
+      sub: attested ? t('Attested') : t('Awaiting Circle (~20 min)'),
+      hash: null,
+      explorer: null,
+      done: attested,
+    },
+    {
+      key: 'mint',
+      label: t('Receive USDC on Stellar'),
+      sub: t('Mint'),
+      hash: tr.mintTxHash,
+      explorer: 'stellar',
+    },
   ];
 }
 
@@ -104,7 +154,13 @@ const STATUS_CHIP: Record<string, { label: string; color: string; bg: string }> 
   REFUNDED: { label: 'Refunded', color: '#8A4A00', bg: 'rgba(245,158,11,0.12)' },
 };
 
-export function SwapDetailModal({ transferId, onClose }: { transferId: string | null; onClose: () => void }) {
+export function SwapDetailModal({
+  transferId,
+  onClose,
+}: {
+  transferId: string | null;
+  onClose: () => void;
+}) {
   const { t } = useTranslate();
   const [transfer, setTransfer] = useState<CctpTransferDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -153,10 +209,22 @@ export function SwapDetailModal({ transferId, onClose }: { transferId: string | 
   const chip = transfer ? STATUS_CHIP[transfer.status] : undefined;
 
   return (
-    <Dialog open={transferId !== null} onClose={onClose} fullWidth maxWidth="xs" PaperProps={{ sx: { borderRadius: '24px', p: '22px', maxWidth: 420 } }}>
+    <Dialog
+      open={transferId !== null}
+      onClose={onClose}
+      fullWidth
+      maxWidth="xs"
+      PaperProps={{ sx: { borderRadius: '24px', p: '22px', maxWidth: 420 } }}
+    >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '14px' }}>
-        <Typography sx={{ fontSize: '17px', fontWeight: 600, color: '#0A0A0F' }}>{t('Swap details')}</Typography>
-        <Box component="button" onClick={onClose} sx={{ all: 'unset', cursor: 'pointer', color: 'rgba(10,10,15,0.4)', display: 'flex' }}>
+        <Typography sx={{ fontSize: '17px', fontWeight: 600, color: '#0A0A0F' }}>
+          {t('Swap details')}
+        </Typography>
+        <Box
+          component="button"
+          onClick={onClose}
+          sx={{ all: 'unset', cursor: 'pointer', color: 'rgba(10,10,15,0.4)', display: 'flex' }}
+        >
           <Iconify icon="mingcute:close-line" width={20} />
         </Box>
       </Stack>
@@ -166,16 +234,27 @@ export function SwapDetailModal({ transferId, onClose }: { transferId: string | 
           <CircularProgress size={22} sx={{ color: '#0A0A0F' }} />
         </Stack>
       ) : !transfer ? (
-        <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', py: '20px', textAlign: 'center' }}>
+        <Typography
+          sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', py: '20px', textAlign: 'center' }}
+        >
           {t('Could not load this transfer.')}
         </Typography>
       ) : (
         <>
           {/* Route summary */}
-          <Box sx={{ p: '12px 14px', borderRadius: '14px', bgcolor: '#FAFAFB', border: '1px solid rgba(10,10,15,0.06)', mb: '14px' }}>
+          <Box
+            sx={{
+              p: '12px 14px',
+              borderRadius: '14px',
+              bgcolor: '#FAFAFB',
+              border: '1px solid rgba(10,10,15,0.06)',
+              mb: '14px',
+            }}
+          >
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
-                {fmt(transfer.srcAmount)} {transfer.srcAsset} → {fmt(transfer.dstAmount)} {transfer.dstAsset}
+                {fmt(transfer.srcAmount)} {transfer.srcAsset} → {fmt(transfer.dstAmount)}{' '}
+                {transfer.dstAsset}
               </Typography>
               <Chip
                 label={t(chip?.label ?? 'In progress')}
@@ -199,28 +278,78 @@ export function SwapDetailModal({ transferId, onClose }: { transferId: string | 
               const isActive = !stepDone && idx === activeIdx;
               const showError = isActive && isFailed;
               return (
-                <Stack key={s.key} direction="row" spacing={1.5} alignItems="flex-start" sx={{ py: '9px', opacity: stepDone || isActive ? 1 : 0.45 }}>
-                  <Box sx={{ width: 22, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', mt: '1px' }}>
+                <Stack
+                  key={s.key}
+                  direction="row"
+                  spacing={1.5}
+                  alignItems="flex-start"
+                  sx={{ py: '9px', opacity: stepDone || isActive ? 1 : 0.45 }}
+                >
+                  <Box
+                    sx={{
+                      width: 22,
+                      height: 22,
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mt: '1px',
+                    }}
+                  >
                     {stepDone ? (
                       <Iconify icon="lets-icons:check-fill" width={20} sx={{ color: '#1AB37D' }} />
                     ) : showError ? (
-                      <Iconify icon="eva:alert-triangle-fill" width={18} sx={{ color: '#DC2626' }} />
+                      <Iconify
+                        icon="eva:alert-triangle-fill"
+                        width={18}
+                        sx={{ color: '#DC2626' }}
+                      />
                     ) : isActive ? (
                       <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />
                     ) : (
-                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'rgba(10,10,15,0.15)' }} />
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          bgcolor: 'rgba(10,10,15,0.15)',
+                        }}
+                      />
                     )}
                   </Box>
                   <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                    <Typography sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F', lineHeight: 1.35 }}>{s.label}</Typography>
-                    <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', lineHeight: 1.4 }}>{s.sub}</Typography>
+                    <Typography
+                      sx={{
+                        fontSize: '13.5px',
+                        fontWeight: 600,
+                        color: '#0A0A0F',
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {s.label}
+                    </Typography>
+                    <Typography
+                      sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', lineHeight: 1.4 }}
+                    >
+                      {s.sub}
+                    </Typography>
                   </Box>
                   {s.hash && s.explorer && (
                     <Link
                       href={explorerUrl(s.explorer, s.hash)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: 'rgba(10,10,15,0.5)', textDecoration: 'none', ...MONO, flexShrink: 0, '&:hover': { color: '#0A0A0F' } }}
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        fontSize: '11px',
+                        color: 'rgba(10,10,15,0.5)',
+                        textDecoration: 'none',
+                        ...MONO,
+                        flexShrink: 0,
+                        '&:hover': { color: '#0A0A0F' },
+                      }}
                     >
                       {shortHash(s.hash)}
                       <Iconify icon="solar:arrow-right-up-linear" width={13} />
@@ -238,8 +367,26 @@ export function SwapDetailModal({ transferId, onClose }: { transferId: string | 
           )}
 
           {isFailed && transfer.errorDetail && (
-            <Box sx={{ mt: '12px', px: '12px', py: '10px', borderRadius: '10px', bgcolor: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.15)' }}>
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.5, wordBreak: 'break-word' }}>{transfer.errorDetail}</Typography>
+            <Box
+              sx={{
+                mt: '12px',
+                px: '12px',
+                py: '10px',
+                borderRadius: '10px',
+                bgcolor: 'rgba(220,38,38,0.05)',
+                border: '1px solid rgba(220,38,38,0.15)',
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: '12px',
+                  color: 'rgba(10,10,15,0.7)',
+                  lineHeight: 1.5,
+                  wordBreak: 'break-word',
+                }}
+              >
+                {transfer.errorDetail}
+              </Typography>
             </Box>
           )}
         </>

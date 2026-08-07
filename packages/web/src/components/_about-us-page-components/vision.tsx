@@ -34,7 +34,8 @@ const FOUNDER: Founder = {
   quote:
     "We're not building a wallet. We're building the bank account most people wish they already had.",
   bio: 'Justin formerly designed products at Bitcoin of America and CoinFlip — two of the largest crypto ATM and exchange networks in the US. He has invested in crypto for 7+ years and holds a BS in Learning & Organizational Change from Northwestern University.',
-  extraBio: 'He started Normal after realising that DeFi\'s best yields were locked behind interfaces built for traders, not everyday savers. His goal is simple: take the complexity out of on-chain finance and put real, sustainable yield in the hands of anyone with a phone.',
+  extraBio:
+    "He started Normal after realising that DeFi's best yields were locked behind interfaces built for traders, not everyday savers. His goal is simple: take the complexity out of on-chain finance and put real, sustainable yield in the hands of anyone with a phone.",
   stat: { label: 'Years in crypto', value: '7+' },
   socialLinks: [
     {
@@ -96,7 +97,9 @@ export const Vision: React.FC = () => {
               maxWidth: '520px',
             }}
           >
-            {t('The person behind the vision — building the savings account crypto always deserved.')}
+            {t(
+              'The person behind the vision — building the savings account crypto always deserved.'
+            )}
           </Typography>
         </Box>
 

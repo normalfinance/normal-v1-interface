@@ -27,11 +27,11 @@ export async function getSubOrgRootUserId(subOrgId: string): Promise<string | nu
 
 // WebAuthn transport string → Turnkey enum
 const TRANSPORT_MAP: Record<string, v1AuthenticatorTransport> = {
-  usb:      'AUTHENTICATOR_TRANSPORT_USB',
-  nfc:      'AUTHENTICATOR_TRANSPORT_NFC',
-  ble:      'AUTHENTICATOR_TRANSPORT_BLE',
+  usb: 'AUTHENTICATOR_TRANSPORT_USB',
+  nfc: 'AUTHENTICATOR_TRANSPORT_NFC',
+  ble: 'AUTHENTICATOR_TRANSPORT_BLE',
   internal: 'AUTHENTICATOR_TRANSPORT_INTERNAL',
-  hybrid:   'AUTHENTICATOR_TRANSPORT_HYBRID',
+  hybrid: 'AUTHENTICATOR_TRANSPORT_HYBRID',
 };
 
 export interface PasskeyAttestation {

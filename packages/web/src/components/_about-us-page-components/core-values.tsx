@@ -29,27 +29,32 @@ export const CoreValuesDefaults: Props = {
     {
       icon: <PeopleAltOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Keep Crypto Human',
-      description: "Remove complexity, speak plainly, and design for real people — not power users. Every screen, every error message, and every transaction should be explainable in a single sentence. If your parents can't use it, we're not done.",
+      description:
+        "Remove complexity, speak plainly, and design for real people — not power users. Every screen, every error message, and every transaction should be explainable in a single sentence. If your parents can't use it, we're not done.",
     },
     {
       icon: <VerifiedUserOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Security First',
-      description: "Audited contracts, battle-tested code, and 24/7 monitoring on every deployment. Halborn reviews every release before it touches mainnet. We treat your savings with the same seriousness you do — because cutting corners on security isn't a tradeoff, it's a failure.",
+      description:
+        "Audited contracts, battle-tested code, and 24/7 monitoring on every deployment. Halborn reviews every release before it touches mainnet. We treat your savings with the same seriousness you do — because cutting corners on security isn't a tradeoff, it's a failure.",
     },
     {
       icon: <CodeOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Permissionless Innovation',
-      description: 'Build composable primitives that anyone can extend, fork, or build on top of. Open SDK, public smart contracts, MIT-licensed components. We believe the best financial infrastructure is infrastructure no single company controls.',
+      description:
+        'Build composable primitives that anyone can extend, fork, or build on top of. Open SDK, public smart contracts, MIT-licensed components. We believe the best financial infrastructure is infrastructure no single company controls.',
     },
     {
       icon: <GroupsOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Community Ownership',
-      description: "NORM token holders create and vote on every proposal that shapes the protocol. No backroom decisions, no surprise upgrades. The roadmap belongs to the people using the product — we're here to build what the community decides.",
+      description:
+        "NORM token holders create and vote on every proposal that shapes the protocol. No backroom decisions, no surprise upgrades. The roadmap belongs to the people using the product — we're here to build what the community decides.",
     },
     {
       icon: <InsightsOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
       heading: 'Data > Hype',
-      description: "Let on-chain metrics guide every product decision. We don't ship features because they're trending — we ship them because usage data says users need them. Hype fades. Real yield, real volume, and real retention don't.",
+      description:
+        "Let on-chain metrics guide every product decision. We don't ship features because they're trending — we ship them because usage data says users need them. Hype fades. Real yield, real volume, and real retention don't.",
     },
   ],
 };

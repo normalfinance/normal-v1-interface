@@ -28,12 +28,15 @@ export async function addWalletAccounts(
 ): Promise<ChainAddresses> {
   const rpId =
     typeof window !== 'undefined'
-      ? process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname
+      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
       : 'localhost';
 
   const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const { TurnkeyClient } = await import('@turnkey/http');
-  const client = new TurnkeyClient({ baseUrl: 'https://api.turnkey.com' }, new WebauthnStamper({ rpId }));
+  const client = new TurnkeyClient(
+    { baseUrl: 'https://api.turnkey.com' },
+    new WebauthnStamper({ rpId })
+  );
 
   // Passkey prompt — derive the new account(s) on the existing seed
   const activity = await client.createWalletAccounts({
@@ -115,11 +118,14 @@ export async function ensureChainAccount(
   if (existing) {
     const rpId =
       typeof window !== 'undefined'
-        ? process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname
+        ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
         : 'localhost';
     const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
     const { TurnkeyClient } = await import('@turnkey/http');
-    const client = new TurnkeyClient({ baseUrl: 'https://api.turnkey.com' }, new WebauthnStamper({ rpId }));
+    const client = new TurnkeyClient(
+      { baseUrl: 'https://api.turnkey.com' },
+      new WebauthnStamper({ rpId })
+    );
 
     const activity = await client.createWallet({
       type: 'ACTIVITY_TYPE_CREATE_WALLET',

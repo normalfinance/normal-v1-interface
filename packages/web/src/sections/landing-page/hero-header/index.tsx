@@ -64,7 +64,9 @@ export const HeroHeader: React.FC = () => {
           saturate={115}
           canvasOpacity={0.85}
           speed="slow"
-          backgroundFill={theme.palette.mode === 'dark' ? theme.palette.background.paper : '#FAFAFB'}
+          backgroundFill={
+            theme.palette.mode === 'dark' ? theme.palette.background.paper : '#FAFAFB'
+          }
         />
       </Box>
 
@@ -76,9 +78,10 @@ export const HeroHeader: React.FC = () => {
           left: 0,
           right: 0,
           height: '90px',
-          background: th.palette.mode === 'dark'
-            ? `linear-gradient(to bottom, ${th.palette.background.paper} 0%, transparent 100%)`
-            : 'linear-gradient(to bottom, rgba(250,250,251,1) 0%, rgba(250,250,251,0) 100%)',
+          background:
+            th.palette.mode === 'dark'
+              ? `linear-gradient(to bottom, ${th.palette.background.paper} 0%, transparent 100%)`
+              : 'linear-gradient(to bottom, rgba(250,250,251,1) 0%, rgba(250,250,251,0) 100%)',
           zIndex: 1,
           pointerEvents: 'none',
         })}
@@ -92,9 +95,10 @@ export const HeroHeader: React.FC = () => {
           left: 0,
           right: 0,
           height: '140px',
-          background: th.palette.mode === 'dark'
-            ? `linear-gradient(to top, ${th.palette.background.paper} 0%, transparent 100%)`
-            : 'linear-gradient(to top, rgba(250,250,251,1) 0%, rgba(250,250,251,0) 100%)',
+          background:
+            th.palette.mode === 'dark'
+              ? `linear-gradient(to top, ${th.palette.background.paper} 0%, transparent 100%)`
+              : 'linear-gradient(to top, rgba(250,250,251,1) 0%, rgba(250,250,251,0) 100%)',
           zIndex: 1,
           pointerEvents: 'none',
         })}
@@ -104,7 +108,6 @@ export const HeroHeader: React.FC = () => {
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2, px: 0 }}>
         <Stack alignItems="center">
           <Box sx={{ textAlign: 'center', width: '100%' }}>
-
             {/* ---- Hero pill ---- */}
             <Box
               sx={(th) => ({
@@ -264,7 +267,6 @@ export const HeroHeader: React.FC = () => {
             >
               {t('Self-custody savings. Live yield. Built on Stellar.')}
             </Typography>
-
           </Box>
         </Stack>
       </Container>

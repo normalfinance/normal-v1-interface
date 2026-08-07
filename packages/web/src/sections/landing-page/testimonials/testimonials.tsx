@@ -146,7 +146,13 @@ const TestimonialCard: React.FC<{ testimonial: Testimonial; hidden?: boolean }> 
       <Box>
         <Box
           component="span"
-          sx={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#0a0a0b', lineHeight: 1.3 }}
+          sx={{
+            display: 'block',
+            fontSize: '13px',
+            fontWeight: 500,
+            color: '#0a0a0b',
+            lineHeight: 1.3,
+          }}
         >
           {testimonial.name}
         </Box>
@@ -212,7 +218,7 @@ export const TestimonialGrid: React.FC<TestimonialGridProps> = (props) => {
 
   return (
     <SectionRoot aria-labelledby="testimonials-heading" {...props}>
-      <Box sx={{ py: { xs: '40px', md: '56px' }, }}>
+      <Box sx={{ py: { xs: '40px', md: '56px' } }}>
         {/* Header */}
         <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3, mb: '56px', textAlign: 'center' }}>
           <Box

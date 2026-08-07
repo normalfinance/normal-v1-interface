@@ -63,7 +63,11 @@ export async function POST(req: Request) {
   }
 
   const destChain =
-    destDomain === CCTP_DOMAIN.stellar ? 'stellar' : destDomain === CCTP_DOMAIN.ethereum ? 'ethereum' : 'base';
+    destDomain === CCTP_DOMAIN.stellar
+      ? 'stellar'
+      : destDomain === CCTP_DOMAIN.ethereum
+        ? 'ethereum'
+        : 'base';
   const costs = DEST_COSTS[destChain];
 
   return NextResponse.json({
@@ -71,7 +75,9 @@ export async function POST(req: Request) {
     cctpFeeWire: '0', // Circle standard transfer: no protocol fee
     estimatedDestCostsUsd: costs.gasUsd + costs.topUpUsd,
     etaSeconds:
-      sourceDomain === CCTP_DOMAIN.stellar ? CCTP_ETA_SECONDS.fromStellar : CCTP_ETA_SECONDS.fromEvm,
+      sourceDomain === CCTP_DOMAIN.stellar
+        ? CCTP_ETA_SECONDS.fromStellar
+        : CCTP_ETA_SECONDS.fromEvm,
     feeBps: 50,
     feeOnLeg: 'lifi', // single 0.5%, collected on the LI.FI leg; Soroswap leg fee disabled for composite routes
     minAmountWire: MIN_WIRE.toString(),

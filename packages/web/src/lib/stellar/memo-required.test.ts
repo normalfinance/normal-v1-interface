@@ -1,6 +1,5 @@
 import { it, expect, describe } from '@jest/globals';
-import { KNOWN_MEMO_REQUIRED , knownMemoRequirement } from '@/lib/stellar/memo-required-list';
-
+import { KNOWN_MEMO_REQUIRED, knownMemoRequirement } from '@/lib/stellar/memo-required-list';
 
 // INCIDENT (2026-08-06, finding #48): 5 XLM sent to this exact address with no
 // memo. On-chain success; Coinbase credited nothing — the memo is what routes
@@ -26,7 +25,9 @@ describe('knownMemoRequirement', () => {
   it('returns null for an ordinary wallet address', () => {
     // A regular user account must never trip the exchange gate — the memo
     // stays optional for wallet-to-wallet sends.
-    expect(knownMemoRequirement('GA5GD6PTY7QHT5LR5QCPOC6CAJF64KOEDQJBV6RHKJ3QPPCIJDOFZG7F')).toBeNull();
+    expect(
+      knownMemoRequirement('GA5GD6PTY7QHT5LR5QCPOC6CAJF64KOEDQJBV6RHKJ3QPPCIJDOFZG7F')
+    ).toBeNull();
   });
 
   it('seed list entries are well-formed Stellar account IDs', () => {

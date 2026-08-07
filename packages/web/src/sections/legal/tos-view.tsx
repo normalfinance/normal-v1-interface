@@ -4,10 +4,20 @@ import ReactMarkdown from 'react-markdown';
 import { SimpleLayout } from '@/layouts/simple';
 
 const components: React.ComponentProps<typeof ReactMarkdown>['components'] = {
-  h1: ({ children }) => <h1 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 8 }}>{children}</h1>,
-  h2: ({ children }) => <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 32, marginBottom: 8, color: '#666' }}>{children}</h2>,
+  h1: ({ children }) => (
+    <h1 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 8 }}>{children}</h1>
+  ),
+  h2: ({ children }) => (
+    <h2
+      style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 32, marginBottom: 8, color: '#666' }}
+    >
+      {children}
+    </h2>
+  ),
   p: ({ children }) => <p style={{ marginBottom: 16, lineHeight: 1.7 }}>{children}</p>,
-  ul: ({ children }) => <ul style={{ margin: '0 0 16px 0', paddingLeft: 24, listStyleType: 'disc' }}>{children}</ul>,
+  ul: ({ children }) => (
+    <ul style={{ margin: '0 0 16px 0', paddingLeft: 24, listStyleType: 'disc' }}>{children}</ul>
+  ),
   li: ({ children }) => <li style={{ marginBottom: 6, lineHeight: 1.7 }}>{children}</li>,
 };
 
@@ -17,11 +27,22 @@ export default function TermsOfServiceView() {
       slotProps={{
         content: {
           compact: true,
-          sx: { textAlign: 'left', maxWidth: 900, alignItems: 'flex-start', justifyContent: 'flex-start' },
+          sx: {
+            textAlign: 'left',
+            maxWidth: 900,
+            alignItems: 'flex-start',
+            justifyContent: 'flex-start',
+          },
         },
       }}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} components={components}>{MESSAGE}</ReactMarkdown>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
+        components={components}
+      >
+        {MESSAGE}
+      </ReactMarkdown>
     </SimpleLayout>
   );
 }

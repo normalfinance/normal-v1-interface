@@ -73,7 +73,7 @@ export function BtcTxStatusModal({
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json() as Promise<MempoolTx>;
       }),
-    { refreshInterval: 30_000, revalidateOnFocus: true },
+    { refreshInterval: 30_000, revalidateOnFocus: true }
   );
 
   useEffect(() => {
@@ -169,11 +169,7 @@ export function BtcTxStatusModal({
                   justifyContent: 'center',
                 }}
               >
-                <Iconify
-                  icon="eva:checkmark-circle-2-fill"
-                  width={28}
-                  sx={{ color: '#1AB37D' }}
-                />
+                <Iconify icon="eva:checkmark-circle-2-fill" width={28} sx={{ color: '#1AB37D' }} />
               </Box>
             ) : (
               <CircularProgress size={36} thickness={3} sx={{ color: 'rgba(10,10,15,0.3)' }} />
@@ -188,9 +184,7 @@ export function BtcTxStatusModal({
                 transition: 'color 400ms ease',
               }}
             >
-              {isConfirmed
-                ? t('Transaction confirmed')
-                : t('Confirming on Bitcoin network…')}
+              {isConfirmed ? t('Transaction confirmed') : t('Confirming on Bitcoin network…')}
             </Typography>
 
             {!isConfirmed && (
@@ -235,7 +229,11 @@ export function BtcTxStatusModal({
 
           {/* Details card */}
           <Box
-            sx={{ borderRadius: '16px', border: '1px solid rgba(10,10,15,0.08)', overflow: 'hidden' }}
+            sx={{
+              borderRadius: '16px',
+              border: '1px solid rgba(10,10,15,0.08)',
+              overflow: 'hidden',
+            }}
           >
             {/* Amount */}
             <Box
@@ -247,9 +245,7 @@ export function BtcTxStatusModal({
                 alignItems: 'flex-start',
               }}
             >
-              <Typography
-                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', fontWeight: 500 }}
-              >
+              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', fontWeight: 500 }}>
                 {t('Amount')}
               </Typography>
               <Box sx={{ textAlign: 'right' }}>

@@ -77,10 +77,20 @@ export default function AssetsView() {
     const stellar = tokens.filter(
       (token) =>
         !nativeSymbols.includes(token.symbol) &&
-        (BigNumber(token.balance).gt(0) || token.featured || token.symbol === 'XLM' || token.symbol === 'USDC')
+        (BigNumber(token.balance).gt(0) ||
+          token.featured ||
+          token.symbol === 'XLM' ||
+          token.symbol === 'USDC')
     );
 
-    const synthesize = (symbol: string, name: string, contract: string, icon: string, decimals: number, usdPrice: number): Token =>
+    const synthesize = (
+      symbol: string,
+      name: string,
+      contract: string,
+      icon: string,
+      decimals: number,
+      usdPrice: number
+    ): Token =>
       ({
         symbol,
         contract,
@@ -94,7 +104,7 @@ export default function AssetsView() {
         balance: '0',
         price: String(usdPrice),
         percentageChange: 0,
-      } as Token);
+      }) as Token;
 
     const natives = [
       btcToken ?? synthesize('BTC', 'Bitcoin', '__btc__', cdn('tokens/bitcoin.webp'), 8, btcUsd),
@@ -110,7 +120,10 @@ export default function AssetsView() {
   }, [tokens, btcToken, ethToken, solToken, btcUsd, ethUsd, solUsd]);
 
   // Calculate total value
-  const totalValue = displayTokens.reduce((acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)), BigNumber(0));
+  const totalValue = displayTokens.reduce(
+    (acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)),
+    BigNumber(0)
+  );
 
   const handleRowClick = (token: Token) => {
     router.push(paths.assets.details(token.symbol));

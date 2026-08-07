@@ -36,7 +36,7 @@ export interface EvmAdapterOptions {
 export function createEthereumAdapter(
   ethereumAddress: string,
   onError?: (msg: string) => void,
-  options: EvmAdapterOptions = {},
+  options: EvmAdapterOptions = {}
 ): SendAdapter {
   const chainId: ChainId = options.chainId ?? 'ethereum';
   const chainDef = getChain(chainId);
@@ -101,7 +101,7 @@ export function createEthereumAdapter(
         // Sign with Turnkey via the user's passkey (WebAuthn prompt)
         const rpId =
           typeof window !== 'undefined'
-            ? process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname
+            ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
             : 'localhost';
         const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
         const { TurnkeyClient } = await import('@turnkey/http');

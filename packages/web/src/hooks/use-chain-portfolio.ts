@@ -165,11 +165,33 @@ function useChainPortfolio(chain: 'ethereum' | 'solana', enabled = true) {
 }
 
 export function useEthPortfolio(enabled = true) {
-  const { token, address, hasWallet, loading, error, refetch, refetchBalance } = useChainPortfolio('ethereum', enabled);
-  return { ethToken: token, ethereumAddress: address, hasWallet, loading, error, refetch, refetchBalance };
+  const { token, address, hasWallet, loading, error, refetch, refetchBalance } = useChainPortfolio(
+    'ethereum',
+    enabled
+  );
+  return {
+    ethToken: token,
+    ethereumAddress: address,
+    hasWallet,
+    loading,
+    error,
+    refetch,
+    refetchBalance,
+  };
 }
 
 export function useSolPortfolio(enabled = true) {
-  const { token, address, hasWallet, loading, error, refetch, refetchBalance } = useChainPortfolio('solana', enabled);
-  return { solToken: token, solanaAddress: address, hasWallet, loading, error, refetch, refetchBalance };
+  const { token, address, hasWallet, loading, error, refetch, refetchBalance } = useChainPortfolio(
+    'solana',
+    enabled
+  );
+  return {
+    solToken: token,
+    solanaAddress: address,
+    hasWallet,
+    loading,
+    error,
+    refetch,
+    refetchBalance,
+  };
 }

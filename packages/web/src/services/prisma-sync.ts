@@ -1,8 +1,15 @@
-import type { ReferralRow, VolumeDailyRow, LinkedWalletRow, WalletActivityRow, TransactionLogRow } from '@/lib/dune/tables';
+import type {
+  ReferralRow,
+  VolumeDailyRow,
+  LinkedWalletRow,
+  WalletActivityRow,
+  TransactionLogRow,
+} from '@/lib/dune/tables';
 
 import { prisma } from '@/lib/prisma';
 
-const NETWORK = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() === 'mainnet' ? 'mainnet' : 'testnet';
+const NETWORK =
+  process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() === 'mainnet' ? 'mainnet' : 'testnet';
 
 // ---------------------------------------------------------------------------
 // Swap volume + fee revenue grouped by day

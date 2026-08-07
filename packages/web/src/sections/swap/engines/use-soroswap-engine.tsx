@@ -127,8 +127,12 @@ export function useSoroswapEngine({
         action: null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', px: 1 }}>
-            {t('Fund this account with at least 1 XLM to activate Stellar before adding a USDC trustline.')}
+          <Typography
+            sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', px: 1 }}
+          >
+            {t(
+              'Fund this account with at least 1 XLM to activate Stellar before adding a USDC trustline.'
+            )}
           </Typography>
         ),
       };
@@ -171,7 +175,9 @@ export function useSoroswapEngine({
       <Stack spacing={0.75}>
         {exchangeRate && (
           <Stack direction="row" justifyContent="space-between">
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{t('Rate')}</Typography>
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+              {t('Rate')}
+            </Typography>
             <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
               1 {fromSymbol} = {exchangeRate} {toSymbol}
             </Typography>

@@ -24,7 +24,7 @@ export async function signStellarXdrWithTurnkey(
 
   const rpId =
     typeof window !== 'undefined'
-      ? process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname
+      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
       : 'localhost';
 
   const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');

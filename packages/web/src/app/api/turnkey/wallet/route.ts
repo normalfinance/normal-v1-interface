@@ -7,7 +7,12 @@ import { getAccessToken } from '@/utils/http';
 import { turnkey, buildPasskeyRootUser } from '@/lib/turnkey/server';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { CHAINS, pickAddresses, ADDRESS_SELECT } from '@/lib/chains/registry';
-import { XLM_ACCOUNT, SOLANA_ACCOUNT, BITCOIN_ACCOUNT, ETHEREUM_ACCOUNT } from '@/lib/turnkey/account-specs';
+import {
+  XLM_ACCOUNT,
+  SOLANA_ACCOUNT,
+  BITCOIN_ACCOUNT,
+  ETHEREUM_ACCOUNT,
+} from '@/lib/turnkey/account-specs';
 
 const CHAIN_SPECS = {
   bitcoin: BITCOIN_ACCOUNT,

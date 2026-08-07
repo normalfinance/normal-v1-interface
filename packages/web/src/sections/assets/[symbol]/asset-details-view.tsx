@@ -78,7 +78,14 @@ function getAssetActions(symbol: string): AssetActionKey[] {
 // the per-chain notes shown under the action row.
 const NATIVE_CHAINS: Record<
   string,
-  { chain: TurnkeyChain; name: string; contract: string; icon: string; decimals: number; note: string }
+  {
+    chain: TurnkeyChain;
+    name: string;
+    contract: string;
+    icon: string;
+    decimals: number;
+    note: string;
+  }
 > = {
   BTC: {
     chain: 'bitcoin',
@@ -137,7 +144,13 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const nativeUsdPrice = useUsdPrice(upperSymbol, !!native);
 
   const nativeToken = isBtc ? btc.btcToken : isEth ? eth.ethToken : isSol ? sol.solToken : null;
-  const nativeAddress = isBtc ? btc.bitcoinAddress : isEth ? eth.ethereumAddress : isSol ? sol.solanaAddress : null;
+  const nativeAddress = isBtc
+    ? btc.bitcoinAddress
+    : isEth
+      ? eth.ethereumAddress
+      : isSol
+        ? sol.solanaAddress
+        : null;
   const nativeLoading = isBtc ? btc.loading : isEth ? eth.loading : isSol ? sol.loading : false;
   const nativeError = isEth ? eth.error : isSol ? sol.error : false;
   const refetchNative = isBtc ? btc.refetch : isEth ? eth.refetch : sol.refetch;
@@ -149,7 +162,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const [sellOpen, setSellOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   // Action the user started before the chain account existed; resumed after setup
-  const [pendingAction, setPendingAction] = useState<'send' | 'receive' | 'buy' | 'sell' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'send' | 'receive' | 'buy' | 'sell' | null>(
+    null
+  );
   // Note: completing a Coinbase off-ramp on return is handled globally by
   // OfframpResumeHandler (mounted in ModalProvider) — not per-page.
 
@@ -177,8 +192,16 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   if (native && nativeLoading && !nativeToken) {
     return (
       <DashboardContent maxWidth="xl">
-        <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
-        <Skeleton variant="rectangular" height={280} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }} />
+        <Skeleton
+          variant="rectangular"
+          height={220}
+          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+        />
+        <Skeleton
+          variant="rectangular"
+          height={280}
+          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }}
+        />
       </DashboardContent>
     );
   }
@@ -240,16 +263,21 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
     setPendingAction(null);
   };
 
-  const ACTION_CONFIG: Record<AssetActionKey, { label: string; icon: ReactNode; onClick: () => void }> = {
+  const ACTION_CONFIG: Record<
+    AssetActionKey,
+    { label: string; icon: ReactNode; onClick: () => void }
+  > = {
     send: {
       label: t('Send'),
       icon: <CallMadeOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => (native ? requireNativeWallet('send') : requireStellarWallet(() => setSendOpen(true))),
+      onClick: () =>
+        native ? requireNativeWallet('send') : requireStellarWallet(() => setSendOpen(true)),
     },
     receive: {
       label: t('Receive'),
       icon: <CallReceivedOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => (native ? requireNativeWallet('receive') : requireStellarWallet(() => setReceiveOpen(true))),
+      onClick: () =>
+        native ? requireNativeWallet('receive') : requireStellarWallet(() => setReceiveOpen(true)),
     },
     swap: {
       label: t('Swap'),
@@ -264,12 +292,14 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
     buy: {
       label: t('Buy'),
       icon: <AttachMoneyOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => (native ? requireNativeWallet('buy') : requireStellarWallet(() => setBuyOpen(true))),
+      onClick: () =>
+        native ? requireNativeWallet('buy') : requireStellarWallet(() => setBuyOpen(true)),
     },
     sell: {
       label: t('Sell'),
       icon: <MoneyOffOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => (native ? requireNativeWallet('sell') : requireStellarWallet(() => setSellOpen(true))),
+      onClick: () =>
+        native ? requireNativeWallet('sell') : requireStellarWallet(() => setSellOpen(true)),
     },
   };
 
@@ -282,7 +312,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
 
   const infoRows: { label: string; value: string; copyable?: boolean }[] = native
     ? [
-        ...(nativeAddress ? [{ label: t('Your address'), value: nativeAddress, copyable: true }] : []),
+        ...(nativeAddress
+          ? [{ label: t('Your address'), value: nativeAddress, copyable: true }]
+          : []),
         { label: t('Network'), value: native.name },
         { label: t('Decimals'), value: String(native.decimals) },
       ]
@@ -338,7 +370,15 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
             />
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Box sx={{ fontSize: '17px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                <Box
+                  sx={{
+                    fontSize: '17px',
+                    fontWeight: 600,
+                    color: '#0A0A0F',
+                    letterSpacing: '-0.01em',
+                    lineHeight: 1.3,
+                  }}
+                >
                   {token.name}
                 </Box>
                 <NetworkBadge network={getAssetNetwork(token)} />
@@ -350,12 +390,30 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
           </Stack>
 
           <Box sx={{ mb: '22px' }}>
-            <Box sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '6px' }}>
+            <Box
+              sx={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: 'rgba(10,10,15,0.45)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                mb: '6px',
+              }}
+            >
               {t('Your Balance')}
             </Box>
             {nativeError ? (
               <>
-                <Box sx={{ ...MONO, fontSize: '28px', fontWeight: 600, color: 'rgba(10,10,15,0.3)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                <Box
+                  sx={{
+                    ...MONO,
+                    fontSize: '28px',
+                    fontWeight: 600,
+                    color: 'rgba(10,10,15,0.3)',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.2,
+                  }}
+                >
                   — {token.symbol}
                 </Box>
                 <Box
@@ -381,12 +439,23 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
               </>
             ) : (
               <>
-                <Box sx={{ ...MONO, fontSize: '28px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                <Box
+                  sx={{
+                    ...MONO,
+                    fontSize: '28px',
+                    fontWeight: 600,
+                    color: '#0A0A0F',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.2,
+                  }}
+                >
                   {fTokenAmount(balance)} {token.symbol}
                 </Box>
                 <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
                   {fCurrencyTwoDecimals(value.toNumber())}
-                  <Box component="span" sx={{ mx: '8px', color: 'rgba(10,10,15,0.2)' }}>·</Box>
+                  <Box component="span" sx={{ mx: '8px', color: 'rgba(10,10,15,0.2)' }}>
+                    ·
+                  </Box>
                   {fCurrency(price.toNumber())} / {token.symbol}
                 </Box>
               </>
@@ -423,7 +492,11 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                   color: '#6B6B76',
                   background: 'transparent',
                   transition: 'all .15s ease',
-                  '&:hover': { bgcolor: 'rgba(10,10,15,0.03)', color: '#0A0A0F', borderColor: 'rgba(10,10,15,0.14)' },
+                  '&:hover': {
+                    bgcolor: 'rgba(10,10,15,0.03)',
+                    color: '#0A0A0F',
+                    borderColor: 'rgba(10,10,15,0.14)',
+                  },
                   '&:hover .action-icon-box': { bgcolor: '#0A0A0F', color: '#fff' },
                 }}
               >
@@ -476,7 +549,12 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
             {infoRows.map((row) => (
               <Box
                 key={row.label}
-                sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
               >
                 <Box sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', flexShrink: 0 }}>
                   {row.label}
@@ -499,7 +577,12 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                     <Iconify
                       icon="solar:copy-linear"
                       width={15}
-                      sx={{ cursor: 'pointer', color: 'rgba(10,10,15,0.35)', flexShrink: 0, '&:hover': { color: '#0A0A0F' } }}
+                      sx={{
+                        cursor: 'pointer',
+                        color: 'rgba(10,10,15,0.35)',
+                        flexShrink: 0,
+                        '&:hover': { color: '#0A0A0F' },
+                      }}
                       onClick={() => handleCopy(row.value, t('Copied to clipboard'))}
                     />
                   )}
@@ -528,17 +611,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
       </Box>
 
       {/* Modals — rendered locally so the asset is preselected */}
-      <SendModal
-        open={sendOpen}
-        onClose={() => setSendOpen(false)}
-        initialSymbol={token.symbol}
-      />
+      <SendModal open={sendOpen} onClose={() => setSendOpen(false)} initialSymbol={token.symbol} />
 
-      <ReceiveModal
-        open={receiveOpen}
-        context="receive"
-        onClose={() => setReceiveOpen(false)}
-      />
+      <ReceiveModal open={receiveOpen} context="receive" onClose={() => setReceiveOpen(false)} />
 
       {/* USDC can also be bought with cash via MoneyGram (Stellar USDC deposit);
           other assets are Stripe + Coinbase only. */}
@@ -548,7 +623,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         onClose={() => setBuyOpen(false)}
         walletAddress={(native ? nativeAddress : wallet.address) ?? undefined}
         asset={{ symbol: token.symbol, blockchain: native?.chain ?? 'stellar' }}
-        providers={token.symbol === 'USDC' ? ['stripe', 'coinbase', 'moneygram'] : ['stripe', 'coinbase']}
+        providers={
+          token.symbol === 'USDC' ? ['stripe', 'coinbase', 'moneygram'] : ['stripe', 'coinbase']
+        }
       />
 
       {/* USDC offers Coinbase + MoneyGram (both cash out Stellar USDC); BTC/ETH/

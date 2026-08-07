@@ -19,13 +19,32 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { direction, sourceDomain, destDomain, amountWire, srcAsset, dstAsset, srcAmount, srcAddress, destAddress, quoteJson, refund } = body ?? {};
+  const {
+    direction,
+    sourceDomain,
+    destDomain,
+    amountWire,
+    srcAsset,
+    dstAsset,
+    srcAmount,
+    srcAddress,
+    destAddress,
+    quoteJson,
+    refund,
+  } = body ?? {};
 
-  if (!VALID_DOMAINS.has(sourceDomain) || !VALID_DOMAINS.has(destDomain) || sourceDomain === destDomain) {
+  if (
+    !VALID_DOMAINS.has(sourceDomain) ||
+    !VALID_DOMAINS.has(destDomain) ||
+    sourceDomain === destDomain
+  ) {
     return NextResponse.json({ error: 'invalid domains' }, { status: 400 });
   }
   if (typeof amountWire !== 'string' || !/^\d+$/.test(amountWire) || BigInt(amountWire) <= 0n) {
-    return NextResponse.json({ error: 'amountWire must be a positive integer string (6dp units)' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'amountWire must be a positive integer string (6dp units)' },
+      { status: 400 }
+    );
   }
   if (!srcAddress || !destAddress || !direction) {
     return NextResponse.json({ error: 'missing direction/addresses' }, { status: 400 });

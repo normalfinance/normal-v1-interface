@@ -42,7 +42,8 @@ export const metadata: Metadata = {
     default: 'Normal',
     template: '%s · Normal',
   },
-  description: 'Earn yield on your USDC with Normal — self-custody savings powered by DeFindex and Blend on Stellar.',
+  description:
+    'Earn yield on your USDC with Normal — self-custody savings powered by DeFindex and Blend on Stellar.',
   keywords: 'crypto savings, USDC yield, DeFi, Stellar, Blend, DeFindex, Normal Finance',
   openGraph: {
     siteName: 'Normal',
@@ -119,52 +120,52 @@ export default async function RootLayout({ children }: RootLayoutProps) {
       </head>
       <body>
         <InitColorSchemeScript
-            defaultMode={themeConfig.defaultMode}
-            modeStorageKey={themeConfig.modeStorageKey}
-            attribute={themeConfig.cssVariables.colorSchemeSelector}
-          />
+          defaultMode={themeConfig.defaultMode}
+          modeStorageKey={themeConfig.modeStorageKey}
+          attribute={themeConfig.cssVariables.colorSchemeSelector}
+        />
 
-          <I18nProvider lang={appConfig.i18nLang}>
-            <SettingsProvider
-              cookieSettings={appConfig.cookieSettings}
-              defaultSettings={defaultSettings}
-            >
-              <LocalizationProvider>
-                <AppRouterCacheProvider options={{ key: 'css' }}>
-                  <ThemeProvider
-                    defaultMode={themeConfig.defaultMode}
-                    modeStorageKey={themeConfig.modeStorageKey}
-                  >
-                    <SupabaseAuthProvider>
-                      <ExternalProvider>
-                        <ReferralProvider>
-                          <MotionLazy>
-                            <SnackbarProvider>
-                              <Analytics />
-                              {/* Collect-only real-user performance vitals (Phase 0
+        <I18nProvider lang={appConfig.i18nLang}>
+          <SettingsProvider
+            cookieSettings={appConfig.cookieSettings}
+            defaultSettings={defaultSettings}
+          >
+            <LocalizationProvider>
+              <AppRouterCacheProvider options={{ key: 'css' }}>
+                <ThemeProvider
+                  defaultMode={themeConfig.defaultMode}
+                  modeStorageKey={themeConfig.modeStorageKey}
+                >
+                  <SupabaseAuthProvider>
+                    <ExternalProvider>
+                      <ReferralProvider>
+                        <MotionLazy>
+                          <SnackbarProvider>
+                            <Analytics />
+                            {/* Collect-only real-user performance vitals (Phase 0
                                   baseline — approved 2026-07-24). */}
-                              <SpeedInsights />
-                              <ProgressBar />
-                              <SettingsDrawer defaultSettings={defaultSettings} />
-                              <AnnouncementProvider>
-                                <WalletPasswordProvider>
-                                  <ModalProvider>
-                                    <AssetActionsProvider>
-                                      <DashboardLayout>{children}</DashboardLayout>
-                                    </AssetActionsProvider>
-                                  </ModalProvider>
-                                </WalletPasswordProvider>
-                              </AnnouncementProvider>
-                            </SnackbarProvider>
-                          </MotionLazy>
-                        </ReferralProvider>
-                      </ExternalProvider>
-                    </SupabaseAuthProvider>
-                  </ThemeProvider>
-                </AppRouterCacheProvider>
-              </LocalizationProvider>
-            </SettingsProvider>
-          </I18nProvider>
+                            <SpeedInsights />
+                            <ProgressBar />
+                            <SettingsDrawer defaultSettings={defaultSettings} />
+                            <AnnouncementProvider>
+                              <WalletPasswordProvider>
+                                <ModalProvider>
+                                  <AssetActionsProvider>
+                                    <DashboardLayout>{children}</DashboardLayout>
+                                  </AssetActionsProvider>
+                                </ModalProvider>
+                              </WalletPasswordProvider>
+                            </AnnouncementProvider>
+                          </SnackbarProvider>
+                        </MotionLazy>
+                      </ReferralProvider>
+                    </ExternalProvider>
+                  </SupabaseAuthProvider>
+                </ThemeProvider>
+              </AppRouterCacheProvider>
+            </LocalizationProvider>
+          </SettingsProvider>
+        </I18nProvider>
       </body>
     </html>
   );

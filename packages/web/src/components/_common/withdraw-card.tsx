@@ -615,7 +615,14 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
           fiatValue={fiatValue}
           address={destination}
           memo={memo}
-          sendFn={(params) => stellarSend({ destination: params.destination, token: params.token, amount: params.amount, memo: params.memo })}
+          sendFn={(params) =>
+            stellarSend({
+              destination: params.destination,
+              token: params.token,
+              amount: params.amount,
+              memo: params.memo,
+            })
+          }
         />
       )}
       {/* Token Picker Popup */}

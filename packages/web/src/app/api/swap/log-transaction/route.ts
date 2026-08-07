@@ -1,4 +1,4 @@
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
@@ -104,9 +104,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Swap log transaction error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to log swap' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to log swap' }, { status: 500 });
   }
 }

@@ -26,7 +26,10 @@ export async function POST(req: NextRequest) {
     const { jwt, host, path } = await getCdpBearerToken();
 
     const rawIp = getClientIP(req);
-    const isPrivateIp = !rawIp || rawIp === 'unknown' || /^(::1|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(rawIp);
+    const isPrivateIp =
+      !rawIp ||
+      rawIp === 'unknown' ||
+      /^(::1|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(rawIp);
     // Only forward clientIp when it's a real public IP — Coinbase rejects private addresses.
     const clientIp = isPrivateIp ? undefined : rawIp;
 
@@ -51,7 +54,11 @@ export async function POST(req: NextRequest) {
       logger.error('[coinbase/session] Coinbase API error:', resp.status, text);
       // Try to parse Coinbase JSON error body, fall back to raw text
       let errorPayload: unknown = text;
-      try { errorPayload = JSON.parse(text); } catch { /* keep raw string */ }
+      try {
+        errorPayload = JSON.parse(text);
+      } catch {
+        /* keep raw string */
+      }
       return NextResponse.json(
         { error: errorPayload || 'Session creation failed' },
         { status: resp.status }

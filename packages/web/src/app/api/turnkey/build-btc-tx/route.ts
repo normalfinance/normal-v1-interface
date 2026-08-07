@@ -94,12 +94,8 @@ export async function POST(request: NextRequest) {
     let estimatedFeeSat = Math.ceil(feeRateSatPerVbyte * estimatedVsize);
 
     // Coin selection — prefer confirmed UTXOs, sort by value descending
-    const confirmed = utxos
-      .filter((u) => u.status.confirmed)
-      .sort((a, b) => b.value - a.value);
-    const unconfirmed = utxos
-      .filter((u) => !u.status.confirmed)
-      .sort((a, b) => b.value - a.value);
+    const confirmed = utxos.filter((u) => u.status.confirmed).sort((a, b) => b.value - a.value);
+    const unconfirmed = utxos.filter((u) => !u.status.confirmed).sort((a, b) => b.value - a.value);
     const orderedUtxos = [...confirmed, ...unconfirmed];
 
     const selected: MempoolUtxo[] = [];
@@ -120,10 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (totalInput < amountSat + estimatedFeeSat) {
-      return NextResponse.json(
-        { error: 'Insufficient Bitcoin balance' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Insufficient Bitcoin balance' }, { status: 400 });
     }
 
     const changeAmountSat = totalInput - amountSat - estimatedFeeSat;
@@ -136,7 +129,7 @@ export async function POST(request: NextRequest) {
         const res = await fetch(`https://mempool.space/api/tx/${utxo.txid}/hex`);
         if (!res.ok) throw new Error(`Failed to fetch prev tx ${utxo.txid} (${res.status})`);
         return res.text();
-      }),
+      })
     );
 
     // Build PSBT

@@ -53,7 +53,9 @@ export function ReceiveAssetPicker({
     >
       <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+          <Typography
+            sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+          >
             Receive
           </Typography>
           <IconButton onClick={onClose} size="small" sx={{ color: '#6B6B76', borderRadius: '8px' }}>
@@ -97,15 +99,35 @@ export function ReceiveAssetPicker({
               sx={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
             />
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Box sx={{ fontSize: '14px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+              <Box
+                sx={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#0A0A0F',
+                  letterSpacing: '-0.01em',
+                  lineHeight: 1.3,
+                }}
+              >
                 {opt.label}
               </Box>
-              <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', mt: '2px', lineHeight: 1.4 }}>
+              <Box
+                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', mt: '2px', lineHeight: 1.4 }}
+              >
                 {opt.subtitle}
               </Box>
             </Box>
-            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: opt.dotColor, flexShrink: 0 }} />
-            <ChevronRightOutlined sx={{ fontSize: 18, color: 'rgba(10,10,15,0.3)', flexShrink: 0 }} />
+            <Box
+              sx={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                bgcolor: opt.dotColor,
+                flexShrink: 0,
+              }}
+            />
+            <ChevronRightOutlined
+              sx={{ fontSize: 18, color: 'rgba(10,10,15,0.3)', flexShrink: 0 }}
+            />
           </Box>
         ))}
       </DialogContent>

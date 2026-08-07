@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
 import { useMgiLimits } from '@/hooks/use-mgi-limits';
 import { usePersistStore } from '@normalfinance/state';
-import { useBoolean , useStellarConfig } from '@/hooks';
+import { useBoolean, useStellarConfig } from '@/hooks';
 import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
 import { reportMgiStatus, refreshMgiStatus } from '@/lib/mgi/db';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
@@ -252,7 +252,9 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
       const { token: sessionToken, error } = await r.json();
       if (error || !sessionToken) {
         win?.close();
-        enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', { variant: 'error' });
+        enqueueSnackbar('Failed to start Coinbase checkout. Try again later.', {
+          variant: 'error',
+        });
         return;
       }
       const url = createCoinbasePayOnrampURL({
@@ -421,9 +423,12 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
                   {mgiCommitted.status === 'completed'
                     ? t('MoneyGram received your cash and the USDC has been sent to your wallet.')
                     : FAILED_MGI_STATUSES.has(mgiCommitted.status)
-                      ? t('MoneyGram reports this deposit as {{status}}. Start a new deposit if needed.', {
-                          status: mgiCommitted.status,
-                        })
+                      ? t(
+                          'MoneyGram reports this deposit as {{status}}. Start a new deposit if needed.',
+                          {
+                            status: mgiCommitted.status,
+                          }
+                        )
                       : t(
                           'Bring ${{amount}} in cash to the MoneyGram location you selected. No code is needed — the agent finds your transaction by your name and phone number, and your receipt with a reference number comes after paying. Your USDC arrives here shortly after.',
                           { amount: mgiCommitted.amount }
@@ -446,120 +451,128 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
                 )}
 
               <Button variant="contained" fullWidth size="large" onClick={handleDialogClose}>
-                {mgiCommitted.status === 'completed' ? t('Done') : t("Done — I'll drop off the cash")}
+                {mgiCommitted.status === 'completed'
+                  ? t('Done')
+                  : t("Done — I'll drop off the cash")}
               </Button>
 
               {mgiCommitted.status !== 'completed' && (
                 <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-                  {t('You can close this — the deposit stays visible under Activity on your USDC page.')}
+                  {t(
+                    'You can close this — the deposit stays visible under Activity on your USDC page.'
+                  )}
                 </Typography>
               )}
             </Stack>
           ) : (
             <>
-          {!isConnected && isStellarAsset && (
-            <Stack spacing={2} sx={{ mb: 2 }}>
-              <Alert severity="info" icon={<Iconify icon="solar:wallet-bold" width={22} />}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                  {t('Normal Account Required')}
-                </Typography>
-                <Typography variant="body2">
-                  {t('Create a Normal account to start your first USDC deposit.')}
-                </Typography>
-              </Alert>
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                size="large"
-                onClick={() => setShowCreateNormalWallet(true)}
-                startIcon={<Iconify icon="solar:add-circle-bold" />}
-              >
-                {t('Create Normal Account')}
-              </Button>
-            </Stack>
-          )}
+              {!isConnected && isStellarAsset && (
+                <Stack spacing={2} sx={{ mb: 2 }}>
+                  <Alert severity="info" icon={<Iconify icon="solar:wallet-bold" width={22} />}>
+                    <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                      {t('Normal Account Required')}
+                    </Typography>
+                    <Typography variant="body2">
+                      {t('Create a Normal account to start your first USDC deposit.')}
+                    </Typography>
+                  </Alert>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    size="large"
+                    onClick={() => setShowCreateNormalWallet(true)}
+                    startIcon={<Iconify icon="solar:add-circle-bold" />}
+                  >
+                    {t('Create Normal Account')}
+                  </Button>
+                </Stack>
+              )}
 
-          {isConnected && checkingAccount && (
-            <Stack alignItems="center" justifyContent="center" sx={{ py: 4 }}>
-              <CircularProgress size={32} />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                {t('Checking account status...')}
-              </Typography>
-            </Stack>
-          )}
+              {isConnected && checkingAccount && (
+                <Stack alignItems="center" justifyContent="center" sx={{ py: 4 }}>
+                  <CircularProgress size={32} />
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                    {t('Checking account status...')}
+                  </Typography>
+                </Stack>
+              )}
 
-          {isStellarAsset && !isCheckingAccount && isConnected && accountExists && !hasUsdcTrustline && (
-            <Stack spacing={2} sx={{ mb: 2 }}>
-              <Alert severity="info" icon={<Iconify icon="solar:link-bold" width={22} />}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                  {t('USDC Trustline Required')}
-                </Typography>
-                <Typography variant="body2">
-                  {t('Add a USDC trustline to receive USDC from onramp providers.')}
-                </Typography>
-              </Alert>
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                size="large"
-                onClick={handleAddTrustline}
-                disabled={isAddingTrustline}
-                startIcon={
-                  isAddingTrustline ? (
-                    <CircularProgress size={18} color="inherit" />
-                  ) : (
-                    <Iconify icon="solar:add-circle-bold" />
-                  )
-                }
-              >
-                {isAddingTrustline ? t('Adding Trustline...') : t('Add USDC Trustline')}
-              </Button>
-            </Stack>
-          )}
-
-          {!checkingAccount && isConnected && prerequisitesMet && (
-            <List disablePadding>
-              {ONRAMPS.map((checkout) => (
-                <ListItemButton
-                  key={checkout.id}
-                  onClick={() => {
-                    if (checkout.onClick) {
-                      checkout.onClick();
-                    } else if (checkout.url) {
-                      openExternal(checkout.url);
-                    }
-                  }}
-                  sx={{
-                    borderRadius: 1,
-                    mb: 1,
-                    border: `1px solid ${alpha(theme.palette.grey[500], 0.14)}`,
-                  }}
-                >
-                  <ListItemAvatar>
-                    <Avatar
-                      src={checkout.avatar}
-                      alt={checkout.heading}
-                      sx={{ width: 36, height: 36 }}
-                    />
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Typography variant="subtitle2" color="text.primary">
-                        {checkout.heading}
+              {isStellarAsset &&
+                !isCheckingAccount &&
+                isConnected &&
+                accountExists &&
+                !hasUsdcTrustline && (
+                  <Stack spacing={2} sx={{ mb: 2 }}>
+                    <Alert severity="info" icon={<Iconify icon="solar:link-bold" width={22} />}>
+                      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                        {t('USDC Trustline Required')}
                       </Typography>
-                    }
-                    secondary={
-                      <Typography variant="caption" color="text.secondary">
-                        {checkout.description}
+                      <Typography variant="body2">
+                        {t('Add a USDC trustline to receive USDC from onramp providers.')}
                       </Typography>
-                    }
-                  />
-                </ListItemButton>
-              ))}
-            </List>
-          )}
+                    </Alert>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      size="large"
+                      onClick={handleAddTrustline}
+                      disabled={isAddingTrustline}
+                      startIcon={
+                        isAddingTrustline ? (
+                          <CircularProgress size={18} color="inherit" />
+                        ) : (
+                          <Iconify icon="solar:add-circle-bold" />
+                        )
+                      }
+                    >
+                      {isAddingTrustline ? t('Adding Trustline...') : t('Add USDC Trustline')}
+                    </Button>
+                  </Stack>
+                )}
+
+              {!checkingAccount && isConnected && prerequisitesMet && (
+                <List disablePadding>
+                  {ONRAMPS.map((checkout) => (
+                    <ListItemButton
+                      key={checkout.id}
+                      onClick={() => {
+                        if (checkout.onClick) {
+                          checkout.onClick();
+                        } else if (checkout.url) {
+                          openExternal(checkout.url);
+                        }
+                      }}
+                      sx={{
+                        borderRadius: 1,
+                        mb: 1,
+                        border: `1px solid ${alpha(theme.palette.grey[500], 0.14)}`,
+                      }}
+                    >
+                      <ListItemAvatar>
+                        <Avatar
+                          src={checkout.avatar}
+                          alt={checkout.heading}
+                          sx={{ width: 36, height: 36 }}
+                        />
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Typography variant="subtitle2" color="text.primary">
+                            {checkout.heading}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography variant="caption" color="text.secondary">
+                            {checkout.description}
+                          </Typography>
+                        }
+                      />
+                    </ListItemButton>
+                  ))}
+                </List>
+              )}
             </>
           )}
         </DialogContent>

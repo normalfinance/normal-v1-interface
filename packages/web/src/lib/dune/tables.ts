@@ -1,5 +1,5 @@
 export interface VaultSnapshotRow {
-  date: string;           // ISO timestamp
+  date: string; // ISO timestamp
   vault_address: string;
   network: string;
   tvl_usd: number;
@@ -58,13 +58,13 @@ export interface LinkedWalletRow {
 }
 
 export interface TransactionLogRow {
-  date: string;           // ISO timestamp
+  date: string; // ISO timestamp
   wallet_address: string;
-  action_type: string;    // 'swap' | 'savings_deposit' | 'savings_withdraw'
-  asset_in: string;       // token the user sent (XLM, USDC, nUSDC)
-  asset_out: string;      // token the user received
-  amount: number;         // amount of asset_in
-  fee_usd: number;        // Normal fee charged
+  action_type: string; // 'swap' | 'savings_deposit' | 'savings_withdraw'
+  asset_in: string; // token the user sent (XLM, USDC, nUSDC)
+  asset_out: string; // token the user received
+  amount: number; // amount of asset_in
+  fee_usd: number; // Normal fee charged
   tx_hash: string;
   network: string;
 }

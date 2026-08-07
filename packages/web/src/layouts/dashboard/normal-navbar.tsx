@@ -15,8 +15,6 @@ import { Box, Button, IconButton, Typography, useMediaQuery } from '@mui/materia
 
 import { Iconify } from '@/components/template/iconify';
 
-
-
 const NAV_ITEMS: { url: string; label: string }[] = [
   { url: paths.socials.discord, label: 'Discord' },
 ];
@@ -98,16 +96,19 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
   const [dockOpen, setDockOpen] = useState(false);
   const dropdownRefs = useRef<Array<HTMLDivElement | null>>([]);
 
-  const toggleDock = useCallback((idx: number) => {
-    setDockOpen((prev) => {
-      if (prev && activeIdx === idx) {
-        setActiveIdx(null);
-        return false;
-      }
-      setActiveIdx(idx);
-      return true;
-    });
-  }, [activeIdx]);
+  const toggleDock = useCallback(
+    (idx: number) => {
+      setDockOpen((prev) => {
+        if (prev && activeIdx === idx) {
+          setActiveIdx(null);
+          return false;
+        }
+        setActiveIdx(idx);
+        return true;
+      });
+    },
+    [activeIdx]
+  );
 
   const closeDock = useCallback(() => {
     setDockOpen(false);
@@ -188,9 +189,10 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         alignItems: 'center',
         justifyContent: 'space-between',
         borderBottom: '1px solid rgba(10,10,15,0.04)',
-        background: theme.palette.mode === 'dark'
-          ? alpha(theme.palette.background.paper, 0.92)
-          : 'rgba(250,250,251,0.72)',
+        background:
+          theme.palette.mode === 'dark'
+            ? alpha(theme.palette.background.paper, 0.92)
+            : 'rgba(250,250,251,0.72)',
         backdropFilter: 'blur(14px) saturate(140%)',
         WebkitBackdropFilter: 'blur(14px) saturate(140%)',
         minHeight: { xs: 64, lg: 72 },
@@ -242,7 +244,16 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
           <Box
             component="a"
             href="/"
-            sx={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0, borderRadius: '999px', overflow: 'hidden', p: '6px', transition: 'background 0.15s', '&:hover': { background: 'rgba(10,10,15,0.04)' } }}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              flexShrink: 0,
+              borderRadius: '999px',
+              overflow: 'hidden',
+              p: '6px',
+              transition: 'background 0.15s',
+              '&:hover': { background: 'rgba(10,10,15,0.04)' },
+            }}
           >
             <Box
               component="img"
@@ -286,7 +297,9 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               return (
                 <Box
                   key={i}
-                  ref={(el) => { dropdownRefs.current[i] = el as HTMLDivElement | null; }}
+                  ref={(el) => {
+                    dropdownRefs.current[i] = el as HTMLDivElement | null;
+                  }}
                   sx={{ position: 'relative' }}
                 >
                   <Button
@@ -388,7 +401,6 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         </Box>
       </Box>
 
-
       <AnimatePresence initial={false}>
         {mobileOpen && (
           <m.div
@@ -411,7 +423,16 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
             aria-modal="true"
             role="dialog"
           >
-            <Box sx={{ height: '100%', overflow: 'auto', px: '5%', py: 2, display: 'flex', flexDirection: 'column' }}>
+            <Box
+              sx={{
+                height: '100%',
+                overflow: 'auto',
+                px: '5%',
+                py: 2,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
               {links
                 .filter((l) => !!l.megaMenu)
                 .map((link, i) => (
@@ -454,7 +475,7 @@ function DesktopDock({
           borderRadius: '16px',
           border: `1px solid ${alpha(theme.palette.text.primary, 0.07)}`,
           background: theme.palette.background.paper,
-          boxShadow: `0 4px 6px ${alpha('#000', 0.04)}, 0 16px 48px ${alpha('#000', 0.10)}`,
+          boxShadow: `0 4px 6px ${alpha('#000', 0.04)}, 0 16px 48px ${alpha('#000', 0.1)}`,
           overflow: 'hidden',
         }}
       >
@@ -525,20 +546,35 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
             p: '7px',
           }}
         >
-          {l.icon ?? (l.image && (
-            <Box
-              component="img"
-              src={l.image.src}
-              alt={tDock(l.image.alt || '')}
-              sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            />
-          ))}
+          {l.icon ??
+            (l.image && (
+              <Box
+                component="img"
+                src={l.image.src}
+                alt={tDock(l.image.alt || '')}
+                sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            ))}
         </Box>
         <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: '13.5px', fontWeight: 500, lineHeight: 1.3, color: isDark ? '#fff' : '#0A0A0F' }}>
+          <Typography
+            sx={{
+              fontSize: '13.5px',
+              fontWeight: 500,
+              lineHeight: 1.3,
+              color: isDark ? '#fff' : '#0A0A0F',
+            }}
+          >
             {tDock(l.title)}
           </Typography>
-          <Typography sx={{ fontSize: '12px', color: isDark ? 'rgba(255,255,255,0.4)' : '#9A9AA3', lineHeight: 1.4, mt: '2px' }}>
+          <Typography
+            sx={{
+              fontSize: '12px',
+              color: isDark ? 'rgba(255,255,255,0.4)' : '#9A9AA3',
+              lineHeight: 1.4,
+              mt: '2px',
+            }}
+          >
             {tDock(l.description)}
           </Typography>
         </Box>
@@ -609,30 +645,69 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                 component="img"
                 src={mega.banner.image}
                 alt=""
-                sx={{ width: 60, height: 42, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }}
+                sx={{
+                  width: 60,
+                  height: 42,
+                  borderRadius: '6px',
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                }}
               />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 {mega.banner.badge && (
-                  <Box sx={{ display: 'inline-flex', px: '7px', py: '2px', mb: '5px', borderRadius: '999px', bgcolor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.14)' }}>
-                    <Typography sx={{ fontSize: '9px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'inline-flex',
+                      px: '7px',
+                      py: '2px',
+                      mb: '5px',
+                      borderRadius: '999px',
+                      bgcolor: 'rgba(255,255,255,0.12)',
+                      border: '1px solid rgba(255,255,255,0.14)',
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        color: '#fff',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        lineHeight: 1,
+                      }}
+                    >
                       {mega.banner.badge}
                     </Typography>
                   </Box>
                 )}
-                <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: '#fff', lineHeight: 1.3, mb: '4px' }}>
+                <Typography
+                  sx={{
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    color: '#fff',
+                    lineHeight: 1.3,
+                    mb: '4px',
+                  }}
+                >
                   {tDock(mega.banner.title)}
                 </Typography>
                 {mega.banner.meta && (
-                  <Typography sx={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', lineHeight: 1 }}>
+                  <Typography
+                    sx={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', lineHeight: 1 }}
+                  >
                     {mega.banner.meta}
                   </Typography>
                 )}
               </Box>
               <Box
                 sx={{
-                  width: 28, height: 28, borderRadius: '50%',
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
                   bgcolor: 'rgba(255,255,255,0.12)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   flexShrink: 0,
                 }}
               >
@@ -643,18 +718,44 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
             /* CTA style */
             <>
               {mega.banner.badge && (
-                <Box sx={{ px: '10px', py: '4px', borderRadius: '999px', bgcolor: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)', flexShrink: 0 }}>
-                  <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#fff', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                <Box
+                  sx={{
+                    px: '10px',
+                    py: '4px',
+                    borderRadius: '999px',
+                    bgcolor: 'rgba(255,255,255,0.10)',
+                    border: '1px solid rgba(255,255,255,0.14)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#fff',
+                      lineHeight: 1,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {mega.banner.badge}
                   </Typography>
                 </Box>
               )}
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#fff', lineHeight: 1.3 }}>
+                <Typography
+                  sx={{ fontSize: '13px', fontWeight: 600, color: '#fff', lineHeight: 1.3 }}
+                >
                   {tDock(mega.banner.title)}
                 </Typography>
                 {mega.banner.subtitle && (
-                  <Typography sx={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.4, mt: '2px' }}>
+                  <Typography
+                    sx={{
+                      fontSize: '11.5px',
+                      color: 'rgba(255,255,255,0.45)',
+                      lineHeight: 1.4,
+                      mt: '2px',
+                    }}
+                  >
                     {tDock(mega.banner.subtitle)}
                   </Typography>
                 )}
@@ -665,12 +766,20 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                 target={mega.banner.buttonTarget}
                 rel={mega.banner.buttonTarget === '_blank' ? 'noopener noreferrer' : undefined}
                 sx={{
-                  display: 'inline-flex', alignItems: 'center',
-                  px: '14px', py: '7px', borderRadius: '999px',
-                  bgcolor: '#fff', color: '#0A0A0F',
-                  fontSize: '12px', fontWeight: 600,
-                  textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
-                  transition: 'opacity 0.15s', '&:hover': { opacity: 0.85 },
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  px: '14px',
+                  py: '7px',
+                  borderRadius: '999px',
+                  bgcolor: '#fff',
+                  color: '#0A0A0F',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  transition: 'opacity 0.15s',
+                  '&:hover': { opacity: 0.85 },
                 }}
               >
                 {tDock(mega.banner.buttonLabel)}
@@ -724,20 +833,35 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
             p: '7px',
           }}
         >
-          {l.icon ?? (l.image && (
-            <Box
-              component="img"
-              src={l.image.src}
-              alt={tMobile(l.image.alt || '')}
-              sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            />
-          ))}
+          {l.icon ??
+            (l.image && (
+              <Box
+                component="img"
+                src={l.image.src}
+                alt={tMobile(l.image.alt || '')}
+                sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            ))}
         </Box>
         <Box>
-          <Typography sx={{ fontSize: '14px', fontWeight: 500, lineHeight: 1.3, color: isDark ? '#fff' : '#0A0A0F' }}>
+          <Typography
+            sx={{
+              fontSize: '14px',
+              fontWeight: 500,
+              lineHeight: 1.3,
+              color: isDark ? '#fff' : '#0A0A0F',
+            }}
+          >
             {tMobile(l.title)}
           </Typography>
-          <Typography sx={{ fontSize: '12.5px', color: isDark ? 'rgba(255,255,255,0.4)' : '#9A9AA3', lineHeight: 1.4, mt: '2px' }}>
+          <Typography
+            sx={{
+              fontSize: '12.5px',
+              color: isDark ? 'rgba(255,255,255,0.4)' : '#9A9AA3',
+              lineHeight: 1.4,
+              mt: '2px',
+            }}
+          >
             {tMobile(l.description)}
           </Typography>
         </Box>
@@ -785,7 +909,10 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
             alignItems: 'center',
             gap: '12px',
             textDecoration: 'none',
-            ...(megaMenu.banner.image && { transition: 'opacity 0.15s', '&:hover': { opacity: 0.88 } }),
+            ...(megaMenu.banner.image && {
+              transition: 'opacity 0.15s',
+              '&:hover': { opacity: 0.88 },
+            }),
           }}
         >
           {megaMenu.banner.image ? (
@@ -794,45 +921,114 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
                 component="img"
                 src={megaMenu.banner.image}
                 alt=""
-                sx={{ width: 56, height: 40, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }}
+                sx={{
+                  width: 56,
+                  height: 40,
+                  borderRadius: '6px',
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                }}
               />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 {megaMenu.banner.badge && (
-                  <Box sx={{ display: 'inline-flex', px: '7px', py: '2px', mb: '5px', borderRadius: '999px', bgcolor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.14)' }}>
-                    <Typography sx={{ fontSize: '9px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'inline-flex',
+                      px: '7px',
+                      py: '2px',
+                      mb: '5px',
+                      borderRadius: '999px',
+                      bgcolor: 'rgba(255,255,255,0.12)',
+                      border: '1px solid rgba(255,255,255,0.14)',
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        color: '#fff',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        lineHeight: 1,
+                      }}
+                    >
                       {megaMenu.banner.badge}
                     </Typography>
                   </Box>
                 )}
-                <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#fff', lineHeight: 1.3, mb: '3px' }}>
+                <Typography
+                  sx={{
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#fff',
+                    lineHeight: 1.3,
+                    mb: '3px',
+                  }}
+                >
                   {tMobile(megaMenu.banner.title)}
                 </Typography>
                 {megaMenu.banner.meta && (
-                  <Typography sx={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', lineHeight: 1 }}>
+                  <Typography
+                    sx={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', lineHeight: 1 }}
+                  >
                     {megaMenu.banner.meta}
                   </Typography>
                 )}
               </Box>
-              <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Box
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(255,255,255,0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
                 <Typography sx={{ color: '#fff', fontSize: '13px', lineHeight: 1 }}>→</Typography>
               </Box>
             </>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '10px', width: '100%' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: '10px',
+                width: '100%',
+              }}
+            >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 {megaMenu.banner.badge && (
-                  <Box sx={{ px: '10px', py: '4px', borderRadius: '999px', bgcolor: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)', flexShrink: 0 }}>
-                    <Typography sx={{ fontSize: '11px', fontWeight: 600, color: '#fff', lineHeight: 1 }}>
+                  <Box
+                    sx={{
+                      px: '10px',
+                      py: '4px',
+                      borderRadius: '999px',
+                      bgcolor: 'rgba(255,255,255,0.10)',
+                      border: '1px solid rgba(255,255,255,0.14)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Typography
+                      sx={{ fontSize: '11px', fontWeight: 600, color: '#fff', lineHeight: 1 }}
+                    >
                       {megaMenu.banner.badge}
                     </Typography>
                   </Box>
                 )}
-                <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#fff', lineHeight: 1.3 }}>
+                <Typography
+                  sx={{ fontSize: '13px', fontWeight: 600, color: '#fff', lineHeight: 1.3 }}
+                >
                   {tMobile(megaMenu.banner.title)}
                 </Typography>
               </Box>
               {megaMenu.banner.subtitle && (
-                <Typography sx={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
+                <Typography
+                  sx={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}
+                >
                   {tMobile(megaMenu.banner.subtitle)}
                 </Typography>
               )}
@@ -842,13 +1038,20 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
                 target={megaMenu.banner.buttonTarget}
                 rel={megaMenu.banner.buttonTarget === '_blank' ? 'noopener noreferrer' : undefined}
                 sx={{
-                  display: 'inline-flex', alignItems: 'center', alignSelf: 'stretch',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  alignSelf: 'stretch',
                   justifyContent: 'center',
-                  px: '16px', py: '9px', borderRadius: '999px',
-                  bgcolor: '#fff', color: '#0A0A0F',
-                  fontSize: '13px', fontWeight: 600,
+                  px: '16px',
+                  py: '9px',
+                  borderRadius: '999px',
+                  bgcolor: '#fff',
+                  color: '#0A0A0F',
+                  fontSize: '13px',
+                  fontWeight: 600,
                   textDecoration: 'none',
-                  transition: 'opacity 0.15s', '&:hover': { opacity: 0.85 },
+                  transition: 'opacity 0.15s',
+                  '&:hover': { opacity: 0.85 },
                 }}
               >
                 {tMobile(megaMenu.banner.buttonLabel)}

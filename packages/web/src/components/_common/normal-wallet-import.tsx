@@ -417,9 +417,7 @@ export default function NormalWalletImport({
             value={privateKey}
             onChange={(e) => handlePrivateKeyChange(e.target.value)}
             error={!!privateKeyError}
-            helperText={
-              privateKeyError || t('Your private key should be 56 characters long.')
-            }
+            helperText={privateKeyError || t('Your private key should be 56 characters long.')}
             disabled={isImporting}
           />
         </Stack>

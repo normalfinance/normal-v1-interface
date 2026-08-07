@@ -25,7 +25,9 @@ import type { SwapSymbol } from './engines/types';
 
 export default function SwapView() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { user } = useSupabaseAuth();
   const { setGlobalIsLoading } = useAppStore();
@@ -55,10 +57,25 @@ export default function SwapView() {
   if (!mounted || walletChecking) {
     return (
       <DashboardContent maxWidth="xl">
-        <Skeleton variant="rectangular" height={48} width={200} sx={{ borderRadius: '12px', bgcolor: 'rgba(10,10,15,0.08)', mb: '24px' }} />
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px' }}>
-          <Skeleton variant="rectangular" height={420} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
-          <Skeleton variant="rectangular" height={200} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+        <Skeleton
+          variant="rectangular"
+          height={48}
+          width={200}
+          sx={{ borderRadius: '12px', bgcolor: 'rgba(10,10,15,0.08)', mb: '24px' }}
+        />
+        <Box
+          sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px' }}
+        >
+          <Skeleton
+            variant="rectangular"
+            height={420}
+            sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          />
+          <Skeleton
+            variant="rectangular"
+            height={200}
+            sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          />
         </Box>
       </DashboardContent>
     );
@@ -160,7 +177,9 @@ export default function SwapView() {
     <DashboardContent maxWidth="xl">
       <Box sx={{ mb: '24px' }}>
         <Stack spacing={0.5}>
-          <Typography sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+          <Typography
+            sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+          >
             Swap
           </Typography>
           <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)' }}>

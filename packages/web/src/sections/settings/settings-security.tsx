@@ -70,7 +70,16 @@ export function SettingsSecurity() {
         <Stack spacing={2}>
           {/* Email display */}
           <Box>
-            <Typography sx={{ fontSize: '11px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '8px' }}>
+            <Typography
+              sx={{
+                fontSize: '11px',
+                fontWeight: 500,
+                color: 'rgba(10,10,15,0.45)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                mb: '8px',
+              }}
+            >
               {t('Email')}
             </Typography>
             <Box
@@ -82,7 +91,13 @@ export function SettingsSecurity() {
                 border: '1px solid rgba(10,10,15,0.08)',
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
+              <Typography
+                sx={{
+                  fontSize: '13px',
+                  color: 'rgba(10,10,15,0.5)',
+                  fontFamily: '"Geist Mono", "Courier New", monospace',
+                }}
+              >
                 {user?.email || '—'}
               </Typography>
             </Box>
@@ -90,7 +105,9 @@ export function SettingsSecurity() {
 
           <Turnstile
             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
-            onSuccess={(token) => { setCaptchaToken(token); }}
+            onSuccess={(token) => {
+              setCaptchaToken(token);
+            }}
           />
 
           <Button
@@ -124,7 +141,11 @@ export function SettingsSecurity() {
             border: '1px solid rgba(16,185,129,0.2)',
           }}
         >
-          <Iconify icon="solar:check-circle-bold" width={20} sx={{ color: 'success.main', flexShrink: 0, mt: '1px' }} />
+          <Iconify
+            icon="solar:check-circle-bold"
+            width={20}
+            sx={{ color: 'success.main', flexShrink: 0, mt: '1px' }}
+          />
           <Box>
             <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
               {t("We've sent a password reset link to")} {user?.email}

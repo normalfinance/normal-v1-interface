@@ -45,7 +45,7 @@ export async function createPasskeyRegistration(
         displayName: userEmail ?? 'Normal User',
       },
       pubKeyCredParams: [
-        { type: 'public-key', alg: -7 },   // ES256 (P-256)
+        { type: 'public-key', alg: -7 }, // ES256 (P-256)
         { type: 'public-key', alg: -257 }, // RS256
       ],
       timeout: 60000,

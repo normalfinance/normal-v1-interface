@@ -42,7 +42,15 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
-  keywords: ['Normal', 'Normal Finance', 'USDC yield', 'crypto savings', 'DeFi', 'Stellar', 'Blend'],
+  keywords: [
+    'Normal',
+    'Normal Finance',
+    'USDC yield',
+    'crypto savings',
+    'DeFi',
+    'Stellar',
+    'Blend',
+  ],
 };
 
 export default function Page() {

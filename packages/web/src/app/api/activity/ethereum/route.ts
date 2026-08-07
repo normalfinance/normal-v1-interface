@@ -73,7 +73,9 @@ export async function GET(request: NextRequest) {
     const normalData = normalRes.ok ? await normalRes.json() : { result: [] };
     const internalData = internalRes.ok ? await internalRes.json() : { result: [] };
     const normalTxs: EtherscanTx[] = Array.isArray(normalData?.result) ? normalData.result : [];
-    const internalTxs: EtherscanTx[] = Array.isArray(internalData?.result) ? internalData.result : [];
+    const internalTxs: EtherscanTx[] = Array.isArray(internalData?.result)
+      ? internalData.result
+      : [];
 
     const toActivity = (tx: EtherscanTx, idSuffix: string): Activity => {
       const isReceive = tx.to?.toLowerCase() === address;
@@ -90,8 +92,12 @@ export async function GET(request: NextRequest) {
     };
 
     const items: Activity[] = [
-      ...normalTxs.filter((tx) => tx.isError === '0' && tx.value !== '0').map((tx) => toActivity(tx, '')),
-      ...internalTxs.filter((tx) => tx.isError === '0' && tx.value !== '0').map((tx, i) => toActivity(tx, `:i${i}`)),
+      ...normalTxs
+        .filter((tx) => tx.isError === '0' && tx.value !== '0')
+        .map((tx) => toActivity(tx, '')),
+      ...internalTxs
+        .filter((tx) => tx.isError === '0' && tx.value !== '0')
+        .map((tx, i) => toActivity(tx, `:i${i}`)),
     ]
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 25);
@@ -106,6 +112,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, items });
   } catch (error) {
     logger.error('[activity/ethereum] error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch activity' }, { status: 502 });
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch activity' },
+      { status: 502 }
+    );
   }
 }

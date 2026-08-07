@@ -38,9 +38,7 @@ describe('withAuth', () => {
   it('hands the verified user to the handler', async () => {
     getAuthenticatedUser.mockResolvedValue({ id: 'user-1' });
 
-    const res = await withAuth(async (_req, { user }) => Response.json({ uid: user.id }))(
-      request
-    );
+    const res = await withAuth(async (_req, { user }) => Response.json({ uid: user.id }))(request);
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ uid: 'user-1' });

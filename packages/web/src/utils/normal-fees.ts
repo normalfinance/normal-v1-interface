@@ -31,17 +31,17 @@ export function getSwapFeeAmount(amountIn: number): number {
 
 export const YIELD_COMMISSION_TIERS: ReadonlyArray<{ minUsd: number; rate: number }> = [
   { minUsd: 50_000, rate: 0.05 },
-  { minUsd: 2_500, rate: 0.10 },
+  { minUsd: 2_500, rate: 0.1 },
   { minUsd: 500, rate: 0.15 },
-  { minUsd: 0, rate: 0.20 },
+  { minUsd: 0, rate: 0.2 },
 ];
 
 export function getYieldCommissionRate(withdrawAmountUsd: number): number {
-  if (!Number.isFinite(withdrawAmountUsd) || withdrawAmountUsd <= 0) return 0.20;
+  if (!Number.isFinite(withdrawAmountUsd) || withdrawAmountUsd <= 0) return 0.2;
   for (const tier of YIELD_COMMISSION_TIERS) {
     if (withdrawAmountUsd >= tier.minUsd) return tier.rate;
   }
-  return 0.20;
+  return 0.2;
 }
 
 /**

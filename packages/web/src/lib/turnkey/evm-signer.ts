@@ -12,12 +12,15 @@ export async function signEvmTxWithTurnkey(
 ): Promise<`0x${string}`> {
   const rpId =
     typeof window !== 'undefined'
-      ? process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname
+      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
       : 'localhost';
 
   const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const { TurnkeyClient } = await import('@turnkey/http');
-  const client = new TurnkeyClient({ baseUrl: 'https://api.turnkey.com' }, new WebauthnStamper({ rpId }));
+  const client = new TurnkeyClient(
+    { baseUrl: 'https://api.turnkey.com' },
+    new WebauthnStamper({ rpId })
+  );
 
   const result = await client.signTransaction({
     type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',

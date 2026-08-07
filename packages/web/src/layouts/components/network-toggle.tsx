@@ -71,9 +71,7 @@ export function NetworkToggle() {
         <MenuList sx={{ width: 160, minHeight: 72 }}>
           {NETWORK_OPTIONS.map((option) => {
             const dotColor =
-              option.value === 'mainnet'
-                ? theme.palette.success.main
-                : theme.palette.warning.main;
+              option.value === 'mainnet' ? theme.palette.success.main : theme.palette.warning.main;
             return (
               <MenuItem
                 key={option.value}

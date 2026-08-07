@@ -107,11 +107,20 @@ export function AssetPriceChart({ symbol }: { symbol: string }) {
             <Skeleton variant="text" width={160} sx={{ fontSize: '24px' }} />
           ) : prices.length > 0 ? (
             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-              <Box sx={{ ...MONO, fontSize: '24px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+              <Box
+                sx={{
+                  ...MONO,
+                  fontSize: '24px',
+                  fontWeight: 600,
+                  color: '#0A0A0F',
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 {formatPrice(lastPrice)}
               </Box>
               <Box sx={{ ...MONO, fontSize: '13px', fontWeight: 500, color }}>
-                {isUp ? '+' : ''}{changePct.toFixed(2)}%
+                {isUp ? '+' : ''}
+                {changePct.toFixed(2)}%
               </Box>
             </Box>
           ) : null}
@@ -155,7 +164,9 @@ export function AssetPriceChart({ symbol }: { symbol: string }) {
 
       {/* Chart */}
       {error ? (
-        <Box sx={{ color: 'rgba(10,10,15,0.4)', fontSize: '14px', py: '48px', textAlign: 'center' }}>
+        <Box
+          sx={{ color: 'rgba(10,10,15,0.4)', fontSize: '14px', py: '48px', textAlign: 'center' }}
+        >
           {t('Price data is unavailable right now. Please try again later.')}
         </Box>
       ) : isLoading ? (

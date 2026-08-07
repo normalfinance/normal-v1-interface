@@ -163,12 +163,12 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   // USDC has no reserve on the USDC amount (the fee is paid in XLM separately).
   const reserve =
     asset.blockchain === 'bitcoin'
-      ? btcReserve ?? NATIVE_RESERVE.bitcoin
+      ? (btcReserve ?? NATIVE_RESERVE.bitcoin)
       : asset.blockchain === 'stellar'
         ? asset.symbol === 'XLM'
-          ? xlmReserve ?? 1.6
+          ? (xlmReserve ?? 1.6)
           : 0
-        : NATIVE_RESERVE[asset.blockchain] ?? 0;
+        : (NATIVE_RESERVE[asset.blockchain] ?? 0);
   const sellMax =
     assetBalance != null ? Math.max(Math.floor((assetBalance - reserve) * 1e6) / 1e6, 0) : null;
 
@@ -212,7 +212,9 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
       const { token: sessionToken, error } = await r.json();
       if (error || !sessionToken) {
         win?.close();
-        enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), { variant: 'error' });
+        enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), {
+          variant: 'error',
+        });
         return;
       }
       const url = createCoinbasePayOfframpURL({
@@ -243,7 +245,9 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
       }
     } catch {
       win?.close();
-      enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), { variant: 'error' });
+      enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), {
+        variant: 'error',
+      });
     }
   };
 
@@ -392,7 +396,10 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
           {cbStep ? (
             <Stack spacing={2}>
               <Typography variant="body2" color="text.secondary">
-                {t('How much {{symbol}} do you want to sell? Max keeps a little back for network fees.', { symbol: asset.symbol })}
+                {t(
+                  'How much {{symbol}} do you want to sell? Max keeps a little back for network fees.',
+                  { symbol: asset.symbol }
+                )}
               </Typography>
               <TextField
                 autoFocus

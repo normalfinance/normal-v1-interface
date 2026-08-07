@@ -376,7 +376,9 @@ const AuthLoginModal = ({
             }
             label={
               <Typography variant="body2" color="text.secondary">
-                {t('Send me Normal updates, promotional offers, and company news. I can opt out at any time.')}{' '}
+                {t(
+                  'Send me Normal updates, promotional offers, and company news. I can opt out at any time.'
+                )}{' '}
                 <MuiLink
                   href={paths.legal.pp}
                   underline="always"

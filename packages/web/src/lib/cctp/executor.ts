@@ -77,7 +77,10 @@ export async function isEvmTxConfirmed(params: {
   chain: 'base' | 'ethereum';
   txHash: `0x${string}`;
 }): Promise<boolean> {
-  const pub = createPublicClient({ chain: evmChain(params.network, params.chain), transport: http() });
+  const pub = createPublicClient({
+    chain: evmChain(params.network, params.chain),
+    transport: http(),
+  });
   try {
     const receipt = await pub.getTransactionReceipt({ hash: params.txHash });
     if (receipt.status === 'reverted') throw new Error(`mint tx reverted: ${params.txHash}`);
@@ -123,7 +126,10 @@ export async function computeTopUpShortfall(params: {
   to: `0x${string}`;
   gasEstimate: bigint;
 }): Promise<bigint> {
-  const pub = createPublicClient({ chain: evmChain(params.network, params.chain), transport: http() });
+  const pub = createPublicClient({
+    chain: evmChain(params.network, params.chain),
+    transport: http(),
+  });
   const [balance, fees] = await Promise.all([
     pub.getBalance({ address: params.to }),
     pub.estimateFeesPerGas(),
@@ -153,8 +159,7 @@ export async function executeStellarMintAndForward(params: {
     allowHttp: stellarCfg.RPC_URL.startsWith('http://'),
   });
   const keypair = Keypair.fromSecret(secret);
-  const passphrase =
-    params.network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+  const passphrase = params.network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
 
   const account = await server.getAccount(keypair.publicKey());
   const contract = new Contract(STELLAR_CCTP[params.network].cctpForwarder);

@@ -145,30 +145,33 @@ export function CoinbaseOfframpModal({
 
   // The pending sell that needs us to send crypto: STARTED, for this asset,
   // with a deposit address + amount, and not already fulfilled by us.
-  const findPending = useCallback((list: PendingTxn[]): PendingTxn | null => {
-    const balance = parseFloat(token.balance || '0');
-    const candidates = list
-      .filter(
-        (x) =>
-          x.status === 'TRANSACTION_STATUS_STARTED' &&
-          x.toAddress &&
-          x.amount &&
-          String(x.asset).toUpperCase() === symbol.toUpperCase() &&
-          // Safety: the amount MUST be denominated in the crypto, not fiat —
-          // Coinbase sometimes returns sell_amount in EUR, which we must never
-          // send as a crypto amount.
-          String(x.currency).toUpperCase() === symbol.toUpperCase() &&
-          // Only orders the wallet can actually fulfill. Crucially, this skips
-          // stale/abandoned STARTED orders from earlier attempts after the user
-          // has already cashed out (balance dropped) — otherwise the modal would
-          // re-prompt to send an amount that's no longer in the wallet.
-          parseFloat(x.amount) <= balance &&
-          !x.txHash && // Coinbase already saw an on-chain send for it
-          getFill(x.transactionId) === undefined // we haven't sent for it
-      )
-      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    return candidates[0] ?? null;
-  }, [symbol, token.balance]);
+  const findPending = useCallback(
+    (list: PendingTxn[]): PendingTxn | null => {
+      const balance = parseFloat(token.balance || '0');
+      const candidates = list
+        .filter(
+          (x) =>
+            x.status === 'TRANSACTION_STATUS_STARTED' &&
+            x.toAddress &&
+            x.amount &&
+            String(x.asset).toUpperCase() === symbol.toUpperCase() &&
+            // Safety: the amount MUST be denominated in the crypto, not fiat —
+            // Coinbase sometimes returns sell_amount in EUR, which we must never
+            // send as a crypto amount.
+            String(x.currency).toUpperCase() === symbol.toUpperCase() &&
+            // Only orders the wallet can actually fulfill. Crucially, this skips
+            // stale/abandoned STARTED orders from earlier attempts after the user
+            // has already cashed out (balance dropped) — otherwise the modal would
+            // re-prompt to send an amount that's no longer in the wallet.
+            parseFloat(x.amount) <= balance &&
+            !x.txHash && // Coinbase already saw an on-chain send for it
+            getFill(x.transactionId) === undefined // we haven't sent for it
+        )
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      return candidates[0] ?? null;
+    },
+    [symbol, token.balance]
+  );
 
   const pollSettle = useCallback(async (id: string) => {
     for (let i = 0; i < 30; i += 1) {
@@ -248,7 +251,9 @@ export function CoinbaseOfframpModal({
     if (isStellar) {
       if (!txn.memo && (await destinationRequiresMemo(config.HORIZON_URL, txn.toAddress))) {
         setError(
-          t('This destination requires a memo, but Coinbase didn’t provide one — we can’t safely send. Please contact support.')
+          t(
+            'This destination requires a memo, but Coinbase didn’t provide one — we can’t safely send. Please contact support.'
+          )
         );
         return;
       }
@@ -351,36 +356,65 @@ export function CoinbaseOfframpModal({
           : t('Finish your {{symbol}} cash-out', { symbol });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: '22px' } } }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+    >
       <DialogContent sx={{ px: '22px', py: '26px' }}>
         <Stack spacing={2.5}>
           <Box sx={{ textAlign: 'center' }}>
-            <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+            <Typography
+              sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+            >
               {title}
             </Typography>
             <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
               {stage === 'searching' && t('Looking for your Coinbase sell order…')}
               {stage === 'ready' &&
-                t('To complete your sale, send the crypto to Coinbase. This needs one passkey confirmation.')}
+                t(
+                  'To complete your sale, send the crypto to Coinbase. This needs one passkey confirmation.'
+                )}
               {stage === 'sending' && t('Approve the send with your passkey…')}
               {stage === 'confirming' &&
-                t('Crypto sent. Coinbase will pay out your cash once it confirms — you can close this.')}
-              {stage === 'done' && t('Your crypto is on its way to Coinbase. Cash payout follows automatically.')}
-              {stage === 'failed' && t('We couldn’t complete the send. No funds were moved — you can try again.')}
+                t(
+                  'Crypto sent. Coinbase will pay out your cash once it confirms — you can close this.'
+                )}
+              {stage === 'done' &&
+                t('Your crypto is on its way to Coinbase. Cash payout follows automatically.')}
+              {stage === 'failed' &&
+                t('We couldn’t complete the send. No funds were moved — you can try again.')}
               {stage === 'none' &&
-                t('We didn’t find a pending Coinbase sell order. If you just confirmed one, give it a moment and reopen.')}
+                t(
+                  'We didn’t find a pending Coinbase sell order. If you just confirmed one, give it a moment and reopen.'
+                )}
             </Typography>
           </Box>
 
-          {(stage === 'ready' || stage === 'sending' || stage === 'confirming' || stage === 'done') && txn && (
-            <Box sx={{ p: '14px', borderRadius: '14px', bgcolor: '#FAFAFB', border: '1px solid rgba(10,10,15,0.08)' }}>
-              <Stack spacing={1}>
-                <Row label={t('Amount')} value={`${txn.amount} ${symbol}`} />
-                <Row label={t('To (Coinbase)')} value={txn.toAddress} mono truncate />
-                {isStellar && txn.memo && <Row label={t('Memo')} value={txn.memo} mono truncate />}
-              </Stack>
-            </Box>
-          )}
+          {(stage === 'ready' ||
+            stage === 'sending' ||
+            stage === 'confirming' ||
+            stage === 'done') &&
+            txn && (
+              <Box
+                sx={{
+                  p: '14px',
+                  borderRadius: '14px',
+                  bgcolor: '#FAFAFB',
+                  border: '1px solid rgba(10,10,15,0.08)',
+                }}
+              >
+                <Stack spacing={1}>
+                  <Row label={t('Amount')} value={`${txn.amount} ${symbol}`} />
+                  <Row label={t('To (Coinbase)')} value={txn.toAddress} mono truncate />
+                  {isStellar && txn.memo && (
+                    <Row label={t('Memo')} value={txn.memo} mono truncate />
+                  )}
+                </Stack>
+              </Box>
+            )}
 
           {(stage === 'searching' || stage === 'sending' || stage === 'confirming') && (
             <Stack alignItems="center" sx={{ py: 1 }}>
@@ -389,8 +423,18 @@ export function CoinbaseOfframpModal({
           )}
 
           {error && (
-            <Box sx={{ px: '12px', py: '10px', borderRadius: '10px', bgcolor: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.15)' }}>
-              <Typography sx={{ fontSize: '12.5px', color: '#B91C1C', lineHeight: 1.5 }}>{error}</Typography>
+            <Box
+              sx={{
+                px: '12px',
+                py: '10px',
+                borderRadius: '10px',
+                bgcolor: 'rgba(220,38,38,0.05)',
+                border: '1px solid rgba(220,38,38,0.15)',
+              }}
+            >
+              <Typography sx={{ fontSize: '12.5px', color: '#B91C1C', lineHeight: 1.5 }}>
+                {error}
+              </Typography>
             </Box>
           )}
 
@@ -400,7 +444,13 @@ export function CoinbaseOfframpModal({
                 variant="contained"
                 onClick={handleSend}
                 startIcon={<Iconify icon="solar:shield-keyhole-bold" width={18} />}
-                sx={{ borderRadius: '12px', bgcolor: '#0A0A0F', textTransform: 'none', fontWeight: 700, '&:hover': { bgcolor: '#1a1a25' } }}
+                sx={{
+                  borderRadius: '12px',
+                  bgcolor: '#0A0A0F',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  '&:hover': { bgcolor: '#1a1a25' },
+                }}
               >
                 {t('Send with passkey')}
               </Button>
@@ -409,7 +459,13 @@ export function CoinbaseOfframpModal({
               <Button
                 variant="contained"
                 onClick={handleSend}
-                sx={{ borderRadius: '12px', bgcolor: '#0A0A0F', textTransform: 'none', fontWeight: 700, '&:hover': { bgcolor: '#1a1a25' } }}
+                sx={{
+                  borderRadius: '12px',
+                  bgcolor: '#0A0A0F',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  '&:hover': { bgcolor: '#1a1a25' },
+                }}
               >
                 {t('Try again')}
               </Button>
@@ -418,9 +474,19 @@ export function CoinbaseOfframpModal({
               variant="outlined"
               onClick={onClose}
               disabled={stage === 'sending'}
-              sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 500, borderColor: 'rgba(10,10,15,0.16)', color: '#0A0A0F' }}
+              sx={{
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontWeight: 500,
+                borderColor: 'rgba(10,10,15,0.16)',
+                color: '#0A0A0F',
+              }}
             >
-              {stage === 'confirming' || stage === 'done' ? t('Close') : stage === 'ready' ? t('Cancel') : t('Close')}
+              {stage === 'confirming' || stage === 'done'
+                ? t('Close')
+                : stage === 'ready'
+                  ? t('Cancel')
+                  : t('Close')}
             </Button>
           </Stack>
         </Stack>
@@ -429,17 +495,33 @@ export function CoinbaseOfframpModal({
   );
 }
 
-function Row({ label, value, mono, truncate }: { label: string; value: string; mono?: boolean; truncate?: boolean }) {
+function Row({
+  label,
+  value,
+  mono,
+  truncate,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  truncate?: boolean;
+}) {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-      <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', flexShrink: 0 }}>{label}</Typography>
+    <Box
+      sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
+    >
+      <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', flexShrink: 0 }}>
+        {label}
+      </Typography>
       <Typography
         sx={{
           fontSize: '12.5px',
           fontWeight: 600,
           color: '#0A0A0F',
           fontFamily: mono ? '"Geist Mono", monospace' : 'inherit',
-          ...(truncate ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 } : {}),
+          ...(truncate
+            ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }
+            : {}),
         }}
       >
         {value}

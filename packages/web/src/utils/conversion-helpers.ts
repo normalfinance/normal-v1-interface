@@ -16,8 +16,7 @@ export const getConversionTextScaled = (
   sellToken: Token,
   buyToken: Token,
   pair: { scaledPrice: string }
-): string =>
-  `1 ${buyToken.symbol} = ${fCurrencyTwoDecimals(pair.scaledPrice)}`;
+): string => `1 ${buyToken.symbol} = ${fCurrencyTwoDecimals(pair.scaledPrice)}`;
 
 // 1 ETH = $2,814.81 USDC ($2,814.81) - We are swaping ETH to USDC
 export const getSwapConversionText = (sellToken: Token, buyToken: Token): string => {

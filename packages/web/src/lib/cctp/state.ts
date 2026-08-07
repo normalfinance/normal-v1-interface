@@ -26,7 +26,12 @@ import {
   executeStellarMintAndForward,
 } from './executor';
 
-export const PENDING_STATUSES = ['BURN_SUBMITTED', 'BURN_CONFIRMED', 'ATTESTED', 'MINT_SUBMITTED'] as const;
+export const PENDING_STATUSES = [
+  'BURN_SUBMITTED',
+  'BURN_CONFIRMED',
+  'ATTESTED',
+  'MINT_SUBMITTED',
+] as const;
 
 /** Advance a single transfer one step if possible. Returns the fresh row. */
 export async function advanceTransfer(transfer: CctpTransfer): Promise<CctpTransfer> {
@@ -143,7 +148,10 @@ export async function advanceTransfer(transfer: CctpTransfer): Promise<CctpTrans
 }
 
 /** Advance every in-flight transfer (cron entrypoint). */
-export async function advancePendingTransfers(): Promise<{ advanced: number; byStatus: Record<string, number> }> {
+export async function advancePendingTransfers(): Promise<{
+  advanced: number;
+  byStatus: Record<string, number>;
+}> {
   const pending = await prisma.cctpTransfer.findMany({
     where: { status: { in: [...PENDING_STATUSES] } },
     orderBy: { createdAt: 'asc' },

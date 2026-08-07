@@ -182,9 +182,7 @@ export default function BtcSweepPage() {
         </div>
       )}
 
-      {error && (
-        <div style={{ marginTop: 18, color: '#b91c1c', fontSize: 13 }}>{error}</div>
-      )}
+      {error && <div style={{ marginTop: 18, color: '#b91c1c', fontSize: 13 }}>{error}</div>}
     </div>
   );
 }

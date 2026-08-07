@@ -10,13 +10,15 @@ export const metadata: Metadata = {
     default: 'Portfolio | Normal',
     template: '%s · Normal',
   },
-  description: 'View your wallet balances, savings position, and earnings all in one place on Normal.',
+  description:
+    'View your wallet balances, savings position, and earnings all in one place on Normal.',
   alternates: {
     canonical: '/invest',
   },
   openGraph: {
     title: 'Portfolio | Normal',
-    description: 'View your wallet balances, savings position, and earnings all in one place on Normal.',
+    description:
+      'View your wallet balances, savings position, and earnings all in one place on Normal.',
     url: `${CONFIG.siteUrl}/invest`,
     siteName: 'Normal',
     images: [
@@ -33,7 +35,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Portfolio | Normal',
-    description: 'View your wallet balances, savings position, and earnings all in one place on Normal.',
+    description:
+      'View your wallet balances, savings position, and earnings all in one place on Normal.',
     images: ['/og/portfolio.png'],
   },
   robots: {
