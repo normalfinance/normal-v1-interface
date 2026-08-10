@@ -88,7 +88,7 @@ Importing a Normal Stellar wallet hides the Turnkey one. **Verified cosmetic**
 | 27 | Record-before-broadcast for swaps & savings (failed swaps leave no server trace) |
 | 29 | ETH `estimateGas` (hardcoded 21000 breaks contract destinations) + idempotent retry (lost response can **double send**) |
 | 28 | XLM fee preflight in savings |
-| 26 | Fee-first: **ratify or restructure** — decision |
+| 26 | Fee-first: **ratify or restructure** — decision. **ESCALATED 2026-08-07: first real casualty (finding #54 — Lobstr user's fee charged, deposit failed). Restructure so the fee cannot outlive a failed main transaction** |
 
 ## Block F2 — next batch, after staging feedback (scheduled 2026-08-06)
 

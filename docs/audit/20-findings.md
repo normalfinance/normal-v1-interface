@@ -581,3 +581,31 @@ extensions, and stale comments. Behavior change: none (a legacy persisted
 The OP_RETURN report to Turnkey is drafted paste-ready in
 [54-turnkey-op-return-report.md](54-turnkey-op-return-report.md) — sending it
 is a user action. #42 repro remains scheduled with the user.
+
+## #54 — WalletConnect "request already pending" breaks the second signature (FIXED 2026-08-07)
+
+Hit LIVE on mainnet by a Lobstr user mid savings-deposit: fee signature
+succeeded (fee charged, tx c51cdd7…), then the immediately-following deposit
+signature bounced off WalletConnect's one-open-request rule — "A request is
+already pending." Result: fee paid, deposit never executed. Pre-existing on
+mainnet for weeks; the WalletConnect TWIN of #51, whose fix I explicitly
+scoped to Turnkey signing only ("external wallets lower exposure") — that
+scoping was wrong and this incident is the proof.
+
+Fix: `lib/wallet-kit-guard.ts` — queue (one wallet request in flight), 750ms
+settle between requests, ONE retry on the pending bounce (safe: a bounced
+request was never queued, retrying cannot double-sign), and a surviving jam
+rethrows with instructions (open wallet app / approve or dismiss / or
+disconnect-reconnect) instead of jargon. Wired into BOTH external-signing
+funnels: signOrReconnect (savings/swap/send/trustline) and
+signXDRWithWalletKit (MGI). User rejections and session errors pass through
+untouched so the reconnect UX keeps working. 5-case suite. NOTE: needs live
+confirmation by the affected coworker (back-to-back deposits).
+
+**Escalates #26 (fee-first):** this is the first real casualty — fee charged,
+service not delivered. The restructure (charge fee only after the main
+transaction succeeds, or bundle) moves up Block E.
+
+Funds: never at risk — signing was the only thing jammed, only in-session;
+stuck WalletConnect requests expire in minutes and disconnect/reconnect
+always clears them.

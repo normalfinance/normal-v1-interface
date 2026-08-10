@@ -1,5 +1,6 @@
 'use client';
 
+import { runWalletKitSigning } from '@/lib/wallet-kit-guard';
 import { SESSION_BASED_WALLET_TYPES } from '@/hooks/stellar/use-stellar-wallets-kit';
 import {
   usePersistStore,
@@ -85,7 +86,9 @@ export async function signXDRWithWalletKit(
 
   let res: string | { xdr?: string; signedXDR?: string };
   try {
-    res = await sign(xdr, networkPassphrase);
+    // Serialized + pending-retried like every other external-wallet signing
+    // path (finding #54) — see lib/wallet-kit-guard.ts.
+    res = await runWalletKitSigning(() => sign(xdr, networkPassphrase));
   } catch (err) {
     // Lobstr/WalletConnect sessions don't survive page reloads; signing then
     // fails with "connection key is missing". Surface the same reconnect UX
