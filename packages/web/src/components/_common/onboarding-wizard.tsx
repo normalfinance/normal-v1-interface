@@ -1507,7 +1507,7 @@ export default function OnboardingWizard({
                 </Box>
               </Stack>
               <Typography variant="caption" color="text.secondary">
-                {t('Freighter, Ledger, xBull, Lobstr, and more.')}
+                {t('Freighter, Lobstr, Ledger, and WalletConnect.')}
               </Typography>
             </Box>
             <Iconify icon="mingcute:right-line" sx={{ color: 'text.disabled', flexShrink: 0 }} />
@@ -2323,7 +2323,7 @@ export default function OnboardingWizard({
                   {t('Connect a crypto wallet')}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {t('Freighter, Ledger, xBull, Lobstr, and more')}
+                  {t('Freighter, Lobstr, Ledger, and WalletConnect')}
                 </Typography>
               </Box>
               <Iconify icon="mingcute:right-line" sx={{ color: 'text.disabled', flexShrink: 0 }} />

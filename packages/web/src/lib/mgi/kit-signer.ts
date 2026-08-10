@@ -18,7 +18,7 @@ import {
  * external wallets work:
  *   1. Normal wallet, Turnkey-managed  → passkey signing
  *   2. Normal wallet, local key (unlocked in memory) → store signer
- *   3. External wallet (Freighter/Lobstr/xBull/…) → Stellar Wallets Kit
+ *   3. External wallet (Freighter/Lobstr/Ledger/WalletConnect) → Stellar Wallets Kit
  */
 export async function signStellarTxForMgi(
   xdr: string,

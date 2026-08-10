@@ -569,3 +569,15 @@ c/day real at $20 / 6.17%). Not a money bug — the anchor value is real.
 Fix path: plot RECORDED earnings snapshots once roadmap #27 (durable server
 records) lands; interim option: label the curve "estimated". Sev 2 · Lik 3 ·
 Eff 2 (proper) / 1 (interim label).
+
+## #43 — CLOSED 2026-08-07 (cleanup batch)
+
+Dead wallet types removed everywhere they lived: the `walletType` union
+(types/state/wallet.ts), TWO user-facing onboarding strings that still
+advertised "Freighter, Ledger, xBull, Lobstr" — a wallet the picker does not
+offer — the mgi preflight probes collecting diagnostics from unconnectable
+extensions, and stale comments. Behavior change: none (a legacy persisted
+'xbull'/'hana' value already failed restore and disconnected; it still does).
+The OP_RETURN report to Turnkey is drafted paste-ready in
+[54-turnkey-op-return-report.md](54-turnkey-op-return-report.md) — sending it
+is a user action. #42 repro remains scheduled with the user.
