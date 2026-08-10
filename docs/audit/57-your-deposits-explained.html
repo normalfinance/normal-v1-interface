@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>57-your-deposits-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>57 — "Your Deposits" showed the wrong number (#55), explained for juniors</h1>
+<h2>What happened (real incident, 2026-08-10, mainnet)</h2>
+<p>Niko deposited 4.975, withdrew 6.000, and deposited 4.975 again — all within</p>
+<p>four minutes. The card then showed Your Deposits <strong>18.4551934</strong> instead of</p>
+<p><strong>23.4301934</strong>, and the missing 4.975 appeared as fake green "earnings"</p>
+<p>(+5.25 on a 4.53% APY account — impossible from yield). The numbers match to</p>
+<p>the 7th decimal: 18.4551934 is exactly the total <em>after</em> the withdraw and</p>
+<p><em>before</em> the last deposit.</p>
+<h2>Why it happened — cause and effect</h2>
+<ul>
+<li>"Current Value" is read <strong>live from the blockchain</strong> → it was correct</li>
+</ul>
+<p>  (23.709) the whole time.</p>
+<ul>
+<li>"Your Deposits" is computed from DeFindex's <strong>event history</strong>, and their</li>
+</ul>
+<p>  indexer runs <strong>30–120 seconds behind</strong> the chain.</p>
+<ul>
+<li>If you transact and the app immediately re-reads that history → it can</li>
+</ul>
+<p>  catch a <strong>half-indexed world</strong> (your withdraw was in, your newest deposit</p>
+<p>  was not).</p>
+<ul>
+<li>Our server then <strong>cached that snapshot for 300 seconds</strong> → the wrong</li>
+</ul>
+<p>  number was locked on screen.</p>
+<ul>
+<li>"Earnings" is calculated as <code>value − deposits</code> → the missing deposit</li>
+</ul>
+<p>  showed up as fake earnings of exactly its own amount.</p>
+<p>The bitter part: the correct answer was already in <strong>our own database</strong>.</p>
+<p>Every deposit/withdraw is logged to the <code>vault_deposits</code> table with its</p>
+<p>transaction hash within about a second of succeeding. The position route</p>
+<p>just ignored those rows unless DeFindex returned nothing at all.</p>
+<h2>Why the earlier fix (#52) didn't catch this</h2>
+<p>#52 discards reads that were <strong>already in flight</strong> when you acted. This</p>
+<p>read <em>started after</em> the action — the problem wasn't a stale request, it</p>
+<p>was a stale <strong>source</strong>. Same symptom family, different organ.</p>
+<h2>The fix — a signal, not a timer</h2>
+<p><code>reconcileTotalDeposited</code> (new, in <code>server/savings-deposits.ts</code>):</p>
+<blockquote>total = DeFindex events total **+ the deltas of our own recent rows whose</blockquote>
+<blockquote>transaction hash the indexer has not included yet**.</blockquote>
+<ul>
+<li>If the indexer is behind → our row supplies the missing transaction, so</li>
+</ul>
+<p>  the number is right <strong>the instant the transaction completes</strong>.</p>
+<ul>
+<li>The moment the indexer catches up → the hash matches, our row steps</li>
+</ul>
+<p>  aside, nothing is counted twice.</p>
+<ul>
+<li>There is nothing to expire and nothing to guess — correctness no longer</li>
+</ul>
+<p>  depends on how stale any cache or indexer is.</p>
+<p>Two supporting changes:</p>
+<ol>
+<li><strong>Logging a transaction now clears the server's position cache</strong> for that</li>
+</ol>
+<p>   wallet. The log row <em>is</em> the proof the caches are outdated — rapid</p>
+<p>   back-to-back actions can no longer be served a pre-action snapshot.</p>
+<ol>
+<li>The events cache now stores the event <strong>hashes</strong> alongside the total</li>
+</ol>
+<p>   (that's what makes the reconciliation exact), and rows without a hash or</p>
+<p>   older than 24h are excluded so nothing can skew the figure forever.</p>
+<h2>How to test (do → see)</h2>
+<ul>
+<li>Deposit, then withdraw, then deposit again as fast as you can → Your</li>
+</ul>
+<p>  Deposits tracks every step immediately and ends on the correct total.</p>
+<ul>
+<li>Wait 5+ minutes and refresh → the number does <strong>not</strong> change (before the</li>
+</ul>
+<p>  fix, this is when a poisoned cache would finally expire and "heal").</p>
+<ul>
+<li>Current Earnings stays in believable territory (cents, not dollars).</li>
+</ul>
+<h2>Tests</h2>
+<p>9 unit cases pin the reconciler — including the exact incident numbers as a</p>
+<p>permanent regression test: events total 18.4551934 + our not-yet-indexed</p>
+<p>deposit row 4.975 must equal 23.4301934.</p>
+</body></html>

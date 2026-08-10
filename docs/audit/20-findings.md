@@ -632,3 +632,34 @@ with both hashes; the residual loss case shrinks to "our infra down 15+ min
 right after a success" and is logged loudly as `[fee-escrow] RECEIVABLE`.
 Design: [55-fee-ordering-plan.md](55-fee-ordering-plan.md). 12-case test
 suite (escrow state machine + sequence chaining). Staging matrix in doc 55.
+
+## #55 — "Your Deposits" stuck wrong after rapid withdraw→deposit (FIXED 2026-08-10)
+
+Reproduced live by Niko on mainnet, proven to the 7th decimal: deposit 4.975
+(14:25), withdraw 6.000 (14:28:50), deposit 4.975 (14:29:19). Correct total
+23.4301934; screen showed 18.4551934 = 19.4801934 + 4.975 − 6.000 — the
+world AFTER the withdraw, BEFORE the last deposit. The missing 4.975
+displayed as fake earnings (5.2542851 = 23.7094785 − 18.4551934) because
+earnings = live currentValue − stale totalDeposited.
+
+MECHANISM: the post-action `refresh=1` read refetches DeFindex's event
+history, whose indexer runs 30-120s behind the chain. Fired seconds after a
+transaction it captures a HALF-INDEXED history — and the route then cached
+that snapshot for 300s, locking the wrong figure. #52's epoch guard cannot
+catch it: the read STARTS after the action; the SOURCE is what's stale.
+Sixth instance of the "snapshot/heuristic standing in for a real signal"
+root cause. Bitter detail: the correct answer sat in our own vault_deposits
+rows (txHash + amount, written within ~1s of success) the whole time — the
+route only used them as a fallback when events returned nothing.
+
+FIX (signal-based, no timers): `server/savings-deposits.ts`
+`reconcileTotalDeposited` — events total + deltas of our own recent rows
+whose txHash the indexer hasn't included yet; the moment the event appears,
+the hash matches and the row steps aside. Correct at every instant, immune
+to indexer/cache staleness, converges automatically. Events cache v2 stores
+{total, txIds} (bare-number legacy key orphaned). log-transaction now
+deletes the position cache + refresh floor on write — the row IS the
+invalidation signal, so rapid back-to-back actions can't be served a
+pre-action snapshot. Also corrected a false comment (live-verified:
+withdraw event amounts ARE USDC, not shares). 9-case suite incl. the exact
+incident as a regression test (137 total).

@@ -1,10 +1,11 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { cookies } from 'next/headers';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
+import { redis, rateLimiter } from '@/server/rateLimiter';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 // ----------------------------------------------------------------------
@@ -77,6 +78,22 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
         feeTxHash: typeof feeTxHash === 'string' ? feeTxHash : null,
       },
     });
+
+    // This row IS the signal that every cached position for this wallet is now
+    // wrong (#55). Drop the position cache and the refresh floor so the very
+    // next read recomputes — and the recompute reconciles this row by tx hash,
+    // so it is correct even while DeFindex's indexer is still behind. The
+    // events cache deliberately stays: reconciliation makes its staleness safe.
+    try {
+      const cookieStore = await cookies();
+      const network = cookieStore.get('normal-network')?.value ?? 'testnet';
+      await redis.del(
+        `savings:pos:${walletAddress}:${network}`,
+        `savings:pos:floor:${walletAddress}:${network}`
+      );
+    } catch {
+      /* cache invalidation is best-effort — TTLs bound any staleness */
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
