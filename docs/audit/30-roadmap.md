@@ -107,7 +107,7 @@ except the component tests.
 | — | **USER, GitHub settings:** merge-commit policy for living branches · branch protection requiring the web check · CI secrets to unlock the build gate | user |
 | 46 | **`withAuth` route wrapper** — third unauthenticated-route finding (#3, Block C #2, #44); make auth the default, public routes the explicit exception, then sweep all routes onto it. **DONE 2026-08-07: full sweep complete, 37 files/40+ handlers, conformance test in CI** (a 37-file mechanical diff under squash-merges = conflict bomb) | S done / M sweep |
 | 42 | **Self-heal repro** — Freighter + provisioned BTC, disconnect, reload; does the Turnkey Stellar address silently take over? Fix designed only after the repro | S |
-| 43 | Remove dead `xbull`/`hana` wallet types + restore-switch branches | S |
+| 43 | ~~Remove dead wallet types~~ **CLOSED 2026-08-07** — union, 2 user-facing onboarding strings (!), mgi probes, comments. Turnkey OP_RETURN report drafted paste-ready (doc 54) — USER sends it. #42 repro still pending with user | done |
 | T1 | ~~Test foundation: Jest wired (`yarn test`), first suite on `normalize.ts`~~ **done 2026-08-06** — 16 cases, all anchored to shipped bugs | done |
 | T2 | **Test wave 2:** `wallet-ownership.ts`, `reconcile` edge cases as found, `describePsbt` against the real failing-PSBT fixture, low-S normalisation | S |
 | T3 | ~~Test wave 3 (components)~~ **swap-gate test DONE 2026-08-07** — 5 cases incl. the invisible enabled:false contract; scaffolding paid for savings-card/memo-gate/pending-badge tests to copy. Bonus: .gitattributes ends the Windows CRLF prettier churn | done / S rest |

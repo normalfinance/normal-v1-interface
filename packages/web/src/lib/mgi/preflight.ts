@@ -20,64 +20,8 @@ export async function detectWalletEnv(): Promise<WalletEnvInfo> {
       info.publicKey = await w.freighterApi.getPublicKey();
     }
 
-    // xBull (APIs vary by version; try a few)
-    if (!info.network && w.xbull?.getNetwork) {
-      try {
-        info.network = await w.xbull.getNetwork();
-      } catch {
-        // ignore
-      }
-    }
-    if (!info.publicKey && w.xbull?.getPublicKey) {
-      try {
-        info.publicKey = await w.xbull.getPublicKey();
-      } catch {
-        // ignore
-      }
-    }
-    if (!info.network && w.xBull?.getNetwork) {
-      try {
-        info.network = await w.xBull.getNetwork();
-      } catch {
-        // ignore
-      }
-    }
-    if (!info.publicKey && w.xBull?.getPublicKey) {
-      try {
-        info.publicKey = await w.xBull.getPublicKey();
-      } catch {
-        // ignore
-      }
-    }
-
-    // Lobstr
-    if (!info.publicKey && w.lobstr?.getPublicKey) {
-      try {
-        info.publicKey = await w.lobstr.getPublicKey();
-      } catch {
-        // ignore
-      }
-    }
-
-    // Hana / Wallet Standard
-    if (w.hana?.stellar?.request) {
-      if (!info.publicKey) {
-        try {
-          const r = await w.hana.stellar.request({ method: 'getPublicKey' });
-          if (r?.publicKey) info.publicKey = r.publicKey;
-        } catch {
-          // ignore
-        }
-      }
-      if (!info.network) {
-        try {
-          const r = await w.hana.stellar.request({ method: 'getNetwork' });
-          if (r?.network) info.network = r.network;
-        } catch {
-          // ignore
-        }
-      }
-    }
+    // (xBull / Hana probes removed 2026-08-07 — finding #43: those wallets
+    // are not connectable in this app, so their diagnostics were dead weight.)
 
     // Generic Wallet Standard (if present)
     if (w.stellar?.request) {
