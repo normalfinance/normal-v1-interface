@@ -4,6 +4,7 @@ import { constants } from '@normalfinance/utils';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import {
   Asset,
+  Account,
   Horizon,
   Operation,
   TransactionBuilder,
@@ -14,6 +15,14 @@ import {
 
 const BASE_FEE: string = typeof SDK_BASE_FEE === 'string' ? SDK_BASE_FEE : '100';
 
+const DEFAULT_TIMEOUT_SECONDS = 180;
+
+// Fee txs built as the second half of a sign-both-first pair (#26) get a
+// longer window: the server escrow may need to retry submission after the
+// service tx lands, and the timebounds are what guarantee the escrowed tx
+// eventually dies if we can't.
+export const FEE_PAIR_TIMEOUT_SECONDS = 900;
+
 export type FeeAssetCode = 'XLM' | 'USDC';
 
 export interface BuildFeePaymentParams {
@@ -23,6 +32,15 @@ export interface BuildFeePaymentParams {
   assetCode: FeeAssetCode;
   assetIssuer?: string; // required for non-native assets
   config?: NetworkConfig;
+  /**
+   * Sequence number the transaction should be built ON TOP OF, i.e. the tx
+   * gets sequence `sourceSequence + 1`. Pass the SERVICE transaction's own
+   * sequence here to chain the fee directly behind it (#26 pairing). When
+   * omitted, the account's live sequence is loaded from Horizon (legacy
+   * standalone behavior).
+   */
+  sourceSequence?: string;
+  timeoutSeconds?: number;
 }
 
 /**
@@ -38,6 +56,8 @@ export async function buildFeePaymentXdr(params: BuildFeePaymentParams): Promise
     assetCode,
     assetIssuer,
     config = constants.StellarConfig,
+    sourceSequence,
+    timeoutSeconds = DEFAULT_TIMEOUT_SECONDS,
   } = params;
 
   if (!isValidStellarAddress(caller)) {
@@ -62,11 +82,20 @@ export async function buildFeePaymentXdr(params: BuildFeePaymentParams): Promise
     asset = new Asset(assetCode, assetIssuer);
   }
 
-  const horizonServer = new Horizon.Server(config.HORIZON_URL, {
-    allowHttp: config.HORIZON_URL.startsWith('http://'),
-  });
-
-  const account = await horizonServer.loadAccount(caller);
+  let account: Account;
+  if (sourceSequence !== undefined) {
+    if (!/^\d+$/.test(sourceSequence)) {
+      throw new Error('sourceSequence must be a decimal sequence number string');
+    }
+    // Chained mode (#26): build directly behind the given sequence without
+    // touching Horizon — the pair must not race the account's live sequence.
+    account = new Account(caller, sourceSequence);
+  } else {
+    const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+      allowHttp: config.HORIZON_URL.startsWith('http://'),
+    });
+    account = await horizonServer.loadAccount(caller);
+  }
 
   // Stellar payment amounts are fixed-point with 7 decimals.
   const normalizedAmount = numeric.toFixed(7);
@@ -82,7 +111,7 @@ export async function buildFeePaymentXdr(params: BuildFeePaymentParams): Promise
         amount: normalizedAmount,
       })
     )
-    .setTimeout(180)
+    .setTimeout(timeoutSeconds)
     .build();
 
   return tx.toXDR();

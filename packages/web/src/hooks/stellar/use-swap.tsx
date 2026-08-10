@@ -11,8 +11,9 @@ import { usePersistStore } from '@normalfinance/state';
 import { getSwapFeeAmount } from '@/utils/normal-fees';
 import { postTransactionLog } from '@/lib/log-transaction';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
-import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
+import { FEE_PAIR_TIMEOUT_SECONDS } from '@/lib/build-fee-payment';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
+import { submitFeePair, getTransactionSequence } from '@/lib/stellar/fee-pair';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -157,16 +158,13 @@ export function useSwap(): UseSwapReturn {
           : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
-        const horizonServer = new Horizon.Server(config.HORIZON_URL, {
-          allowHttp: config.HORIZON_URL.startsWith('http://'),
-        });
-
-        const signAndSubmit = async (xdr: string) => {
+        // Sign WITHOUT submitting — submission happens server-side as a pair
+        // (#26 sign-both-first, see lib/stellar/fee-pair.ts).
+        const signOnly = async (xdr: string) => {
           const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signed = normalizeSignedXDR(signResult);
           if (!signed) throw new Error('Transaction signing failed — no signed XDR returned');
-          const signedTx = TransactionBuilder.fromXDR(signed, config.NETWORK_PASSPHRASE);
-          return horizonServer.submitTransaction(signedTx);
+          return signed;
         };
 
         // Resolve the fee asset from the swap quote's tokenIn contract address
@@ -191,33 +189,8 @@ export function useSwap(): UseSwapReturn {
           throw new Error('Swap fee was not computed — please refresh the quote');
         }
 
-        // 1. Build + sign + submit the Normal fee payment first
-        const feeResponse = await fetch('/api/fees/build-payment', {
-          method: 'POST',
-          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            caller: walletAddress,
-            amount: feeAmount.toFixed(7),
-            assetCode: feeAssetCode,
-          }),
-        });
-        const feeData = await feeResponse.json();
-        if (!feeData.success || !feeData.xdr) {
-          throw new Error(feeData.error || 'Failed to build Normal fee transaction');
-        }
-
-        let feeResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
-        try {
-          feeResult = await signAndSubmit(feeData.xdr);
-        } catch (feeErr: any) {
-          throw new Error(
-            feeErr?.message
-              ? `Fee payment failed: ${feeErr.message}`
-              : 'Fee payment failed — swap not submitted'
-          );
-        }
-
-        // 2. Re-fetch the Soroswap quote with sender and NET amount (fresh seq)
+        // 1. Build the Soroswap swap tx with sender and NET amount — it
+        // carries the account's next sequence; the fee tx chains behind it.
         const netAmountIn = parseFloat(swapQuote.amountIn) - feeAmount;
         const amountInStroops = Math.floor(netAmountIn * 10_000_000).toString();
 
@@ -235,9 +208,7 @@ export function useSwap(): UseSwapReturn {
         const quoteData = await quoteResponse.json();
 
         if (!quoteData.success) {
-          throw new Error(
-            `${quoteData.error || 'Failed to build swap transaction'} (Normal fee already charged — tx ${feeResult.hash})`
-          );
+          throw new Error(quoteData.error || 'Failed to build swap transaction');
         }
 
         if (!quoteData.xdr) {
@@ -246,17 +217,37 @@ export function useSwap(): UseSwapReturn {
           );
         }
 
-        // 3. Sign + submit the Soroban swap
-        let result: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
-        try {
-          result = await signAndSubmit(quoteData.xdr);
-        } catch (swapErr: any) {
-          throw new Error(
-            swapErr?.message
-              ? `${swapErr.message} (Normal fee already charged — tx ${feeResult.hash})`
-              : 'Swap failed after fee was charged'
-          );
+        // 2. Build the Normal fee payment directly behind the swap (#26:
+        // consecutive sequences — the fee can only apply if the swap did).
+        const feeResponse = await fetch('/api/fees/build-payment', {
+          method: 'POST',
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            caller: walletAddress,
+            amount: feeAmount.toFixed(7),
+            assetCode: feeAssetCode,
+            sourceSequence: getTransactionSequence(quoteData.xdr, config.NETWORK_PASSPHRASE),
+            timeoutSeconds: FEE_PAIR_TIMEOUT_SECONDS,
+          }),
+        });
+        const feeData = await feeResponse.json();
+        if (!feeData.success || !feeData.xdr) {
+          throw new Error(feeData.error || 'Failed to build Normal fee transaction');
         }
+
+        // 3. Collect BOTH signatures before anything is submitted — rejecting
+        // either prompt aborts the whole swap with nothing charged.
+        const signedSwapXdr = await signOnly(quoteData.xdr);
+        const signedFeeXdr = await signOnly(feeData.xdr);
+
+        // 4. Server submits the pair: swap first, fee escrowed + collected
+        // after it (cron sweeper as backstop if anything dies mid-way).
+        const pair = await submitFeePair({
+          signedServiceXdr: signedSwapXdr,
+          signedFeeXdr,
+          kind: 'swap',
+          config,
+        });
 
         postTransactionLog('/api/swap/log-transaction', {
           walletAddress,
@@ -266,12 +257,12 @@ export function useSwap(): UseSwapReturn {
           tokenOutSymbol: display?.tokenOutSymbol,
           amountIn: netAmountIn.toFixed(7),
           amountOut: swapQuote.amountOut,
-          txHash: result.hash,
+          txHash: pair.serviceHash,
           feeAmount: feeAmount.toFixed(7),
-          feeTxHash: feeResult.hash,
+          feeTxHash: pair.feeHash,
         });
 
-        const stellarExpertUrl = createStellarExpertUrl('tx', result.hash);
+        const stellarExpertUrl = createStellarExpertUrl('tx', pair.serviceHash);
 
         enqueueSnackbar(
           <Box component="span">
@@ -300,7 +291,7 @@ export function useSwap(): UseSwapReturn {
           }
         );
         setQuote(null);
-        return result.hash;
+        return pair.serviceHash;
       } catch (err: any) {
         if (err instanceof WalletSessionExpiredError) return '';
         console.error('Error executing swap:', err);

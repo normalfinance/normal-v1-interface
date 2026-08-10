@@ -24,7 +24,7 @@ reproduction · `input?` = parked on an open question.
 | 32 | 19 | All 35 authed routes verify session live with NO timeout | reliability | 4·2·2 | code | timeout wrapper + cached verification | ✅ |
 | **48** | 16 | Dedupe failure: `wallet-info.ts` has no single-flight guard → cache stampede (~22 calls/session) | perf/cost | 2·4·**1** | **ROOT CAUSE FOUND** | add in-flight promise; unify with the SWR path | ✅ |
 | 30 | 30 | Turbo declares 57 env vars, ~55 read-but-undeclared → stale cached builds | hygiene | 3·2·1 | code | declare full list; verify Vercel cache invalidation | ✅ |
-| 27 | 26 | Fee-first: fee signed before swap → fee lost if swap fails | correctness | 3·3·3 | code | **ratify** the risk OR bundle fee (see #33) | ✅ |
+| 27 | 26 | Fee-first: fee signed before swap → fee lost if swap fails | correctness | 3·3·3 | code | **FIXED 2026-08-10**: sign-both-first + server escrow (see §#26 below, doc 55) | ✅ |
 | 25 | P0-1 | **[STRATEGIC]** Per-client fetching 7–30× over free tiers → the Layer-1 cache re-architecture | cost | 5·5·5 | math | server-fetch-once + event refresh (workstream B) | ✅ |
 | 24 | 28 | Savings has no XLM-fee preflight → mid-flow failure (June TODO) | UX/correctness | 2·3·2 | code | preflight XLM balance, warn upfront | ✅ |
 | **32** | 29 | ETH/SOL send: hardcoded 21000 gas breaks contract destinations; lost response can cause **double send** | correctness | **4**·2·2 | code | `estimateGas` + record-before-broadcast | ✅ |
@@ -609,3 +609,26 @@ transaction succeeds, or bundle) moves up Block E.
 Funds: never at risk — signing was the only thing jammed, only in-session;
 stuck WalletConnect requests expire in minutes and disconnect/reconnect
 always clears them.
+
+## #26 — Fee ordering: FIXED 2026-08-10 (sign-both-first + server escrow)
+
+The structural fix for the whole failure family (#54 was the live casualty):
+no flow submits ANYTHING until both signatures exist. Deposit, withdraw and
+swap now build the service tx first, chain the fee tx one sequence number
+behind it (fee builder gained `sourceSequence` + a 15-min window), collect
+both signatures, and hand the signed pair to `/api/fees/execute-pair` —
+which escrows the signed fee in Redis BEFORE submitting, then submits
+service → fee. A cron sweeper (`/api/cron/fee-escrow-sweep`, every 2 min)
+finishes any pair whose route/tab/network died, idempotently (hash-probe
+before every submit). Stellar sequence numbers carry the safety: the fee
+cannot apply unless the service applied, and a user retry reuses the same
+sequences so the old pair dies with `tx_bad_seq` — double-charge impossible.
+
+Consequences: rejection at either prompt = nothing happened, nothing charged
+(v1's "accept and measure leakage" was rejected — rightly); the withdraw
+latent bug (commission failure threw BEFORE the log call, so completed
+withdrawals could go unrecorded) is structurally gone — log always fires
+with both hashes; the residual loss case shrinks to "our infra down 15+ min
+right after a success" and is logged loudly as `[fee-escrow] RECEIVABLE`.
+Design: [55-fee-ordering-plan.md](55-fee-ordering-plan.md). 12-case test
+suite (escrow state machine + sequence chaining). Staging matrix in doc 55.

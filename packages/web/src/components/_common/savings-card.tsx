@@ -228,11 +228,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     return () => window.removeEventListener('nf:activity-updated', handler);
   }, []);
 
+  // #26 sign-both-first: both signatures are collected BEFORE anything is
+  // submitted, then the pair is submitted server-side in one phase.
   const depositSteps = [
     { id: 'checking', label: t('Checking balance'), sub: t('Verifying USDC on Stellar') },
-    { id: 'fee_sign', label: t('Signing fee payment'), sub: t('Approve in your wallet · 1 of 2') },
-    { id: 'fee_broadcast', label: t('Broadcasting to Stellar'), sub: 'horizon.stellar.org' },
-    { id: 'deposit_sign', label: t('Signing deposit'), sub: t('Approve in your wallet · 2 of 2') },
+    { id: 'deposit_sign', label: t('Signing deposit'), sub: t('Approve in your wallet · 1 of 2') },
+    { id: 'fee_sign', label: t('Signing fee payment'), sub: t('Approve in your wallet · 2 of 2') },
     {
       id: 'deposit_broadcast',
       label: t('Crediting savings vault'),
@@ -248,15 +249,14 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           label: t('Signing withdrawal'),
           sub: t('Approve in your wallet · 1 of 2'),
         },
-        { id: 'withdraw_broadcast', label: t('Processing withdrawal'), sub: 'horizon.stellar.org' },
         {
           id: 'commission_sign',
           label: t('Signing yield commission'),
           sub: t('Approve in your wallet · 2 of 2'),
         },
         {
-          id: 'commission_broadcast',
-          label: t('Broadcasting to Stellar'),
+          id: 'withdraw_broadcast',
+          label: t('Processing withdrawal'),
           sub: 'horizon.stellar.org',
         },
       ]
