@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import { closeSnackbar, enqueueSnackbar } from 'notistack';
+import { runWalletKitSigning } from '@/lib/wallet-kit-guard';
 
 import Button from '@mui/material/Button';
 
@@ -60,7 +61,11 @@ export function useWalletReconnect() {
   const signOrReconnect = useCallback(
     async (xdr: string, networkPassphrase?: string): Promise<string> => {
       try {
-        return await kitSign(xdr, networkPassphrase);
+        // Serialized + pending-retried: two back-to-back signatures (savings
+        // fee → deposit) bounced off WalletConnect's one-request-at-a-time
+        // rule on mainnet, charging the fee and losing the deposit (finding
+        // #54). See lib/wallet-kit-guard.ts.
+        return await runWalletKitSigning(() => kitSign(xdr, networkPassphrase));
       } catch (err: any) {
         if (isSessionBased && isSessionError(err)) {
           showWalletReconnectSnackbar(connectWallet, {
