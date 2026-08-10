@@ -16,8 +16,10 @@ import { postTransactionLog } from '@/lib/log-transaction';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
+import { FEE_PAIR_TIMEOUT_SECONDS } from '@/lib/build-fee-payment';
 import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
+import { submitFeePair, getTransactionSequence } from '@/lib/stellar/fee-pair';
 import { parseHorizonError, createStellarExpertUrl } from '@/utils/transactions.utils';
 
 const WALLET_RECONNECT_REQUIRED_MESSAGE =
@@ -151,9 +153,12 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
     savingsRef.current.refreshPosition();
   }, []);
 
-  // Deposit to vault — two transactions: (1) classic USDC fee payment,
-  // (2) DeFindex deposit for the net amount. Fee goes first so if the
-  // Soroban deposit fails the user only loses the small flat fee.
+  // Deposit to vault — two transactions signed up front, submitted as a pair
+  // (#26): (1) DeFindex deposit for the net amount, (2) classic USDC fee
+  // payment chained one sequence number behind it. Nothing is submitted until
+  // BOTH signatures exist, and the server escrows the signed fee before
+  // submitting the deposit — so a rejection costs nothing, and a successful
+  // deposit always ends up paired with its fee (cron sweeper as backstop).
   const deposit = useCallback(
     async (amount: string): Promise<string> => {
       if (!wallet.address) {
@@ -200,13 +205,12 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           allowHttp: config.HORIZON_URL.startsWith('http://'),
         });
 
-        const signAndSubmit = async (xdr: string, onSigned?: () => void) => {
+        // Sign WITHOUT submitting — submission happens server-side as a pair.
+        const signOnly = async (xdr: string) => {
           const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
-          onSigned?.();
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
-          const signedTx = TransactionBuilder.fromXDR(signedXDR, config.NETWORK_PASSPHRASE);
-          return horizonServer.submitTransaction(signedTx);
+          return signedXDR;
         };
 
         // Pre-flight: verify USDC balance matches the expected issuer and
@@ -264,9 +268,25 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           console.warn('Could not pre-check USDC balance:', balanceErr.message);
         }
 
-        // 1. Build + sign + submit the Normal fee payment first.
-        // Savings uses Blend USDC on testnet and canonical USDC on mainnet —
-        // getSavingsUsdcIssuer resolves to the right issuer for this network.
+        // 1. Build the DeFindex deposit XDR for the NET amount. It carries
+        // the account's next sequence number — the fee tx chains behind it.
+        const depositResponse = await fetch('/api/savings/deposit', {
+          method: 'POST',
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: netAmount.toFixed(7), caller: walletAddress }),
+        });
+        const depositData = await depositResponse.json();
+        if (!depositData.success) {
+          throw new Error(depositData.error || 'Failed to build deposit transaction');
+        }
+        if (!depositData.xdr) {
+          throw new Error('No transaction XDR returned from DeFindex');
+        }
+
+        // 2. Build the Normal fee payment directly behind the deposit
+        // (#26: consecutive sequences make the fee unable to apply unless the
+        // deposit applied first). Savings uses Blend USDC on testnet and
+        // canonical USDC on mainnet — getSavingsUsdcIssuer resolves it.
         const feeResponse = await fetch('/api/fees/build-payment', {
           method: 'POST',
           headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
@@ -275,6 +295,8 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             amount: feeAmount.toFixed(7),
             assetCode: 'USDC',
             assetIssuer: getSavingsUsdcIssuer(config),
+            sourceSequence: getTransactionSequence(depositData.xdr, config.NETWORK_PASSPHRASE),
+            timeoutSeconds: FEE_PAIR_TIMEOUT_SECONDS,
           }),
         });
         const feeData = await feeResponse.json();
@@ -282,59 +304,42 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           throw new Error(feeData.error || 'Failed to build Normal fee transaction');
         }
 
-        setTxStep('fee_sign');
-        let feeResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
-        try {
-          feeResult = await signAndSubmit(feeData.xdr, () => setTxStep('fee_broadcast'));
-        } catch (feeErr: any) {
-          throw new Error(`Fee payment failed: ${parseHorizonError(feeErr)}`);
-        }
-
-        // 2. Build the DeFindex deposit XDR for the NET amount (fresh sequence)
-        const depositResponse = await fetch('/api/savings/deposit', {
-          method: 'POST',
-          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: netAmount.toFixed(7), caller: walletAddress }),
-        });
-        const depositData = await depositResponse.json();
-        if (!depositData.success) {
-          throw new Error(
-            `${depositData.error || 'Failed to build deposit transaction'} (fee was already charged — please contact support with tx ${feeResult.hash})`
-          );
-        }
-        if (!depositData.xdr) {
-          throw new Error('No transaction XDR returned from DeFindex');
-        }
-
+        // 3. Collect BOTH signatures before anything is submitted. Rejecting
+        // either prompt (or a wallet jam, or closing the tab) aborts the whole
+        // action with nothing charged and nothing moved — retry costs nothing.
         setTxStep('deposit_sign');
-        // 3. Sign + submit the deposit
-        let depositResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
-        try {
-          depositResult = await signAndSubmit(depositData.xdr, () =>
-            setTxStep('deposit_broadcast')
-          );
-        } catch (depositErr: any) {
-          throw new Error(
-            `${parseHorizonError(depositErr)} (Normal fee already charged — tx ${feeResult.hash})`
-          );
-        }
+        const signedDepositXdr = await signOnly(depositData.xdr);
+        setTxStep('fee_sign');
+        const signedFeeXdr = await signOnly(feeData.xdr);
 
-        // Log deposit to DB (fire-and-forget)
+        // 4. Hand the signed pair to the server: it escrows the fee, submits
+        // the deposit, then collects the fee — and the cron sweeper finishes
+        // the pair even if this tab dies right here.
+        setTxStep('deposit_broadcast');
+        const pair = await submitFeePair({
+          signedServiceXdr: signedDepositXdr,
+          signedFeeXdr,
+          kind: 'savings_deposit',
+          config,
+        });
+
+        // Log deposit to DB (fire-and-forget). Always reached on success —
+        // the fee hash is known even when the sweeper still owes the submit.
         postTransactionLog('/api/savings/log-transaction', {
           walletAddress,
           vaultAddress: vaultInfo.address,
           type: 'deposit',
           amount: netAmount.toFixed(7),
-          txHash: depositResult.hash,
+          txHash: pair.serviceHash,
           feeAmount: feeAmount.toFixed(2),
-          feeTxHash: feeResult.hash,
+          feeTxHash: pair.feeHash,
         });
 
         enqueueSuccessWithStellarExpert(
           enqueueSnackbar,
           t,
           t('Deposit successful!'),
-          depositResult.hash
+          pair.serviceHash
         );
 
         // Optimistically update the shared savings cache so every view reflects
@@ -378,7 +383,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           setTimeout(() => refreshUserPosition(), 45_000),
         ];
 
-        return depositResult.hash;
+        return pair.serviceHash;
       } catch (err: any) {
         if (err instanceof WalletSessionExpiredError) return '';
         console.error('Error depositing:', err);
@@ -412,9 +417,11 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
     ]
   );
 
-  // Withdraw from vault — two transactions: (1) classic USDC payment for
-  // the 7% yield commission, (2) DeFindex withdraw to the user. Commission
-  // fee goes first so the withdrawal is blocked if the fee cannot be sent.
+  // Withdraw from vault — DeFindex withdraw plus (when yield was earned) a
+  // USDC commission payment chained behind it, both signed up front and
+  // submitted as a pair (#26): rejecting either prompt leaves savings
+  // untouched, and a successful withdrawal always gets its commission
+  // collected (server escrow + cron sweeper).
   const withdraw = useCallback(
     async (amount: string): Promise<string> => {
       if (!wallet.address) {
@@ -466,18 +473,17 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           allowHttp: config.HORIZON_URL.startsWith('http://'),
         });
 
-        const signAndSubmit = async (xdr: string, onSigned?: () => void) => {
+        const signOnly = async (xdr: string) => {
           const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
-          onSigned?.();
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
-          const signedTx = TransactionBuilder.fromXDR(signedXDR, config.NETWORK_PASSPHRASE);
-          return horizonServer.submitTransaction(signedTx);
+          return signedXDR;
         };
 
-        // 1. Build + sign + submit the DeFindex withdraw first so the user
-        // always has USDC in their wallet to cover the commission — even if
-        // they deposited their entire balance.
+        // 1. Build the DeFindex withdraw XDR. The commission (when owed)
+        // chains one sequence number behind it, so the commission can only
+        // ever apply after the withdrawal put USDC in the wallet — an empty
+        // wallet never blocks the user from accessing their savings.
         const withdrawResponse = await fetch('/api/savings/withdraw', {
           method: 'POST',
           headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
@@ -491,21 +497,13 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           throw new Error('No transaction XDR returned from DeFindex');
         }
 
-        setTxStep('withdraw_sign');
-        let withdrawResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
-        try {
-          withdrawResult = await signAndSubmit(withdrawData.xdr, () =>
-            setTxStep('withdraw_broadcast')
-          );
-        } catch (withdrawErr: any) {
-          throw new Error(parseSigningError(withdrawErr));
-        }
-
-        // 2. Build + sign + submit the yield commission fee from the funds
-        // just received. Runs after the withdrawal so an empty wallet never
-        // blocks the user from accessing their savings.
+        let withdrawTxHash: string;
         let commissionTxHash: string | null = null;
+
         if (commissionAmount > 0) {
+          // 2. Build the commission behind the withdraw, sign BOTH before
+          // anything is submitted (#26): rejecting either prompt aborts the
+          // whole action — funds stay in savings, nothing charged.
           const commissionResponse = await fetch('/api/fees/build-payment', {
             method: 'POST',
             headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
@@ -514,6 +512,8 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
               amount: commissionAmount.toFixed(7),
               assetCode: 'USDC',
               assetIssuer: getSavingsUsdcIssuer(config),
+              sourceSequence: getTransactionSequence(withdrawData.xdr, config.NETWORK_PASSPHRASE),
+              timeoutSeconds: FEE_PAIR_TIMEOUT_SECONDS,
             }),
           });
           const commissionData = await commissionResponse.json();
@@ -521,25 +521,47 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             throw new Error(commissionData.error || 'Failed to build commission transaction');
           }
 
+          setTxStep('withdraw_sign');
+          const signedWithdrawXdr = await signOnly(withdrawData.xdr);
           setTxStep('commission_sign');
-          let commissionResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
+          const signedCommissionXdr = await signOnly(commissionData.xdr);
+
+          setTxStep('withdraw_broadcast');
+          const pair = await submitFeePair({
+            signedServiceXdr: signedWithdrawXdr,
+            signedFeeXdr: signedCommissionXdr,
+            kind: 'savings_withdraw',
+            config,
+          });
+          withdrawTxHash = pair.serviceHash;
+          commissionTxHash = pair.feeHash;
+        } else {
+          // No commission owed — a single transaction, submitted directly.
+          setTxStep('withdraw_sign');
+          const signedWithdrawXdr = await signOnly(withdrawData.xdr);
+          setTxStep('withdraw_broadcast');
           try {
-            commissionResult = await signAndSubmit(commissionData.xdr, () =>
-              setTxStep('commission_broadcast')
+            const signedTx = TransactionBuilder.fromXDR(
+              signedWithdrawXdr,
+              config.NETWORK_PASSPHRASE
             );
-          } catch (commissionErr: any) {
-            throw new Error(`Yield commission payment failed: ${parseSigningError(commissionErr)}`);
+            const withdrawResult = await horizonServer.submitTransaction(signedTx);
+            withdrawTxHash = withdrawResult.hash;
+          } catch (withdrawErr: any) {
+            throw new Error(parseSigningError(withdrawErr));
           }
-          commissionTxHash = commissionResult.hash;
         }
 
-        // Log withdrawal to DB (fire-and-forget)
+        // Log withdrawal to DB (fire-and-forget). Always reached on success —
+        // the old flow threw on a commission failure BEFORE this line, so a
+        // completed withdrawal could go unrecorded. Structurally impossible
+        // now: once the pair is accepted, we log.
         postTransactionLog('/api/savings/log-transaction', {
           walletAddress,
           vaultAddress: vaultInfo.address,
           type: 'withdraw',
           amount,
-          txHash: withdrawResult.hash,
+          txHash: withdrawTxHash,
           feeAmount: commissionAmount > 0 ? commissionAmount.toFixed(7) : null,
           feeTxHash: commissionTxHash,
         });
@@ -548,7 +570,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           enqueueSnackbar,
           t,
           t('Withdrawal successful!'),
-          withdrawResult.hash
+          withdrawTxHash
         );
 
         // Optimistically update the shared savings cache.
@@ -582,7 +604,7 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           setTimeout(() => refreshUserPosition(), 45_000),
         ];
 
-        return withdrawResult.hash;
+        return withdrawTxHash;
       } catch (err: any) {
         if (err instanceof WalletSessionExpiredError) return '';
         console.error('Error withdrawing:', err);

@@ -7,6 +7,7 @@ import { redis } from '@/server/rateLimiter';
 import { withRateLimitRetry } from '@/server/defindex';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
+import { eventTxId, reconcileTotalDeposited } from '@/server/savings-deposits';
 
 export const dynamic = 'force-dynamic';
 
@@ -159,15 +160,28 @@ export async function GET(request: NextRequest) {
     const networkParam = isMainnet ? 'mainnet' : 'testnet';
 
     // The events history is append-only: it changes only when the user deposits
-    // or withdraws, and `?refresh=1` forces a fresh read on exactly those
-    // events. Re-fetching the whole paginated history on every cold read was
-    // the heaviest part of the burst that trips DeFindex's per-second limit, so
-    // it gets its own, much longer cache.
-    const eventsCacheKey = `savings:events:${userAddress}:${network}`;
-    let cachedEventsTotal: number | null = null;
+    // or withdraws. Re-fetching the whole paginated history on every cold read
+    // was the heaviest part of the burst that trips DeFindex's per-second
+    // limit, so it gets its own, much longer cache. Staleness here is SAFE
+    // (#55): the total is reconciled below against our own vault_deposits rows
+    // by tx hash, so transactions the cached snapshot (or the lagging indexer
+    // itself) has not seen yet are counted from our rows until it catches up.
+    // Cache v2 stores the event tx ids alongside the total — the hashes are
+    // what make that reconciliation exact.
+    const eventsCacheKey = `savings:events2:${userAddress}:${network}`;
+    interface EventsCacheEntry {
+      total: number;
+      txIds: string[];
+    }
+    let cachedEvents: EventsCacheEntry | null = null;
     if (!wantsFresh) {
       try {
-        cachedEventsTotal = await redis.get<number>(eventsCacheKey);
+        const cached = await redis.get<EventsCacheEntry>(eventsCacheKey);
+        // Guard the shape: a legacy bare-number entry (old key had one) or a
+        // hand-edited value must read as a miss, not as hashes = [].
+        if (cached && typeof cached.total === 'number' && Array.isArray(cached.txIds)) {
+          cachedEvents = cached;
+        }
       } catch {
         /* cache unavailable — fetch the history */
       }
@@ -181,7 +195,7 @@ export async function GET(request: NextRequest) {
             withTimeout(sdk.getVaultBalance(VAULT_ADDRESS, userAddress), 25_000, 'getVaultBalance'),
           'getVaultBalance'
         ),
-        cachedEventsTotal != null
+        cachedEvents != null
           ? Promise.resolve([] as any[])
           : withRateLimitRetry(
               () =>
@@ -199,7 +213,7 @@ export async function GET(request: NextRequest) {
             ),
         prisma.vaultDeposit.findMany({
           where: { walletAddress: userAddress, vaultAddress: VAULT_ADDRESS },
-          select: { type: true, amount: true },
+          select: { type: true, amount: true, txHash: true, createdAt: true },
         }),
         withTimeout(
           fetch(
@@ -249,10 +263,10 @@ export async function GET(request: NextRequest) {
       dfTokens = Number(b.dfTokens) || 0;
     }
 
-    // Extract DeFindex account position data (authoritative source for totalDeposited and earnings).
-    // Withdrawal amounts in the events API are recorded in vault shares, not USDC, which causes
-    // computeTotalDepositedFromEvents to underestimate withdrawals when PPS > 1. The account
-    // position API computes these values in USDC terms correctly.
+    // Extract DeFindex account position data — used ONLY for totalInterestEarned (lifetime
+    // earnings). Verified against live responses 2026-08-10: event amounts (assets[0].amount)
+    // are USDC for BOTH deposits and withdraws (dfTokenAmount carries the shares), so the
+    // events computation is unit-correct.
     const accountPosition =
       accountPositionResult.status === 'fulfilled' ? accountPositionResult.value : null;
 
@@ -267,7 +281,11 @@ export async function GET(request: NextRequest) {
 
     const lifetimeEarnings = accountPosition?.totalInterestEarned ?? null;
 
-    // totalDeposited: events API is authoritative; DB is fallback only.
+    // totalDeposited: events API is the base; our own vault_deposits rows patch
+    // the indexer's lag (#55, see server/savings-deposits.ts). The events feed
+    // runs 30-120s behind the chain, so a read right after a transaction sees a
+    // half-indexed history — reconciling by tx hash counts what the indexer
+    // hasn't seen yet from our rows, and steps aside once it has.
     // NOTE: accountPosition.totalDeposited is NOT used here — the DeFindex API returns the
     // cumulative gross deposit total (all deposits ever, ignoring withdrawals), which is
     // wrong for display. Only totalInterestEarned from that endpoint is used (for earnings).
@@ -275,19 +293,39 @@ export async function GET(request: NextRequest) {
     const events = eventsResult.status === 'fulfilled' ? eventsResult.value : [];
     const totalDepositedFromEvents = computeTotalDepositedFromEvents(events);
 
-    let totalDeposited: number;
-    if (cachedEventsTotal != null) {
-      // Skipped the history fetch entirely — this is the value it produced last
-      // time, and it only changes on a deposit/withdraw, which bypass the cache.
-      totalDeposited = cachedEventsTotal;
-      console.log('[user-position] totalDeposited from cached events:', totalDeposited);
+    let eventsBase: { total: number; txIds: string[] } | null = null;
+    if (cachedEvents != null) {
+      // Skipped the history fetch entirely — the cached snapshot plus row
+      // reconciliation below yields the same answer a fresh fetch would.
+      eventsBase = cachedEvents;
+      console.log('[user-position] events total from cache:', eventsBase.total);
     } else if (totalDepositedFromEvents !== null) {
-      totalDeposited = totalDepositedFromEvents;
-      console.log('[user-position] totalDeposited from events:', totalDeposited);
+      eventsBase = {
+        total: totalDepositedFromEvents,
+        txIds: events.map(eventTxId).filter((id): id is string => !!id),
+      };
+      console.log('[user-position] events total from fetch:', eventsBase.total);
       try {
-        await redis.set(eventsCacheKey, totalDepositedFromEvents, { ex: EVENTS_TTL_SECONDS });
+        await redis.set(eventsCacheKey, eventsBase, { ex: EVENTS_TTL_SECONDS });
       } catch {
         /* non-fatal */
+      }
+    }
+
+    let totalDeposited: number;
+    if (eventsBase != null) {
+      const reconciled = reconcileTotalDeposited({
+        eventsTotal: eventsBase.total,
+        eventTxIds: eventsBase.txIds,
+        rows: records,
+        nowMs: Date.now(),
+      });
+      totalDeposited = reconciled.total;
+      if (reconciled.pendingCount > 0) {
+        console.log(
+          `[user-position] totalDeposited reconciled with ${reconciled.pendingCount} not-yet-indexed row(s):`,
+          totalDeposited
+        );
       }
     } else {
       // Fall back to DB when events API returns nothing

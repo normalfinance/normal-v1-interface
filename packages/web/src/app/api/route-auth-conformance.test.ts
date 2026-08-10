@@ -29,6 +29,7 @@ const PUBLIC_ROUTES: Record<string, string> = {
   'mgi/info': 'static SEP anchor info, cached 300s, no user data',
   'cron/cctp-advance': 'cron-secret auth, not user sessions',
   'cron/dune-sync': 'cron-secret auth, not user sessions',
+  'cron/fee-escrow-sweep': 'cron-secret auth, not user sessions',
 };
 
 const API_DIR = path.join(__dirname);

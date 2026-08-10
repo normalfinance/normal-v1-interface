@@ -30,11 +30,38 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as NetworkType;
     const config = getStellarConfigForNetwork(network);
 
-    const { caller, amount, assetCode, assetIssuer: clientAssetIssuer } = await request.json();
+    const {
+      caller,
+      amount,
+      assetCode,
+      assetIssuer: clientAssetIssuer,
+      sourceSequence,
+      timeoutSeconds,
+    } = await request.json();
 
     if (!caller || !amount || !assetCode) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields: caller, amount, assetCode' },
+        { status: 400 }
+      );
+    }
+
+    // Chained-pair mode (#26): the fee tx is built behind the service tx's
+    // sequence with a longer window. Both inputs are bounded — a bogus
+    // sequence only yields an unsubmittable tx for the caller's own account,
+    // but validating keeps errors early and obvious.
+    if (sourceSequence !== undefined && !/^\d+$/.test(String(sourceSequence))) {
+      return NextResponse.json(
+        { success: false, error: 'sourceSequence must be a decimal sequence number string' },
+        { status: 400 }
+      );
+    }
+    if (
+      timeoutSeconds !== undefined &&
+      (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 60 || timeoutSeconds > 1800)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'timeoutSeconds must be an integer between 60 and 1800' },
         { status: 400 }
       );
     }
@@ -87,6 +114,8 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       assetCode,
       assetIssuer,
       config,
+      sourceSequence: sourceSequence !== undefined ? String(sourceSequence) : undefined,
+      timeoutSeconds,
     });
 
     return NextResponse.json({ success: true, xdr, destination });

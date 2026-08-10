@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/cctp-advance/",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron/fee-escrow-sweep/",
+      "schedule": "*/2 * * * *"
     }
   ]
 }
