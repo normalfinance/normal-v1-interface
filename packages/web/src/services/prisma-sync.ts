@@ -11,12 +11,18 @@ import { prisma } from '@/lib/prisma';
 const NETWORK =
   process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() === 'mainnet' ? 'mainnet' : 'testnet';
 
+// #27: swap_logs / vault_deposits rows now exist BEFORE broadcast, with
+// pending/failed/abandoned states. Dune is a public money dashboard — only
+// confirmed rows may count.
+const CONFIRMED = { status: 'confirmed' } as const;
+
 // ---------------------------------------------------------------------------
 // Swap volume + fee revenue grouped by day
 // ---------------------------------------------------------------------------
 
 export async function fetchSwapVolume(): Promise<VolumeDailyRow[]> {
   const swaps = await prisma.swapLog.findMany({
+    where: CONFIRMED,
     select: { createdAt: true, amountIn: true, feeAmount: true },
     orderBy: { createdAt: 'asc' },
   });
@@ -48,8 +54,11 @@ export async function fetchSwapVolume(): Promise<VolumeDailyRow[]> {
 
 export async function fetchWalletActivity(): Promise<WalletActivityRow[]> {
   const [swaps, deposits] = await Promise.all([
-    prisma.swapLog.findMany({ select: { createdAt: true, walletAddress: true } }),
-    prisma.vaultDeposit.findMany({ select: { createdAt: true, walletAddress: true, type: true } }),
+    prisma.swapLog.findMany({ where: CONFIRMED, select: { createdAt: true, walletAddress: true } }),
+    prisma.vaultDeposit.findMany({
+      where: CONFIRMED,
+      select: { createdAt: true, walletAddress: true, type: true },
+    }),
   ]);
 
   const rows: WalletActivityRow[] = [];
@@ -81,6 +90,7 @@ export async function fetchWalletActivity(): Promise<WalletActivityRow[]> {
 
 export async function fetchAllDepositWallets(): Promise<string[]> {
   const results = await prisma.vaultDeposit.findMany({
+    where: CONFIRMED,
     select: { walletAddress: true },
     distinct: ['walletAddress'],
   });
@@ -112,6 +122,7 @@ export async function fetchLinkedWallets(): Promise<LinkedWalletRow[]> {
 export async function fetchTransactionLog(): Promise<TransactionLogRow[]> {
   const [swaps, deposits] = await Promise.all([
     prisma.swapLog.findMany({
+      where: CONFIRMED,
       select: {
         createdAt: true,
         walletAddress: true,
@@ -125,6 +136,7 @@ export async function fetchTransactionLog(): Promise<TransactionLogRow[]> {
       orderBy: { createdAt: 'asc' },
     }),
     prisma.vaultDeposit.findMany({
+      where: CONFIRMED,
       select: {
         createdAt: true,
         walletAddress: true,

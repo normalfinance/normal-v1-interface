@@ -7,6 +7,16 @@ import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
+// ----------------------------------------------------------------------
+// DEPRECATED (#27, 2026-08-10): swaps are now recorded server-side by
+// /api/fees/execute-pair BEFORE broadcast — no current client calls this
+// route. It stays alive for one release because browsers holding the
+// previous bundle still post here mid-flow; rows it writes default to
+// status 'confirmed' (the old contract: only logged after success). Delete
+// in the next cleanup batch. (LI.FI cross-chain swaps log via /api/lifi/
+// record, which is NOT deprecated.)
+// ----------------------------------------------------------------------
+
 function isValidTokenRef(ref: string): boolean {
   return ref === 'native' || isValidStellarAddress(ref);
 }

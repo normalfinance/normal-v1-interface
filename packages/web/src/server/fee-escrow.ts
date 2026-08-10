@@ -227,6 +227,12 @@ export interface AdvanceResult {
   feeHash: string;
   action: EscrowAction['type'] | 'resolved';
   status?: FeeEscrowStatus;
+  // Entry context, so the cron can settle the matching tx record (#27)
+  // without this module importing tx-records (which imports from here).
+  serviceHash: string;
+  kind: FeeEscrowKind;
+  walletAddress: string;
+  network: NetworkType;
 }
 
 /**
@@ -236,6 +242,14 @@ export interface AdvanceResult {
 export async function advanceEscrowEntry(entry: FeeEscrowEntry): Promise<AdvanceResult> {
   const config = getStellarConfigForNetwork(entry.network);
   const server = horizonFor(entry.network);
+
+  const base = {
+    feeHash: entry.feeHash,
+    serviceHash: entry.serviceHash,
+    kind: entry.kind,
+    walletAddress: entry.walletAddress,
+    network: entry.network,
+  };
 
   const [feeProbe, serviceProbe] = await Promise.all([
     probeTransaction(server, entry.feeHash),
@@ -247,11 +261,11 @@ export async function advanceEscrowEntry(entry: FeeEscrowEntry): Promise<Advance
   switch (action.type) {
     case 'complete': {
       await resolveEscrow(entry.network, entry.feeHash, 'completed');
-      return { feeHash: entry.feeHash, action: 'resolved', status: 'completed' };
+      return { ...base, action: 'resolved', status: 'completed' };
     }
     case 'resolve': {
       await resolveEscrow(entry.network, entry.feeHash, action.status);
-      return { feeHash: entry.feeHash, action: 'resolved', status: action.status };
+      return { ...base, action: 'resolved', status: action.status };
     }
     case 'submit_service': {
       const res = await submitSignedXdr(server, entry.serviceXdr, config.NETWORK_PASSPHRASE);
@@ -260,43 +274,43 @@ export async function advanceEscrowEntry(entry: FeeEscrowEntry): Promise<Advance
         const fee = await submitSignedXdr(server, entry.feeXdr, config.NETWORK_PASSPHRASE);
         if (fee.outcome === 'success') {
           await resolveEscrow(entry.network, entry.feeHash, 'completed');
-          return { feeHash: entry.feeHash, action: 'resolved', status: 'completed' };
+          return { ...base, action: 'resolved', status: 'completed' };
         }
-        return { feeHash: entry.feeHash, action: 'submit_service' };
+        return { ...base, action: 'submit_service' };
       }
       if (res.outcome === 'failed') {
         const status = isSequenceError(res.resultCodes) ? 'superseded' : 'service_failed';
         await resolveEscrow(entry.network, entry.feeHash, status);
-        return { feeHash: entry.feeHash, action: 'resolved', status };
+        return { ...base, action: 'resolved', status };
       }
-      return { feeHash: entry.feeHash, action: 'submit_service' };
+      return { ...base, action: 'submit_service' };
     }
     case 'submit_fee': {
       const res = await submitSignedXdr(server, entry.feeXdr, config.NETWORK_PASSPHRASE);
       if (res.outcome === 'success') {
         await resolveEscrow(entry.network, entry.feeHash, 'completed');
-        return { feeHash: entry.feeHash, action: 'resolved', status: 'completed' };
+        return { ...base, action: 'resolved', status: 'completed' };
       }
       if (res.outcome === 'failed') {
         if (isSequenceError(res.resultCodes)) {
           // The user (or another app) consumed the sequence after the service
           // succeeded — the fee is unrecoverable. Same receivable bucket.
           await resolveEscrow(entry.network, entry.feeHash, 'expired');
-          return { feeHash: entry.feeHash, action: 'resolved', status: 'expired' };
+          return { ...base, action: 'resolved', status: 'expired' };
         }
         if (isTooLateError(res.resultCodes)) {
           await resolveEscrow(entry.network, entry.feeHash, 'expired');
-          return { feeHash: entry.feeHash, action: 'resolved', status: 'expired' };
+          return { ...base, action: 'resolved', status: 'expired' };
         }
         // Unexpected rejection (e.g. op_underfunded right now) — keep pending,
         // the timebounds bound how long we retry.
-        return { feeHash: entry.feeHash, action: 'submit_fee' };
+        return { ...base, action: 'submit_fee' };
       }
-      return { feeHash: entry.feeHash, action: 'submit_fee' };
+      return { ...base, action: 'submit_fee' };
     }
     case 'wait':
     default:
-      return { feeHash: entry.feeHash, action: 'wait' };
+      return { ...base, action: 'wait' };
   }
 }
 

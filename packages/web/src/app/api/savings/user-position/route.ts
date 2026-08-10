@@ -212,8 +212,10 @@ export async function GET(request: NextRequest) {
               'fetchAllEvents'
             ),
         prisma.vaultDeposit.findMany({
-          where: { walletAddress: userAddress, vaultAddress: VAULT_ADDRESS },
-          select: { type: true, amount: true, txHash: true, createdAt: true },
+          // #27: rows exist before broadcast — a pending/failed transaction
+          // must not count into "Your Deposits" until it actually confirmed.
+          where: { walletAddress: userAddress, vaultAddress: VAULT_ADDRESS, status: 'confirmed' },
+          select: { type: true, amount: true, txHash: true, createdAt: true, status: true },
         }),
         withTimeout(
           fetch(

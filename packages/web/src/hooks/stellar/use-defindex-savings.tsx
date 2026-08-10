@@ -4,36 +4,23 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { OptionsObject, SnackbarMessage } from 'notistack';
 import type { VaultInfo, SavingsPosition } from '@/types/savings';
 
+import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
+import { buildAuthHeaders } from '@/utils/http';
 // The savings read (vault metadata + user position), its localStorage cache,
 // and the indexer-lag merge now live in `useSavingsPosition` — one deduped SWR
 // shared across all views. This hook consumes it for the read and keeps the
 // deposit/withdraw transaction engine.
-import { useTranslate } from '@/locales';
-import { useStellarConfig } from '@/hooks';
-import { buildAuthHeaders } from '@/utils/http';
+import { Asset, Horizon } from '@stellar/stellar-sdk';
 import { usePersistStore } from '@normalfinance/state';
-import { postTransactionLog } from '@/lib/log-transaction';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
+import { bumpSavingsReadEpoch } from '@/lib/savings-read-guard';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { FEE_PAIR_TIMEOUT_SECONDS } from '@/lib/build-fee-payment';
-import { Asset, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
+import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
 import { submitFeePair, getTransactionSequence } from '@/lib/stellar/fee-pair';
-import { parseHorizonError, createStellarExpertUrl } from '@/utils/transactions.utils';
-
-const WALLET_RECONNECT_REQUIRED_MESSAGE =
-  'Your wallet session has expired. Please disconnect and reconnect your wallet, then try again.';
-
-function parseSigningError(err: any): string {
-  const msg: string = err?.message ?? '';
-  if (msg.toLowerCase().includes('connection key') || msg.toLowerCase().includes('walletconnect')) {
-    return WALLET_RECONNECT_REQUIRED_MESSAGE;
-  }
-  return parseHorizonError(err);
-}
-
-import { bumpSavingsReadEpoch } from '@/lib/savings-read-guard';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -312,27 +299,21 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         setTxStep('fee_sign');
         const signedFeeXdr = await signOnly(feeData.xdr);
 
-        // 4. Hand the signed pair to the server: it escrows the fee, submits
-        // the deposit, then collects the fee — and the cron sweeper finishes
-        // the pair even if this tab dies right here.
+        // 4. Hand the signed pair to the server: it records the deposit BEFORE
+        // broadcasting (#27 — no client-side logging anymore), escrows the
+        // fee, submits the deposit, then collects the fee — and the cron
+        // sweeper finishes the pair even if this tab dies right here.
         setTxStep('deposit_broadcast');
         const pair = await submitFeePair({
           signedServiceXdr: signedDepositXdr,
           signedFeeXdr,
           kind: 'savings_deposit',
+          record: {
+            vaultAddress: vaultInfo.address,
+            amount: netAmount.toFixed(7),
+            feeAmount: feeAmount.toFixed(7),
+          },
           config,
-        });
-
-        // Log deposit to DB (fire-and-forget). Always reached on success —
-        // the fee hash is known even when the sweeper still owes the submit.
-        postTransactionLog('/api/savings/log-transaction', {
-          walletAddress,
-          vaultAddress: vaultInfo.address,
-          type: 'deposit',
-          amount: netAmount.toFixed(7),
-          txHash: pair.serviceHash,
-          feeAmount: feeAmount.toFixed(2),
-          feeTxHash: pair.feeHash,
         });
 
         enqueueSuccessWithStellarExpert(
@@ -469,10 +450,6 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
-        const horizonServer = new Horizon.Server(config.HORIZON_URL, {
-          allowHttp: config.HORIZON_URL.startsWith('http://'),
-        });
-
         const signOnly = async (xdr: string) => {
           const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signedXDR = normalizeSignedXDR(signResult);
@@ -498,7 +475,6 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
         }
 
         let withdrawTxHash: string;
-        let commissionTxHash: string | null = null;
 
         if (commissionAmount > 0) {
           // 2. Build the commission behind the withdraw, sign BOTH before
@@ -531,40 +507,33 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             signedServiceXdr: signedWithdrawXdr,
             signedFeeXdr: signedCommissionXdr,
             kind: 'savings_withdraw',
+            record: {
+              vaultAddress: vaultInfo.address,
+              amount,
+              feeAmount: commissionAmount.toFixed(7),
+            },
             config,
           });
           withdrawTxHash = pair.serviceHash;
-          commissionTxHash = pair.feeHash;
         } else {
-          // No commission owed — a single transaction, submitted directly.
+          // No commission owed — single transaction, but STILL through the
+          // server funnel so it gets a record before broadcast (#27). This
+          // was the last flow the client submitted straight to Horizon.
           setTxStep('withdraw_sign');
           const signedWithdrawXdr = await signOnly(withdrawData.xdr);
           setTxStep('withdraw_broadcast');
-          try {
-            const signedTx = TransactionBuilder.fromXDR(
-              signedWithdrawXdr,
-              config.NETWORK_PASSPHRASE
-            );
-            const withdrawResult = await horizonServer.submitTransaction(signedTx);
-            withdrawTxHash = withdrawResult.hash;
-          } catch (withdrawErr: any) {
-            throw new Error(parseSigningError(withdrawErr));
-          }
+          const single = await submitFeePair({
+            signedServiceXdr: signedWithdrawXdr,
+            signedFeeXdr: null,
+            kind: 'savings_withdraw',
+            record: { vaultAddress: vaultInfo.address, amount, feeAmount: null },
+            config,
+          });
+          withdrawTxHash = single.serviceHash;
         }
 
-        // Log withdrawal to DB (fire-and-forget). Always reached on success —
-        // the old flow threw on a commission failure BEFORE this line, so a
-        // completed withdrawal could go unrecorded. Structurally impossible
-        // now: once the pair is accepted, we log.
-        postTransactionLog('/api/savings/log-transaction', {
-          walletAddress,
-          vaultAddress: vaultInfo.address,
-          type: 'withdraw',
-          amount,
-          txHash: withdrawTxHash,
-          feeAmount: commissionAmount > 0 ? commissionAmount.toFixed(7) : null,
-          feeTxHash: commissionTxHash,
-        });
+        // No client-side logging anymore: the server recorded this withdrawal
+        // BEFORE broadcasting it and settles its status truthfully (#27).
 
         enqueueSuccessWithStellarExpert(
           enqueueSnackbar,

@@ -77,9 +77,16 @@ model VaultDeposit {
   feeAmount     String?  // Normal fee (deposit) or commission (withdraw), human-readable USDC
   feeTxHash     String?  // Hash of the classic fee payment transaction
   txHash        String?
+  // #27 record-before-broadcast: pending | submitted | confirmed | failed | abandoned.
+  // Legacy rows (written only after success) default to confirmed via the SQL default.
+  status        String   @default("confirmed")
+  statusReason  String?  // e.g. Horizon result codes on failure
+  network       String?  // "mainnet" | "testnet"; null on legacy rows
   createdAt     DateTime @default(now())
 
   @@index([walletAddress, vaultAddress])
+  @@index([status])
+  @@index([txHash])
   @@map("vault_deposits")
 }
 
@@ -95,9 +102,16 @@ model SwapLog {
   feeAmount        String?  // 0.5% fee charged in tokenIn (human-readable)
   feeTxHash        String?  // Hash of the classic fee payment transaction
   txHash           String?
+  // #27 record-before-broadcast: pending | submitted | confirmed | failed | abandoned.
+  // Legacy rows (written only after success) default to confirmed via the SQL default.
+  status           String   @default("confirmed")
+  statusReason     String?  // e.g. Horizon result codes on failure
+  network          String?  // "mainnet" | "testnet"; null on legacy rows
   createdAt        DateTime @default(now())
 
   @@index([walletAddress])
+  @@index([status])
+  @@index([txHash])
   @@map("swap_logs")
 }
 

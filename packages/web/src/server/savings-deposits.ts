@@ -24,6 +24,9 @@ export interface PendingLedgerRow {
   amount: string; // human-readable USDC
   txHash: string | null;
   createdAt: Date | string;
+  // #27: rows exist before broadcast. The route already filters its query to
+  // confirmed rows; this is defense-in-depth for any future caller.
+  status?: string;
 }
 
 // Rows older than this cannot be "the indexer hasn't seen it yet" — real lag
@@ -51,6 +54,8 @@ export function reconcileTotalDeposited(params: {
   let pendingCount = 0;
 
   for (const row of rows) {
+    // Only money that actually moved may count (#27).
+    if (row.status !== undefined && row.status !== 'confirmed') continue;
     // No hash = no way to ever match it against an event, so adding it could
     // only double-count once the indexer catches up. Skip.
     if (!row.txHash) continue;
