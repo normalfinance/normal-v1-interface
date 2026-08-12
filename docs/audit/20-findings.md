@@ -717,3 +717,49 @@ only definitive rejections mark 'failed'; "already known" counts as
 ACCEPTED; ambiguity stays 'unknown' so a live tx is never labeled failed.
 Carve-in: LI.FI EVM leg estimates gas if a quote ever omits gasLimit.
 9 new tests (158 total). Wave 3 money-correctness: COMPLETE.
+
+## #62 — Balance freshness after sends & swaps (FIXED 2026-08-12, branch fix/balance-freshness)
+
+Niko's live findings: a finished SOL send left the balance stale for "a few
+refreshes", and a finished LI.FI swap briefly looked like lost funds. Root
+cause: the 7th instance of timer-instead-of-signal — the 0s/+8s/+45s refresh
+shots race the chain, and the 0s shot poisons the server bypass floor so the
++8s shot serves stale cache; the LI.FI engine never refetched the
+DESTINATION chain on completion (CCTP's finish() did — same prop, unused).
+
+Three fixes, two of them Niko's design corrections:
+1. **"Done" gated on arrival** (his rule): lifi-tracker awaits a new
+   onArrival handler (engine refetches the destination chain,
+   Promise.race-capped at 10s so a refetch hiccup can't make a SUCCESSFUL
+   swap look stuck) BEFORE the stage flips to done. Deliberately NOT a
+   before/after balance comparison (slippage/fees/concurrent activity lie).
+2. **Confirmation-driven refresh for sends**: lib/send-confirmation.ts polls
+   the chain DIRECTLY (public RPC, no server cache/floor; ETH receipt 5s×18,
+   SOL sig status 2s×30) and fires ONE chain-scoped refresh
+   (announceConfirmation) at the exact moment the chain guarantees a fresh
+   balance read. Timer shots kept for XLM/BTC + feeds. Success copy now says
+   exchanges credit on their own schedule (the Coinbase question, answered
+   permanently — on-chain delivery is visible, exchange ledgers are not).
+3. **Spendable = balance − pending outflows** (his second catch: send SOL →
+   MAX-swap would offer money already gone): lib/spendable.ts derives a pure
+   adjustment from the pending-sends ledger + a lifi-tracker in-flight
+   registry — NO optimistic store writes (the #52/#55 disease). Wired into
+   send-modal spendableBalance and swap-card fromBalance (one line covers
+   every engine). CCTP source legs excluded, documented (chain rejection +
+   #29 preflight remain the backstop).
+
+13 tests (171 total). No schema, no routes, no cron changes. Doc 62.
+
+### #62 follow-up (same day, Niko's live retest)
+1. **Swap row stuck "pending" until manual refresh** — /api/lifi/statuses
+   caches PENDING for 30s, so the feed refresh fired at delivery was served
+   the stale cache. Fix: session-local status override
+   (lib/lifi/status-overrides.ts) — the tracker registers DONE/REFUNDED/
+   FAILED before firing the feed refresh; use-user-activity prefers it over
+   the server answer. Other tabs converge within the 30s TTL.
+2. **409 "previous send still confirming" after a CONFIRMED send** — the #29
+   guard only unblocked via the cron reconciler (~2 min on Vercel, NEVER on
+   localhost). Fix: probeAndSettleUnsettledSend — the execute route probes
+   the chain inline when the guard trips; a confirmed/failed earlier send
+   settles on the spot and the new send proceeds; only a genuinely-unknown
+   outcome still blocks. 3 more tests (174 total).

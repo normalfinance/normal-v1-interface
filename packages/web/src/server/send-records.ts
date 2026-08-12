@@ -114,6 +114,50 @@ export async function findUnsettledSend(walletAddress: string, chain: SendChain)
   });
 }
 
+/**
+ * Probe an unsettled send RIGHT NOW and settle it if the chain has answered.
+ * Returns 'settled' when the row reached a terminal state (a new send may
+ * proceed) or 'wait' when the outcome is genuinely still unknown.
+ *
+ * This is what makes the one-send-at-a-time guard SELF-CLEARING at request
+ * time: without it, a send whose tx confirmed seconds ago would keep
+ * blocking until the cron reconciler's next tick (~2 min on Vercel — and
+ * never on localhost, where crons don't run). Observed live 2026-08-12: a
+ * confirmed test send 409-blocked the next ETH send.
+ */
+export async function probeAndSettleUnsettledSend(row: {
+  id: string;
+  chain: SendChain;
+  txHash: string | null;
+  createdAt: Date;
+}): Promise<'settled' | 'wait'> {
+  if (!row.txHash) return 'wait';
+  try {
+    const probe =
+      row.chain === 'ethereum'
+        ? await probeEvmTx(rpcUrlFor(row.chain), row.txHash)
+        : await probeSolSig(rpcUrlFor(row.chain), row.txHash);
+
+    const decision = decideRecordSettlement(
+      probe,
+      row.createdAt.getTime(),
+      Date.now(),
+      row.chain === 'ethereum' ? EVM_ABANDON_AFTER_MS : SOL_ABANDON_AFTER_MS
+    );
+    if (decision.status === 'wait') return 'wait';
+
+    await settleSend(
+      row.id,
+      decision.status,
+      decision.status === 'abandoned' ? 'never reached the network before expiry' : undefined
+    );
+    return 'settled';
+  } catch {
+    // RPC hiccup — keep the guard conservative; the cron settles it.
+    return 'wait';
+  }
+}
+
 export async function createPendingSend(params: {
   walletAddress: string;
   chain: SendChain;

@@ -10,6 +10,7 @@ import { getCryptoIconUrl } from '@normalfinance/utils';
 import { CHAINS, getChainAddress } from '@/lib/chains/registry';
 import { useMemo, useEffect, useSyncExternalStore } from 'react';
 import { useMgiTransactions } from '@/hooks/use-mgi-transactions';
+import { getLifiStatusOverride } from '@/lib/lifi/status-overrides';
 import { FAILED_MGI_STATUSES, PENDING_MGI_STATUSES } from '@/lib/mgi/statuses';
 import {
   toHashSet,
@@ -480,7 +481,10 @@ export function useUserActivity(
       a.txHash &&
       (a.tokenIn.address?.startsWith('lifi:') || a.tokenOut.address?.startsWith('lifi:'))
     ) {
-      const status = swapStatuses?.[a.txHash];
+      // The tab that ran the swap knows the terminal state before the server
+      // statuses cache (PENDING, 30s TTL) catches up — prefer its answer
+      // (#62 follow-up: rows stayed "pending" right after delivery).
+      const status = getLifiStatusOverride(a.txHash) ?? swapStatuses?.[a.txHash];
       const ageMs = Date.now() - a.timestamp;
       let pending = false;
       let failed = false;

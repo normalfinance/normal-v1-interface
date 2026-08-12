@@ -65,6 +65,17 @@ export function announceTransaction(opts: {
   }
 }
 
+/**
+ * One chain-scoped refresh, fired at the moment a send is CONFIRMED on-chain
+ * (#62 — driven by lib/send-confirmation.ts, not a timer). No pending-row
+ * write, no follow-up shots: the chain has just guaranteed the new balance
+ * is readable, so a single refresh is exactly enough.
+ */
+export function announceConfirmation(chain: ChainId): void {
+  if (typeof window === 'undefined') return;
+  dispatch(chain);
+}
+
 /** The chain a scoped announcement was about, or undefined for the legacy
  *  "refresh everything" dispatches. Kept here so listeners never parse the
  *  event shape themselves. */

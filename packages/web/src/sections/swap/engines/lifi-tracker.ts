@@ -1,8 +1,12 @@
 'use client';
 
+import type { ChainId } from '@/lib/chains/registry';
+
 import { buildAuthHeaders } from '@/utils/http';
 import { useRef, useState, useEffect } from 'react';
 import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
+import { clearSwapOutflow, registerSwapOutflow } from '@/lib/spendable';
+import { registerLifiStatusOverride } from '@/lib/lifi/status-overrides';
 
 // ---------------------------------------------------------------------------
 // Background tracker for a cross-chain (LI.FI) swap. Runs independently of the
@@ -37,6 +41,14 @@ export function chainName(id: number): string {
   if (id === CHAIN.SOL) return 'Solana';
   if (id === CHAIN.BTC) return 'Bitcoin';
   return 'source chain';
+}
+
+/** LI.FI numeric chain id → our registry ChainId (undefined if unknown). */
+export function registryChainOf(id: number): ChainId | undefined {
+  if (id === CHAIN.ETH) return 'ethereum';
+  if (id === CHAIN.SOL) return 'solana';
+  if (id === CHAIN.BTC) return 'bitcoin';
+  return undefined;
 }
 
 const log = (msg: string, extra?: unknown) =>
@@ -142,7 +154,19 @@ export interface LifiTrackerHandlers {
   onActivity: () => void;
   /** fired once when the swap reaches a terminal state — surface a toast */
   onTerminal: (stage: Stage) => void;
+  /**
+   * Awaited (capped) BETWEEN the bridge reporting DONE and the stage
+   * flipping to 'done' (#62): the engine refetches the DESTINATION chain's
+   * balances here, so "Done" is never shown against a stale balance that
+   * looks like lost funds.
+   */
+  onArrival?: () => Promise<void> | void;
 }
+
+// Safety valve for onArrival: the funds ARE on-chain once the bridge says
+// DONE — a hiccuping balance refetch must not make a successful swap look
+// stuck, so after this cap "done" shows regardless.
+const ARRIVAL_CAP_MS = 10_000;
 
 /**
  * Tracks `tx` to completion, independent of any modal. Re-keys on the tx hash,
@@ -161,6 +185,17 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
     const stop = () => cancelled;
     setStage('confirming');
 
+    // While this swap is in flight its source amount is committed money —
+    // register it so MAX buttons stop offering it (#62 spendable).
+    const outflowChain = registryChainOf(tx.fromChainId);
+    if (outflowChain) {
+      registerSwapOutflow(tx.txHash, {
+        chain: outflowChain,
+        symbol: tx.fromSymbol,
+        amount: tx.amountIn,
+      });
+    }
+
     (async () => {
       const { txHash, fromChainId, toChainId, fromSymbol, toSymbol, amountIn, amountOut } = tx;
       log(`Submitted ${fromSymbol}→${toSymbol}`, txHash);
@@ -170,6 +205,7 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
       if (cancelled) return;
       if (src !== 'confirmed') {
         log('source not confirmed', src);
+        clearSwapOutflow(txHash); // nothing left the wallet — restore spendable
         setStage('failed');
         handlersRef.current.onTerminal('failed');
         return;
@@ -202,6 +238,33 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
             : bridge === 'FAILED'
               ? 'failed'
               : 'bridging';
+
+      // #62: on DONE, refresh the DESTINATION chain's balances BEFORE showing
+      // 'done' (capped — see ARRIVAL_CAP_MS). Niko's rule: never display
+      // "Done" against a stale balance that looks like lost funds.
+      if (final === 'done' && handlersRef.current.onArrival) {
+        log('bridge DONE — refreshing destination balances before showing done');
+        try {
+          await Promise.race([
+            Promise.resolve(handlersRef.current.onArrival()),
+            delay(ARRIVAL_CAP_MS),
+          ]);
+        } catch (e) {
+          log('arrival refresh failed (showing done anyway)', (e as Error).message);
+        }
+        if (cancelled) return;
+      }
+
+      if (final !== 'bridging') {
+        clearSwapOutflow(txHash);
+        // Tell the activity feed the truth BEFORE it refetches — the server
+        // statuses route caches PENDING for 30s, so without this override the
+        // row keeps showing "pending" right after delivery (#62 follow-up).
+        registerLifiStatusOverride(
+          txHash,
+          final === 'done' ? 'DONE' : final === 'refunded' ? 'REFUNDED' : 'FAILED'
+        );
+      }
       setStage(final);
       handlersRef.current.onActivity();
       if (final !== 'bridging') handlersRef.current.onTerminal(final);
@@ -209,6 +272,7 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
 
     return () => {
       cancelled = true;
+      clearSwapOutflow(tx.txHash);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tx?.txHash]);

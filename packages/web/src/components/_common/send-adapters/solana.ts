@@ -149,6 +149,17 @@ export function createSolanaAdapter(
           },
         });
 
+        // #62: fire ONE more refresh at the exact moment the chain confirms —
+        // SOL lands in ~2s, well before the old +8s timer shot, and this one
+        // cannot be swallowed by the server cache floor.
+        void import('@/lib/send-confirmation').then(({ watchSendConfirmation }) =>
+          watchSendConfirmation('solana', txid, () => {
+            void import('@/lib/tx-events').then(({ announceConfirmation }) =>
+              announceConfirmation('solana')
+            );
+          })
+        );
+
         return txid;
       } catch (err: any) {
         const msg: string = err?.message ?? 'Solana transaction failed';

@@ -1,12 +1,14 @@
 'use client';
 
 import type { Token } from '@normalfinance/types';
+import type { ChainId } from '@/lib/chains/registry';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
+import { usePendingOutflow } from '@/lib/spendable';
 import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
@@ -49,6 +51,16 @@ import type {
 // ---------------------------------------------------------------------------
 
 const ZERO = BigNumber(0);
+
+// Which chain's pending outflows affect each swappable asset (#62 spendable).
+// Partial on purpose: pivot-only symbols (e.g. USDC_BASE) have no send flows.
+const CHAIN_OF_SYMBOL: Partial<Record<SwapSymbol, ChainId>> = {
+  XLM: 'stellar',
+  USDC: 'stellar',
+  BTC: 'bitcoin',
+  ETH: 'ethereum',
+  SOL: 'solana',
+};
 
 export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const { t } = useTranslate();
@@ -103,7 +115,11 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const toToken = tokenBySymbol[toSymbol];
   const fromPrice = BigNumber(fromToken.price || 0);
   const toPrice = BigNumber(toToken.price || 0);
-  const fromBalance = BigNumber(fromToken.balance || 0);
+  // #62: subtract money committed to in-flight sends/swaps — the displayed
+  // balance lags the chain by seconds, and MAX must never offer funds that
+  // already left. One subtraction here covers every engine.
+  const pendingOutflow = usePendingOutflow(CHAIN_OF_SYMBOL[fromSymbol], fromSymbol);
+  const fromBalance = BigNumber.max(BigNumber(fromToken.balance || 0).minus(pendingOutflow), 0);
   const fromDecimals = assetBySymbol(fromSymbol).decimals;
   const fromLoading = (
     { XLM: false, USDC: false, BTC: btc.loading, ETH: eth.loading, SOL: sol.loading } as Record<

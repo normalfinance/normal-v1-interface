@@ -22,7 +22,7 @@ import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 
 import { ethGasReserve } from './gas-reserve';
 import { LifiStatusModal } from '../lifi-status-modal';
-import { isTerminal, useLifiTracker } from './lifi-tracker';
+import { isTerminal, useLifiTracker, registryChainOf } from './lifi-tracker';
 
 import type { LifiTrackedTx } from './lifi-tracker';
 import type { CrosschainSymbol, SwapEngineResult } from './types';
@@ -107,6 +107,13 @@ export function useLifiEngine({
   // keeps confirming, refreshing balances and notifying after the dialog closes.
   const stage = useLifiTracker(statusTx, {
     onActivity: () => window.dispatchEvent(new Event('nf:activity-updated')),
+    // #62: awaited (capped) before the tracker shows 'done' — the destination
+    // chain's balances refresh FIRST, so "Done" never appears against a stale
+    // balance that looks like lost funds. Same pattern as CCTP's finish().
+    onArrival: async () => {
+      const destChain = registryChainOf(statusTx?.toChainId ?? -1);
+      if (destChain && destChain !== 'stellar') await refetchChain(destChain);
+    },
     onTerminal: (st) => {
       if (st === 'done')
         enqueueSnackbar(

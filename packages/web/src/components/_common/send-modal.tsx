@@ -9,6 +9,7 @@ import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { Horizon } from '@stellar/stellar-sdk';
 import { fCurrency } from '@/utils/format-number';
+import { usePendingOutflow } from '@/lib/spendable';
 import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
@@ -183,10 +184,17 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
 
   const xlmSubentriesForAdapter = xlmSubentries ?? undefined;
 
+  // #62: money committed to in-flight sends/swaps is not offerable, even
+  // while the displayed balance still includes it (it lags the chain by a
+  // few seconds). Derived live from the pending ledgers — never a store write.
+  const pendingOutflow = usePendingOutflow(adapter?.network, sendToken?.symbol);
+
   const spendableBalance = useMemo(() => {
     if (!sendToken || !adapter) return BigNumber(0);
-    return adapter.getSpendableBalance(sendToken, xlmSubentriesForAdapter);
-  }, [sendToken, adapter, xlmSubentriesForAdapter]);
+    const base = adapter.getSpendableBalance(sendToken, xlmSubentriesForAdapter);
+    const net = base.minus(pendingOutflow);
+    return net.gt(0) ? net : BigNumber(0);
+  }, [sendToken, adapter, xlmSubentriesForAdapter, pendingOutflow]);
 
   const coinAmount = useMemo(() => {
     if (!sendToken || !amount) return BigNumber(0);

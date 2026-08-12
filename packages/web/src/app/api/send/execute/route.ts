@@ -16,6 +16,7 @@ import {
   createPendingSend,
   INSUFFICIENT_MESSAGE,
   SEND_IN_FLIGHT_MESSAGE,
+  probeAndSettleUnsettledSend,
 } from '@/server/send-records';
 
 // ---------------------------------------------------------------------------
@@ -193,13 +194,22 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       );
     }
 
-    // The structural double-send guard (see header).
+    // The structural double-send guard (see header) — but SELF-CLEARING:
+    // before blocking, ask the chain about the earlier send right now. A
+    // confirmed/failed previous send settles inline and this one proceeds;
+    // only a genuinely-unknown outcome blocks.
     const inFlight = await findUnsettledSend(decoded.from, chain as SendChain);
     if (inFlight) {
-      return NextResponse.json(
-        { success: false, error: SEND_IN_FLIGHT_MESSAGE, txHash: inFlight.txHash },
-        { status: 409 }
-      );
+      const resolution = await probeAndSettleUnsettledSend({
+        ...inFlight,
+        chain: chain as SendChain,
+      });
+      if (resolution === 'wait') {
+        return NextResponse.json(
+          { success: false, error: SEND_IN_FLIGHT_MESSAGE, txHash: inFlight.txHash },
+          { status: 409 }
+        );
+      }
     }
 
     const cookieStore = await cookies();

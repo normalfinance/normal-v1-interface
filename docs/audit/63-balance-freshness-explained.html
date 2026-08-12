@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>63-balance-freshness-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>63 — Balance freshness (#62), explained for juniors</h1>
+<p>Branch: <code>fix/balance-freshness</code>. Design: <a href="62-balance-freshness-plan.md">62-balance-freshness-plan.md</a>.</p>
+<p>Both key design rules came from Niko's review of the first draft.</p>
+<h2>The two complaints, and the one root cause</h2>
+<ul>
+<li>A finished SOL send left the old balance on screen for "a few refreshes".</li>
+<li>A finished ETH→SOL swap briefly looked like the funds were lost.</li>
+</ul>
+<p>Both happened because we refreshed balances on <strong>timer guesses</strong> (instantly,</p>
+<p>+8s, +45s) instead of on the <strong>real signal</strong> ("the chain confirmed it"):</p>
+<ul>
+<li>The instant refresh runs before the chain confirms → it reads the OLD</li>
+</ul>
+<p>  balance → our server caches that stale answer AND starts its anti-abuse</p>
+<p>  cooldown → the +8s refresh gets served the stale cache → truth waits for</p>
+<p>  +45s. This was the 7th finding caused by a timer standing in for a signal.</p>
+<h2>Fix 1 — swaps: "Done" is not shown until the money is visible</h2>
+<p>Niko's rule: never display "Done" against a balance that hasn't caught up.</p>
+<ul>
+<li>When the bridge reports the swap delivered → we now refresh the</li>
+</ul>
+<p>  <strong>destination chain's</strong> balances FIRST → only then the modal flips to</p>
+<p>  Done.</p>
+<ul>
+<li>Safety valve: the wait is capped at 10 seconds. The funds ARE on-chain the</li>
+</ul>
+<p>  moment the bridge confirms — a hiccuping refresh must not make a</p>
+<p>  successful swap look stuck.</p>
+<ul>
+<li>We deliberately do NOT compare before/after balance numbers — slippage,</li>
+</ul>
+<p>  fees, and other transactions landing in between make that comparison lie.</p>
+<h2>Fix 2 — sends: refresh at the moment of confirmation, not on a timer</h2>
+<ul>
+<li>After a send broadcasts, a small watcher asks the chain directly (no</li>
+</ul>
+<p>  server, no cache, no cooldown): "confirmed yet?" — SOL answers in ~2</p>
+<p>  seconds, ETH in ~15–30. Hard caps (60s/90s), then it stops forever.</p>
+<ul>
+<li>The moment the chain says confirmed → ONE balance refresh fires — the one</li>
+</ul>
+<p>  moment a refresh is guaranteed to read the new number.</p>
+<ul>
+<li>The success message now also tells the truth about exchanges: we can see</li>
+</ul>
+<p>  funds arrive at the destination <strong>address</strong>; nobody can see Coinbase</p>
+<p>  credit its <strong>internal account</strong> — so we say it may take them a few extra</p>
+<p>  minutes. That's the honest maximum.</p>
+<h2>Fix 3 — MAX can never offer money that already left</h2>
+<p>Niko's catch: send SOL → the balance display lags a few seconds → open swap</p>
+<p>→ MAX would offer the pre-send balance → the chain would reject it with a</p>
+<p>confusing error.</p>
+<ul>
+<li>Every place that OFFERS money now computes</li>
+</ul>
+<p>  <strong>spendable = displayed balance − pending outflows</strong>, where pending</p>
+<p>  outflows come from ledgers we already keep: the pending-send rows and a</p>
+<p>  registry of in-flight swap source amounts.</p>
+<ul>
+<li>This is a pure calculation, recomputed every render — deliberately NOT an</li>
+</ul>
+<p>  optimistic write into the balance store, because stored fake numbers</p>
+<p>  fighting refreshes is exactly what caused the stuck-balance bugs (#52,</p>
+<p>  #55). Nothing stored → nothing can stick, clobber, or need reconciling.</p>
+<ul>
+<li>The display may lag a few seconds; the app can no longer OFFER committed</li>
+</ul>
+<p>  money. When the send confirms, the pending row clears and the adjustment</p>
+<p>  vanishes by itself.</p>
+<h2>Two follow-ups from Niko's live retest (same day)</h2>
+<ul>
+<li><strong>The swap row said "pending" after delivery.</strong> The server caches the</li>
+</ul>
+<p>  bridge status for 30 seconds, and the feed asked right when the swap</p>
+<p>  finished — so it was served the stale "PENDING". Now the tab that ran the</p>
+<p>  swap tells its own feed the terminal state directly (a session-local</p>
+<p>  override); the server cache catches up for everyone else within 30s.</p>
+<ul>
+<li>**"Previous send is still confirming" blocked a NEW send even though the</li>
+</ul>
+<p>  previous one was long confirmed.** The one-send-at-a-time guard only</p>
+<p>  unblocked when the background job settled the record — every 2 minutes in</p>
+<p>  production, and never on localhost. Now the guard checks the chain the</p>
+<p>  moment it trips: if the earlier send is confirmed or failed, it settles</p>
+<p>  the record right there and lets the new send through. Only a genuinely</p>
+<p>  unknown outcome still blocks — which is exactly the case the guard exists</p>
+<p>  for.</p>
+<h2>How to test (do → see)</h2>
+<ul>
+<li>Send SOL → balance updates within a couple of seconds of on-chain</li>
+</ul>
+<p>  confirmation, no manual refreshes.</p>
+<ul>
+<li>Immediately after sending, open swap and hit MAX on SOL → the offered</li>
+</ul>
+<p>  amount already excludes what you just sent.</p>
+<ul>
+<li>Do an ETH→SOL swap → the modal shows Done only once the SOL balance is</li>
+</ul>
+<p>  already updated — no "lost funds" moment.</p>
+<ul>
+<li>Send to Coinbase → success message notes the exchange may take a few</li>
+</ul>
+<p>  minutes; the pending badge in Activity clears when the chain confirms.</p>
+</body></html>
