@@ -178,6 +178,32 @@ model MoneyGramTransaction {
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+// #29 record-before-broadcast for native ETH/SOL sends. Row written (with the
+// pre-computable tx hash and, on EVM, the nonce) BEFORE the server broadcasts;
+// settled pending → submitted → confirmed/failed/abandoned by the route and
+// the cron reconciler. A non-terminal row blocks further sends on that
+// wallet+chain — the structural double-send guard. Not wired into activity
+// feeds (sends already surface via chain activity APIs + #47 pending rows).
+model SendLog {
+  id            String   @id @default(cuid())
+  walletAddress String
+  chain         String   // registry ChainId: 'ethereum' | 'solana'
+  symbol        String?
+  amount        String
+  destination   String
+  txHash        String?
+  nonce         Int?     // EVM only — the double-send key
+  status        String   @default("pending")
+  statusReason  String?
+  network       String?
+  createdAt     DateTime @default(now())
+
+  @@index([walletAddress])
+  @@index([status])
+  @@index([txHash])
+  @@map("send_logs")
+}
+
 model TurnkeyWallet {
   id              String   @id @default(cuid())
   supabaseUid     String   @unique

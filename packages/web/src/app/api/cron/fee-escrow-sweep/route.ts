@@ -7,6 +7,7 @@
 // packages/web/vercel.json. Same auth pattern as cctp-advance.
 import { NextResponse } from 'next/server';
 import { sweepFeeEscrow } from '@/server/fee-escrow';
+import { reconcileSendRecords } from '@/server/send-records';
 import {
   settleRecord,
   annotateRecord,
@@ -71,5 +72,9 @@ export async function GET(req: Request) {
   //    terminal state and that have no live escrow driving them (#27).
   const records = await reconcileTxRecords();
 
-  return NextResponse.json({ ...sweep, records });
+  // 4. Settle ETH/SOL send records the same way (#29) — this is also what
+  //    releases the one-send-at-a-time guard after an unknown outcome.
+  const sends = await reconcileSendRecords();
+
+  return NextResponse.json({ ...sweep, records, sends });
 }

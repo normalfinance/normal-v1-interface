@@ -27,7 +27,7 @@ reproduction · `input?` = parked on an open question.
 | 27 | 26 | Fee-first: fee signed before swap → fee lost if swap fails | correctness | 3·3·3 | code | **FIXED 2026-08-10**: sign-both-first + server escrow (see §#26 below, doc 55) | ✅ |
 | 25 | P0-1 | **[STRATEGIC]** Per-client fetching 7–30× over free tiers → the Layer-1 cache re-architecture | cost | 5·5·5 | math | server-fetch-once + event refresh (workstream B) | ✅ |
 | 24 | 28 | Savings has no XLM-fee preflight → mid-flow failure (June TODO) | UX/correctness | 2·3·2 | code | preflight XLM balance, warn upfront | ✅ |
-| **32** | 29 | ETH/SOL send: hardcoded 21000 gas breaks contract destinations; lost response can cause **double send** | correctness | **4**·2·2 | code | `estimateGas` + record-before-broadcast | ✅ |
+| **32** | 29 | ETH/SOL send: hardcoded 21000 gas breaks contract destinations; lost response can cause **double send** | correctness | **4**·2·2 | code | **FIXED 2026-08-12**: estimateGas + server funnel + one-unknown-at-a-time guard (§#29 below, doc 60) | ✅ |
 | ~~24~~ | ~~21~~ | ~~cctp-advance overlap~~ — **CLEARED**: proper compare-and-swap guards, cannot double-mint | — | — | code | none needed ✅ | — |
 | 20 | 23 | dune-sync clear-then-insert → dashboard empty ≤4h on failed insert | integrity | 2·2·1 | code | insert-then-swap, or transactional | ✅ |
 | 18 | 8 | CCTP relayer (money-moving) on viem DEFAULT public RPCs | reliability | 3·2·3 | code | pin a dedicated RPC endpoint | ✅ |
@@ -691,3 +691,29 @@ ORDER matters: SQL first, code second.
 Design doc 58; 12 new tests (149 total). Unlocks #53 (chart from recorded
 history) and lays the record-before-broadcast rail #29's ETH double-send
 fix rides next.
+
+## #29 — ETH/SOL send safety (FIXED 2026-08-12, branch fix/send-safety)
+
+The last known silent-loss path. Two defects, both live-verified in code:
+hardcoded `gas: 21000n` made any send to a CONTRACT destination (exchange
+deposit contracts, smart wallets) revert with the fee burned; and a lost
+response after node acceptance showed "failed" while the send was live — a
+retry read a FRESH pending nonce (ETH) / new blockhash (SOL), producing a
+second valid transaction: double send, with no server record to even notice.
+
+FIX (doc 60): (1) `estimateGas` before signing — contracts get real gas,
+estimation-reverts block the send BEFORE any fee with an actionable message;
+plus an honest amount+fee>balance preflight. (2) New `send_logs` table +
+`/api/send/execute`: the client still signs with the passkey (custody
+unchanged), the server decodes the SIGNED tx, cross-checks claimed
+amount/destination against it, verifies the embedded sender is the user's
+turnkey wallet, writes the row (with pre-computed tx hash + EVM nonce)
+BEFORE broadcasting — then relays, like broadcast-btc always did. (3) The
+structural double-send guard: any non-terminal send on that wallet+chain →
+409 "still confirming"; the #27 cron reconciler settles unknowns from the
+chain (EVM receipts / SOL signature status; abandon windows 30/10 min) which
+releases the guard. Broadcast-error classifier is deliberately conservative:
+only definitive rejections mark 'failed'; "already known" counts as
+ACCEPTED; ambiguity stays 'unknown' so a live tx is never labeled failed.
+Carve-in: LI.FI EVM leg estimates gas if a quote ever omits gasLimit.
+9 new tests (158 total). Wave 3 money-correctness: COMPLETE.
