@@ -6,6 +6,14 @@ import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
+import { inspectRateLimit, withRateLimitRetry } from '@/server/defindex';
+
+// A cold savings load bursts ~5 DeFindex calls and their limit is per second;
+// a user clicking deposit/withdraw right after page load could land inside
+// that window and get DeFindex's raw "Rate limit exceeded" as a tech error
+// (observed live 2026-08-12 on withdraw). The retry self-heals the transient
+// case; this message covers the rare double-429 in language a user can act on.
+const BUSY_MESSAGE = 'Savings is busy for a moment. Please wait a few seconds and try again.';
 
 // ----------------------------------------------------------------------
 
@@ -68,12 +76,16 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     const padded = frac.padEnd(7, '0').slice(0, 7);
     const amountInStroops = BigInt(whole) * BigInt(10_000_000) + BigInt(padded);
 
-    const result = await sdk.depositToVault(VAULT_ADDRESS, {
-      amounts: [Number(amountInStroops)],
-      caller,
-      invest: true,
-      slippageBps: 100, // 1% slippage
-    });
+    const result = await withRateLimitRetry(
+      () =>
+        sdk.depositToVault(VAULT_ADDRESS, {
+          amounts: [Number(amountInStroops)],
+          caller,
+          invest: true,
+          slippageBps: 100, // 1% slippage
+        }),
+      'depositToVault'
+    );
 
     if (!result.xdr) {
       return NextResponse.json(
@@ -88,6 +100,9 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     });
   } catch (error: any) {
     console.error('Deposit error:', error);
+    if (inspectRateLimit(error).isRateLimited) {
+      return NextResponse.json({ success: false, error: BUSY_MESSAGE }, { status: 429 });
+    }
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to build deposit transaction' },
       { status: 500 }
