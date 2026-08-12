@@ -94,6 +94,13 @@
 <li><strong>Statuspage (#18):</strong> a widget polling an unowned status account twice a</li>
 </ul>
 <p>  minute, forever, for every user. Deleted.</p>
+<h2>7. Rider: the font-loading warning (from Niko's console review)</h2>
+<p>The layout loaded the font stylesheet with an old raw-HTML trick</p>
+<p>(<code>media="print"</code> + a string <code>onLoad</code>) meant to make it non-blocking. React</p>
+<p>refuses string event handlers — it warned on every page load in dev AND</p>
+<p>never attached the handler, so the trick was dead weight. Replaced with a</p>
+<p>plain stylesheet link; <code>display=swap</code> in the font URL already prevents</p>
+<p>invisible text, which is all the trick was for.</p>
 <h2>How to test (do → see)</h2>
 <ol>
 <li>Open DevTools → Network → do anything (load portfolio, open savings) →</li>

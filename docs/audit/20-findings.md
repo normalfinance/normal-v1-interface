@@ -795,3 +795,10 @@ Three fixes, two of them Niko's design corrections:
 - **#18 — FIXED**: Statuspage loader deleted (ExternalProvider removed from
   the layout tree; module removed from @normalfinance/utils). No more
   2×/min polling for a status account nobody owns.
+- **Rider (Niko's console review):** the layout's font link used the raw-HTML
+  media="print"+string-onLoad async trick — React never attaches string
+  handlers (the repeated dev warning) so it was dead weight; replaced with a
+  plain stylesheet link (display=swap already covers no-invisible-text).
+- **#34 (separate staging DB): DECLINED by Niko 2026-08-12** — staging stays
+  on the production database by his decision; Phase 5 load-testing scope
+  must avoid prod-data writes accordingly.
