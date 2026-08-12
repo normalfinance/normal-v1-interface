@@ -4,6 +4,7 @@
 // even when nobody has the app open. Registered in packages/web/vercel.json.
 import { NextResponse } from 'next/server';
 import { advancePendingTransfers } from '@/lib/cctp/state';
+import { recordCronHeartbeat } from '@/server/cron-heartbeat';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -19,5 +20,6 @@ export async function GET(req: Request) {
   }
 
   const result = await advancePendingTransfers();
-  return NextResponse.json(result);
+  const heartbeat = await recordCronHeartbeat('cctp-advance');
+  return NextResponse.json({ ...result, heartbeat });
 }

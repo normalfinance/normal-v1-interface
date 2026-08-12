@@ -763,3 +763,35 @@ Three fixes, two of them Niko's design corrections:
    the chain inline when the guard trips; a confirmed/failed earlier send
    settles on the spot and the new send proceeds; only a genuinely-unknown
    outcome still blocks. 3 more tests (174 total).
+
+## Capacity quick-wins batch (2026-08-12, branch chore/capacity-quickwins, doc 64)
+
+- **#19 — CORRECTION: was already fixed.** Recon for this batch found
+  `getAuthenticatedUser` already cached (30s TTL + 5s negative), in-flight
+  deduplicated, digest-keyed, size-capped, AND timeout-raced — implemented
+  during the withAuth sweep. Register row stands corrected; no new code.
+- **#13 — FIXED**: `skipTrailingSlashRedirect: true` next to the existing
+  `trailingSlash: true`. Every `/api` fetch (clients call slash-less, config
+  canonicalizes to slashed) paid a 308 + second round trip — now served
+  directly. Internal page links still generate slashed URLs (canonical
+  behavior unchanged); externally-typed slash-less page URLs now serve
+  content instead of redirecting (accepted residual). Verified EMPIRICALLY:
+  prod-server curl matrix — API 200 on both forms, no 308.
+- **Cron heartbeat — NEW**: `server/cron-heartbeat.ts`; all 3 cron routes
+  stamp `cron:heartbeat:<name>` in Redis (7d TTL) + echo it in their JSON.
+  Silent cron death is now a 5-second Upstash lookup.
+- **RPC fallback for send probes — NEW**: probes try the configured RPC
+  then a public fallback (deduped). Also fixed a latent probe bug: the EVM
+  probe swallowed TRANSPORT errors as "not found", which could have let a
+  dead RPC escalate to a false 'abandoned' — transport now rethrows
+  (fallback runs), only a real no-receipt answer counts as not-found.
+- **#36 — FIXED**: ADMIN_SECRET bypass deleted from wallets/link
+  (unreachable behind withAuth; dead security code invites a future
+  "fix" into a live backdoor). Stale mention scrubbed from with-auth.ts.
+  Niko: delete ADMIN_SECRET from Vercel env.
+- **#31 — FIXED**: Onramper config + NEXT_PUBLIC_ONRAMPER_API_KEY +
+  utils/checkout.ts deleted (only caller was a commented line). Niko:
+  delete the env var from Vercel.
+- **#18 — FIXED**: Statuspage loader deleted (ExternalProvider removed from
+  the layout tree; module removed from @normalfinance/utils). No more
+  2×/min polling for a status account nobody owns.

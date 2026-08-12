@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>65-capacity-quickwins-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>65 — Capacity quick-wins, explained for juniors</h1>
+<p>Branch: <code>chore/capacity-quickwins</code>. Design: <a href="64-capacity-quickwins-plan.md">64-capacity-quickwins-plan.md</a>.</p>
+<h2>The theme</h2>
+<p>The money-correctness work is done. This batch makes the app cheaper per</p>
+<p>user, harder to silently break, and smaller in attack surface — six small</p>
+<p>items, each independently safe.</p>
+<h2>1. Every API call was two API calls (#13)</h2>
+<ul>
+<li>The app's config says URLs end with a slash (<code>/api/thing/</code>), but our code</li>
+</ul>
+<p>  fetches without one (<code>/api/thing</code>).</p>
+<ul>
+<li>Cause and effect: every single API request → server answers "wrong URL,</li>
+</ul>
+<p>  go to /api/thing/" (a 308 redirect) → the browser sends the request AGAIN</p>
+<p>  → double the round trips, double the latency, double the request volume,</p>
+<p>  on every interaction, for every user.</p>
+<ul>
+<li>Fix: one config line (<code>skipTrailingSlashRedirect</code>) — the server now</li>
+</ul>
+<p>  answers both forms directly. Internal page links are untouched.</p>
+<ul>
+<li>We didn't trust the docs: we built the app, started a production server,</li>
+</ul>
+<p>  and curled both URL forms — API answers 200 directly on both, no</p>
+<p>  redirect hop.</p>
+<h2>2. Auth timeout (#19) — turned out to be already done</h2>
+<p>The register said "auth verification has no timeout, one slow Supabase</p>
+<p>minute hangs every route." Recon showed it was fixed during the withAuth</p>
+<p>sweep: verification is cached 30s, deduplicated, and timeout-raced. Lesson</p>
+<p>worth keeping: **verify the register against the code before doing the</p>
+<p>work** — we corrected the books instead of redoing a fix.</p>
+<h2>3. Crons now prove they're alive</h2>
+<ul>
+<li>Your question from this week: "cron jobs sometimes fail — how would we</li>
+</ul>
+<p>  know?" Answer before today: we wouldn't, until a user hit something.</p>
+<ul>
+<li>Now every cron run stamps a timestamp in Redis (<code>cron:heartbeat:&lt;name&gt;</code>)</li>
+</ul>
+<p>  and echoes it in its response. "Are the crons alive?" is a 5-second</p>
+<p>  lookup in Upstash.</p>
+<h2>4. The send guard got a second opinion</h2>
+<ul>
+<li>The "is your previous send settled?" check asks the blockchain through</li>
+</ul>
+<p>  one RPC endpoint. If that endpoint hiccuped → conservative "still</p>
+<p>  confirming" even for a confirmed send.</p>
+<ul>
+<li>Now it tries a second, independent endpoint before giving up.</li>
+<li>Bonus bug found while wiring it: the Ethereum probe treated a DEAD RPC</li>
+</ul>
+<p>  the same as "transaction not found" — which, for an old record, could</p>
+<p>  have been escalated to "abandoned" (a lying record). A transport failure</p>
+<p>  now clearly says "I couldn't check" instead of "it doesn't exist."</p>
+<h2>5–6. Three deletions</h2>
+<ul>
+<li><strong>Admin backdoor code (#36):</strong> a rate-limit bypass keyed on ADMIN_SECRET</li>
+</ul>
+<p>  sat in wallets/link. It was provably unreachable (the auth wrapper</p>
+<p>  rejects anything that isn't a real session before the check could run) —</p>
+<p>  but dead security code is how future refactors accidentally create live</p>
+<p>  backdoors. Deleted.</p>
+<ul>
+<li><strong>Onramper (#31):</strong> an API key shipped to every browser for a service</li>
+</ul>
+<p>  that's been commented out for months. An unused credential is pure</p>
+<p>  liability. Deleted (the Vercel env var too — Niko's step).</p>
+<ul>
+<li><strong>Statuspage (#18):</strong> a widget polling an unowned status account twice a</li>
+</ul>
+<p>  minute, forever, for every user. Deleted.</p>
+<h2>How to test (do → see)</h2>
+<ol>
+<li>Open DevTools → Network → do anything (load portfolio, open savings) →</li>
+</ol>
+<p>   each <code>/api/...</code> request appears ONCE with status 200 — before this you'd</p>
+<p>   see pairs: a 308 followed by the real call.</p>
+<ol>
+<li>App works exactly as before — sends, swaps, savings, MoneyGram — because</li>
+</ol>
+<p>   nothing user-facing changed except the redirect hop.</p>
+<ol>
+<li>In Upstash → <code>cron:heartbeat:fee-escrow-sweep</code> (staging/prod only —</li>
+</ol>
+<p>   localhost has no crons) → a timestamp under 2 minutes old.</p>
+<ol>
+<li>Nothing references Onramper or Statuspage anymore: DevTools Network on a</li>
+</ol>
+<p>   fresh load shows no <code>statuspage.io</code> request.</p>
+</body></html>

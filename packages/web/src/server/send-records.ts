@@ -133,10 +133,7 @@ export async function probeAndSettleUnsettledSend(row: {
 }): Promise<'settled' | 'wait'> {
   if (!row.txHash) return 'wait';
   try {
-    const probe =
-      row.chain === 'ethereum'
-        ? await probeEvmTx(rpcUrlFor(row.chain), row.txHash)
-        : await probeSolSig(rpcUrlFor(row.chain), row.txHash);
+    const probe = await probeWithFallback(row.chain, row.txHash);
 
     const decision = decideRecordSettlement(
       probe,
@@ -200,9 +197,15 @@ async function probeEvmTx(rpcUrl: string, hash: string): Promise<Probe> {
   try {
     const receipt = await client.getTransactionReceipt({ hash: hash as `0x${string}` });
     return { state: 'found', successful: receipt.status === 'success' };
-  } catch {
-    // viem throws TransactionReceiptNotFoundError while pending/unknown.
-    return { state: 'not_found' };
+  } catch (err: unknown) {
+    // Only a REAL "no receipt" answer means not-found. A transport error must
+    // rethrow (#64): swallowing it as not_found let a dead RPC read as "tx
+    // never existed" — which the reconciler could escalate to a false
+    // 'abandoned' — and it also has to bubble so the fallback endpoint runs.
+    if ((err as { name?: string })?.name === 'TransactionReceiptNotFoundError') {
+      return { state: 'not_found' };
+    }
+    throw err;
   }
 }
 
@@ -223,10 +226,36 @@ async function probeSolSig(rpcUrl: string, signature: string): Promise<Probe> {
 
 const RECONCILE_MIN_AGE_MS = 60_000;
 
-function rpcUrlFor(chain: SendChain): string {
-  return chain === 'ethereum'
-    ? (process.env.NEXT_PUBLIC_ETH_RPC_URL ?? 'https://ethereum-rpc.publicnode.com')
-    : (process.env.NEXT_PUBLIC_SOL_RPC_URL ?? 'https://api.mainnet-beta.solana.com');
+const PUBLIC_FALLBACK: Record<SendChain, string> = {
+  ethereum: 'https://ethereum-rpc.publicnode.com',
+  solana: 'https://api.mainnet-beta.solana.com',
+};
+
+/**
+ * Configured endpoint first, public fallback second (deduped). A probe that
+ * fails on the primary keeps the one-send-at-a-time guard conservative
+ * (409) — trying a second endpoint shrinks that window (#64). Exported for
+ * tests.
+ */
+export function rpcCandidatesFor(chain: SendChain): string[] {
+  const configured =
+    chain === 'ethereum'
+      ? process.env.NEXT_PUBLIC_ETH_RPC_URL
+      : process.env.NEXT_PUBLIC_SOL_RPC_URL;
+  const fallback = PUBLIC_FALLBACK[chain];
+  return configured && configured !== fallback ? [configured, fallback] : [fallback];
+}
+
+async function probeWithFallback(chain: SendChain, txHash: string) {
+  let lastError: unknown;
+  for (const url of rpcCandidatesFor(chain)) {
+    try {
+      return chain === 'ethereum' ? await probeEvmTx(url, txHash) : await probeSolSig(url, txHash);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
 }
 
 export async function reconcileSendRecords(): Promise<{ scanned: number; settled: number }> {
@@ -241,10 +270,7 @@ export async function reconcileSendRecords(): Promise<{ scanned: number; settled
     if (!row.txHash || (row.chain !== 'ethereum' && row.chain !== 'solana')) continue;
     const chain = row.chain as SendChain;
     try {
-      const probe =
-        chain === 'ethereum'
-          ? await probeEvmTx(rpcUrlFor(chain), row.txHash)
-          : await probeSolSig(rpcUrlFor(chain), row.txHash);
+      const probe = await probeWithFallback(chain, row.txHash);
 
       const decision = decideRecordSettlement(
         probe,

@@ -13,7 +13,6 @@ const LinkWalletSchema = z.object({
     .min(1, 'Wallet address is required')
     .regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
   walletName: z.string().max(50, 'Wallet name must be 50 characters or less').optional(),
-  userId: z.string().uuid().optional(), // Required for admin requests
 });
 
 const UpdateWalletSchema = z.object({
@@ -26,18 +25,20 @@ const UpdateWalletSchema = z.object({
 
 /**
  * POST /api/wallets/link
- * Link a wallet to the authenticated user's account
- * Admin can bypass rate limits by using ADMIN_SECRET and providing userId in body
+ * Link a wallet to the authenticated user's account.
+ *
+ * #36 (removed 2026-08-12): an ADMIN_SECRET rate-limit bypass used to live
+ * here — provably unreachable, because withAuth rejects any bearer token
+ * that is not a valid Supabase session BEFORE the comparison could run.
+ * Dead security code invites someone to "fix" it into a live backdoor, so
+ * it is gone rather than documented.
  */
-export const POST = withAuth(async (request: NextRequest, { user, accessToken }) => {
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   try {
-    // Check if admin bypass (admin_secret as auth token)
-    const isAdminRequest = accessToken === process.env.ADMIN_SECRET;
     const isDev = process.env.NODE_ENV === 'development';
     const isTestnet = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() !== 'mainnet';
     const forceRateLimit = process.env.FORCE_RATE_LIMIT === 'true';
 
-    // Parse and validate request body first (needed for admin userId)
     const body = await request.json();
     const validation = LinkWalletSchema.safeParse(body);
 
@@ -48,57 +49,34 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
       );
     }
 
-    const { walletAddress, walletName, userId: adminProvidedUserId } = validation.data;
+    const { walletAddress, walletName } = validation.data;
+    const userId = user.id;
 
-    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    // if (isLinked) {
-    //   return NextResponse.json({ error: 'Wallet already linked' }, { status: 409 });
-    // }
-
-    let userId: string;
-
-    if (isAdminRequest) {
-      // Admin request: require userId in body
-      if (!adminProvidedUserId) {
-        return NextResponse.json(
-          { error: 'Admin requests require userId in request body' },
-          { status: 400 }
-        );
-      }
-      userId = adminProvidedUserId;
-      logger.log('[API /wallets/link] Admin bypass for user:', {
-        userId: userId.substring(0, 8) + '...',
-      });
-    } else {
-      // Normal request: authenticate user
-      userId = user.id;
-
-      // Check rate limit for non-admin requests (skipped on dev/testnet unless FORCE_RATE_LIMIT=true)
-      if ((!isDev && !isTestnet) || forceRateLimit) {
-        const rateLimitResult = await faucetRateLimiter.reserve(userId);
-        if (rateLimitResult.degraded) {
-          logger.warn('[API /wallets/link] Rate limiter unavailable, allowing wallet creation:', {
-            userId: userId.substring(0, 8) + '...',
-          });
-        }
-        if (!rateLimitResult.success) {
-          logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
-            userId: userId.substring(0, 8) + '...',
-            reset: rateLimitResult.reset,
-          });
-          return NextResponse.json(
-            {
-              error: 'You can only create 3 wallets per day. Try again tomorrow.',
-              reset: rateLimitResult.reset,
-            },
-            { status: 429 }
-          );
-        }
-      } else {
-        logger.log('[API /wallets/link] Dev/testnet mode: skipping rate limit', {
+    // Rate limit (skipped on dev/testnet unless FORCE_RATE_LIMIT=true)
+    if ((!isDev && !isTestnet) || forceRateLimit) {
+      const rateLimitResult = await faucetRateLimiter.reserve(userId);
+      if (rateLimitResult.degraded) {
+        logger.warn('[API /wallets/link] Rate limiter unavailable, allowing wallet creation:', {
           userId: userId.substring(0, 8) + '...',
         });
       }
+      if (!rateLimitResult.success) {
+        logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
+          userId: userId.substring(0, 8) + '...',
+          reset: rateLimitResult.reset,
+        });
+        return NextResponse.json(
+          {
+            error: 'You can only create 3 wallets per day. Try again tomorrow.',
+            reset: rateLimitResult.reset,
+          },
+          { status: 429 }
+        );
+      }
+    } else {
+      logger.log('[API /wallets/link] Dev/testnet mode: skipping rate limit', {
+        userId: userId.substring(0, 8) + '...',
+      });
     }
 
     // Link the wallet

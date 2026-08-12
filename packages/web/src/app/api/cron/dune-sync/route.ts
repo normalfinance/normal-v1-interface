@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { duneClear, duneInsert } from '@/lib/dune/client';
 import { fetchSupabaseUsers } from '@/services/supabase-sync';
+import { recordCronHeartbeat } from '@/server/cron-heartbeat';
 import {
   fetchSavingsVolume,
   fetchVaultSnapshots,
@@ -125,5 +126,6 @@ export async function GET(req: Request) {
     results.transaction_log = `ERROR: ${e.message}`;
   }
 
-  return NextResponse.json({ ok: true, results });
+  const heartbeat = await recordCronHeartbeat('dune-sync');
+  return NextResponse.json({ ok: true, results, heartbeat });
 }

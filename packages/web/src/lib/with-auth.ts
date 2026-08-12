@@ -34,8 +34,7 @@ export interface AuthedContext {
   /** Dynamic segment params for routes like /api/thing/[id]. Empty object on
    *  static routes, so `params.id` reads cleanly where the segment exists. */
   params: Record<string, string>;
-  /** The raw bearer token, for the rare route that needs it beyond auth
-   *  (e.g. wallets/link compares it against ADMIN_SECRET). */
+  /** The raw bearer token, for the rare route that needs it beyond auth. */
   accessToken: string | undefined;
 }
 
