@@ -82,10 +82,42 @@ export function createEthereumAdapter(
         const to = params.destination as `0x${string}`;
         const value = parseEther(params.amount);
 
+        // Ask the network what this exact send costs instead of assuming a
+        // wallet-to-wallet transfer (#29). A plain wallet still answers
+        // 21000; a CONTRACT destination (most exchange deposit addresses,
+        // every smart wallet) answers its real cost — the old hardcoded
+        // 21000 made those sends revert with the fee burned. An estimation
+        // REVERT means the address cannot accept plain ETH at all — block
+        // BEFORE any signature or fee is spent.
+        let gasEstimate: bigint;
+        try {
+          gasEstimate = await client.estimateGas({ account: from, to, value });
+        } catch {
+          throw new Error(
+            'This address cannot accept ETH directly. Double-check the destination — if it is an exchange, use its ETH deposit address, not a contract address.'
+          );
+        }
+        const gas = (gasEstimate * 12n) / 10n; // 20% headroom
+
         const [nonce, fees] = await Promise.all([
           client.getTransactionCount({ address: from, blockTag: 'pending' }),
           client.estimateFeesPerGas(),
         ]);
+
+        // Honest MAX: fail with a number the user can act on, not a node error.
+        try {
+          const balanceWei = parseEther(params.token.balance);
+          const feeWei = gas * fees.maxFeePerGas;
+          if (value + feeWei > balanceWei) {
+            const shortEth = Number(value + feeWei - balanceWei) / 1e18;
+            throw new Error(
+              `Amount plus network fee exceeds your balance. Reduce the amount by about ${shortEth.toFixed(6)} ETH.`
+            );
+          }
+        } catch (balanceErr: any) {
+          if (balanceErr?.message?.startsWith('Amount plus network fee')) throw balanceErr;
+          // Unparseable balance string — let the node be the judge.
+        }
 
         const unsigned = serializeTransaction({
           chainId: viemChain.id,
@@ -93,7 +125,7 @@ export function createEthereumAdapter(
           nonce,
           to,
           value,
-          gas: 21000n,
+          gas,
           maxFeePerGas: fees.maxFeePerGas,
           maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
         });
@@ -126,9 +158,29 @@ export function createEthereumAdapter(
         if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
 
         const rawTx = signedTx.startsWith('0x') ? signedTx : `0x${signedTx}`;
-        const txHash = await client.sendRawTransaction({
-          serializedTransaction: rawTx as `0x${string}`,
+
+        // Broadcast through the server funnel (#29): the signed tx is
+        // recorded BEFORE broadcast, the server relays it (like BTC), and a
+        // previous send with an unknown outcome blocks this one (409) — the
+        // structural double-send guard. Custody unchanged: the tx above is
+        // already fully signed by the passkey.
+        const { buildAuthHeaders } = await import('@/utils/http');
+        const res = await fetch('/api/send/execute', {
+          method: 'POST',
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chain: chainId,
+            signedTx: rawTx,
+            symbol: 'ETH',
+            amount: params.amount,
+            destination: params.destination,
+          }),
         });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.success) {
+          throw new Error(data?.error || 'Send failed. Please try again.');
+        }
+        const txHash: string = data.txHash;
 
         // Pending row + cache-bypassed refresh. On Ethereum the row also
         // covers Etherscan's indexing lag, which can run minutes behind an

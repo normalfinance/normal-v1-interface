@@ -115,9 +115,28 @@ export function createSolanaAdapter(
         tx.addSignature(fromPubkey, Buffer.from(signature));
         if (!tx.verifySignatures()) throw new Error('Signature verification failed');
 
-        const txid = await connection.sendRawTransaction(tx.serialize(), {
-          skipPreflight: false,
+        // Broadcast through the server funnel (#29): the signed tx is
+        // recorded BEFORE broadcast, the server relays it (like BTC), and a
+        // previous send with an unknown outcome blocks this one (409) — the
+        // structural double-send guard. Custody unchanged: the tx above is
+        // already fully signed by the passkey.
+        const { buildAuthHeaders } = await import('@/utils/http');
+        const res = await fetch('/api/send/execute', {
+          method: 'POST',
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chain: 'solana',
+            signedTx: Buffer.from(tx.serialize()).toString('base64'),
+            symbol: 'SOL',
+            amount: params.amount,
+            destination: params.destination,
+          }),
         });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.success) {
+          throw new Error(data?.error || 'Send failed. Please try again.');
+        }
+        const txid: string = data.txHash;
 
         // Pending row + cache-bypassed refresh (see lib/tx-events.ts).
         announceTransaction({

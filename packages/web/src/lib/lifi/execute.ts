@@ -97,13 +97,24 @@ async function executeEvm(
     blockTag: 'pending',
   });
 
+  // LI.FI always sends gasLimit today, but a missing one would otherwise
+  // broadcast with gas 0 and fail — estimate live as the fallback (#29).
+  const gas = tx.gasLimit
+    ? BigInt(tx.gasLimit)
+    : await client.estimateGas({
+        account: ethereumAddress as `0x${string}`,
+        to: tx.to as `0x${string}`,
+        value: BigInt(tx.value ?? '0'),
+        data: tx.data as `0x${string}`,
+      });
+
   const common = {
     chainId: tx.chainId ?? mainnet.id,
     nonce,
     to: tx.to as `0x${string}`,
     value: BigInt(tx.value ?? '0'),
     data: tx.data as `0x${string}`,
-    gas: BigInt(tx.gasLimit ?? '0'),
+    gas,
   };
 
   // LI.FI's quoted gas price can be stale by the time the user approves the
