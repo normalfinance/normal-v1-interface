@@ -108,7 +108,15 @@ const SendReview: React.FC<SendReviewProps> = ({
         if (isBtc && onBtcSendSuccess) {
           onBtcSendSuccess(txHash);
         } else {
-          enqueueSnackbar(t('Transaction sent successfully'), { variant: 'success' });
+          // #62 honesty: on-chain delivery is visible (the pending badge
+          // flips when confirmed); an exchange crediting its own internal
+          // ledger never is — say so, once, here.
+          enqueueSnackbar(
+            t(
+              'Sent. If the destination is an exchange, it can take a few extra minutes to appear in your account there.'
+            ),
+            { variant: 'success', autoHideDuration: 7000 }
+          );
           onClose();
         }
       }

@@ -195,6 +195,17 @@ export function createEthereumAdapter(
           },
         });
 
+        // #62: fire ONE more refresh at the exact moment the chain confirms —
+        // that is when a balance read is guaranteed fresh (the timer shots
+        // above race the chain and the server cache floor).
+        void import('@/lib/send-confirmation').then(({ watchSendConfirmation }) =>
+          watchSendConfirmation('ethereum', txHash, () => {
+            void import('@/lib/tx-events').then(({ announceConfirmation }) =>
+              announceConfirmation('ethereum')
+            );
+          })
+        );
+
         return txHash;
       } catch (err: any) {
         const msg: string = err?.shortMessage ?? err?.message ?? 'Ethereum transaction failed';
