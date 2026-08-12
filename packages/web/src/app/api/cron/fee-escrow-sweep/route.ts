@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { sweepFeeEscrow } from '@/server/fee-escrow';
 import { reconcileSendRecords } from '@/server/send-records';
+import { recordCronHeartbeat } from '@/server/cron-heartbeat';
 import {
   settleRecord,
   annotateRecord,
@@ -76,5 +77,6 @@ export async function GET(req: Request) {
   //    releases the one-send-at-a-time guard after an unknown outcome.
   const sends = await reconcileSendRecords();
 
-  return NextResponse.json({ ...sweep, records, sends });
+  const heartbeat = await recordCronHeartbeat('fee-escrow-sweep');
+  return NextResponse.json({ ...sweep, records, sends, heartbeat });
 }

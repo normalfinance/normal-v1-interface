@@ -206,14 +206,6 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
     }
   };
 
-  /** Onramper */
-  // const onramperUrl = createOnramperURL(CONFIG.onramper.apiKey, {
-  //   amountUsd: amount,
-  //   tokenSymbol: 'USDC',
-  //   walletAddress,
-  //   fiat: 'USD',
-  // });
-
   /** Stripe */
   const stripeUrl = createStripeURL(amount, asset.symbol.toLowerCase(), asset.blockchain);
 

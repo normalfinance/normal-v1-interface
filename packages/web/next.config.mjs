@@ -24,6 +24,12 @@ const nextConfig = {
     ],
   },
   trailingSlash: true,
+  // #13: clients fetch '/api/...' slash-less while trailingSlash canonicalizes
+  // to '/api/.../' — so EVERY API call paid a 308 redirect + second round trip.
+  // Skipping the redirect serves both forms directly (verified empirically:
+  // docs/audit/64). Internal links still generate slashed URLs, so page
+  // canonical behavior is unchanged.
+  skipTrailingSlashRedirect: true,
   env: {
     BUILD_STATIC_EXPORT: isStaticExport,
     NEXT_PUBLIC_APP_VERSION: version,

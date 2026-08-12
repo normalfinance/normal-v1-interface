@@ -13,7 +13,6 @@ import { I18nProvider } from '@/locales/i18n-provider';
 import { ModalProvider } from '@/providers/ModalProvider';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ReferralProvider } from '@/providers/ReferralProvider';
-import { ExternalProvider } from '@/providers/ExternalProvider';
 import { AssetActionsProvider } from '@/providers/AssetActionsProvider';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
 import { SupabaseAuthProvider } from '@/providers/SupabaseAuthProvider';
@@ -104,7 +103,11 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
-        {/* Non-blocking font load — does not delay first paint */}
+        {/* Font stylesheet. The old media="print" + onLoad="this.media='all'"
+            async trick was written for raw HTML — React refuses string event
+            handlers (the console warning on every page load) and never
+            attached it, so the trick was dead weight. A plain link with
+            display=swap gives the same no-invisible-text behavior. */}
         <link
           rel="preload"
           as="style"
@@ -113,9 +116,6 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         <link
           rel="stylesheet"
           href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap"
-          media="print"
-          // @ts-expect-error — onLoad on link is valid HTML but not in React types
-          onLoad="this.media='all'"
         />
       </head>
       <body>
@@ -137,29 +137,27 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   modeStorageKey={themeConfig.modeStorageKey}
                 >
                   <SupabaseAuthProvider>
-                    <ExternalProvider>
-                      <ReferralProvider>
-                        <MotionLazy>
-                          <SnackbarProvider>
-                            <Analytics />
-                            {/* Collect-only real-user performance vitals (Phase 0
+                    <ReferralProvider>
+                      <MotionLazy>
+                        <SnackbarProvider>
+                          <Analytics />
+                          {/* Collect-only real-user performance vitals (Phase 0
                                   baseline — approved 2026-07-24). */}
-                            <SpeedInsights />
-                            <ProgressBar />
-                            <SettingsDrawer defaultSettings={defaultSettings} />
-                            <AnnouncementProvider>
-                              <WalletPasswordProvider>
-                                <ModalProvider>
-                                  <AssetActionsProvider>
-                                    <DashboardLayout>{children}</DashboardLayout>
-                                  </AssetActionsProvider>
-                                </ModalProvider>
-                              </WalletPasswordProvider>
-                            </AnnouncementProvider>
-                          </SnackbarProvider>
-                        </MotionLazy>
-                      </ReferralProvider>
-                    </ExternalProvider>
+                          <SpeedInsights />
+                          <ProgressBar />
+                          <SettingsDrawer defaultSettings={defaultSettings} />
+                          <AnnouncementProvider>
+                            <WalletPasswordProvider>
+                              <ModalProvider>
+                                <AssetActionsProvider>
+                                  <DashboardLayout>{children}</DashboardLayout>
+                                </AssetActionsProvider>
+                              </ModalProvider>
+                            </WalletPasswordProvider>
+                          </AnnouncementProvider>
+                        </SnackbarProvider>
+                      </MotionLazy>
+                    </ReferralProvider>
                   </SupabaseAuthProvider>
                 </ThemeProvider>
               </AppRouterCacheProvider>
