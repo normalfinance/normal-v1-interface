@@ -55,6 +55,32 @@ describe('reconcileTotalDeposited (#55)', () => {
     expect(result).toEqual({ total: 70, pendingCount: 1 });
   });
 
+  it('non-confirmed rows are ignored (#27) — pending/failed money never counts', () => {
+    const result = reconcileTotalDeposited({
+      eventsTotal: 100,
+      eventTxIds: [],
+      rows: [
+        {
+          type: 'deposit',
+          amount: '5',
+          txHash: 'p1',
+          createdAt: secondsAgo(10),
+          status: 'pending',
+        },
+        { type: 'deposit', amount: '5', txHash: 'f1', createdAt: secondsAgo(10), status: 'failed' },
+        {
+          type: 'deposit',
+          amount: '5',
+          txHash: 'c1',
+          createdAt: secondsAgo(10),
+          status: 'confirmed',
+        },
+      ],
+      nowMs: NOW,
+    });
+    expect(result).toEqual({ total: 105, pendingCount: 1 });
+  });
+
   it('rows without a tx hash are ignored — they could only ever double-count', () => {
     const result = reconcileTotalDeposited({
       eventsTotal: 100,

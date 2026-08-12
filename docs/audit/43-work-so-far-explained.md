@@ -17,6 +17,7 @@ deeper only where you need to:
 | `53-component-tests-explained.md` | the first UI test: the swap gate pinned, and the pattern to copy |
 | `56-fee-ordering-explained.md` | #26: sign-both-first + server escrow — no fee without service, ever |
 | `57-your-deposits-explained.md` | #55: "Your Deposits" reconciled by tx hash — right the instant you act |
+| `59-tx-server-records-explained.md` | #27: every money tx recorded server-side BEFORE broadcast, settled truthfully |
 | `20-findings.md` | the ranked register, every finding with severity |
 | `30-roadmap.md` | what is scheduled next, and why in that order |
 | `42-tester-guide.html` | the tester-facing version, printable to PDF |

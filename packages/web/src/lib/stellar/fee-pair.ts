@@ -1,6 +1,9 @@
 'use client';
 
 import type { NetworkConfig } from '@normalfinance/types';
+// Type-only import — erased at compile time, so the server-only module
+// (prisma/redis) never enters the client bundle.
+import type { SwapRecordInput, SavingsRecordInput } from '@/server/tx-records';
 
 import { buildAuthHeaders } from '@/utils/http';
 import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
@@ -21,9 +24,12 @@ import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
 
 export type FeePairKind = 'savings_deposit' | 'savings_withdraw' | 'swap';
 
+export type FeePairRecord = SavingsRecordInput | SwapRecordInput;
+
 export interface FeePairResult {
   serviceHash: string;
-  feeHash: string;
+  /** null when the flow has no fee leg (zero-commission withdraw). */
+  feeHash: string | null;
   /** false = fee is escrowed and the cron sweeper will collect it shortly. */
   feeSubmitted: boolean;
 }
@@ -70,7 +76,8 @@ async function awaitOnChain(server: Horizon.Server, hash: string): Promise<OnCha
 }
 
 /**
- * Submit a signed service+fee pair through the server.
+ * Submit a signed service tx — with its fee tx when the flow charges one —
+ * through the server funnel, which records it before broadcasting (#27).
  *
  * Throws with a user-facing message when the SERVICE outcome is a failure or
  * unknown; a fee that could not be submitted yet is NOT an error (the sweeper
@@ -81,11 +88,13 @@ async function awaitOnChain(server: Horizon.Server, hash: string): Promise<OnCha
  */
 export async function submitFeePair(params: {
   signedServiceXdr: string;
-  signedFeeXdr: string;
+  /** null = no fee leg (zero-commission withdraw). */
+  signedFeeXdr: string | null;
   kind: FeePairKind;
+  record: FeePairRecord;
   config: NetworkConfig;
 }): Promise<FeePairResult> {
-  const { signedServiceXdr, signedFeeXdr, kind, config } = params;
+  const { signedServiceXdr, signedFeeXdr, kind, record, config } = params;
 
   const serviceTx = TransactionBuilder.fromXDR(signedServiceXdr, config.NETWORK_PASSPHRASE);
   const serviceHash = serviceTx.hash().toString('hex');
@@ -98,15 +107,17 @@ export async function submitFeePair(params: {
     response = await fetch('/api/fees/execute-pair', {
       method: 'POST',
       headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ serviceXdr: signedServiceXdr, feeXdr: signedFeeXdr, kind }),
+      body: JSON.stringify({ serviceXdr: signedServiceXdr, feeXdr: signedFeeXdr, kind, record }),
     });
   } catch {
     // The request itself died — we cannot tell whether it reached the server.
     // If the service tx made it out, its hash will appear on Horizon shortly.
     const status = await awaitOnChain(server, serviceHash);
     if (status === 'success') {
-      const feeTx = TransactionBuilder.fromXDR(signedFeeXdr, config.NETWORK_PASSPHRASE);
-      return { serviceHash, feeHash: feeTx.hash().toString('hex'), feeSubmitted: false };
+      const feeHash = signedFeeXdr
+        ? TransactionBuilder.fromXDR(signedFeeXdr, config.NETWORK_PASSPHRASE).hash().toString('hex')
+        : null;
+      return { serviceHash, feeHash, feeSubmitted: false };
     }
     if (status === 'failed') {
       throw new Error('Transaction failed on-chain. No fee was charged.');

@@ -9,7 +9,6 @@ import { useState, useCallback } from 'react';
 import { buildAuthHeaders } from '@/utils/http';
 import { usePersistStore } from '@normalfinance/state';
 import { getSwapFeeAmount } from '@/utils/normal-fees';
-import { postTransactionLog } from '@/lib/log-transaction';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { FEE_PAIR_TIMEOUT_SECONDS } from '@/lib/build-fee-payment';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
@@ -240,26 +239,23 @@ export function useSwap(): UseSwapReturn {
         const signedSwapXdr = await signOnly(quoteData.xdr);
         const signedFeeXdr = await signOnly(feeData.xdr);
 
-        // 4. Server submits the pair: swap first, fee escrowed + collected
-        // after it (cron sweeper as backstop if anything dies mid-way).
+        // 4. Server submits the pair: it records the swap BEFORE broadcasting
+        // (#27 — no client-side logging anymore), then swap first, fee
+        // escrowed + collected after it (cron sweeper as backstop).
         const pair = await submitFeePair({
           signedServiceXdr: signedSwapXdr,
           signedFeeXdr,
           kind: 'swap',
+          record: {
+            tokenInAddress: swapQuote.tokenIn,
+            tokenOutAddress: swapQuote.tokenOut,
+            tokenInSymbol: display?.tokenInSymbol,
+            tokenOutSymbol: display?.tokenOutSymbol,
+            amountIn: netAmountIn.toFixed(7),
+            amountOut: swapQuote.amountOut,
+            feeAmount: feeAmount.toFixed(7),
+          },
           config,
-        });
-
-        postTransactionLog('/api/swap/log-transaction', {
-          walletAddress,
-          tokenInAddress: swapQuote.tokenIn,
-          tokenOutAddress: swapQuote.tokenOut,
-          tokenInSymbol: display?.tokenInSymbol,
-          tokenOutSymbol: display?.tokenOutSymbol,
-          amountIn: netAmountIn.toFixed(7),
-          amountOut: swapQuote.amountOut,
-          txHash: pair.serviceHash,
-          feeAmount: feeAmount.toFixed(7),
-          feeTxHash: pair.feeHash,
         });
 
         const stellarExpertUrl = createStellarExpertUrl('tx', pair.serviceHash);

@@ -41,7 +41,9 @@ export const GET = withAuth(async (request: NextRequest) => {
     const [swaps, vaultTxs] = await Promise.all([
       type !== 'savings'
         ? prisma.swapLog.findMany({
-            where: { walletAddress: user },
+            // #27: rows now exist BEFORE broadcast with pending/failed states —
+            // only confirmed ones are money that actually moved.
+            where: { walletAddress: user, status: 'confirmed' },
             select: {
               id: true,
               tokenInSymbol: true,
@@ -57,7 +59,7 @@ export const GET = withAuth(async (request: NextRequest) => {
 
       type !== 'swaps' && VAULT_ADDRESS
         ? prisma.vaultDeposit.findMany({
-            where: { walletAddress: user, vaultAddress: VAULT_ADDRESS },
+            where: { walletAddress: user, vaultAddress: VAULT_ADDRESS, status: 'confirmed' },
             select: {
               id: true,
               type: true,

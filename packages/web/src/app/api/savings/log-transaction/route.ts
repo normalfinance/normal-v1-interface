@@ -4,10 +4,18 @@ import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
-import { redis, rateLimiter } from '@/server/rateLimiter';
 import { isValidStellarAddress } from '@/utils/stellar-address';
+import { invalidateSavingsPositionCache } from '@/server/tx-records';
 
+// ----------------------------------------------------------------------
+// DEPRECATED (#27, 2026-08-10): savings transactions are now recorded
+// server-side by /api/fees/execute-pair BEFORE broadcast — no current client
+// calls this route. It stays alive for one release because browsers holding
+// the previous bundle still post here mid-flow; rows it writes default to
+// status 'confirmed' (the old contract: only logged after success). Delete in
+// the next cleanup batch.
 // ----------------------------------------------------------------------
 
 const VALID_TYPES = ['deposit', 'withdraw'] as const;
@@ -84,16 +92,9 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     // next read recomputes — and the recompute reconciles this row by tx hash,
     // so it is correct even while DeFindex's indexer is still behind. The
     // events cache deliberately stays: reconciliation makes its staleness safe.
-    try {
-      const cookieStore = await cookies();
-      const network = cookieStore.get('normal-network')?.value ?? 'testnet';
-      await redis.del(
-        `savings:pos:${walletAddress}:${network}`,
-        `savings:pos:floor:${walletAddress}:${network}`
-      );
-    } catch {
-      /* cache invalidation is best-effort — TTLs bound any staleness */
-    }
+    const cookieStore = await cookies();
+    const network = cookieStore.get('normal-network')?.value ?? 'testnet';
+    await invalidateSavingsPositionCache(walletAddress, network);
 
     return NextResponse.json({ success: true });
   } catch (error) {

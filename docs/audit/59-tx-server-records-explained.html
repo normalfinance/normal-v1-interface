@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>59-tx-server-records-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>59 — Server transaction records (#27), explained for juniors</h1>
+<p>Branch: <code>fix/tx-server-records</code>. Design: <a href="58-tx-server-records-plan.md">58-tx-server-records-plan.md</a>.</p>
+<h2>The problem, in one sentence</h2>
+<p>Until now, our database only learned about a swap or savings transaction if</p>
+<p>the browser remembered to tell it AFTER everything succeeded — so a failed</p>
+<p>or interrupted transaction left <strong>no trace at all</strong>, and a successful one</p>
+<p>could go unrecorded if the tab closed a second too early.</p>
+<h2>Cause and effect, before this fix</h2>
+<ul>
+<li>If a swap failed on-chain → no row anywhere → support sees nothing when</li>
+</ul>
+<p>  the user asks "where is my money?"</p>
+<ul>
+<li>If you closed the tab right after a deposit confirmed → the "log it"</li>
+</ul>
+<p>  request died with the tab → the deposit is missing from Activity and from</p>
+<p>  the Dune dashboard.</p>
+<ul>
+<li>The #55 "Your Deposits" fix leans on those rows existing → a lost log</li>
+</ul>
+<p>  call quietly weakened it.</p>
+<h2>The fix, in one sentence</h2>
+<p>The server writes the record itself, <strong>before broadcasting anything</strong>, and</p>
+<p>then guarantees the record ends up telling the truth.</p>
+<h2>How it works now</h2>
+<ol>
+<li>Your browser signs the transactions (nothing submitted — that's #26) and</li>
+</ol>
+<p>   hands them to the server in one request.</p>
+<ol>
+<li>The server writes the DB row first, with status <strong>pending</strong>. If even</li>
+</ol>
+<p>   that write fails → the request aborts and nothing was broadcast at all.</p>
+<ol>
+<li>The server broadcasts, then flips the row: <strong>confirmed</strong> on success,</li>
+</ol>
+<p>   <strong>failed</strong> with the chain's error codes on rejection, <strong>submitted</strong> if</p>
+<p>   the outcome is temporarily unknown.</p>
+<ol>
+<li>If the server instance dies mid-way → the every-2-minutes cron finds the</li>
+</ol>
+<p>   stuck row, asks the blockchain "did this hash land?", and settles it —</p>
+<p>   confirmed, failed, or (after 30 minutes, when no transaction could</p>
+<p>   possibly still apply) <strong>abandoned</strong>.</p>
+<ol>
+<li>Terminal states are never overwritten, so the route, the fee sweeper,</li>
+</ol>
+<p>   and the reconciler can all touch the same row in any order without ever</p>
+<p>   rewriting settled history.</p>
+<p>One subtle rule: if the user's action succeeded but only the FEE leg went</p>
+<p>wrong (the #26 escrow expired), the record still says <strong>confirmed</strong> — with</p>
+<p>a note — because the user's money really did move. Records describe what</p>
+<p>happened to the USER, fee bookkeeping lives in the escrow logs.</p>
+<h2>What you will and won't see (do → see)</h2>
+<ul>
+<li>Do a normal deposit → the row is created before broadcast and reads</li>
+</ul>
+<p>  <code>confirmed</code> a second later; Activity looks exactly as before.</p>
+<ul>
+<li>Force a failure (e.g. vault error) → the row exists with <code>failed</code> + the</li>
+</ul>
+<p>  reason — but Activity, "Your Deposits", and Dune <strong>don't</strong> show it,</p>
+<p>  because every reader now filters to confirmed rows only.</p>
+<ul>
+<li>Close the tab right after signing → the row still ends <code>confirmed</code></li>
+</ul>
+<p>  within ~2 minutes (cron), and "Your Deposits" updates because a savings</p>
+<p>  confirm also fires the #55 cache invalidation.</p>
+<ul>
+<li>Zero-commission withdraw → now also goes through the server funnel (it</li>
+</ul>
+<p>  was the last flow the browser submitted directly), so it gets the same</p>
+<p>  guarantees.</p>
+<h2>Honesty about the fee record</h2>
+<p>The server does not trust the browser's claimed fee: it reads the actual</p>
+<p>payment amount out of the signed fee transaction and rejects the request if</p>
+<p>the record claims anything else. A record cannot lie about the fee.</p>
+<h2>What changed, by category</h2>
+<p><strong>New (2):</strong> <code>server/tx-records.ts</code> (records + settlement state machine +</p>
+<p>cron reconciler), design/explainer docs. <strong>Rewired (3):</strong> execute-pair (the</p>
+<p>funnel now records first), fee-escrow sweeper results carry context, cron</p>
+<p>route settles records. <strong>Readers filtered (4 files):</strong> both activity</p>
+<p>routes, Dune sync, user-position. <strong>Client (3):</strong> the three fire-and-forget</p>
+<p>log calls deleted; <code>submitFeePair</code> carries the record. <strong>Deprecated (2):</strong></p>
+<p>the old log-transaction routes (one release of grace for old bundles).</p>
+<p><strong>Schema:</strong> three additive columns + four indexes, applied by Niko in</p>
+<p>Supabase BEFORE deploy — old rows default to <code>confirmed</code>, which is exactly</p>
+<p>what they were.</p>
+<h2>Tests</h2>
+<p>12 new (149 total): the settlement decision table, the escrow-outcome →</p>
+<p>record mapping (including "fee failed but action confirmed"), and proof</p>
+<p>that pending/failed rows never count into "Your Deposits".</p>
+</body></html>

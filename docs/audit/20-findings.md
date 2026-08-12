@@ -20,7 +20,7 @@ reproduction · `input?` = parked on an open question.
 | ~~40~~ | ~~14~~ | ~~Savings-refresh event has no emitter~~ — **FALSE POSITIVE, withdrawn 2026-07-27**: it *is* dispatched at `use-defindex-savings.tsx:341,538`. The Phase-1 grep searched the string literal; the dispatcher uses the `POSITION_SYNC_EVENT` constant. | — | — | code | none — no code written | — |
 | 36 | 2 | Unauth reads of per-user activity/position by address | privacy | 3·3·2 | code+POC? | require session; scope to own data | ✅ |
 | 36 | 3 | Unauth quote/price routes let outsiders burn our provider quotas | cost | 3·3·2 | code+POC? | auth or stricter RL on quote routes | ✅ |
-| 36 | 27 | Failed/abandoned swaps & deposits leave NO server record | integrity | 3·4·3 | code | CCTP's record-before-broadcast pattern | ✅ |
+| 36 | 27 | Failed/abandoned swaps & deposits leave NO server record | integrity | 3·4·3 | code | **FIXED 2026-08-10**: records inside the execute-pair funnel (see §#27 below, doc 58) | ✅ |
 | 32 | 19 | All 35 authed routes verify session live with NO timeout | reliability | 4·2·2 | code | timeout wrapper + cached verification | ✅ |
 | **48** | 16 | Dedupe failure: `wallet-info.ts` has no single-flight guard → cache stampede (~22 calls/session) | perf/cost | 2·4·**1** | **ROOT CAUSE FOUND** | add in-flight promise; unify with the SWR path | ✅ |
 | 30 | 30 | Turbo declares 57 env vars, ~55 read-but-undeclared → stale cached builds | hygiene | 3·2·1 | code | declare full list; verify Vercel cache invalidation | ✅ |
@@ -663,3 +663,31 @@ invalidation signal, so rapid back-to-back actions can't be served a
 pre-action snapshot. Also corrected a false comment (live-verified:
 withdraw event amounts ARE USDC, not shares). 9-case suite incl. the exact
 incident as a regression test (137 total).
+
+## #27 — Record-before-broadcast (FIXED 2026-08-10, branch fix/tx-server-records)
+
+Every Stellar money flow (swap, savings deposit, savings withdraw — including
+the zero-commission withdraw, which was the last flow submitted straight from
+the browser) now writes its DB row with status 'pending' INSIDE
+/api/fees/execute-pair BEFORE anything is broadcast, and the row is settled
+to a truthful terminal state (confirmed / failed / abandoned) by three
+idempotent actors: the route itself, the fee-escrow sweeper (terminal pair
+outcomes mirror onto the row), and a new reconciler step in the same 2-min
+cron that probes stuck rows on Horizon by tx hash. Terminal states are never
+overwritten. Fee-leg-only failures (expired/fee_failed escrow) CONFIRM the
+record with a reason note — the user's action did happen.
+
+Client fire-and-forget logging is GONE from all three flows; the server
+cross-checks record.feeAmount against the fee tx's actual payment amount, so
+a record cannot lie about the fee. The legacy log-transaction routes stay
+one release for in-flight old bundles (rows default 'confirmed'), then die.
+
+Readers filtered to confirmed-only (verified inventory): both activity
+routes, Dune prisma-sync (5 queries), and the #55 user-position reconciler
+(query + defense-in-depth in the pure fn). Schema: additive-only SQL applied
+by Niko in Supabase (status/statusReason/network + 4 indexes) — deploy
+ORDER matters: SQL first, code second.
+
+Design doc 58; 12 new tests (149 total). Unlocks #53 (chart from recorded
+history) and lays the record-before-broadcast rail #29's ETH double-send
+fix rides next.

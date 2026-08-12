@@ -37,13 +37,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // #27: rows now exist BEFORE broadcast with pending/failed states — only
+    // confirmed ones are money that actually moved.
     const [vaultRows, swapRows] = await Promise.all([
       prisma.vaultDeposit.findMany({
-        where: { walletAddress },
+        where: { walletAddress, status: 'confirmed' },
         orderBy: { createdAt: 'desc' },
       }),
       prisma.swapLog.findMany({
-        where: { walletAddress },
+        where: { walletAddress, status: 'confirmed' },
         orderBy: { createdAt: 'desc' },
       }),
     ]);
