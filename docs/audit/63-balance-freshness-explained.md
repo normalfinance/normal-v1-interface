@@ -59,6 +59,22 @@ confusing error.
   money. When the send confirms, the pending row clears and the adjustment
   vanishes by itself.
 
+## Two follow-ups from Niko's live retest (same day)
+
+- **The swap row said "pending" after delivery.** The server caches the
+  bridge status for 30 seconds, and the feed asked right when the swap
+  finished — so it was served the stale "PENDING". Now the tab that ran the
+  swap tells its own feed the terminal state directly (a session-local
+  override); the server cache catches up for everyone else within 30s.
+- **"Previous send is still confirming" blocked a NEW send even though the
+  previous one was long confirmed.** The one-send-at-a-time guard only
+  unblocked when the background job settled the record — every 2 minutes in
+  production, and never on localhost. Now the guard checks the chain the
+  moment it trips: if the earlier send is confirmed or failed, it settles
+  the record right there and lets the new send through. Only a genuinely
+  unknown outcome still blocks — which is exactly the case the guard exists
+  for.
+
 ## How to test (do → see)
 
 - Send SOL → balance updates within a couple of seconds of on-chain

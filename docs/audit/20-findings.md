@@ -749,3 +749,17 @@ Three fixes, two of them Niko's design corrections:
    #29 preflight remain the backstop).
 
 13 tests (171 total). No schema, no routes, no cron changes. Doc 62.
+
+### #62 follow-up (same day, Niko's live retest)
+1. **Swap row stuck "pending" until manual refresh** — /api/lifi/statuses
+   caches PENDING for 30s, so the feed refresh fired at delivery was served
+   the stale cache. Fix: session-local status override
+   (lib/lifi/status-overrides.ts) — the tracker registers DONE/REFUNDED/
+   FAILED before firing the feed refresh; use-user-activity prefers it over
+   the server answer. Other tabs converge within the 30s TTL.
+2. **409 "previous send still confirming" after a CONFIRMED send** — the #29
+   guard only unblocked via the cron reconciler (~2 min on Vercel, NEVER on
+   localhost). Fix: probeAndSettleUnsettledSend — the execute route probes
+   the chain inline when the guard trips; a confirmed/failed earlier send
+   settles on the spot and the new send proceeds; only a genuinely-unknown
+   outcome still blocks. 3 more tests (174 total).

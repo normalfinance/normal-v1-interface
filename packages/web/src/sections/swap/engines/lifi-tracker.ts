@@ -6,6 +6,7 @@ import { buildAuthHeaders } from '@/utils/http';
 import { useRef, useState, useEffect } from 'react';
 import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { clearSwapOutflow, registerSwapOutflow } from '@/lib/spendable';
+import { registerLifiStatusOverride } from '@/lib/lifi/status-overrides';
 
 // ---------------------------------------------------------------------------
 // Background tracker for a cross-chain (LI.FI) swap. Runs independently of the
@@ -254,7 +255,16 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
         if (cancelled) return;
       }
 
-      if (final !== 'bridging') clearSwapOutflow(txHash);
+      if (final !== 'bridging') {
+        clearSwapOutflow(txHash);
+        // Tell the activity feed the truth BEFORE it refetches — the server
+        // statuses route caches PENDING for 30s, so without this override the
+        // row keeps showing "pending" right after delivery (#62 follow-up).
+        registerLifiStatusOverride(
+          txHash,
+          final === 'done' ? 'DONE' : final === 'refunded' ? 'REFUNDED' : 'FAILED'
+        );
+      }
       setStage(final);
       handlersRef.current.onActivity();
       if (final !== 'bridging') handlersRef.current.onTerminal(final);
