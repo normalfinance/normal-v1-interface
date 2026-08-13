@@ -474,11 +474,19 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
                       {t('Available:')}{' '}
                       <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 600 }}>
-                        {spendableBalance.toFixed(
-                          Math.min(sendToken.decimals, isBtc ? 6 : 4),
-                          BigNumber.ROUND_DOWN
-                        )}{' '}
-                        {sendToken.symbol}
+                        {/* Follow the amount toggle (Niko, 2026-08-13): typing
+                            dollars against a token-unit readout gives no way
+                            to know what fits. Same ROUND_DOWN cents as the
+                            MAX fill, so typing exactly the shown number can
+                            never trip "Exceeds available balance". */}
+                        {isFiatMode && BigNumber(sendToken.price).gt(0)
+                          ? `$${spendableBalance
+                              .multipliedBy(sendToken.price)
+                              .toFixed(2, BigNumber.ROUND_DOWN)}`
+                          : `${spendableBalance.toFixed(
+                              Math.min(sendToken.decimals, isBtc ? 6 : 4),
+                              BigNumber.ROUND_DOWN
+                            )} ${sendToken.symbol}`}
                       </Box>
                     </Typography>
                   </Box>

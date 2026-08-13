@@ -853,3 +853,13 @@ SELECTED token's row on balance refreshes without touching typed input.
 Lesson recorded: replacing fetch-into-state with derive-per-render changes
 object identity semantics — every consumer watching identity must be
 audited, not assumed.
+
+### P0-1 follow-up 3 (2026-08-13, Niko — fiat toggle vs Available readout)
+In the send dialog's fiat mode, "Available" stayed in token units — typing
+dollars against an ETH readout gives no way to know what fits (and a
+manually typed amount can exceed by fractions of a cent). Audit of all
+three fiat-toggle surfaces: send-modal FIXED (Available follows the
+toggle, using the SAME ROUND_DOWN-to-cents as the MAX fill so typing the
+shown number always passes validation); swap-card already correct
+(fCurrency in fiat mode); withdraw-card shows both units simultaneously —
+no bug.
