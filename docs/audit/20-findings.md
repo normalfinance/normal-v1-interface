@@ -25,7 +25,7 @@ reproduction · `input?` = parked on an open question.
 | **48** | 16 | Dedupe failure: `wallet-info.ts` has no single-flight guard → cache stampede (~22 calls/session) | perf/cost | 2·4·**1** | **ROOT CAUSE FOUND** | add in-flight promise; unify with the SWR path | ✅ |
 | 30 | 30 | Turbo declares 57 env vars, ~55 read-but-undeclared → stale cached builds | hygiene | 3·2·1 | code | declare full list; verify Vercel cache invalidation | ✅ |
 | 27 | 26 | Fee-first: fee signed before swap → fee lost if swap fails | correctness | 3·3·3 | code | **FIXED 2026-08-10**: sign-both-first + server escrow (see §#26 below, doc 55) | ✅ |
-| 25 | P0-1 | **[STRATEGIC]** Per-client fetching 7–30× over free tiers → the Layer-1 cache re-architecture | cost | 5·5·5 | math | server-fetch-once + event refresh (workstream B) | ✅ |
+| 25 | P0-1 | **[STRATEGIC]** Per-client fetching 7–30× over free tiers → the Layer-1 cache re-architecture | cost | 5·5·5 | math | **COMPLETE 2026-08-12**: last browser-direct paths (swap/send BTC+ETH+SOL) now selectors over the shared aggregate (§P0-1 below, doc 66) | ✅ |
 | 24 | 28 | Savings has no XLM-fee preflight → mid-flow failure (June TODO) | UX/correctness | 2·3·2 | code | preflight XLM balance, warn upfront | ✅ |
 | **32** | 29 | ETH/SOL send: hardcoded 21000 gas breaks contract destinations; lost response can cause **double send** | correctness | **4**·2·2 | code | **FIXED 2026-08-12**: estimateGas + server funnel + one-unknown-at-a-time guard (§#29 below, doc 60) | ✅ |
 | ~~24~~ | ~~21~~ | ~~cctp-advance overlap~~ — **CLEARED**: proper compare-and-swap guards, cannot double-mint | — | — | code | none needed ✅ | — |
@@ -802,3 +802,104 @@ Three fixes, two of them Niko's design corrections:
 - **#34 (separate staging DB): DECLINED by Niko 2026-08-12** — staging stays
   on the production database by his decision; Phase 5 load-testing scope
   must avoid prod-data writes accordingly.
+
+## P0-1 — Layer-1 cache COMPLETE (2026-08-12, branch feat/layer1-cache, doc 66)
+
+The [STRATEGIC] "mandatory between 1k and 10k" item. Recon showed Layer-1
+mostly existed (/api/wallet/portfolio aggregator + useWalletBalances shared
+SWR — the portfolio page already rode it); the remaining browser-direct gap
+was the three per-chain hooks used by swap-card/send-modal: BTC hit
+mempool.space and ETH/SOL hit public JSON-RPC from every user's browser on
+every mount. Those hooks are now thin selectors over the shared aggregate
+(same exported interfaces, zero behavior change for consumers; pure
+PortfolioAsset→Token mapper, tested). Cost/rate-limit exposure now scales
+with the cache window, not with open views × users.
+
+Kept browser-direct on purpose (action-time exceptions, documented):
+fetchEthBalance/fetchSolBalance (off-ramp preflight), RPC URL exports
+(tx-confirmation probing), mempool fee quote (send-modal).
+
+LATENT BUG FIXED: swap-card's refetchChain — awaited by the #62 arrival
+gate before showing "Done" — called refetch() (Turnkey ADDRESSES), not a
+balance refresh. Now calls refetchBalance = the new awaitable
+refreshFresh() (server-cache-bypassing shared revalidation), so "Done
+waits for real balances" is finally true end to end.
+
+4 new tests (178 total). No routes, no schema, no crons.
+
+### P0-1 follow-up (2026-08-13, Niko's live retest — the drawer SOL lag)
+After ETH→SOL "Done", the account drawer showed the old SOL for a few
+seconds. Mechanism: the arrival refresh can fire before the server's SOL
+RPC reflects the just-delivered funds → under P0-1 that pre-delivery answer
+gets CACHED (15s response cache; the 5s bypass floor blocks immediate
+retries) → every surface shows it until the next poll. It looked fixed
+before P0-1 only because the old drawer hook re-fetched browser-direct on
+every mount — luck subsidized by the per-view fetching P0-1 removed. Fix:
+verify-and-retry in refetchChain — refresh, and if the destination balance
+didn't move, wait past the floor (5.6s) and refresh ONCE more before the
+tracker shows Done (arrival cap 10s→15s). refreshFresh now returns the
+fresh assets to make the verification possible.
+
+### P0-1 follow-up 2 (2026-08-13, Niko's live retest — send form wiped itself)
+Typing an amount (or MAX) in the send dialog snapped back to 0. Mechanism:
+the old hooks held the token in React STATE (stable object identity); the
+P0-1 selectors rebuilt the Token object EVERY render → the send modal's
+open-reset effect (which had the token list as a dependency) saw a "new"
+list on every keystroke's render and wiped the form. Two fixes: (1) the
+selector hooks memoize the token on the underlying aggregate row — stable
+identity between data updates; (2) the modal's reset now fires ONLY on
+open (list read via ref), with a separate sync effect that updates the
+SELECTED token's row on balance refreshes without touching typed input.
+Lesson recorded: replacing fetch-into-state with derive-per-render changes
+object identity semantics — every consumer watching identity must be
+audited, not assumed.
+
+### P0-1 follow-up 3 (2026-08-13, Niko — fiat toggle vs Available readout)
+In the send dialog's fiat mode, "Available" stayed in token units — typing
+dollars against an ETH readout gives no way to know what fits (and a
+manually typed amount can exceed by fractions of a cent). Audit of all
+three fiat-toggle surfaces: send-modal FIXED (Available follows the
+toggle, using the SAME ROUND_DOWN-to-cents as the MAX fill so typing the
+shown number always passes validation); swap-card already correct
+(fCurrency in fiat mode); withdraw-card shows both units simultaneously —
+no bug.
+
+### P0-1 follow-up 4 (2026-08-13, Niko — sell Max + double-count + sell modal)
+1. Sell "Max" ~$20 vs $25.65 balance: NOT our code — the Max lives on
+   COINBASE's hosted page; they keep back their own (generous, ~$4-6 at L1
+   rates) Ethereum gas reserve. Our balance math was right ($30 − $5 − fee).
+   Our preflight does the equivalent reserve on our side by design.
+2. The question exposed a REAL adjacent gap in the #62 spendable ledger:
+   after chain confirmation, the balance reflects the send but the pending
+   row only clears when Etherscan indexes into the feed (minutes) — our
+   send/swap MAX double-subtracted during that window. Fix:
+   markSendConfirmed(txHash) from the confirmation watcher; spendable skips
+   confirmed rows after a 2.5s grace (covers the bypassed refresh landing);
+   the row keeps feeding the activity badge until reconciled. +1 test (179).
+3. Sell modal: asset icon + amount now shown in the send-dialog's visual
+   language with the dollar equivalent.
+
+### P0-1 follow-up 4 CORRECTION + follow-up 5 (2026-08-13)
+CORRECTION to follow-up 4: the ~$20 sell "Max" was OURS, not Coinbase's —
+the OffRampDialog amount step (offramp-dialog.tsx) computes
+sellMax = balance − reserve (ETH reserve 0.001) and PRESETS it into
+Coinbase. I answered from the wrong modal (the post-Coinbase fulfillment
+dialog); Niko's screenshot showed the pre-Coinbase amount step. The
+double-count fix from follow-up 4 stands on its own merit.
+Follow-up 5: that amount step restyled into the house language (labeled
+box, mono amount, black CTA) with a $/token toggle — unit-following
+Available line, Max fill, and validation all share the same floor-rounding
+(the doc-67 rule); fiat→crypto conversion clamps to sellMax so rounding
+can never overshoot the reserve. assetPrice wired from both callers.
+
+### P0-1 follow-up 6 (2026-08-13, Niko's UX call — transparent sell fees)
+The sell amount step no longer hides the reserve inside a smaller Max.
+Now: header shows the FULL balance; a fee-breakdown box above the CTA
+shows Balance → "Kept for the network fee" (live per asset: BTC mempool
+rate, XLM Horizon reserve, ETH/SOL static, USDC none) → "Max you can
+sell", plus the Coinbase-fees expectation line. While the async reserves
+resolve, the CTA shows "Calculating fees…" (spinner) and Max is disabled —
+no fallback number the breakdown would contradict. All values unit-follow
+the $/token toggle with the shared floor-rounding. Also fixed the $ prefix
+typography (generic 'monospace' fallback rendered it slanted/oversized —
+now the exact send-dialog input pattern, Geist Mono digits, same-size sans $).

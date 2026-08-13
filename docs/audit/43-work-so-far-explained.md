@@ -21,6 +21,7 @@ deeper only where you need to:
 | `61-send-safety-explained.md` | #29: real gas estimation + one-send-at-a-time — double sends impossible |
 | `63-balance-freshness-explained.md` | #62: refresh on chain confirmation, Done gated on arrival, MAX never offers committed money |
 | `65-capacity-quickwins-explained.md` | #13/#36/#31/#18 + heartbeats + RPC fallback — cheaper per user, provably-alive crons |
+| `67-layer1-cache-explained.md` | P0-1: the server asks once, everyone shares — cost scales with time, not users |
 | `20-findings.md` | the ranked register, every finding with severity |
 | `30-roadmap.md` | what is scheduled next, and why in that order |
 | `42-tester-guide.html` | the tester-facing version, printable to PDF |

@@ -197,9 +197,17 @@ export function createEthereumAdapter(
 
         // #62: fire ONE more refresh at the exact moment the chain confirms —
         // that is when a balance read is guaranteed fresh (the timer shots
-        // above race the chain and the server cache floor).
+        // above race the chain and the server cache floor). Confirmation also
+        // ends the pending row's SPENDABLE subtraction (#66 follow-up: the
+        // refreshed balance already reflects the send; keeping the deduction
+        // would double-count until Etherscan indexes the tx).
         void import('@/lib/send-confirmation').then(({ watchSendConfirmation }) =>
-          watchSendConfirmation('ethereum', txHash, () => {
+          watchSendConfirmation('ethereum', txHash, (outcome) => {
+            if (outcome === 'confirmed') {
+              void import('@/lib/pending-sends').then(({ markSendConfirmed }) =>
+                markSendConfirmed(txHash)
+              );
+            }
             void import('@/lib/tx-events').then(({ announceConfirmation }) =>
               announceConfirmation('ethereum')
             );

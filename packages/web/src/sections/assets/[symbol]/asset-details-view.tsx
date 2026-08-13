@@ -639,6 +639,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         asset={{ symbol: token.symbol, blockchain: native?.chain ?? 'stellar' }}
         providers={token.symbol === 'USDC' ? ['coinbase', 'moneygram'] : ['coinbase']}
         assetBalance={balance.toNumber()}
+        assetPrice={Number(token.price) || undefined}
       />
 
       {isBtc && (

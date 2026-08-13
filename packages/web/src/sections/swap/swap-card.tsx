@@ -12,7 +12,7 @@ import { usePendingOutflow } from '@/lib/spendable';
 import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useRef, useMemo, useState, useCallback } from 'react';
 import { getXlmToken, getSwapUsdcToken } from '@/utils/token-selectors';
 import { getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
@@ -166,11 +166,32 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     () => ({ BTC: btc.bitcoinAddress, ETH: eth.ethereumAddress, SOL: sol.solanaAddress }),
     [btc.bitcoinAddress, eth.ethereumAddress, sol.solanaAddress]
   );
+  // #66: refetchBalance, not refetch — refetch reloads Turnkey ADDRESSES,
+  // which is what the #62 arrival gate was accidentally awaiting before.
+  // refetchBalance is the awaitable, server-cache-bypassing refresh of the
+  // shared aggregate, so "Done waits for real balances" is now true.
+  //
+  // Verify-and-retry (#66 arrival race, observed live 2026-08-13): a refresh
+  // fired the instant the bridge reports DONE can read the PRE-delivery
+  // balance from the chain RPC — and the aggregate then caches that stale
+  // answer for 15s (the bypass floor blocks immediate retries). If the
+  // destination balance didn't move, wait just past the floor and refresh
+  // ONCE more, so Done displays against the delivered balance everywhere
+  // (drawer included — every surface shares this cache). One bounded retry;
+  // an unchanged balance after that defers to the background poll.
+  const balancesRef = useRef(tokenBySymbol);
+  balancesRef.current = tokenBySymbol;
   const refetchChain = useCallback(
     async (chain: TurnkeyChain) => {
-      if (chain === 'bitcoin') await btc.refetch();
-      else if (chain === 'ethereum') await eth.refetch();
-      else if (chain === 'solana') await sol.refetch();
+      const hook = chain === 'bitcoin' ? btc : chain === 'ethereum' ? eth : sol;
+      const symbol = chain === 'bitcoin' ? 'BTC' : chain === 'ethereum' ? 'ETH' : 'SOL';
+      const before = balancesRef.current[symbol as SwapSymbol]?.balance;
+      const fresh = await hook.refetchBalance();
+      const after = fresh?.find((a) => a.symbol === symbol)?.balance;
+      if (after !== undefined && after === before) {
+        await new Promise((resolve) => setTimeout(resolve, 5_600)); // past the 5s server floor
+        await hook.refetchBalance();
+      }
     },
     [btc, eth, sol]
   );

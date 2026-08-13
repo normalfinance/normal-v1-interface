@@ -54,14 +54,23 @@ export function clearSwapOutflow(key: string): void {
 
 /** Sum of in-flight outflows for a chain+symbol, as a string (stable
  *  primitive for useSyncExternalStore snapshots). Exported for tests. */
+// Once the chain confirms a send, the on-chain balance already reflects it —
+// keeping the subtraction would DOUBLE-count (observed risk 2026-08-13:
+// Etherscan indexing lags minutes behind confirmation, and the row only
+// clears on feed reconcile). The short grace covers the moment between
+// confirmation and the bypassed balance refresh landing.
+const CONFIRMED_GRACE_MS = 2_500;
+
 export function pendingOutflowAmount(
   chain: ChainId | undefined,
   symbol: string | undefined
 ): string {
   if (!chain || !symbol) return '0';
+  const now = Date.now();
   let sum = new BigNumber(0);
 
   for (const send of getPendingSends()) {
+    if (send.confirmedAt && now - send.confirmedAt > CONFIRMED_GRACE_MS) continue;
     if (send.chain === chain && send.symbol === symbol) {
       const n = new BigNumber(send.amount);
       if (n.isFinite() && n.gt(0)) sum = sum.plus(n);
