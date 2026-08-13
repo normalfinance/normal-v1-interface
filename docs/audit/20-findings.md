@@ -826,3 +826,16 @@ refreshFresh() (server-cache-bypassing shared revalidation), so "Done
 waits for real balances" is finally true end to end.
 
 4 new tests (178 total). No routes, no schema, no crons.
+
+### P0-1 follow-up (2026-08-13, Niko's live retest — the drawer SOL lag)
+After ETH→SOL "Done", the account drawer showed the old SOL for a few
+seconds. Mechanism: the arrival refresh can fire before the server's SOL
+RPC reflects the just-delivered funds → under P0-1 that pre-delivery answer
+gets CACHED (15s response cache; the 5s bypass floor blocks immediate
+retries) → every surface shows it until the next poll. It looked fixed
+before P0-1 only because the old drawer hook re-fetched browser-direct on
+every mount — luck subsidized by the per-view fetching P0-1 removed. Fix:
+verify-and-retry in refetchChain — refresh, and if the destination balance
+didn't move, wait past the floor (5.6s) and refresh ONCE more before the
+tracker shows Done (arrival cap 10s→15s). refreshFresh now returns the
+fresh assets to make the verification possible.

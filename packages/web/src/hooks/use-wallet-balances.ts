@@ -50,8 +50,11 @@ export interface UseWalletBalancesResult {
   refresh: () => void;
   /** Awaitable, server-cache-BYPASSING refresh (#66). This is what arrival
    *  gates (#62 "Done waits for balances") and post-action refreshes need:
-   *  when the promise resolves, the shared data is genuinely fresh. */
-  refreshFresh: () => Promise<void>;
+   *  when the promise resolves, the shared data is genuinely fresh. Returns
+   *  the fresh assets so callers can verify a specific balance moved (the
+   *  #66 arrival race: a refresh fired the instant a bridge delivers can
+   *  read the pre-delivery balance and lock it into the server cache). */
+  refreshFresh: () => Promise<PortfolioAsset[] | null>;
 }
 
 export function useWalletBalances(enabled = true): UseWalletBalancesResult {
@@ -142,8 +145,9 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
       mutate();
     },
     refreshFresh: async () => {
-      if (!swrKey) return;
-      await mutate(fetchPayload(swrKey, true), { revalidate: false });
+      if (!swrKey) return null;
+      const payload = await mutate(fetchPayload(swrKey, true), { revalidate: false });
+      return payload?.assets ?? null;
     },
   };
 }

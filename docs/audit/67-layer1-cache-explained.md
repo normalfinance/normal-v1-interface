@@ -50,6 +50,21 @@ rarely noticed — but the guarantee wasn't what the design claimed. Now the
 gate awaits a true, cache-bypassing balance refresh. Lesson: a guarantee
 you haven't traced end to end is a hope, not a guarantee.
 
+## Follow-up from Niko's live retest (the drawer SOL lag)
+
+After an ETH→SOL swap said Done, the drawer showed the old SOL for a few
+seconds. Why: the arrival refresh can run a beat before the chain's RPC
+reflects the just-delivered funds — and under the shared cache, that
+too-early answer got locked in for 15 seconds for every surface at once.
+It *looked* fine before this batch only because the old drawer re-fetched
+directly on every open — luck, not a guarantee, subsidized by the exact
+per-view fetching we removed. Fix: the arrival gate now **verifies** the
+destination balance actually moved; if it didn't, it waits just past the
+server's anti-abuse floor and refreshes once more before showing Done.
+One bounded retry, condition-driven — and because it repairs the shared
+cache, the drawer, swap card, and portfolio all show the delivered
+balance the moment Done appears.
+
 ## How to test (do → see)
 
 1. Open the swap page with DevTools → Network. You should see ONE

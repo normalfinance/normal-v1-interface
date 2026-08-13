@@ -165,8 +165,10 @@ export interface LifiTrackerHandlers {
 
 // Safety valve for onArrival: the funds ARE on-chain once the bridge says
 // DONE — a hiccuping balance refetch must not make a successful swap look
-// stuck, so after this cap "done" shows regardless.
-const ARRIVAL_CAP_MS = 10_000;
+// stuck, so after this cap "done" shows regardless. Sized to fit the
+// verify-and-retry in swap-card's refetchChain (refresh + 5.6s floor wait +
+// second refresh) with margin.
+const ARRIVAL_CAP_MS = 15_000;
 
 /**
  * Tracks `tx` to completion, independent of any modal. Re-keys on the tx hash,
