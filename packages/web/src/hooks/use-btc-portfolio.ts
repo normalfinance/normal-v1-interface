@@ -12,6 +12,7 @@
 // the #62 arrival gate needs.
 // ---------------------------------------------------------------------------
 
+import { useMemo } from 'react';
 import { nativeAssetToToken } from '@/lib/portfolio/native-token';
 
 import { useTurnkeyWallet } from './use-turnkey-wallet';
@@ -22,7 +23,15 @@ export function useBtcPortfolio(enabled = true) {
   const balances = useWalletBalances(enabled);
 
   const address = addresses?.bitcoinAddress ?? null;
-  const btcToken = address ? nativeAssetToToken(balances.getAsset('BTC'), 'bitcoin') : null;
+  const asset = balances.getAsset('BTC');
+  // Memoized so the token keeps a STABLE identity between data updates — the
+  // pre-memo version built a fresh object every render, and consumers that
+  // watch the token list (send-modal's open-reset) fired on every keystroke,
+  // wiping the form (observed live 2026-08-13).
+  const btcToken = useMemo(
+    () => (address ? nativeAssetToToken(asset, 'bitcoin') : null),
+    [address, asset]
+  );
 
   return {
     btcToken,

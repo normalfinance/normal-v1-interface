@@ -13,6 +13,7 @@
 //    send-confirmation) and send building
 // ---------------------------------------------------------------------------
 
+import { useMemo } from 'react';
 import { nativeAssetToToken } from '@/lib/portfolio/native-token';
 
 import { useTurnkeyWallet } from './use-turnkey-wallet';
@@ -57,7 +58,12 @@ function useChainPortfolio(chain: 'ethereum' | 'solana', enabled = true) {
   const address =
     (chain === 'ethereum' ? addresses?.ethereumAddress : addresses?.solanaAddress) ?? null;
   const asset = balances.getAsset(chain === 'ethereum' ? 'ETH' : 'SOL');
-  const token = address ? nativeAssetToToken(asset, chain) : null;
+  // Memoized for a STABLE identity between data updates — see the note in
+  // use-btc-portfolio.ts (fresh-per-render objects wiped the send form).
+  const token = useMemo(
+    () => (address ? nativeAssetToToken(asset, chain) : null),
+    [address, asset, chain]
+  );
 
   return {
     token,

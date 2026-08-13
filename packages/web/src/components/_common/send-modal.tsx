@@ -106,9 +106,17 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   const isSol = sendToken?.contract === '__sol__';
   const isNative = isBtc || isEth || isSol;
 
-  // Reset form each time the dialog opens
+  // Reset form each time the dialog opens — and ONLY then. sendableTokens is
+  // read through a ref: with the P0-1 shared-cache hooks, the token list's
+  // identity refreshes with the data, and having it as an effect dependency
+  // made every background refresh (and, before the hooks memoized, every
+  // keystroke's render) wipe the amount the user was typing (observed live
+  // 2026-08-13: "input glitches back to 0").
+  const sendableTokensRef = useRef(sendableTokens);
+  sendableTokensRef.current = sendableTokens;
   useEffect(() => {
     if (!open) return;
+    const list = sendableTokensRef.current;
     setDestination('');
     setMemo('');
     setAmount('');
@@ -117,16 +125,29 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     setXlmSubentries(null);
     setBtcFeeRateSatPerVbyte(null);
     const preselected = initialSymbol
-      ? sendableTokens.find((tkn) => tkn.symbol === initialSymbol)
+      ? list.find((tkn) => tkn.symbol === initialSymbol)
       : undefined;
-    const best = [...sendableTokens].sort(
+    const best = [...list].sort(
       (a, b) =>
         BigNumber(b.balance)
           .multipliedBy(b.price)
           .comparedTo(BigNumber(a.balance).multipliedBy(a.price)) ?? 0
     )[0];
-    setSendToken(preselected ?? best ?? sendableTokens[0] ?? null);
-  }, [open, sendableTokens, initialSymbol]);
+    setSendToken(preselected ?? best ?? list[0] ?? null);
+  }, [open, initialSymbol]);
+
+  // Keep the SELECTED token's row in sync when balances refresh while the
+  // dialog is open (so MAX and the header amount stay truthful) — without
+  // touching the typed amount or destination.
+  useEffect(() => {
+    setSendToken((prev) => {
+      if (!prev) return prev;
+      const updated = sendableTokens.find(
+        (tkn) => tkn.symbol === prev.symbol && tkn.contract === prev.contract
+      );
+      return updated ?? prev;
+    });
+  }, [sendableTokens]);
 
   // Fetch XLM subentry count for accurate reserve calculation
   useEffect(() => {

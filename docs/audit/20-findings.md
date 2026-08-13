@@ -839,3 +839,17 @@ verify-and-retry in refetchChain — refresh, and if the destination balance
 didn't move, wait past the floor (5.6s) and refresh ONCE more before the
 tracker shows Done (arrival cap 10s→15s). refreshFresh now returns the
 fresh assets to make the verification possible.
+
+### P0-1 follow-up 2 (2026-08-13, Niko's live retest — send form wiped itself)
+Typing an amount (or MAX) in the send dialog snapped back to 0. Mechanism:
+the old hooks held the token in React STATE (stable object identity); the
+P0-1 selectors rebuilt the Token object EVERY render → the send modal's
+open-reset effect (which had the token list as a dependency) saw a "new"
+list on every keystroke's render and wiped the form. Two fixes: (1) the
+selector hooks memoize the token on the underlying aggregate row — stable
+identity between data updates; (2) the modal's reset now fires ONLY on
+open (list read via ref), with a separate sync effect that updates the
+SELECTED token's row on balance refreshes without touching typed input.
+Lesson recorded: replacing fetch-into-state with derive-per-render changes
+object identity semantics — every consumer watching identity must be
+audited, not assumed.

@@ -88,6 +88,18 @@
 <p>One bounded retry, condition-driven — and because it repairs the shared</p>
 <p>cache, the drawer, swap card, and portfolio all show the delivered</p>
 <p>balance the moment Done appears.</p>
+<h2>Follow-up 2 from Niko's retest (the send form wiped itself)</h2>
+<p>Typing an amount in the send dialog instantly snapped back to 0. Why: the</p>
+<p>old hooks kept the token in React state — the same object between fetches.</p>
+<p>The new selector hooks rebuilt the token object on <strong>every render</strong>, and</p>
+<p>the send dialog had an effect watching the token list to reset the form on</p>
+<p>open — so every keystroke's re-render looked like "the list changed" and</p>
+<p>wiped the input. Fixed on both sides: the hooks now memoize the token (its</p>
+<p>identity only changes when the data does), and the dialog's reset fires</p>
+<p>only when it opens — a background balance refresh updates the selected</p>
+<p>token's numbers without ever touching what you typed. Lesson: when you</p>
+<p>replace "fetch into state" with "derive on render", object identity</p>
+<p>changes meaning — every consumer that watches identity must be audited.</p>
 <h2>How to test (do → see)</h2>
 <ol>
 <li>Open the swap page with DevTools → Network. You should see ONE</li>
