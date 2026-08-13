@@ -19,7 +19,6 @@ import {
   Button,
   Dialog,
   Avatar,
-  TextField,
   Typography,
   IconButton,
   DialogTitle,
@@ -27,6 +26,7 @@ import {
   DialogContent,
   ListItemButton,
   ListItemAvatar,
+  CircularProgress,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
@@ -60,6 +60,8 @@ export interface OffRampDialogProps {
   /** When set, the Coinbase sell asks for an amount in our UI (capped to the
    *  spendable balance) and presets+locks it on Coinbase — avoids "Max" overshoot. */
   assetBalance?: number;
+  /** USD spot for the asset — enables the $/token toggle on the amount step. */
+  assetPrice?: number;
 }
 
 // Kept back from a native off-ramp so the chain can pay its own fee (and SOL's
@@ -83,6 +85,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   asset = { symbol: 'USDC', blockchain: 'stellar' },
   providers = ['coinbase', 'moneygram'],
   assetBalance,
+  assetPrice,
 }) => {
   const theme = useTheme();
   const { t } = useTranslate();
@@ -101,6 +104,8 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   const [cbStep, setCbStep] = useState(false);
   const [cbAmount, setCbAmount] = useState('');
   const [cbLoading, setCbLoading] = useState(false);
+  // $/token amount toggle (Niko, 2026-08-13) — only offered when a price is known.
+  const [cbFiatMode, setCbFiatMode] = useState(false);
   // BTC miner fee swings widely — resolve the reserve from the live fee rate.
   const [btcReserve, setBtcReserve] = useState<number | null>(null);
   // XLM must keep an account min-balance reserve (Stellar's rent equivalent).
@@ -172,9 +177,42 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   const sellMax =
     assetBalance != null ? Math.max(Math.floor((assetBalance - reserve) * 1e6) / 1e6, 0) : null;
 
+  // Fiat mirror of the cap, floored to cents with the SAME rule everywhere
+  // (display, Max fill, validation) — typing exactly the shown number must
+  // always pass (the send-dialog lesson from doc 67).
+  const price = assetPrice != null && assetPrice > 0 ? assetPrice : null;
+  const sellMaxFiat =
+    sellMax != null && price != null ? Math.max(Math.floor(sellMax * price * 100) / 100, 0) : null;
+
+  // The typed amount converted to crypto units (what Coinbase is preset with).
+  const cbAmountCrypto = (() => {
+    const amt = Number(cbAmount);
+    if (!Number.isFinite(amt) || amt <= 0) return null;
+    return cbFiatMode && price != null ? amt / price : amt;
+  })();
+
+  // Reserve resolution (Niko's UX, 2026-08-13): BTC's fee-rate and XLM's
+  // Horizon reserve arrive async — until then the CTA shows "Calculating
+  // fees…" instead of silently using a fallback number the breakdown would
+  // then contradict. ETH/SOL/USDC reserves are static, so they're ready
+  // immediately.
+  const reserveReady =
+    asset.blockchain === 'bitcoin'
+      ? btcReserve != null
+      : asset.blockchain === 'stellar' && asset.symbol === 'XLM'
+        ? xlmReserve != null
+        : true;
+
+  // Full-balance + reserve figures for the fee breakdown, unit-following.
+  const fmtUnit = (crypto: number): string =>
+    cbFiatMode && price != null
+      ? `$${(Math.floor(crypto * price * 100) / 100).toFixed(2)}`
+      : `${Math.floor(crypto * 1e6) / 1e6} ${asset.symbol}`;
+
   const handleClose = () => {
     setCbStep(false);
     setCbAmount('');
+    setCbFiatMode(false);
     onClose();
   };
 
@@ -263,24 +301,34 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   };
 
   const handleCbContinue = async () => {
-    const amt = Number(cbAmount);
-    if (!Number.isFinite(amt) || amt <= 0) {
+    if (cbAmountCrypto == null) {
       enqueueSnackbar(t('Enter an amount'), { variant: 'warning' });
       return;
     }
-    if (sellMax != null && amt > sellMax) {
+    // Compare in the unit the user typed, against the same-rounded cap they
+    // were shown — never fail someone for a float hair past the display.
+    const overMax =
+      cbFiatMode && sellMaxFiat != null
+        ? Number(cbAmount) > sellMaxFiat
+        : sellMax != null && cbAmountCrypto > sellMax;
+    if (overMax) {
       enqueueSnackbar(
-        t('Max is {{max}} {{symbol}} (some is kept for network fees)', {
-          max: sellMax,
-          symbol: asset.symbol,
-        }),
+        cbFiatMode && sellMaxFiat != null
+          ? t('Max is ${{max}} (some is kept for network fees)', { max: sellMaxFiat })
+          : t('Max is {{max}} {{symbol}} (some is kept for network fees)', {
+              max: sellMax,
+              symbol: asset.symbol,
+            }),
         { variant: 'warning' }
       );
       return;
     }
     setCbLoading(true);
     try {
-      await handleCoinbaseClick(String(amt));
+      // Coinbase is preset in CRYPTO units; cap to sellMax so a fiat→crypto
+      // conversion can never overshoot the reserve by rounding.
+      const cryptoAmt = sellMax != null ? Math.min(cbAmountCrypto, sellMax) : cbAmountCrypto;
+      await handleCoinbaseClick(cryptoAmt.toFixed(6));
       handleClose();
     } finally {
       setCbLoading(false);
@@ -394,46 +442,246 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
           }}
         >
           {cbStep ? (
+            // The send-dialog's visual language (Niko, 2026-08-13): labeled
+            // boxes, mono amounts, unit-following Available, $/token toggle.
             <Stack spacing={2}>
-              <Typography variant="body2" color="text.secondary">
-                {t(
-                  'How much {{symbol}} do you want to sell? Max keeps a little back for network fees.',
-                  { symbol: asset.symbol }
-                )}
-              </Typography>
-              <TextField
-                autoFocus
-                fullWidth
-                type="number"
-                label={t('Amount ({{symbol}})', { symbol: asset.symbol })}
-                value={cbAmount}
-                onChange={(e) => setCbAmount(e.target.value)}
-                disabled={cbLoading}
-                helperText={
-                  sellMax != null
-                    ? t('Available: {{max}} {{symbol}}', { max: sellMax, symbol: asset.symbol })
-                    : ''
-                }
-                InputProps={{
-                  endAdornment: (
-                    <Button
-                      size="small"
-                      onClick={() => sellMax != null && setCbAmount(String(sellMax))}
-                      disabled={cbLoading || sellMax == null}
-                    >
-                      {t('Max')}
-                    </Button>
-                  ),
+              <Box
+                sx={{
+                  p: '14px',
+                  borderRadius: '14px',
+                  bgcolor: '#FAFAFB',
+                  border: '1px solid rgba(10,10,15,0.08)',
                 }}
-              />
-              <Stack direction="row" spacing={1.5} justifyContent="flex-end">
-                <Button variant="outlined" onClick={() => setCbStep(false)} disabled={cbLoading}>
-                  {t('Back')}
-                </Button>
-                <Button variant="contained" onClick={handleCbContinue} disabled={cbLoading}>
-                  {cbLoading ? t('Opening…') : t('Continue to Coinbase')}
-                </Button>
-              </Stack>
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: '10px',
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: 'rgba(10,10,15,0.45)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                    }}
+                  >
+                    {t('Amount')}
+                  </Typography>
+                  {assetBalance != null && (
+                    <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
+                      {/* FULL balance (Niko's UX): the fee math lives in the
+                          breakdown below, not hidden inside this number. */}
+                      {t('Balance:')}{' '}
+                      <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 600 }}>
+                        {fmtUnit(assetBalance)}
+                      </Box>
+                    </Typography>
+                  )}
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {/* Exact send-dialog amount pattern (Niko, 2026-08-13: the
+                      TextField + generic 'monospace' rendered the $ oversized
+                      and italic-looking): sans $ prefix at the SAME size as
+                      the Geist Mono digits. */}
+                  {cbFiatMode && (
+                    <Typography
+                      sx={{
+                        fontSize: '24px',
+                        fontWeight: 600,
+                        color: 'rgba(10,10,15,0.35)',
+                        letterSpacing: '-0.02em',
+                        lineHeight: 1,
+                      }}
+                    >
+                      $
+                    </Typography>
+                  )}
+                  <Box
+                    component="input"
+                    type="number"
+                    autoFocus
+                    placeholder="0"
+                    value={cbAmount}
+                    disabled={cbLoading}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setCbAmount(e.target.value)
+                    }
+                    onKeyDown={(e: React.KeyboardEvent) => e.key === '-' && e.preventDefault()}
+                    sx={{
+                      flex: 1,
+                      border: 'none',
+                      outline: 'none',
+                      bgcolor: 'transparent',
+                      fontSize: '24px',
+                      fontWeight: 600,
+                      color: '#0A0A0F',
+                      letterSpacing: '-0.02em',
+                      fontFamily: '"Geist Mono", "Courier New", monospace',
+                      width: '100%',
+                      minWidth: 0,
+                      '&::placeholder': { color: 'rgba(10,10,15,0.2)' },
+                      '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': {
+                        appearance: 'none',
+                      },
+                    }}
+                  />
+                  {!cbFiatMode && (
+                    <Typography
+                      sx={{
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: 'rgba(10,10,15,0.45)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {asset.symbol}
+                    </Typography>
+                  )}
+                  {price != null && (
+                    <Box
+                      component="button"
+                      aria-label="toggle currency"
+                      disabled={cbLoading}
+                      onClick={() => {
+                        setCbAmount('');
+                        setCbFiatMode((p) => !p);
+                      }}
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        border: 'none',
+                        bgcolor: 'rgba(10,10,15,0.06)',
+                        color: '#0A0A0F',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+                      }}
+                    >
+                      <Iconify icon="solar:transfer-vertical-bold-duotone" width={16} />
+                    </Box>
+                  )}
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      if (sellMax == null) return;
+                      setCbAmount(
+                        cbFiatMode && sellMaxFiat != null ? sellMaxFiat.toFixed(2) : String(sellMax)
+                      );
+                    }}
+                    disabled={cbLoading || sellMax == null || !reserveReady}
+                    sx={{
+                      minWidth: 0,
+                      px: '10px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(10,10,15,0.12)',
+                      color: '#0A0A0F',
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {t('Max')}
+                  </Button>
+                </Box>
+                {price != null && cbAmountCrypto != null && (
+                  <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
+                    {cbFiatMode
+                      ? `≈ ${cbAmountCrypto.toFixed(6)} ${asset.symbol}`
+                      : `≈ $${(cbAmountCrypto * price).toFixed(2)}`}
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Fee breakdown above the CTA (Niko's UX, 2026-08-13): show the
+                  full balance, what's kept back and why, and what Coinbase
+                  does on its side — instead of a silently smaller Max. */}
+              {assetBalance != null && (
+                <Box
+                  sx={{
+                    p: '12px 14px',
+                    borderRadius: '12px',
+                    bgcolor: 'rgba(10,10,15,0.03)',
+                    border: '1px solid rgba(10,10,15,0.06)',
+                  }}
+                >
+                  <Stack spacing={0.75}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.55)' }}>
+                        {t('Your balance')}
+                      </Typography>
+                      <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: '#0A0A0F' }}>
+                        {fmtUnit(assetBalance)}
+                      </Typography>
+                    </Box>
+                    {reserve > 0 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.55)' }}>
+                          {t('Kept for the network fee')}
+                        </Typography>
+                        <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: '#0A0A0F' }}>
+                          {reserveReady ? `− ${fmtUnit(reserve)}` : t('calculating…')}
+                        </Typography>
+                      </Box>
+                    )}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.55)' }}>
+                        {t('Max you can sell')}
+                      </Typography>
+                      <Typography sx={{ fontSize: '12.5px', fontWeight: 700, color: '#0A0A0F' }}>
+                        {reserveReady && sellMax != null ? fmtUnit(sellMax) : t('calculating…')}
+                      </Typography>
+                    </Box>
+                    <Typography
+                      sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', pt: '2px' }}
+                    >
+                      {t('Coinbase then shows the cash you’ll receive after its own fees.')}
+                    </Typography>
+                  </Stack>
+                </Box>
+              )}
+
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={handleCbContinue}
+                disabled={cbLoading || !reserveReady || cbAmountCrypto == null}
+                startIcon={
+                  !reserveReady ? (
+                    <CircularProgress size={14} sx={{ color: 'rgba(10,10,15,0.3)' }} />
+                  ) : undefined
+                }
+                sx={{
+                  borderRadius: '12px',
+                  bgcolor: '#0A0A0F',
+                  py: '12px',
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  '&:hover': { bgcolor: '#1a1a25' },
+                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+                }}
+              >
+                {!reserveReady
+                  ? t('Calculating fees…')
+                  : cbLoading
+                    ? t('Opening…')
+                    : t('Continue to Coinbase')}
+              </Button>
+              <Button
+                onClick={() => setCbStep(false)}
+                disabled={cbLoading}
+                sx={{ textTransform: 'none', color: 'rgba(10,10,15,0.6)', fontWeight: 600 }}
+              >
+                {t('Back')}
+              </Button>
             </Stack>
           ) : (
             <List disablePadding>

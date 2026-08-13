@@ -217,6 +217,9 @@ export function useAssetActions(): {
         asset={{ symbol: flow?.symbol ?? 'USDC', blockchain: flowBlockchain }}
         providers={flow?.symbol === 'USDC' ? ['coinbase', 'moneygram'] : ['coinbase']}
         assetBalance={flowBalanceNum}
+        assetPrice={
+          flow ? Number(portfolio.getAsset(flow.symbol)?.price ?? 0) || undefined : undefined
+        }
       />
 
       <ReceiveModal

@@ -878,3 +878,28 @@ no bug.
    the row keeps feeding the activity badge until reconciled. +1 test (179).
 3. Sell modal: asset icon + amount now shown in the send-dialog's visual
    language with the dollar equivalent.
+
+### P0-1 follow-up 4 CORRECTION + follow-up 5 (2026-08-13)
+CORRECTION to follow-up 4: the ~$20 sell "Max" was OURS, not Coinbase's —
+the OffRampDialog amount step (offramp-dialog.tsx) computes
+sellMax = balance − reserve (ETH reserve 0.001) and PRESETS it into
+Coinbase. I answered from the wrong modal (the post-Coinbase fulfillment
+dialog); Niko's screenshot showed the pre-Coinbase amount step. The
+double-count fix from follow-up 4 stands on its own merit.
+Follow-up 5: that amount step restyled into the house language (labeled
+box, mono amount, black CTA) with a $/token toggle — unit-following
+Available line, Max fill, and validation all share the same floor-rounding
+(the doc-67 rule); fiat→crypto conversion clamps to sellMax so rounding
+can never overshoot the reserve. assetPrice wired from both callers.
+
+### P0-1 follow-up 6 (2026-08-13, Niko's UX call — transparent sell fees)
+The sell amount step no longer hides the reserve inside a smaller Max.
+Now: header shows the FULL balance; a fee-breakdown box above the CTA
+shows Balance → "Kept for the network fee" (live per asset: BTC mempool
+rate, XLM Horizon reserve, ETH/SOL static, USDC none) → "Max you can
+sell", plus the Coinbase-fees expectation line. While the async reserves
+resolve, the CTA shows "Calculating fees…" (spinner) and Max is disabled —
+no fallback number the breakdown would contradict. All values unit-follow
+the $/token toggle with the shared floor-rounding. Also fixed the $ prefix
+typography (generic 'monospace' fallback rendered it slanted/oversized —
+now the exact send-dialog input pattern, Geist Mono digits, same-size sans $).
