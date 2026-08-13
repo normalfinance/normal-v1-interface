@@ -1,104 +1,35 @@
 'use client';
 
-import type { Token } from '@normalfinance/types';
+// ---------------------------------------------------------------------------
+// P0-1 (#66): BTC balance + price for swap-card / send-modal — now a thin
+// SELECTOR over the shared server aggregate (`useWalletBalances`, one deduped
+// SWR over /api/wallet/portfolio) instead of a browser-direct mempool.space
+// fetch per mount per user. Addresses still come from the Turnkey wallet
+// lookup. Provider failures surface as the aggregate's stale-snapshot values
+// (the old "keep last known, never a confident 0" behavior, now server-side
+// for every chain). Post-action freshness rides the shared hook's bypassed
+// event refresh; `refetchBalance` is the awaitable cache-bypassing refresh
+// the #62 arrival gate needs.
+// ---------------------------------------------------------------------------
 
-import { cdn } from '@normalfinance/utils';
-import { chainOfActivityEvent } from '@/lib/tx-events';
-import { useState, useEffect, useCallback } from 'react';
+import { nativeAssetToToken } from '@/lib/portfolio/native-token';
 
 import { useTurnkeyWallet } from './use-turnkey-wallet';
-
-// Every provider call the UI waits on needs a deadline — without one a slow
-// provider has no upper bound, which is what makes a shared loading state
-// unsafe to build (#20/#37).
-const MEMPOOL_TIMEOUT_MS = 8_000;
-
-async function fetchBtcData(address: string): Promise<{ btc: number; price: number } | null> {
-  try {
-    const [addrRes, priceRes] = await Promise.all([
-      fetch(`https://mempool.space/api/address/${address}`, {
-        signal: AbortSignal.timeout(MEMPOOL_TIMEOUT_MS),
-      }),
-      fetch('https://mempool.space/api/v1/prices', {
-        signal: AbortSignal.timeout(MEMPOOL_TIMEOUT_MS),
-      }),
-    ]);
-    if (!addrRes.ok) return null;
-    const addrData = await addrRes.json();
-    const priceData = priceRes.ok ? await priceRes.json() : null;
-    const funded: number = addrData.chain_stats?.funded_txo_sum ?? 0;
-    const spent: number = addrData.chain_stats?.spent_txo_sum ?? 0;
-    const btc = (funded - spent) / 1e8;
-    const price: number = priceData?.USD ?? 0;
-    return { btc, price };
-  } catch {
-    return null;
-  }
-}
+import { useWalletBalances } from './use-wallet-balances';
 
 export function useBtcPortfolio(enabled = true) {
   const { addresses, loading: walletLoading, hasWallet, refetch } = useTurnkeyWallet(enabled);
-  const [btcToken, setBtcToken] = useState<Token | null>(null);
-  const [balanceLoading, setBalanceLoading] = useState(false);
+  const balances = useWalletBalances(enabled);
 
   const address = addresses?.bitcoinAddress ?? null;
-
-  // Re-runnable on demand (e.g. after a swap) — the effect alone only fires on
-  // address change, so a same-address balance update would otherwise be missed.
-  const loadBalance = useCallback(async () => {
-    if (!address) {
-      setBtcToken(null);
-      return;
-    }
-    setBalanceLoading(true);
-    const data = await fetchBtcData(address);
-    if (!data) {
-      // Provider failed or timed out. Keep whatever we last knew rather than
-      // rendering a confident "0 BTC" — a wrong balance reads as lost funds,
-      // and on a first load an absent card is honest where a zero is a lie.
-      setBalanceLoading(false);
-      return;
-    }
-    setBtcToken({
-      symbol: 'BTC',
-      contract: '__btc__',
-      name: 'Bitcoin',
-      issuer: '',
-      org: '',
-      domain: '',
-      icon: cdn('tokens/bitcoin.webp'),
-      decimals: 8,
-      featured: false,
-      balance: String(data.btc),
-      price: String(data.price),
-      percentageChange: 0,
-    } as Token);
-    setBalanceLoading(false);
-  }, [address]);
-
-  useEffect(() => {
-    loadBalance();
-  }, [loadBalance]);
-
-  // Auto-refresh when a swap settles (fires `nf:activity-updated`), so the BTC
-  // balance updates everywhere without a manual page refresh. Chain-scoped
-  // events (plain sends) refresh only their own chain — skip the others.
-  useEffect(() => {
-    const onUpdate = (e: Event) => {
-      const only = chainOfActivityEvent(e);
-      if (only && only !== 'bitcoin') return;
-      loadBalance();
-    };
-    window.addEventListener('nf:activity-updated', onUpdate);
-    return () => window.removeEventListener('nf:activity-updated', onUpdate);
-  }, [loadBalance]);
+  const btcToken = address ? nativeAssetToToken(balances.getAsset('BTC'), 'bitcoin') : null;
 
   return {
     btcToken,
     bitcoinAddress: address,
     hasWallet,
-    loading: walletLoading || balanceLoading,
+    loading: walletLoading || balances.isLoading,
     refetch,
-    refetchBalance: loadBalance,
+    refetchBalance: balances.refreshFresh,
   };
 }

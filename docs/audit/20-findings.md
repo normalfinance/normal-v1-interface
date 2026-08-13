@@ -25,7 +25,7 @@ reproduction · `input?` = parked on an open question.
 | **48** | 16 | Dedupe failure: `wallet-info.ts` has no single-flight guard → cache stampede (~22 calls/session) | perf/cost | 2·4·**1** | **ROOT CAUSE FOUND** | add in-flight promise; unify with the SWR path | ✅ |
 | 30 | 30 | Turbo declares 57 env vars, ~55 read-but-undeclared → stale cached builds | hygiene | 3·2·1 | code | declare full list; verify Vercel cache invalidation | ✅ |
 | 27 | 26 | Fee-first: fee signed before swap → fee lost if swap fails | correctness | 3·3·3 | code | **FIXED 2026-08-10**: sign-both-first + server escrow (see §#26 below, doc 55) | ✅ |
-| 25 | P0-1 | **[STRATEGIC]** Per-client fetching 7–30× over free tiers → the Layer-1 cache re-architecture | cost | 5·5·5 | math | server-fetch-once + event refresh (workstream B) | ✅ |
+| 25 | P0-1 | **[STRATEGIC]** Per-client fetching 7–30× over free tiers → the Layer-1 cache re-architecture | cost | 5·5·5 | math | **COMPLETE 2026-08-12**: last browser-direct paths (swap/send BTC+ETH+SOL) now selectors over the shared aggregate (§P0-1 below, doc 66) | ✅ |
 | 24 | 28 | Savings has no XLM-fee preflight → mid-flow failure (June TODO) | UX/correctness | 2·3·2 | code | preflight XLM balance, warn upfront | ✅ |
 | **32** | 29 | ETH/SOL send: hardcoded 21000 gas breaks contract destinations; lost response can cause **double send** | correctness | **4**·2·2 | code | **FIXED 2026-08-12**: estimateGas + server funnel + one-unknown-at-a-time guard (§#29 below, doc 60) | ✅ |
 | ~~24~~ | ~~21~~ | ~~cctp-advance overlap~~ — **CLEARED**: proper compare-and-swap guards, cannot double-mint | — | — | code | none needed ✅ | — |
@@ -802,3 +802,27 @@ Three fixes, two of them Niko's design corrections:
 - **#34 (separate staging DB): DECLINED by Niko 2026-08-12** — staging stays
   on the production database by his decision; Phase 5 load-testing scope
   must avoid prod-data writes accordingly.
+
+## P0-1 — Layer-1 cache COMPLETE (2026-08-12, branch feat/layer1-cache, doc 66)
+
+The [STRATEGIC] "mandatory between 1k and 10k" item. Recon showed Layer-1
+mostly existed (/api/wallet/portfolio aggregator + useWalletBalances shared
+SWR — the portfolio page already rode it); the remaining browser-direct gap
+was the three per-chain hooks used by swap-card/send-modal: BTC hit
+mempool.space and ETH/SOL hit public JSON-RPC from every user's browser on
+every mount. Those hooks are now thin selectors over the shared aggregate
+(same exported interfaces, zero behavior change for consumers; pure
+PortfolioAsset→Token mapper, tested). Cost/rate-limit exposure now scales
+with the cache window, not with open views × users.
+
+Kept browser-direct on purpose (action-time exceptions, documented):
+fetchEthBalance/fetchSolBalance (off-ramp preflight), RPC URL exports
+(tx-confirmation probing), mempool fee quote (send-modal).
+
+LATENT BUG FIXED: swap-card's refetchChain — awaited by the #62 arrival
+gate before showing "Done" — called refetch() (Turnkey ADDRESSES), not a
+balance refresh. Now calls refetchBalance = the new awaitable
+refreshFresh() (server-cache-bypassing shared revalidation), so "Done
+waits for real balances" is finally true end to end.
+
+4 new tests (178 total). No routes, no schema, no crons.

@@ -166,11 +166,15 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     () => ({ BTC: btc.bitcoinAddress, ETH: eth.ethereumAddress, SOL: sol.solanaAddress }),
     [btc.bitcoinAddress, eth.ethereumAddress, sol.solanaAddress]
   );
+  // #66: refetchBalance, not refetch — refetch reloads Turnkey ADDRESSES,
+  // which is what the #62 arrival gate was accidentally awaiting before.
+  // refetchBalance is the awaitable, server-cache-bypassing refresh of the
+  // shared aggregate, so "Done waits for real balances" is now true.
   const refetchChain = useCallback(
     async (chain: TurnkeyChain) => {
-      if (chain === 'bitcoin') await btc.refetch();
-      else if (chain === 'ethereum') await eth.refetch();
-      else if (chain === 'solana') await sol.refetch();
+      if (chain === 'bitcoin') await btc.refetchBalance();
+      else if (chain === 'ethereum') await eth.refetchBalance();
+      else if (chain === 'solana') await sol.refetchBalance();
     },
     [btc, eth, sol]
   );

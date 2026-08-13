@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>67-layer1-cache-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>67 — Layer-1 cache (P0-1), explained for juniors</h1>
+<p>Branch: <code>feat/layer1-cache</code>. Design: <a href="66-layer1-cache-plan.md">66-layer1-cache-plan.md</a>.</p>
+<p>This was the register's one item marked "mandatory between 1,000 and</p>
+<p>10,000 users."</p>
+<h2>The problem, in one picture</h2>
+<ul>
+<li>Before: every user's <strong>browser</strong> asked Bitcoin's explorer and the</li>
+</ul>
+<p>  Ethereum/Solana networks directly for balances — on every visit to the</p>
+<p>  swap page, every open of the send dialog.</p>
+<ul>
+<li>Cause and effect: 1,000 users with the swap page open → thousands of</li>
+</ul>
+<p>  direct calls to services with strict rate limits → they start refusing us</p>
+<p>  → balances fail for everyone at exactly the moment we have the most</p>
+<p>  users. Cost and risk grew with <strong>users × open views</strong>.</p>
+<h2>The fix, in one sentence</h2>
+<p>The server asks once and everyone shares the answer — the swap and send</p>
+<p>views now read the same server-cached portfolio the portfolio page has</p>
+<p>been using all along.</p>
+<h2>How it works now</h2>
+<ol>
+<li>One server endpoint aggregates ALL chains' balances + prices, caches</li>
+</ol>
+<p>   the response for 15 seconds, and keeps a one-hour "last good" snapshot</p>
+<p>   per user.</p>
+<ol>
+<li>One shared client subscription reads it — the portfolio page, the swap</li>
+</ol>
+<p>   card, and the send dialog all share a single request instead of five.</p>
+<ol>
+<li>After a send or swap confirms → one cache-bypassing refresh of that</li>
+</ol>
+<p>   shared data (the server rate-floors the bypass, so it can't be abused).</p>
+<ol>
+<li>If a chain's data source is down → the server serves the last-good</li>
+</ol>
+<p>   snapshot marked "stale" — the UI keeps showing real numbers instead of</p>
+<p>   a lying zero. (The old BTC hook did this client-side; now every chain</p>
+<p>   gets it, server-side.)</p>
+<p>Deliberately NOT moved to the cache (the standing data-layer rule —</p>
+<p>display reads share the cache, <strong>action-time reads stay live</strong>): the</p>
+<p>off-ramp's balance preflight, transaction-confirmation probing, and the</p>
+<p>Bitcoin fee quote. When money is about to move, we always ask the chain</p>
+<p>directly.</p>
+<h2>The bonus bug this caught</h2>
+<p>The #62 "don't show Done until balances are refreshed" gate was awaiting</p>
+<p>the wrong function — it refreshed the wallet's <strong>addresses</strong>, not its</p>
+<p><strong>balances</strong> (the names were one word apart: <code>refetch</code> vs</p>
+<p><code>refetchBalance</code>). Balances still updated via a background event, so users</p>
+<p>rarely noticed — but the guarantee wasn't what the design claimed. Now the</p>
+<p>gate awaits a true, cache-bypassing balance refresh. Lesson: a guarantee</p>
+<p>you haven't traced end to end is a hope, not a guarantee.</p>
+<h2>How to test (do → see)</h2>
+<ol>
+<li>Open the swap page with DevTools → Network. You should see ONE</li>
+</ol>
+<p>   <code>/api/wallet/portfolio</code> request — and <strong>no</strong> requests to</p>
+<p>   <code>mempool.space/api/address/...</code>, <code>publicnode.com</code>, or any raw RPC for</p>
+<p>   balances. (The mempool <strong>fees</strong> request when opening a BTC send is</p>
+<p>   expected — that's an action-time read.)</p>
+<ol>
+<li>Balances on the swap card match the portfolio page exactly — they are</li>
+</ol>
+<p>   now literally the same data.</p>
+<ol>
+<li>Do a swap or send → balances update just like before (the #62</li>
+</ol>
+<p>   confirmation-driven refresh rides the same shared pipeline).</p>
+<ol>
+<li>Finish a LI.FI swap → "Done" appears with the destination balance</li>
+</ol>
+<p>   already updated — and now that's guaranteed by an awaited refresh, not</p>
+<p>   by luck.</p>
+<h2>Tests</h2>
+<p>4 new (178 total): the PortfolioAsset→Token mapper — legacy shape</p>
+<p>preserved, missing row → null (absent beats a lying zero), null</p>
+<p>balance/price → "0" strings, stale rows still display.</p>
+</body></html>
