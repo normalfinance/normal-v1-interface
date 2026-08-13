@@ -863,3 +863,18 @@ toggle, using the SAME ROUND_DOWN-to-cents as the MAX fill so typing the
 shown number always passes validation); swap-card already correct
 (fCurrency in fiat mode); withdraw-card shows both units simultaneously —
 no bug.
+
+### P0-1 follow-up 4 (2026-08-13, Niko — sell Max + double-count + sell modal)
+1. Sell "Max" ~$20 vs $25.65 balance: NOT our code — the Max lives on
+   COINBASE's hosted page; they keep back their own (generous, ~$4-6 at L1
+   rates) Ethereum gas reserve. Our balance math was right ($30 − $5 − fee).
+   Our preflight does the equivalent reserve on our side by design.
+2. The question exposed a REAL adjacent gap in the #62 spendable ledger:
+   after chain confirmation, the balance reflects the send but the pending
+   row only clears when Etherscan indexes into the feed (minutes) — our
+   send/swap MAX double-subtracted during that window. Fix:
+   markSendConfirmed(txHash) from the confirmation watcher; spendable skips
+   confirmed rows after a 2.5s grace (covers the bypassed refresh landing);
+   the row keeps feeding the activity badge until reconciled. +1 test (179).
+3. Sell modal: asset icon + amount now shown in the send-dialog's visual
+   language with the dollar equivalent.

@@ -406,8 +406,35 @@ export function CoinbaseOfframpModal({
                   border: '1px solid rgba(10,10,15,0.08)',
                 }}
               >
-                <Stack spacing={1}>
-                  <Row label={t('Amount')} value={`${txn.amount} ${symbol}`} />
+                <Stack spacing={1.5}>
+                  {/* Asset + amount in the send-dialog's visual language, with
+                      the dollar equivalent (Niko, 2026-08-13). */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Box
+                      component="img"
+                      src={token.icon}
+                      alt={symbol}
+                      sx={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0 }}
+                    />
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography
+                        sx={{
+                          fontSize: '17px',
+                          fontWeight: 700,
+                          color: '#0A0A0F',
+                          letterSpacing: '-0.01em',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        {txn.amount} {symbol}
+                      </Typography>
+                      {Number(token.price) > 0 && (
+                        <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)' }}>
+                          ≈ ${(parseFloat(txn.amount) * Number(token.price)).toFixed(2)}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
                   <Row label={t('To (Coinbase)')} value={txn.toAddress} mono truncate />
                   {isStellar && txn.memo && (
                     <Row label={t('Memo')} value={txn.memo} mono truncate />

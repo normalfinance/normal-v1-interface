@@ -151,9 +151,16 @@ export function createSolanaAdapter(
 
         // #62: fire ONE more refresh at the exact moment the chain confirms —
         // SOL lands in ~2s, well before the old +8s timer shot, and this one
-        // cannot be swallowed by the server cache floor.
+        // cannot be swallowed by the server cache floor. Confirmation also
+        // ends the pending row's SPENDABLE subtraction (#66 follow-up — see
+        // the note in the ethereum adapter).
         void import('@/lib/send-confirmation').then(({ watchSendConfirmation }) =>
-          watchSendConfirmation('solana', txid, () => {
+          watchSendConfirmation('solana', txid, (outcome) => {
+            if (outcome === 'confirmed') {
+              void import('@/lib/pending-sends').then(({ markSendConfirmed }) =>
+                markSendConfirmed(txid)
+              );
+            }
             void import('@/lib/tx-events').then(({ announceConfirmation }) =>
               announceConfirmation('solana')
             );

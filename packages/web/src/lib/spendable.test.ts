@@ -68,6 +68,27 @@ describe('pendingOutflowAmount (#62)', () => {
     spendable.clearSwapOutflow('swap1');
   });
 
+  it('a CHAIN-CONFIRMED send stops counting after the grace — the balance already reflects it', () => {
+    const { spendable, sends } = freshModules();
+    sends.addPendingSend({
+      txHash: 'conf1',
+      chain: 'ethereum',
+      symbol: 'ETH',
+      amount: '0.003',
+      destination: 'd',
+    });
+    expect(spendable.pendingOutflowAmount('ethereum', 'ETH')).toBe('0.003');
+    sends.markSendConfirmed('conf1');
+    // Within the grace window (refresh still landing) it still counts…
+    expect(spendable.pendingOutflowAmount('ethereum', 'ETH')).toBe('0.003');
+    // …after the grace it must not — the on-chain balance includes the send,
+    // and Etherscan's minutes-long indexing lag would otherwise double-count
+    // it against MAX until the feed reconciles the row away.
+    jest.spyOn(Date, 'now').mockReturnValue(Date.now() + 10_000);
+    expect(spendable.pendingOutflowAmount('ethereum', 'ETH')).toBe('0');
+    jest.restoreAllMocks();
+  });
+
   it('a settled send releases the amount (activity reconcile clears the row)', () => {
     const { spendable, sends } = freshModules();
     sends.addPendingSend({

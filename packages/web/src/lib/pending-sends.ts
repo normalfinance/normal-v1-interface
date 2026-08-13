@@ -25,6 +25,12 @@ export interface PendingSend {
   amount: string;
   destination: string;
   createdAt: number;
+  /** Set the moment the CHAIN confirms the send (#66 follow-up). The row
+   *  keeps showing in the activity feed until the indexer catches up, but
+   *  spendable math must stop subtracting it — the on-chain balance already
+   *  reflects the send, and Etherscan's indexing lag (minutes) would
+   *  otherwise double-count the amount against MAX. */
+  confirmedAt?: number;
 }
 
 const STORAGE_KEY = 'nf:pending-sends:v1';
@@ -86,6 +92,23 @@ export function addPendingSend(entry: Omit<PendingSend, 'createdAt'>): void {
   const list = hydrate();
   if (list.some((e) => hashKey(e.txHash) === hashKey(entry.txHash))) return;
   commit([...pruneExpired(list), { ...entry, createdAt: Date.now() }]);
+}
+
+/** Mark a send as chain-confirmed (called by the confirmation watcher). The
+ *  row stays for activity display until reconciled; only its spendable
+ *  contribution ends. */
+export function markSendConfirmed(txHash: string): void {
+  const list = hydrate();
+  const key = hashKey(txHash);
+  let changed = false;
+  const next = list.map((e) => {
+    if (hashKey(e.txHash) === key && !e.confirmedAt) {
+      changed = true;
+      return { ...e, confirmedAt: Date.now() };
+    }
+    return e;
+  });
+  if (changed) commit(next);
 }
 
 /** Drop every entry whose hash appears in `knownHashes` (the activity feed has
