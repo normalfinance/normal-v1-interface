@@ -79,6 +79,30 @@ token's numbers without ever touching what you typed. Lesson: when you
 replace "fetch into state" with "derive on render", object identity
 changes meaning — every consumer that watches identity must be audited.
 
+## Follow-ups 3–6 (same branch, all from Niko's live testing)
+
+- **3 — Fiat toggle vs "Available":** the send dialog's Available readout
+  stayed in token units when the amount was flipped to dollars. Now every
+  fiat-toggle surface follows the unit, and the shown number, the MAX
+  fill, and the validation share one rounding rule — typing exactly what
+  you see always passes. (Audit: send-modal fixed; swap-card was already
+  correct; withdraw-card shows both units.)
+- **4 — The double-count:** after a send confirms, the balance drops on
+  chain — but the pending-send row kept subtracting from MAX until
+  Etherscan indexed the tx (minutes). Sends now mark themselves confirmed
+  the moment the chain says so, and the spendable math stops
+  double-counting (a short grace covers the balance refresh landing).
+  Also corrected the record: an earlier answer blamed Coinbase's page for
+  a smaller sell Max that was actually OUR amount step's reserve.
+- **5 — The sell amount step, house style + dollars:** rebuilt in the
+  send-dialog's visual language with the $/token toggle.
+- **6 — Transparent fees (Niko's design):** the sell step now shows the
+  FULL balance, then itemizes the math above the button — balance, "kept
+  for the network fee" (live per asset: BTC mempool rate, XLM Horizon
+  reserve), "max you can sell", and the note that Coinbase then shows the
+  cash after its own fees. While the async fees resolve, the button reads
+  "Calculating fees…". Money UIs earn trust by showing their arithmetic.
+
 ## How to test (do → see)
 
 1. Open the swap page with DevTools → Network. You should see ONE

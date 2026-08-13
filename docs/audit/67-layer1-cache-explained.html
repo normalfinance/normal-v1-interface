@@ -100,6 +100,36 @@
 <p>token's numbers without ever touching what you typed. Lesson: when you</p>
 <p>replace "fetch into state" with "derive on render", object identity</p>
 <p>changes meaning — every consumer that watches identity must be audited.</p>
+<h2>Follow-ups 3–6 (same branch, all from Niko's live testing)</h2>
+<ul>
+<li><strong>3 — Fiat toggle vs "Available":</strong> the send dialog's Available readout</li>
+</ul>
+<p>  stayed in token units when the amount was flipped to dollars. Now every</p>
+<p>  fiat-toggle surface follows the unit, and the shown number, the MAX</p>
+<p>  fill, and the validation share one rounding rule — typing exactly what</p>
+<p>  you see always passes. (Audit: send-modal fixed; swap-card was already</p>
+<p>  correct; withdraw-card shows both units.)</p>
+<ul>
+<li><strong>4 — The double-count:</strong> after a send confirms, the balance drops on</li>
+</ul>
+<p>  chain — but the pending-send row kept subtracting from MAX until</p>
+<p>  Etherscan indexed the tx (minutes). Sends now mark themselves confirmed</p>
+<p>  the moment the chain says so, and the spendable math stops</p>
+<p>  double-counting (a short grace covers the balance refresh landing).</p>
+<p>  Also corrected the record: an earlier answer blamed Coinbase's page for</p>
+<p>  a smaller sell Max that was actually OUR amount step's reserve.</p>
+<ul>
+<li><strong>5 — The sell amount step, house style + dollars:</strong> rebuilt in the</li>
+</ul>
+<p>  send-dialog's visual language with the $/token toggle.</p>
+<ul>
+<li><strong>6 — Transparent fees (Niko's design):</strong> the sell step now shows the</li>
+</ul>
+<p>  FULL balance, then itemizes the math above the button — balance, "kept</p>
+<p>  for the network fee" (live per asset: BTC mempool rate, XLM Horizon</p>
+<p>  reserve), "max you can sell", and the note that Coinbase then shows the</p>
+<p>  cash after its own fees. While the async fees resolve, the button reads</p>
+<p>  "Calculating fees…". Money UIs earn trust by showing their arithmetic.</p>
 <h2>How to test (do → see)</h2>
 <ol>
 <li>Open the swap page with DevTools → Network. You should see ONE</li>
