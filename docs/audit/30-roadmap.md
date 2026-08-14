@@ -156,3 +156,53 @@ except the component tests.
 2. **Optimistic updates computed from live state, not a snapshot** → 3 bugs.
 3. **Two sources for the same number** → staggered loading, vanishing XLM/USDC,
    wrong balance next to a Deposit button.
+
+## What actually remains — the full map (2026-08-13, after P0-1)
+
+Correction on the record: earlier "last fixes" phrasing covered only the
+non-strategic register rows. This is the COMPLETE remaining picture.
+
+### A. Product / strategic (Niko's priorities, raised 2026-08-13)
+1. **XLM savings-fee protection (NEW).** Verified state: `spendableXlm`
+   guards only the NETWORK reserve; the 1-XLM savings buffer applies to
+   send MAX only ("a manual send can still go all the way down"), keyed on
+   a subentry-count proxy, and XLM→USDC SWAPS have no savings-aware guard
+   at all. Gap: a user with money IN savings can drain their fee-XLM →
+   savings become unwithdrawable until they buy XLM. Fix: when a savings
+   position exists, sends AND swaps of XLM warn/block below the Soroban
+   fee floor — the guard lifts only if the user has no savings.
+2. **#32 — external wallets can't swap cross-chain.** Needs the
+   create-a-Turnkey-wallet-ALONGSIDE-the-connected-wallet flow (external
+   wallets can never sign EVM). Product decisions required: when to offer,
+   how the two wallets coexist in the UI, how funds hop between them.
+3. **#33 — single-signature program.** Current counts: savings = 2 sigs
+   (service+fee pair); CCTP = 2 repeat / up to 4 first-time (Lever A
+   shipped). Staged path: savings fee-bundle investigation → CCTP outbound
+   1-sig needs the audited swap-and-forward hook contract on Base
+   (build+audit = budget decision); CCTP inbound 1-sig is BLOCKED on LI.FI
+   shipping non-EVM contract calls (Stage-4 spike proved). A program, not
+   a batch.
+
+### B. Reliability batch (next, scoped): #10 pooler runbook · #8 relayer
+RPC pinning · #24 off-ramp DB tracking (chore/wave4-reliability).
+
+### C. Register/backlog remainder
+#53 chart on recorded history (unblocked by #27) · #40 drawer wallet list ·
+#7/#12 activity-systems consolidation + token-store retirement (swap-card
+still reads tokenState for XLM/USDC) · #30 turbo env declarations (verify
+if Block C covered it) · #2 activity-by-address privacy (Niko's decision).
+
+### D. CCTP backlog (from the implementation log)
+Solana pivot leg (Base-only today) · reattest-on-expiry (NEEDS_REATTEST
+unreachable) · relayer float balance alerts · outbound pre-pivot
+closed-tab resume execution · fee-exempt Soroswap composite leg ·
+gas-top-up live test on a FRESH 0-ETH wallet.
+
+### E. Phase 5 (the close): read-path load tests (per the no-staging-DB
+decision) + monitoring/alerting (incl. cron heartbeat alerts).
+
+### F. User-side parked: #42 Freighter repro · Turnkey docs deep dive ·
+Vercel env deletions.
+
+Proposed order: A1 (small, protects locked funds) → B → A2 (needs Niko's
+product decisions first — design doc then GO) → C/#53 → A3 staged → E.

@@ -903,3 +903,26 @@ no fallback number the breakdown would contradict. All values unit-follow
 the $/token toggle with the shared floor-rounding. Also fixed the $ prefix
 typography (generic 'monospace' fallback rendered it slanted/oversized —
 now the exact send-dialog input pattern, Geist Mono digits, same-size sans $).
+
+## Wave-4 reliability (2026-08-13, branch chore/wave4-reliability, doc 68)
+
+- **#8 FIXED**: relayer rode viem's DEFAULT public RPCs in 4 places
+  (mint, receipt check, gas top-up, shortfall calc). relayerTransport()
+  uses CCTP_RPC_URL_BASE / CCTP_RPC_URL_ETHEREUM when set, public default
+  as fallback — deploy-order free. Niko: set the two env vars in Vercel.
+- **#24 FIXED**: off-ramp fills (the "we owe Coinbase a send for sale X"
+  memory) moved from localStorage to the new offramp_fills table +
+  /api/offramp/fills (withAuth, session-keyed; GET/POST upsert/DELETE
+  release — fills with a real txHash are permanent, only unfulfilled
+  claims deletable). Both consumers rewired (sell modal via a hydrated
+  module cache so call sites stayed sync; activity hook fetches). One-time
+  localStorage→DB migration preserves in-flight sales across the deploy.
+  Additive SQL for Niko (doc 68). Conformance auto-covers the route.
+- **#10 PREPARED (flip is Niko's, deliberately not merged)**: transaction
+  pooler runbook (doc 68) + scripts/verify-pooler.mjs — read-only proof of
+  the four pooler-sensitive patterns (repeat queries = the
+  prepared-statement trap, transaction, 10 concurrent reads). Flip =
+  DATABASE_URL swap to :6543 + pgbouncer=true&connection_limit=1 after
+  ALL PASS; rollback = env revert.
+
+1 new test surface (route under conformance), 180 total.

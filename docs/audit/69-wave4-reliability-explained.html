@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>69-wave4-reliability-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>69 — Wave-4 reliability (#8 · #24 · #10), explained for juniors</h1>
+<p>Branch: <code>chore/wave4-reliability</code>. Design: <a href="68-wave4-reliability-plan.md">68-wave4-reliability-plan.md</a>.</p>
+<h2>The theme</h2>
+<p>The app can no longer lose money. This batch removes the remaining ways it</p>
+<p>could still <strong>fall over or forget things</strong> under real-world conditions.</p>
+<h2>1. The bridge robot gets its own phone line (#8)</h2>
+<ul>
+<li>Our relayer — the server robot that finishes cross-chain swaps by</li>
+</ul>
+<p>  minting bridged USDC and topping up gas — talked to Ethereum and Base</p>
+<p>  through <strong>free public endpoints</strong> (that's what viem does when you give</p>
+<p>  it no URL; we found four such places).</p>
+<ul>
+<li>Cause and effect: free endpoints are shared with the whole world and</li>
+</ul>
+<p>  rate-limited → one bad hour there → the robot goes deaf → everyone's</p>
+<p>  bridge transfers stall until cron retries land.</p>
+<ul>
+<li>Fix: a single <code>relayerTransport()</code> helper — if <code>CCTP_RPC_URL_BASE</code> /</li>
+</ul>
+<p>  <code>CCTP_RPC_URL_ETHEREUM</code> are set in the environment, the robot uses our</p>
+<p>  paid, keyed endpoints; if not, it falls back to today's behavior, so</p>
+<p>  nothing breaks while the env vars roll out.</p>
+<h2>2. The app's memory of a Coinbase sale moves to the database (#24)</h2>
+<ul>
+<li>"I still owe Coinbase a crypto send for sale X" used to live in the</li>
+</ul>
+<p>  browser's localStorage — on ONE device.</p>
+<ul>
+<li>Cause and effect: clear the browser, or start a sale on the laptop and</li>
+</ul>
+<p>  open the app on the phone → amnesia → the sale looks stuck and needs</p>
+<p>  manual help. (Two separate copies of this localStorage logic existed —</p>
+<p>  the sell modal and the activity feed.)</p>
+<ul>
+<li>Fix: a new <code>offramp_fills</code> table + one authenticated API. Claiming a</li>
+</ul>
+<p>  sale, attaching the send's hash, and releasing a failed claim all go to</p>
+<p>  the server, keyed on your login — so the memory follows the ACCOUNT, not</p>
+<p>  the device. Existing localStorage entries migrate themselves to the DB</p>
+<p>  the first time the new code runs, so in-flight sales survive the deploy.</p>
+<ul>
+<li>One safety rule worth noticing: a fill whose send actually happened</li>
+</ul>
+<p>  (has a hash) can never be deleted — records of moved money are</p>
+<p>  permanent; only unfulfilled claims can be released.</p>
+<h2>3. The database doorman (#10) — prepared, not flipped</h2>
+<ul>
+<li>Today every serverless function opens its own database connection: a</li>
+</ul>
+<p>  spike of users = a spike of connections = the pool fills = everything</p>
+<p>  fails at once.</p>
+<ul>
+<li>The fix is Supabase's transaction pooler — a doorman that shares a few</li>
+</ul>
+<p>  connections among everyone. It's ONE setting: the database URL.</p>
+<ul>
+<li>Why we did NOT flip it in this branch: the pooler dislikes a database</li>
+</ul>
+<p>  feature Prisma uses by default (prepared statements — disabled by adding</p>
+<p>  <code>pgbouncer=true</code> to the URL). The switch is an env change with a</p>
+<p>  10-second rollback, so it must not ride a merge that also carries #8 and</p>
+<p>  #24. This branch ships the proof instead: <code>scripts/verify-pooler.mjs</code></p>
+<p>  runs the exact four patterns that break on a misconfigured pooler</p>
+<p>  (repeat queries, a transaction, concurrent reads) — all read-only. You</p>
+<p>  flip the URL only after it prints ALL PASS.</p>
+<h2>What we accomplish</h2>
+<ul>
+<li>A cross-chain swap no longer depends on the internet's free tier.</li>
+<li>A Coinbase sale survives anything short of Coinbase forgetting it.</li>
+<li>The path to spike-proof database connections is proven and scripted,</li>
+</ul>
+<p>  with a rollback measured in seconds.</p>
+</body></html>
