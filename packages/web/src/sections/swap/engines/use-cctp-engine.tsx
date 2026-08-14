@@ -61,6 +61,46 @@ export interface CctpEngineProps {
 
 const NATIVE_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
 
+// Safety valve for the pre-'done' balance refetch (#66, same constant as the
+// LI.FI tracker's arrival gate #62): once delivery is chain-confirmed the
+// funds ARE there — a hiccuping refetch must not make a successful swap look
+// stuck. Sized for swap-card's verify-and-retry (refresh + 5.6s floor wait +
+// second refresh) with margin.
+const ARRIVAL_CAP_MS = 15_000;
+
+// Follow the outbound pivot's Base→destination bridge to delivery — the
+// mirror of lifi-tracker's pollBridge. Fresh auth headers per poll (#64).
+// Returns null on timeout (~10 min): the bridge is merely slow, not failed.
+async function pollPivotDelivery(
+  txHash: string,
+  fromChainId: number,
+  toChainId: number,
+  cancelledRef: React.MutableRefObject<boolean>
+): Promise<'DONE' | 'REFUNDED' | 'FAILED' | null> {
+  for (let i = 0; i < 60; i++) {
+    if (cancelledRef.current) throw new Error('cancelled');
+    try {
+      const res = await fetch(
+        `/api/lifi/status?txHash=${txHash}&fromChain=${fromChainId}&toChain=${toChainId}`,
+        { headers: await buildAuthHeaders() }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const s = data?.status?.status as string | undefined;
+        const sub = String(data?.status?.substatus ?? '').toUpperCase();
+        // A refund is reported as DONE+REFUNDED (or PARTIAL) — funds returned,
+        // destination not delivered.
+        if (s === 'DONE') return sub === 'REFUNDED' || sub === 'PARTIAL' ? 'REFUNDED' : 'DONE';
+        if (s === 'FAILED' || s === 'INVALID') return 'FAILED';
+      }
+    } catch {
+      /* transient — retry next interval */
+    }
+    await new Promise((r) => setTimeout(r, 10_000));
+  }
+  return null;
+}
+
 async function readBaseUsdc(address: string): Promise<bigint> {
   const { http, erc20Abi, createPublicClient } = await import('viem');
   const { base } = await import('viem/chains');
@@ -297,19 +337,37 @@ export function useCctpEngine({
     [t]
   );
 
-  const finish = useCallback(() => {
-    setStage('done');
-    resetInput();
-    getAllTokens(true).catch(() => {});
-    // Outbound delivers a chain asset (BTC/ETH/SOL) whose balance lives in a
-    // separate portfolio hook — refresh that chain now so the received amount
-    // shows promptly instead of on its next poll cycle.
+  // #66: 'Done' must mean the wallet ALREADY shows the result — the LI.FI
+  // engine's arrival rule (#62) applied here. The delivered side's balance
+  // refetch is AWAITED (capped) before the stage flips; fire-and-forget
+  // refreshes raced the modal and lost, so "Done" showed against a stale
+  // balance that looked like missing funds.
+  //   out (ETH/SOL): runOutbound has chain-confirmed delivery before calling
+  //     this — await the destination chain's verify-and-retry refetch.
+  //   out (BTC): delivery takes many minutes; the snackbar + activity pending
+  //     badge own that wait, so the refetch stays fire-and-forget (documented
+  //     trade-off: holding the modal open that long would itself look stuck).
+  //   in: USDC lands on Stellar, mint already chain-confirmed — await the
+  //     token-store refresh.
+  const finish = useCallback(async () => {
+    const cap = new Promise<void>((resolve) => {
+      setTimeout(resolve, ARRIVAL_CAP_MS);
+    });
     if (direction === 'out') {
       const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
         toSymbol as CrosschainSymbol
       ];
-      if (chain) refetchChain?.(chain).catch(() => {});
+      getAllTokens(true).catch(() => {}); // source side: USDC left Stellar
+      if (chain === 'bitcoin') {
+        refetchChain?.(chain).catch(() => {});
+      } else if (chain && refetchChain) {
+        await Promise.race([refetchChain(chain).catch(() => {}), cap]);
+      }
+    } else {
+      await Promise.race([getAllTokens(true).catch(() => {}), cap]);
     }
+    setStage('done');
+    resetInput();
     window.dispatchEvent(new Event('nf:activity-updated'));
   }, [direction, toSymbol, resetInput, getAllTokens, refetchChain]);
 
@@ -375,7 +433,7 @@ export function useCctpEngine({
         // Delivered amount for the activity feed — the USDC that landed on Stellar.
         const dstAmount = wireToUsdc(arrivedWire);
         await patch({ dstAmount });
-        finish();
+        await finish();
       } catch (e: any) {
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
@@ -430,13 +488,49 @@ export function useCctpEngine({
         const dstAmount = BigNumber(result.toAmountMin)
           .dividedBy(BigNumber(10).pow(NATIVE_DECIMALS[toSymbol as CrosschainSymbol]))
           .toFixed();
-        await patch({ dstAmount });
-        if (toSymbol === 'BTC') {
-          enqueueSnackbar(t('BTC is on its way — delivery takes a few minutes.'), {
-            variant: 'info',
-          });
+
+        // #66: the pivot tx confirming on BASE is not delivery — the bridged
+        // asset lands on the TARGET chain later. 'Done' used to show here,
+        // before the SOL/ETH existed anywhere the wallet could see it. BTC is
+        // exempt (many-minute delivery; snackbar + pending badge own it), as
+        // is a quote that carried no chain ids (can't poll — old behavior).
+        if (toSymbol === 'BTC' || !result.fromChainId || !result.toChainId) {
+          await patch({ dstAmount });
+          if (toSymbol === 'BTC') {
+            enqueueSnackbar(t('BTC is on its way — delivery takes a few minutes.'), {
+              variant: 'info',
+            });
+          }
+          await finish();
+          return;
         }
-        finish();
+
+        setStage('delivering');
+        const delivery = await pollPivotDelivery(
+          result.txHash,
+          result.fromChainId,
+          result.toChainId,
+          cancelled
+        );
+        if (delivery === 'FAILED' || delivery === 'REFUNDED') {
+          throw new Error(
+            t(
+              'The final swap leg did not deliver — your USDC is at your own Base address, untouched by anyone else. Contact support to recover it.'
+            )
+          );
+        }
+        await patch({ dstAmount });
+        if (delivery === null) {
+          // Timed out (~10 min) still bridging: rare, and the funds are in
+          // flight to the user's own address. Documented trade-off (Niko's
+          // #62 rule — a successful swap must never look stuck): close out
+          // with an honest heads-up instead of an error.
+          enqueueSnackbar(
+            t('{{sym}} is on its way — delivery is taking longer than usual.', { sym: toSymbol }),
+            { variant: 'info' }
+          );
+        }
+        await finish();
       } catch (e: any) {
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack

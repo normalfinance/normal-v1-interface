@@ -17,7 +17,15 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from '@/components/template/iconify';
 
-export type CctpStage = 'lifi' | 'arriving' | 'topup' | 'burn' | 'bridging' | 'pivot-swap' | 'done';
+export type CctpStage =
+  | 'lifi'
+  | 'arriving'
+  | 'topup'
+  | 'burn'
+  | 'bridging'
+  | 'pivot-swap'
+  | 'delivering'
+  | 'done';
 
 interface Props {
   open: boolean;
@@ -91,10 +99,24 @@ export function CctpProgressModal({
             label: t('Swapping USDC to {{sym}}', { sym: toSymbol }),
             sub: t('Via LI.FI · approve in your wallet'),
           },
+          // BTC delivery takes many minutes — the modal closes at 'done' with
+          // an "on its way" note instead of holding a delivery step open (#66).
+          ...(toSymbol === 'BTC'
+            ? []
+            : [
+                {
+                  id: 'delivering' as CctpStage,
+                  label: t('Delivering {{sym}}', { sym: toSymbol }),
+                  sub: t('Cross-chain arrival — usually 1–3 minutes'),
+                },
+              ]),
           {
             id: 'done',
             label: t('Done'),
-            sub: t('{{sym}} on its way to your wallet', { sym: toSymbol }),
+            sub:
+              toSymbol === 'BTC'
+                ? t('{{sym}} on its way to your wallet', { sym: toSymbol })
+                : t('{{sym}} delivered', { sym: toSymbol }),
           },
         ];
 

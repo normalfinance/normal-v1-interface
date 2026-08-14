@@ -1027,3 +1027,31 @@ delivered amount (verified live: COMPLETED, 11.839938 USDC).
 Class note: this is the retention-window sibling of #62/#64 — an
 "absence of evidence" read (cache expiry, token expiry, history expiry)
 must never be interpreted as a stable fact.
+
+## #66 — Outbound CCTP said "Done" before the asset existed in the wallet (FIXED 2026-08-14)
+
+Niko's USDC→SOL test: modal reached Done, but the SOL was invisible for a
+while — the #62 disease on the CCTP path. Two gaps vs the LI.FI engine's
+arrival gate:
+
+1. `executePivotSwap` returns when the pivot tx confirms ON BASE — but the
+   bridged asset lands on the TARGET chain later (Base→Solana ≈ 1-3 min).
+   'Done' showed while the SOL existed nowhere a wallet could see.
+2. `finish()` set stage 'done' FIRST and fired the balance refetch
+   fire-and-forget — even delivered funds raced the modal and lost.
+
+Fix (mirrors #62's tracker):
+- New visible 'delivering' stage for outbound ETH/SOL: polls
+  /api/lifi/status (fresh auth headers per poll — #64's lesson) until the
+  bridge reports DONE. FAILED/REFUNDED → honest error (USDC is at the
+  user's own Base address). ~10-min timeout → snackbar "on its way"
+  and proceed (documented trade-off, Niko's #62 rule: a successful swap
+  must never look stuck). dstAmount is now patched only after delivery.
+- `finish()` awaits the delivered side's refetch BEFORE flipping to
+  'done', capped at ARRIVAL_CAP_MS=15s (same constant as #62): outbound
+  awaits swap-card's verify-and-retry refetchChain; inbound awaits the
+  Stellar token-store refresh. BTC exempt (many-minute delivery; snackbar
+  + activity pending badge own that wait — holding the modal open would
+  itself look stuck).
+
+9th instance of the fire-and-forget-refresh-races-the-UI root cause.

@@ -158,3 +158,21 @@ the checker's "not found" answer became permanent → the row could never
 complete, no matter how long you waited. The checker now falls back to
 Horizon (which never forgets) before calling a transaction "pending".
 The July row completed on the next tick with its real delivered amount.
+
+## 7. Addendum 4 (2026-08-14): "Done" now waits for the wallet to see the money (#66)
+
+Niko's USDC→SOL swap said Done while the SOL was still crossing from Base
+to Solana — invisible in the wallet for a couple of minutes. Same lesson
+as the regular LI.FI swaps (#62), applied to the CCTP engine:
+
+- Cause and effect: the final swap leg confirms on BASE first → the SOL
+  arrives on Solana 1-3 minutes LATER → the old code said Done at the
+  Base confirmation → wallet shows no SOL → user thinks funds are lost.
+- Fix: a new visible step — "Delivering SOL · cross-chain arrival" —
+  keeps the modal honest until the bridge reports actual delivery, and
+  then "Done" waits (up to 15s) for the wallet's balance to be re-read
+  before it appears. So when you see Done, the number is already there.
+- BTC stays different on purpose: its delivery takes many minutes, so the
+  modal closes with "BTC is on its way" and the activity feed's pending
+  badge tracks the arrival — a 20-minute spinner would be worse than the
+  message.
