@@ -170,28 +170,49 @@ export function SwapDetailModal({
     // → null); only clear when a new transfer is opened, so the spinner shows.
     if (!transferId) return undefined;
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     setTransfer(null);
     setLoading(true);
-    (async () => {
+
+    // LIVE VIEW, not a snapshot (#66 follow-up, observed live): this dialog
+    // used to fetch once on open, so watching an in-flight swap from here
+    // left the attestation spinner spinning forever after the transfer had
+    // already COMPLETED. While the dialog is open and the transfer is not
+    // terminal, re-read every few seconds; stop at a terminal status.
+    const TERMINAL = ['COMPLETED', 'FAILED', 'REFUNDED'];
+    const load = async () => {
       try {
         const headers = await buildAuthHeaders();
-        // noAdvance = fast read (don't block on the state machine); timeout so a
-        // slow/hung server surfaces as an error instead of an endless spinner.
+        // noAdvance = fast read (don't block on the state machine — the banner's
+        // poke and the cron advance it); timeout so a slow/hung server surfaces
+        // as an error instead of an endless spinner.
         const res = await fetch(`/api/cctp/transfers/${transferId}?noAdvance=1`, {
           headers,
           credentials: 'include',
           signal: AbortSignal.timeout(12_000),
         });
         const data = await res.json();
-        if (!cancelled) setTransfer(res.ok ? (data.transfer ?? null) : null);
+        if (cancelled) return;
+        const fresh: CctpTransferDetail | null = res.ok ? (data.transfer ?? null) : null;
+        // Never clobber shown content with a transient failure.
+        if (fresh) setTransfer(fresh);
+        if (!fresh || !TERMINAL.includes(fresh.status)) {
+          timer = setTimeout(load, 8_000);
+        }
       } catch {
-        if (!cancelled) setTransfer(null);
+        if (!cancelled) {
+          // First load failed → the error text shows; keep retrying quietly so
+          // a transient hiccup (or a mid-flight tab wake) self-heals.
+          timer = setTimeout(load, 8_000);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    };
+    load();
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, [transferId]);
 

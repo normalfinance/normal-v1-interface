@@ -1064,3 +1064,16 @@ nf:activity-updated at the exact settle moment, but the banner never
 subscribed. Fix: banner now listens for that event and re-reads
 immediately — it clears the instant the modal completes. (Timer-instead-
 of-signal, again — the event existed; the consumer just didn't listen.)
+
+**#66 follow-up 2 (Niko caught it — incomplete consumer sweep, again):**
+watching an in-flight swap from the swap-DETAILS popup (activity row
+click): the swap completed, banner cleared instantly (the event fix
+worked), but the popup's "Circle attestation" spinner spun forever — it
+fetched the transfer ONCE on open, a snapshot pretending to be a live
+view. Fix: while the dialog is open and the transfer is non-terminal it
+re-reads every 8s (noAdvance fast reads; the banner poke + cron still
+drive the machine), stops at COMPLETED/FAILED/REFUNDED, and a transient
+read failure never clobbers shown content. Lesson repeated from #47:
+when a state has N surfaces, sweep ALL N — this session alone the same
+transfer state had FOUR surfaces (progress modal, banner, feed row,
+details popup) and each stale one was found by Niko, one at a time.

@@ -182,3 +182,12 @@ server only every 30 seconds — so after the modal said Done, the banner's
 spinner could linger up to half a minute. The engine already broadcasts
 "something settled" at the exact moment; the banner now listens for that
 broadcast and clears instantly.
+
+**Follow-up 2 to #66:** the "Swap details" popup (click an activity row)
+took ONE photograph of the transfer when opened and displayed it forever
+— so if you watched a live swap from there, the attestation spinner
+never stopped, even long after delivery. It now re-checks every few
+seconds while open and stops the moment the transfer reaches a final
+state. One rule ties all of today's fixes together: every surface that
+shows moving money must either poll or listen — never display a
+snapshot as if it were live.
