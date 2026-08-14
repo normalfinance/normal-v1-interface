@@ -965,3 +965,40 @@ nothing left any wallet. Root cause of the WebAuthn error itself:
 environmental (browser/authenticator rejected the ceremony instantly —
 the #51 class); with the guard now in path, the same event auto-retries
 once and otherwise surfaces a human message instead of a dead swap.
+
+## #64 — CCTP progress modal spins forever at "Bridging to Stellar" after the swap SUCCEEDS (FIXED 2026-08-14)
+
+Observed on Niko's first successful end-to-end inbound swap: the resume
+banner correctly disappeared (server row = COMPLETED) while the progress
+modal never left the bridging spinner, and the completed activity row
+showed VALUE $0.
+
+**Root cause 1 — auth headers frozen at swap start.** `makePatcher`
+captured `buildAuthHeaders()` ONCE; a CCTP bridge runs 20-30+ minutes,
+longer than the access token's remaining life, so mid-bridge every poll
+started returning 401. `pollStatus` swallowed every bad response —
+`data.transfer` undefined → neither target nor FAILED → sleep, loop,
+forever, silently. The banner rebuilt headers on each poll, which is why
+IT knew the swap was done. Fix: headers rebuilt per request (patch,
+pollStatus, topUp — Supabase's client hands back the auto-refreshed
+token), pollStatus now requires `res.ok` + an actual transfer object to
+count a read, and 10 consecutive transfer-less reads surface an honest
+"lost connection — the swap continues on our servers, check Activity"
+instead of an infinite spinner.
+
+**Root cause 2 — dstAmount was client-only.** The delivered amount was
+patched by the client AFTER its poll resolved; the modal's UI explicitly
+says "safe to close", so any closed tab (or root cause 1) left dstAmount
+null → activity VALUE $0 forever, and the feed's delivery-dedupe (keyed
+on dstAmount) let the same USDC also render as a separate Receive row.
+Fix: inbound-to-USDC transfers get dstAmount written SERVER-side at the
+MINT_SUBMITTED→COMPLETED transition (mint is 1:1 with the burn, the
+server knows it exactly); a bounded cron backfill repairs
+already-COMPLETED inbound rows with null dstAmount (fixes Niko's $0
+row). Outbound stays client-written — its delivered amount comes from
+the LI.FI pivot result only the client has.
+
+Funds: unaffected throughout — the USDC was delivered; only the
+reporting lied. Same family as #62 (the client's view of a finished
+money movement must come from a durable signal, not from one fragile
+in-page loop surviving to the end).

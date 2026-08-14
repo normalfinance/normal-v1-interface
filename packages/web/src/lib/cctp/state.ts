@@ -18,6 +18,7 @@ import type { NetworkType } from '@normalfinance/utils';
 import { prisma } from '@/lib/prisma';
 
 import { IrisClient } from './iris';
+import { wireToUsdc } from './decimals';
 import {
   destChainOf,
   executeEvmMint,
@@ -128,7 +129,22 @@ export async function advanceTransfer(transfer: CctpTransfer): Promise<CctpTrans
         if (confirmed) {
           await prisma.cctpTransfer.updateMany({
             where: { id: transfer.id, status: 'MINT_SUBMITTED' },
-            data: { status: 'COMPLETED' },
+            data: {
+              status: 'COMPLETED',
+              // Inbound mints the burned amount 1:1 as USDC on Stellar, so the
+              // delivered amount is known HERE, server-side. The client used to
+              // be the only writer (after its status poll resolved) — a dead
+              // tab or dropped poll left dstAmount null: the activity feed
+              // showed $0 forever and the delivery-dedupe (which keys on
+              // dstAmount) let the same USDC appear again as a Receive row.
+              // Outbound stays client-written: its delivered amount comes from
+              // the LI.FI pivot result, which only the client has.
+              ...(transfer.direction === 'crosschain_to_stellar' &&
+              transfer.dstAsset === 'USDC' &&
+              !transfer.dstAmount
+                ? { dstAmount: wireToUsdc(BigInt(transfer.amountWire)) }
+                : {}),
+            },
           });
         }
         break;
@@ -174,6 +190,25 @@ export async function advancePendingTransfers(): Promise<{
       errorDetail: 'Expired — no transaction was ever sent; no funds moved',
     },
   });
+
+  // Repair COMPLETED inbound rows that predate the server-side dstAmount
+  // write above (their client died before reporting) — bounded, and a no-op
+  // once the backlog is drained.
+  const missingAmount = await prisma.cctpTransfer.findMany({
+    where: {
+      status: 'COMPLETED',
+      direction: 'crosschain_to_stellar',
+      dstAsset: 'USDC',
+      dstAmount: null,
+    },
+    take: 20,
+  });
+  for (const row of missingAmount) {
+    await prisma.cctpTransfer.update({
+      where: { id: row.id },
+      data: { dstAmount: wireToUsdc(BigInt(row.amountWire)) },
+    });
+  }
 
   const pending = await prisma.cctpTransfer.findMany({
     where: { status: { in: [...PENDING_STATUSES] } },

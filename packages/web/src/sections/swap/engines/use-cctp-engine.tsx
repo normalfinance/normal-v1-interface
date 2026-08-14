@@ -229,53 +229,71 @@ export function useCctpEngine({
 
   // ---- shared helpers -----------------------------------------------------------
   const makePatcher = useCallback(
-    async (transferId: string) => {
-      const headers = await buildAuthHeaders();
-      return {
-        headers,
-        patch: (body: Record<string, string | boolean>) =>
-          fetch(`/api/cctp/transfers/${transferId}`, {
-            method: 'PATCH',
-            headers,
-            credentials: 'include',
-            body: JSON.stringify(body),
-          }).catch(() => {}),
-        pollStatus: async (target: string, intervalMs: number) => {
-          for (;;) {
-            if (cancelled.current) throw new Error('cancelled');
-            let status: string | undefined;
-            let detail: string | undefined;
-            try {
-              const res = await fetch(`/api/cctp/transfers/${transferId}`, {
-                headers,
-                credentials: 'include',
-                signal: AbortSignal.timeout(20_000),
-              });
+    // Auth headers are rebuilt PER REQUEST, never captured: a CCTP bridge
+    // runs 20-30+ minutes, longer than an access token's remaining life.
+    // Headers frozen at swap start went 401 mid-bridge, and the old poll
+    // loop swallowed that as "not finished yet" — the modal spun forever
+    // at "Bridging to Stellar" while the banner (fresh headers each poll)
+    // already knew the swap was COMPLETED (finding #64).
+    async (transferId: string) => ({
+      patch: async (body: Record<string, string | boolean>) =>
+        fetch(`/api/cctp/transfers/${transferId}`, {
+          method: 'PATCH',
+          headers: await buildAuthHeaders(),
+          credentials: 'include',
+          body: JSON.stringify(body),
+        }).catch(() => {}),
+      pollStatus: async (target: string, intervalMs: number) => {
+        let misses = 0;
+        for (;;) {
+          if (cancelled.current) throw new Error('cancelled');
+          let sawTransfer = false;
+          let status: string | undefined;
+          let detail: string | undefined;
+          try {
+            const res = await fetch(`/api/cctp/transfers/${transferId}`, {
+              headers: await buildAuthHeaders(),
+              credentials: 'include',
+              signal: AbortSignal.timeout(20_000),
+            });
+            if (res.ok) {
               const data = await res.json();
               status = data?.transfer?.status;
               detail = data?.transfer?.errorDetail;
-            } catch {
-              /* transient (timeout / hung server) — the cron keeps advancing it; just retry */
+              sawTransfer = typeof status === 'string';
             }
-            if (status === target) return;
-            if (status === 'FAILED') throw new Error(detail ?? 'transfer failed');
-            await new Promise((r) => setTimeout(r, intervalMs));
+          } catch {
+            /* transient (timeout / hung server) — the cron keeps advancing it; just retry */
           }
-        },
-        topUp: async () => {
-          const res = await fetch('/api/cctp/gas-topup', {
-            method: 'POST',
-            headers,
-            credentials: 'include',
-            body: JSON.stringify({ transferId }),
-            signal: AbortSignal.timeout(30_000),
-          });
-          if (!res.ok && res.status !== 409)
-            throw new Error(t('Gas top-up failed — try again in a moment.'));
-          await new Promise((r) => setTimeout(r, 8_000));
-        },
-      };
-    },
+          if (status === target) return;
+          if (status === 'FAILED') throw new Error(detail ?? 'transfer failed');
+          // A read that came back without a transfer (401/404/parse) is NOT
+          // "still bridging". Tolerate a transient run of them, then say the
+          // truth instead of spinning forever — the bridge itself continues
+          // server-side either way.
+          misses = sawTransfer ? 0 : misses + 1;
+          if (misses >= 10)
+            throw new Error(
+              t(
+                'Lost connection while tracking this swap — it continues on our servers. Check Activity in a few minutes.'
+              )
+            );
+          await new Promise((r) => setTimeout(r, intervalMs));
+        }
+      },
+      topUp: async () => {
+        const res = await fetch('/api/cctp/gas-topup', {
+          method: 'POST',
+          headers: await buildAuthHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({ transferId }),
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (!res.ok && res.status !== 409)
+          throw new Error(t('Gas top-up failed — try again in a moment.'));
+        await new Promise((r) => setTimeout(r, 8_000));
+      },
+    }),
     [t]
   );
 

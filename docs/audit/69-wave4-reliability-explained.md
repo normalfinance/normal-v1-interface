@@ -114,3 +114,35 @@ first passkey prompt with "operation timed out or was not allowed" — and a
 - The activity feed can no longer show an eternal "Pending" for a swap
   that never moved money — and no cleanup path exists that could mislabel
   a transfer that DID move money, except the documented double-failure.
+
+## 5. Addendum 2 (2026-08-14): the swap that succeeded but looked stuck (#64)
+
+The retried swap WORKED — USDC arrived on Stellar, the banner above the
+swap card noticed and removed itself — but the progress modal kept
+spinning at "Bridging to Stellar" and the activity row said $0. Two
+causes, both about reporting, not money:
+
+- **The modal's ID badge expired mid-bridge.** The modal saved its login
+  proof (auth headers) once, at swap start. A bridge takes 20-30+
+  minutes; login tokens rotate underneath. Cause and effect: token
+  rotates → every status check the modal makes is rejected with 401 →
+  the old code treated ANY bad answer as "not finished yet" → infinite
+  spinner. The banner asks for fresh proof on every poll — that's why it
+  knew the truth and the modal didn't. Fix: every request now fetches
+  fresh headers, a rejected answer is no longer counted as "still
+  bridging", and ten bad answers in a row make the modal say honestly
+  "lost connection — the swap continues on our servers" instead of
+  spinning forever.
+- **Only the modal knew the delivered amount.** The database's
+  "delivered amount" was written by the modal at the very end — but the
+  modal invites you to close it ("safe to close")! Cause and effect:
+  modal dies before the finish line → delivered amount never recorded →
+  activity shows $0 forever, and the feed can't recognize the incoming
+  USDC as part of the swap, so it can show up twice. Fix: for inbound
+  swaps the SERVER now records the delivered amount the moment the
+  bridge completes (it mints 1:1, so the server knows the number
+  exactly), and the cron repairs old rows stuck at $0.
+
+Rule this reinforces (same as #62): a fact about finished money movement
+must be recorded by something durable (the server), never only by a
+browser tab that may not live to tell it.
