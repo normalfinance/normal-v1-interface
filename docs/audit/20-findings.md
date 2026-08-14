@@ -1077,3 +1077,31 @@ read failure never clobbers shown content. Lesson repeated from #47:
 when a state has N surfaces, sweep ALL N — this session alone the same
 transfer state had FOUR surfaces (progress modal, banner, feed row,
 details popup) and each stale one was found by Niko, one at a time.
+
+## #67 — XLM savings guard + fee semaphore (FIXED 2026-08-14, branch fix/xlm-savings-guard)
+
+Niko's requirement: "user never sends out all XLM unless savings don't
+work." Verified holes: the 1 XLM MAX buffer keyed on the trustline proxy
+(wrong people) and was MAX-only (typing bypassed it); XLM swaps had NO
+reserve at all — not even the network minimum, so a true MAX XLM swap
+failed on-chain for everyone (latent bug found during this work).
+
+Fix: `spendableXlmForOutflow(balance, subentries, hasActiveSavings)` —
+ONE helper feeding send MAX, send typed validation, swap balance/MAX and
+the Soroswap engine (whose ad-hoc "−1 XLM" was deleted: double-count).
+Trigger = real savings position (shared deduped read), trustline proxy
+kept only as MAX's conservative fallback while the position loads.
+Decisions locked by Niko: NO override (withdrawing all savings lifts the
+guard automatically), buffer stays 1 XLM. Execution-time check in
+use-send-token deliberately stays network-only (op_underfunded guard; a
+stale position cache must not reject a UI-approved send).
+
+Semaphore: `xlmFeeStatus` → ok/low/blocked from the SAME constants as
+the guard and the savings action-block (0.5 / 1.0), always visible on
+the savings card (green one-liner; amber/red banner with live number +
+3 one-tap fixes incl. /swap?from=USDC deep link) + new "Network fees
+(XLM)" explainer card on the savings page. Catches what the guard can't
+prevent: external-wallet spending outside the app, fee spikes, pre-guard
+drained users. 11 unit tests (boundaries + guard-keeps-green invariant),
+191 total. Client-only, no schema/routes/cron. Docs 70 (plan) + 71
+(explainer).

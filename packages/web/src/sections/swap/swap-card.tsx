@@ -12,6 +12,8 @@ import { usePendingOutflow } from '@/lib/spendable';
 import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
+import { spendableXlmForOutflow } from '@/utils/stellar-reserve';
+import { useSavingsPosition } from '@/hooks/use-savings-position';
 import React, { useRef, useMemo, useState, useCallback } from 'react';
 import { getXlmToken, getSwapUsdcToken } from '@/utils/token-selectors';
 import { getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
@@ -119,7 +121,30 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   // balance lags the chain by seconds, and MAX must never offer funds that
   // already left. One subtraction here covers every engine.
   const pendingOutflow = usePendingOutflow(CHAIN_OF_SYMBOL[fromSymbol], fromSymbol);
-  const fromBalance = BigNumber.max(BigNumber(fromToken.balance || 0).minus(pendingOutflow), 0);
+  // #67: XLM leaving via a swap obeys the same reserve as a send — the network
+  // minimum (which swaps previously ignored: a true MAX XLM swap offered the
+  // locked reserve and failed on-chain) plus the 1 XLM savings buffer while
+  // the user has an active position. Subentries assumed 1 (the USDC trustline
+  // — the common case; same assumption as the send adapter). Shared deduped
+  // position read; while it loads, only the network reserve applies.
+  const { position: savingsPosition } = useSavingsPosition();
+  const hasActiveSavings =
+    BigNumber(savingsPosition?.currentValue || 0).gt(0) ||
+    BigNumber(savingsPosition?.shares || 0).gt(0);
+  const grossFromBalance = BigNumber.max(
+    BigNumber(fromToken.balance || 0).minus(pendingOutflow),
+    0
+  );
+  const fromBalance =
+    fromSymbol === 'XLM'
+      ? BigNumber.max(
+          spendableXlmForOutflow(fromToken.balance || 0, 1, hasActiveSavings).minus(pendingOutflow),
+          0
+        )
+      : grossFromBalance;
+  // XLM held out of this swap (network reserve + savings buffer) — names the
+  // amount when an "insufficient" is really the guard, not a missing balance.
+  const xlmHeldBack = fromSymbol === 'XLM' ? grossFromBalance.minus(fromBalance) : ZERO;
   const fromDecimals = assetBySymbol(fromSymbol).decimals;
   const fromLoading = (
     { XLM: false, USDC: false, BTC: btc.loading, ETH: eth.loading, SOL: sol.loading } as Record<
@@ -527,7 +552,13 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
             }}
           >
             {insufficient
-              ? t('Exceeds available balance')
+              ? fromSymbol === 'XLM' && amount.lte(grossFromBalance) && xlmHeldBack.gt(0)
+                ? hasActiveSavings
+                  ? t('Keeps {{n}} XLM for network & savings fees', {
+                      n: xlmHeldBack.toFixed(1),
+                    })
+                  : t('Keeps {{n}} XLM network reserve', { n: xlmHeldBack.toFixed(1) })
+                : t('Exceeds available balance')
               : amount.gt(0) && fromPrice.gt(0)
                 ? isFiatMode
                   ? `≈ ${amount.toFixed(Math.min(fromDecimals, 6), BigNumber.ROUND_DOWN)} ${fromSymbol}`

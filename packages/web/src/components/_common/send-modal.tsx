@@ -13,9 +13,10 @@ import { usePendingOutflow } from '@/lib/spendable';
 import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
+import { useSavingsPosition } from '@/hooks/use-savings-position';
 import React, { useRef, useMemo, useState, useEffect } from 'react';
-import { spendableXlm, SAVINGS_XLM_BUFFER } from '@/utils/stellar-reserve';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
+import { SAVINGS_XLM_BUFFER, spendableXlmForOutflow } from '@/utils/stellar-reserve';
 import { knownMemoRequirement, fetchMemoRequirement } from '@/lib/stellar/memo-required';
 import { getMaxAmount, getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 
@@ -64,6 +65,15 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   const { btcToken, bitcoinAddress } = useBtcPortfolio(open);
   const { ethToken, ethereumAddress } = useEthPortfolio(open);
   const { solToken, solanaAddress } = useSolPortfolio(open);
+
+  // #67: an active savings position holds SAVINGS_XLM_BUFFER back from every
+  // XLM outflow (MAX and typed). Shared deduped read, fetched only while the
+  // dialog is open; localStorage fallback answers instantly on reopen.
+  const { position: savingsPosition } = useSavingsPosition(open);
+  const hasActiveSavings =
+    BigNumber(savingsPosition?.currentValue || 0).gt(0) ||
+    BigNumber(savingsPosition?.shares || 0).gt(0);
+  const savingsPositionKnown = savingsPosition != null;
 
   // Build the full sendable list: Stellar tokens + native chains with balance
   const sendableTokens = useMemo(() => {
@@ -189,7 +199,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       if (!solanaAddress) return null;
       return createSolanaAdapter(solanaAddress, onError);
     }
-    return createStellarAdapter(stellarSend, xlmPrice);
+    return createStellarAdapter(stellarSend, xlmPrice, hasActiveSavings);
   }, [
     sendToken,
     isBtc,
@@ -200,6 +210,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     solanaAddress,
     stellarSend,
     xlmPrice,
+    hasActiveSavings,
     enqueueSnackbar,
   ]);
 
@@ -314,13 +325,12 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
         const acc = await server.loadAccount(persist.wallet.address);
         setXlmSubentries(acc.subentry_count);
         const nativeBal = acc.balances.find((b) => b.asset_type === 'native')?.balance ?? '0';
-        let max = spendableXlm(nativeBal, acc.subentry_count);
-        // Savings-capable accounts (they hold the USDC trustline) keep a small
-        // XLM buffer so future deposit/withdraw fees are always covered — but
-        // only when there's enough headroom to bother.
-        if (acc.subentry_count > 0 && max.gt(SAVINGS_XLM_BUFFER)) {
-          max = max.minus(SAVINGS_XLM_BUFFER);
-        }
+        // #67: the buffer applies when the user HAS savings (confirmed) — or,
+        // while the position is still loading, falls back to the conservative
+        // trustline proxy so MAX never over-offers in the gap. Same helper as
+        // the typed-amount validation, so the two can never disagree.
+        const holdBuffer = hasActiveSavings || (!savingsPositionKnown && acc.subentry_count > 0);
+        const max = spendableXlmForOutflow(nativeBal, acc.subentry_count, holdBuffer);
         setAmount(max.toFixed(7, BigNumber.ROUND_DOWN));
       } catch {
         setAmount(spendableBalance.toFixed(7, BigNumber.ROUND_DOWN));
@@ -334,7 +344,12 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   };
 
   // Whether MAX kept the extra savings buffer (drives the info note below).
-  const savingsBufferApplies = sendToken?.symbol === 'XLM' && (xlmSubentries ?? 0) > 0;
+  // #67: the hint (and the buffer itself) keys on an ACTIVE savings position,
+  // with the old trustline proxy only as the conservative fallback while the
+  // position is still loading.
+  const savingsBufferApplies =
+    sendToken?.symbol === 'XLM' &&
+    (hasActiveSavings || (!savingsPositionKnown && (xlmSubentries ?? 0) > 0));
 
   const toggleMode = () => {
     if (!sendToken || !amount) {

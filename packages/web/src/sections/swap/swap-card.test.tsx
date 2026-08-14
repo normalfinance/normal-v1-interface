@@ -68,6 +68,11 @@ jest.mock('@/hooks', () => ({ useStellarConfig: () => ({}) }));
 jest.mock('@normalfinance/state', () => ({
   usePersistStore: () => ({ tokenState: { tokens: [] }, wallet: mockWalletState }),
 }));
+// #67: the card reads the shared savings position for the XLM outflow guard;
+// these tests exercise the external-wallet gate, so "no savings" is fine.
+jest.mock('@/hooks/use-savings-position', () => ({
+  useSavingsPosition: () => ({ position: null }),
+}));
 jest.mock('@normalfinance/utils', () => ({
   getCryptoIconUrl: () => '',
   sanitizeAmountInput: (s: string) => s,

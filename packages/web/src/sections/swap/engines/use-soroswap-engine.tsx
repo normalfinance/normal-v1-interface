@@ -87,9 +87,10 @@ export function useSoroswapEngine({
       ? BigNumber(quote.amountOut).dividedBy(quote.amountIn).toFixed(6)
       : null;
 
-  // XLM keeps 1 reserve for the account minimum; USDC spends in full.
-  const getMaxToken = async (): Promise<BigNumber> =>
-    fromSymbol === 'XLM' ? BigNumber.max(fromBalance.minus(1), 0) : fromBalance;
+  // #67: XLM's reserve (network minimum + savings buffer) is already inside
+  // the fromBalance the swap card passes in — subtracting an ad-hoc 1 XLM
+  // again here would double-count it.
+  const getMaxToken = async (): Promise<BigNumber> => fromBalance;
 
   const handleSwap = useCallback(async () => {
     if (!quote) return;

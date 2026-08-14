@@ -19,6 +19,7 @@ import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import { SavingsHeroCard } from './savings-hero-card';
 import { SavingsOnrampCard } from './savings-onramp-card';
 import { SavingsHistoryCard } from './savings-history-card';
+import { SavingsXlmFeesCard } from './savings-xlm-fees-card';
 
 export default function SavingsView() {
   const [mounted, setMounted] = useState(false);
@@ -219,7 +220,12 @@ export default function SavingsView() {
         }}
       >
         <SavingsCard />
-        <SavingsOnrampCard />
+        {/* #67: fee explainer above the onramp card — same order as the user's
+            mental model: "can I transact?" before "how do I add money?". */}
+        <Stack spacing="20px">
+          <SavingsXlmFeesCard />
+          <SavingsOnrampCard />
+        </Stack>
       </Box>
 
       {/* Transaction history */}
