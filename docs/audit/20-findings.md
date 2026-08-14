@@ -903,3 +903,177 @@ no fallback number the breakdown would contradict. All values unit-follow
 the $/token toggle with the shared floor-rounding. Also fixed the $ prefix
 typography (generic 'monospace' fallback rendered it slanted/oversized —
 now the exact send-dialog input pattern, Geist Mono digits, same-size sans $).
+
+## Wave-4 reliability (2026-08-13, branch chore/wave4-reliability, doc 68)
+
+- **#8 FIXED**: relayer rode viem's DEFAULT public RPCs in 4 places
+  (mint, receipt check, gas top-up, shortfall calc). relayerTransport()
+  uses CCTP_RPC_URL_BASE / CCTP_RPC_URL_ETHEREUM when set, public default
+  as fallback — deploy-order free. Niko: set the two env vars in Vercel.
+- **#24 FIXED**: off-ramp fills (the "we owe Coinbase a send for sale X"
+  memory) moved from localStorage to the new offramp_fills table +
+  /api/offramp/fills (withAuth, session-keyed; GET/POST upsert/DELETE
+  release — fills with a real txHash are permanent, only unfulfilled
+  claims deletable). Both consumers rewired (sell modal via a hydrated
+  module cache so call sites stayed sync; activity hook fetches). One-time
+  localStorage→DB migration preserves in-flight sales across the deploy.
+  Additive SQL for Niko (doc 68). Conformance auto-covers the route.
+- **#10 PREPARED (flip is Niko's, deliberately not merged)**: transaction
+  pooler runbook (doc 68) + scripts/verify-pooler.mjs — read-only proof of
+  the four pooler-sensitive patterns (repeat queries = the
+  prepared-statement trap, transaction, 10 concurrent reads). Flip =
+  DATABASE_URL swap to :6543 + pgbouncer=true&connection_limit=1 after
+  ALL PASS; rollback = env revert.
+
+1 new test surface (route under conformance), 180 total.
+
+## #63 — LIVE CCTP swap failed at first signature: guard-scoping miss, round 3 (FIXED 2026-08-14)
+
+Niko's ETH→USDC(Stellar) test swap (~$24.50) died instantly at the LI.FI
+leg with WebAuthn "operation timed out or was not allowed", leaving an
+eternal "Pending" row in the activity feed. Two distinct bugs:
+
+**Bug 1 — the #51 guard never covered this path.** `runWebauthnCeremony`
+(queue + settle + fast-fail retry) was wired into stellar-signer and
+evm-signer only. The LI.FI executor (`lib/lifi/execute.ts` — the exact
+signature that failed) and all three send adapters called Turnkey raw.
+This is the THIRD casualty of the same scoping decision: #51 scoped to
+"savings only", #54 proved external wallets needed it, now the LI.FI path.
+Fix: all 6 unguarded sign sites wrapped (execute.ts ETH/SOL/BTC, send
+adapters ethereum/solana/bitcoin). Every passkey ceremony in the app now
+goes through the guard. Lesson recorded: a ceremony guard is
+infrastructure, not a per-feature fix — partial rollouts of it keep
+producing live incidents.
+
+**Bug 2 — a pre-broadcast failure left the transfer row CREATED forever.**
+The engine creates the CctpTransfer row BEFORE anything moves (correct —
+that's #27's record-first rule), but its catch only set the UI error; the
+row stayed CREATED, and the activity feed maps every non-terminal status
+to "pending". Fix, three layers: (1) engine tracks `broadcastStarted`;
+on failure with nothing broadcast it PATCHes `markFailed`; (2) the PATCH
+handler accepts it ONLY while status=CREATED with no burn/src hash — once
+any hash exists the client cannot bury a real transfer; (3) cron
+`advancePendingTransfers` expires CREATED rows >60min old with no hashes
+(cleans Niko's existing phantom, and any future one where the client died
+before patching). Documented trade-off: a broadcast that succeeded but
+whose hash-PATCH failed could be wrongly expired — funds unaffected
+(every recipient address is the user's own; the row label is the only lie)
+and it requires two independent failures.
+
+Funds: never at risk — the failure was BEFORE any signature completed;
+nothing left any wallet. Root cause of the WebAuthn error itself:
+environmental (browser/authenticator rejected the ceremony instantly —
+the #51 class); with the guard now in path, the same event auto-retries
+once and otherwise surfaces a human message instead of a dead swap.
+
+## #64 — CCTP progress modal spins forever at "Bridging to Stellar" after the swap SUCCEEDS (FIXED 2026-08-14)
+
+Observed on Niko's first successful end-to-end inbound swap: the resume
+banner correctly disappeared (server row = COMPLETED) while the progress
+modal never left the bridging spinner, and the completed activity row
+showed VALUE $0.
+
+**Root cause 1 — auth headers frozen at swap start.** `makePatcher`
+captured `buildAuthHeaders()` ONCE; a CCTP bridge runs 20-30+ minutes,
+longer than the access token's remaining life, so mid-bridge every poll
+started returning 401. `pollStatus` swallowed every bad response —
+`data.transfer` undefined → neither target nor FAILED → sleep, loop,
+forever, silently. The banner rebuilt headers on each poll, which is why
+IT knew the swap was done. Fix: headers rebuilt per request (patch,
+pollStatus, topUp — Supabase's client hands back the auto-refreshed
+token), pollStatus now requires `res.ok` + an actual transfer object to
+count a read, and 10 consecutive transfer-less reads surface an honest
+"lost connection — the swap continues on our servers, check Activity"
+instead of an infinite spinner.
+
+**Root cause 2 — dstAmount was client-only.** The delivered amount was
+patched by the client AFTER its poll resolved; the modal's UI explicitly
+says "safe to close", so any closed tab (or root cause 1) left dstAmount
+null → activity VALUE $0 forever, and the feed's delivery-dedupe (keyed
+on dstAmount) let the same USDC also render as a separate Receive row.
+Fix: inbound-to-USDC transfers get dstAmount written SERVER-side at the
+MINT_SUBMITTED→COMPLETED transition (mint is 1:1 with the burn, the
+server knows it exactly); a bounded cron backfill repairs
+already-COMPLETED inbound rows with null dstAmount (fixes Niko's $0
+row). Outbound stays client-written — its delivered amount comes from
+the LI.FI pivot result only the client has.
+
+Funds: unaffected throughout — the USDC was delivered; only the
+reporting lied. Same family as #62 (the client's view of a finished
+money movement must come from a durable signal, not from one fragile
+in-page loop surviving to the end).
+
+## #65 — Stellar mint confirmation used Soroban RPC's bounded history: month-stuck transfer (FIXED 2026-08-14)
+
+Found while running the #63/#64 cleanup cron live: a July 17 SOL→USDC
+inbound transfer sat at MINT_SUBMITTED for a MONTH. Horizon showed the
+mint tx succeeded within 30 minutes of submission — the ~$11.84 USDC was
+delivered on 2026-07-17; only our row never learned it.
+
+Cause: `isStellarTxConfirmed` asks Soroban RPC (`getTransaction`), whose
+history retention is roughly a day. NOT_FOUND was treated as "still
+pending" — correct within the window, but once a transfer's confirmation
+was missed for longer than retention (no cron on localhost during July
+testing), every subsequent probe returned NOT_FOUND until the end of
+time. The row was unfixable by waiting.
+
+Fix: on RPC NOT_FOUND the checker now falls back to Horizon
+(`HORIZON_URL/transactions/<hash>`, full ledger history): successful →
+confirmed; failed → error; 404 → genuinely pending. Horizon unreachable →
+stay pending, next tick retries. Combined with #64's server-side
+dstAmount write, the next cron tick completed the July row with its true
+delivered amount (verified live: COMPLETED, 11.839938 USDC).
+
+Class note: this is the retention-window sibling of #62/#64 — an
+"absence of evidence" read (cache expiry, token expiry, history expiry)
+must never be interpreted as a stable fact.
+
+## #66 — Outbound CCTP said "Done" before the asset existed in the wallet (FIXED 2026-08-14)
+
+Niko's USDC→SOL test: modal reached Done, but the SOL was invisible for a
+while — the #62 disease on the CCTP path. Two gaps vs the LI.FI engine's
+arrival gate:
+
+1. `executePivotSwap` returns when the pivot tx confirms ON BASE — but the
+   bridged asset lands on the TARGET chain later (Base→Solana ≈ 1-3 min).
+   'Done' showed while the SOL existed nowhere a wallet could see.
+2. `finish()` set stage 'done' FIRST and fired the balance refetch
+   fire-and-forget — even delivered funds raced the modal and lost.
+
+Fix (mirrors #62's tracker):
+- New visible 'delivering' stage for outbound ETH/SOL: polls
+  /api/lifi/status (fresh auth headers per poll — #64's lesson) until the
+  bridge reports DONE. FAILED/REFUNDED → honest error (USDC is at the
+  user's own Base address). ~10-min timeout → snackbar "on its way"
+  and proceed (documented trade-off, Niko's #62 rule: a successful swap
+  must never look stuck). dstAmount is now patched only after delivery.
+- `finish()` awaits the delivered side's refetch BEFORE flipping to
+  'done', capped at ARRIVAL_CAP_MS=15s (same constant as #62): outbound
+  awaits swap-card's verify-and-retry refetchChain; inbound awaits the
+  Stellar token-store refresh. BTC exempt (many-minute delivery; snackbar
+  + activity pending badge own that wait — holding the modal open would
+  itself look stuck).
+
+9th instance of the fire-and-forget-refresh-races-the-UI root cause.
+
+**#66 follow-up (same day, Niko's retest):** the retest passed, but the
+resume banner above the swap card ("Completing automatically") kept
+spinning ~30s after the modal said Done. The banner refreshed only on
+mount + a 30s interval; the engine's finish() already dispatches
+nf:activity-updated at the exact settle moment, but the banner never
+subscribed. Fix: banner now listens for that event and re-reads
+immediately — it clears the instant the modal completes. (Timer-instead-
+of-signal, again — the event existed; the consumer just didn't listen.)
+
+**#66 follow-up 2 (Niko caught it — incomplete consumer sweep, again):**
+watching an in-flight swap from the swap-DETAILS popup (activity row
+click): the swap completed, banner cleared instantly (the event fix
+worked), but the popup's "Circle attestation" spinner spun forever — it
+fetched the transfer ONCE on open, a snapshot pretending to be a live
+view. Fix: while the dialog is open and the transfer is non-terminal it
+re-reads every 8s (noAdvance fast reads; the banner poke + cron still
+drive the machine), stops at COMPLETED/FAILED/REFUNDED, and a transient
+read failure never clobbers shown content. Lesson repeated from #47:
+when a state has N surfaces, sweep ALL N — this session alone the same
+transfer state had FOUR surfaces (progress modal, banner, feed row,
+details popup) and each stale one was found by Niko, one at a time.

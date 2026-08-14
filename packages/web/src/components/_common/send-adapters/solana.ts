@@ -92,17 +92,21 @@ export function createSolanaAdapter(
           new WebauthnStamper({ rpId })
         );
 
-        const signResult = await turnkeyClient.signRawPayload({
-          type: 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2',
-          timestampMs: String(Date.now()),
-          organizationId: subOrgId,
-          parameters: {
-            signWith: solanaAddress,
-            payload: bytesToHex(message),
-            encoding: 'PAYLOAD_ENCODING_HEXADECIMAL',
-            hashFunction: 'HASH_FUNCTION_NOT_APPLICABLE',
-          },
-        });
+        // Guarded ceremony (#51 coverage completed 2026-08-14).
+        const { runWebauthnCeremony } = await import('@/lib/turnkey/webauthn-guard');
+        const signResult = await runWebauthnCeremony(() =>
+          turnkeyClient.signRawPayload({
+            type: 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2',
+            timestampMs: String(Date.now()),
+            organizationId: subOrgId,
+            parameters: {
+              signWith: solanaAddress,
+              payload: bytesToHex(message),
+              encoding: 'PAYLOAD_ENCODING_HEXADECIMAL',
+              hashFunction: 'HASH_FUNCTION_NOT_APPLICABLE',
+            },
+          })
+        );
 
         const result = signResult?.activity?.result?.signRawPayloadResult;
         if (!result?.r || !result?.s) throw new Error('Signing failed — no signature returned');

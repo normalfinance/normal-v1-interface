@@ -23,6 +23,9 @@ export interface PivotSwapResult {
   toAmountMin: string;
   /** seconds LI.FI expects until delivery on the target chain */
   etaSeconds: number;
+  /** LI.FI chain ids for the status endpoint (#66 delivery gate) */
+  fromChainId?: number;
+  toChainId?: number;
 }
 
 export async function executePivotSwap(params: {
@@ -133,5 +136,7 @@ export async function executePivotSwap(params: {
     txHash,
     toAmountMin: quote.estimate.toAmountMin,
     etaSeconds: quote.estimate.executionDuration ?? 300,
+    fromChainId: quote.action?.fromChainId,
+    toChainId: quote.action?.toChainId,
   };
 }

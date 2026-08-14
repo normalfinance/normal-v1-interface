@@ -10,6 +10,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { fetchSolBalance, fetchEthBalance } from '@/hooks/use-chain-portfolio';
+import { saveOfframpFill, fetchOfframpFills, removeOfframpFill } from '@/lib/offramp-fills';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -76,28 +77,27 @@ interface CoinbaseOfframpModalProps {
   token: Token;
 }
 
-const LS_KEY = 'nf:cb-offramp-fills';
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function readFills(): Record<string, string> {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) || '{}');
-  } catch {
-    return {};
-  }
+// #24: fills are DB-backed now (lib/offramp-fills — survives cleared
+// browsers and device switches; localStorage entries migrate on first
+// fetch). The module-level cache keeps every call site synchronous, exactly
+// as before; hydrateFills() refreshes it when the modal opens, and writes go
+// through to the server fire-and-forget (the upsert is idempotent).
+let fillsCache: Record<string, string> = {};
+async function hydrateFills(): Promise<void> {
+  fillsCache = await fetchOfframpFills();
 }
 function getFill(id: string): string | undefined {
-  return readFills()[id];
+  return fillsCache[id];
 }
 function markFill(id: string, value: string) {
-  const all = readFills();
-  all[id] = value;
-  localStorage.setItem(LS_KEY, JSON.stringify(all));
+  fillsCache[id] = value;
+  void saveOfframpFill(id, value);
 }
 function clearFill(id: string) {
-  const all = readFills();
-  delete all[id];
-  localStorage.setItem(LS_KEY, JSON.stringify(all));
+  delete fillsCache[id];
+  void removeOfframpFill(id);
 }
 
 async function fetchTransactions(): Promise<PendingTxn[]> {
@@ -206,6 +206,10 @@ export function CoinbaseOfframpModal({
     setTxn(null);
 
     (async () => {
+      // Load this user's fills from the DB BEFORE matching orders — getFill
+      // below decides which sales are already claimed/fulfilled (#24).
+      await hydrateFills();
+      if (cancelled) return;
       for (let i = 0; i < 10 && !cancelled; i += 1) {
         const list = await fetchTransactions();
         if (cancelled) return;

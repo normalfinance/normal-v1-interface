@@ -39,6 +39,20 @@ function evmChain(network: NetworkType, chain: 'base' | 'ethereum') {
   return EVM_CHAINS[network][chain];
 }
 
+/**
+ * #8: the relayer moves real money — it must not ride viem's DEFAULT public
+ * RPCs (shared, rate-limited, no SLA; one bad hour stalls every bridge
+ * transfer until cron retries land). Pin each chain to our keyed endpoint
+ * via env; the public default remains the fallback so deploys don't depend
+ * on env ordering.
+ *   CCTP_RPC_URL_BASE       keyed Base RPC (e.g. Alchemy Base app)
+ *   CCTP_RPC_URL_ETHEREUM   keyed Ethereum RPC
+ */
+function relayerTransport(chain: 'base' | 'ethereum') {
+  const url = chain === 'base' ? process.env.CCTP_RPC_URL_BASE : process.env.CCTP_RPC_URL_ETHEREUM;
+  return http(url || undefined);
+}
+
 /** MetaMask & co. export private keys without the 0x prefix — accept both. */
 function relayerEvmKey(): `0x${string}` {
   const pk = process.env.CCTP_RELAYER_EVM_PRIVATE_KEY?.trim();
@@ -61,7 +75,7 @@ export async function executeEvmMint(params: {
 }): Promise<`0x${string}`> {
   const chain = evmChain(params.network, params.chain);
   const account = privateKeyToAccount(relayerEvmKey());
-  const wallet = createWalletClient({ account, chain, transport: http() });
+  const wallet = createWalletClient({ account, chain, transport: relayerTransport(params.chain) });
 
   return wallet.writeContract({
     address: EVM_CCTP[params.network].messageTransmitterV2,
@@ -79,7 +93,7 @@ export async function isEvmTxConfirmed(params: {
 }): Promise<boolean> {
   const pub = createPublicClient({
     chain: evmChain(params.network, params.chain),
-    transport: http(),
+    transport: relayerTransport(params.chain),
   });
   try {
     const receipt = await pub.getTransactionReceipt({ hash: params.txHash });
@@ -103,7 +117,7 @@ export async function sendGasTopUp(params: {
   const wallet = createWalletClient({
     account,
     chain: evmChain(params.network, params.chain),
-    transport: http(),
+    transport: relayerTransport(params.chain),
   });
   return wallet.sendTransaction({ to: params.to, value: params.amountWei });
 }
@@ -128,7 +142,7 @@ export async function computeTopUpShortfall(params: {
 }): Promise<bigint> {
   const pub = createPublicClient({
     chain: evmChain(params.network, params.chain),
-    transport: http(),
+    transport: relayerTransport(params.chain),
   });
   const [balance, fees] = await Promise.all([
     pub.getBalance({ address: params.to }),
@@ -196,7 +210,27 @@ export async function isStellarTxConfirmed(params: {
   const res = await server.getTransaction(params.txHash);
   if (res.status === 'SUCCESS') return true;
   if (res.status === 'FAILED') throw new Error(`stellar tx failed: ${params.txHash}`);
-  return false; // NOT_FOUND = still pending (or dropped; advance loop retries)
+
+  // NOT_FOUND from Soroban RPC is ambiguous: still pending, dropped — or just
+  // OLDER THAN THE RPC'S HISTORY RETENTION (about a day). Horizon keeps full
+  // ledger history, so ask it before concluding "pending". Without this, a
+  // MINT_SUBMITTED row that slipped past the retention window could NEVER
+  // complete: a July mint sat "unconfirmed" for a month while Horizon knew it
+  // had succeeded within 30 minutes (finding #65).
+  let hz: Response;
+  try {
+    hz = await fetch(`${stellarCfg.HORIZON_URL}/transactions/${params.txHash}`, {
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch {
+    return false; // Horizon unreachable — stay "pending", next tick retries
+  }
+  if (hz.ok) {
+    const tx = (await hz.json().catch(() => null)) as { successful?: boolean } | null;
+    if (tx?.successful === true) return true;
+    if (tx?.successful === false) throw new Error(`stellar tx failed: ${params.txHash}`);
+  }
+  return false; // 404 = genuinely not on-chain yet
 }
 
 /** Which destination chain executes the mint for a transfer row. */

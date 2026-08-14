@@ -7,6 +7,7 @@ import useSWR from 'swr';
 import { buildAuthHeaders } from '@/utils/http';
 import { chainOfActivityEvent } from '@/lib/tx-events';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fetchOfframpFills } from '@/lib/offramp-fills';
 import { CHAINS, getChainAddress } from '@/lib/chains/registry';
 import { useMemo, useEffect, useSyncExternalStore } from 'react';
 import { useMgiTransactions } from '@/hooks/use-mgi-transactions';
@@ -20,21 +21,11 @@ import {
   reconcilePendingSends,
 } from '@/lib/pending-sends';
 
-// Coinbase off-ramp sends are recorded client-side as { coinbaseTxnId: ourTxHash }
-// when we broadcast the on-chain transfer (see coinbase-offramp-modal). We join
-// that with the live Coinbase status to re-label the matching Sent row as an
-// off-ramp and show its real status. (localStorage v1 — DB-backed is the
-// hardening follow-up.)
-const OFFRAMP_FILLS_KEY = 'nf:cb-offramp-fills';
-
-function readOfframpFills(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  try {
-    return JSON.parse(localStorage.getItem(OFFRAMP_FILLS_KEY) || '{}');
-  } catch {
-    return {};
-  }
-}
+// Coinbase off-ramp sends are recorded as { coinbaseTxnId: ourTxHash } when we
+// broadcast the on-chain transfer (see coinbase-offramp-modal). We join that
+// with the live Coinbase status to re-label the matching Sent row as an
+// off-ramp and show its real status. DB-backed since #24 (lib/offramp-fills) —
+// the tracking survives cleared browsers and device switches.
 
 interface OfframpInfo {
   status: 'pending' | 'completed' | 'failed';
@@ -52,7 +43,7 @@ function mapCoinbaseStatus(s: string): OfframpInfo['status'] {
 // local { coinbaseTxnId: txHash } fills with the Coinbase status API
 // (keyed by coinbaseTxnId).
 async function fetchOfframpStatuses(): Promise<Record<string, OfframpInfo>> {
-  const fills = readOfframpFills();
+  const fills = await fetchOfframpFills();
   const entries = Object.entries(fills).filter(([, h]) => h && h !== 'pending');
   if (!entries.length) return {};
   try {

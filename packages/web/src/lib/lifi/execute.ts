@@ -4,6 +4,7 @@ import type { ChainAddresses } from '@/lib/chains/registry';
 
 import { describePsbt } from '@/lib/lifi/psbt-debug';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { runWebauthnCeremony } from '@/lib/turnkey/webauthn-guard';
 import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 
 // ---------------------------------------------------------------------------
@@ -142,16 +143,21 @@ async function executeEvm(
 
   const turnkey = await getTurnkeyClient();
   log('ETH: requesting passkey signature');
-  const signResult = await turnkey.signTransaction({
-    type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
-    timestampMs: String(Date.now()),
-    organizationId: subOrgId,
-    parameters: {
-      signWith: ethereumAddress,
-      unsignedTransaction: unsigned.startsWith('0x') ? unsigned.slice(2) : unsigned,
-      type: 'TRANSACTION_TYPE_ETHEREUM',
-    },
-  });
+  // Serialized + fast-fail-retried like every other passkey ceremony (#51 —
+  // this path was missed in the original guard rollout and failed live with
+  // WebAuthn NotAllowedError, 2026-08-14).
+  const signResult = await runWebauthnCeremony(() =>
+    turnkey.signTransaction({
+      type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
+      timestampMs: String(Date.now()),
+      organizationId: subOrgId,
+      parameters: {
+        signWith: ethereumAddress,
+        unsignedTransaction: unsigned.startsWith('0x') ? unsigned.slice(2) : unsigned,
+        type: 'TRANSACTION_TYPE_ETHEREUM',
+      },
+    })
+  );
   const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
   if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
 
@@ -250,7 +256,10 @@ async function executeBtc(
   let signedTx: string;
   try {
     const { signLifiBtcPsbt } = await import('@/lib/lifi/btc-sign');
-    signedTx = await signLifiBtcPsbt(psbtHex, bitcoinAddress, subOrgId, turnkey);
+    // One ceremony (batched raw-payload signing) — guarded like all others (#51).
+    signedTx = await runWebauthnCeremony(() =>
+      signLifiBtcPsbt(psbtHex, bitcoinAddress, subOrgId, turnkey)
+    );
   } catch (err: any) {
     // Keep the decode attached: any Bitcoin signing failure should say what was
     // in the PSBT, or it can't be acted on or reported upstream.
@@ -297,17 +306,19 @@ async function executeSol(
   // Sign the serialized message bytes (ed25519, no pre-hash) with Turnkey.
   const turnkey = await getTurnkeyClient();
   log('SOL: requesting passkey signature');
-  const signResult = await turnkey.signRawPayload({
-    type: 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2',
-    timestampMs: String(Date.now()),
-    organizationId: subOrgId,
-    parameters: {
-      signWith: solanaAddress,
-      payload: bytesToHex(vtx.message.serialize()),
-      encoding: 'PAYLOAD_ENCODING_HEXADECIMAL',
-      hashFunction: 'HASH_FUNCTION_NOT_APPLICABLE',
-    },
-  });
+  const signResult = await runWebauthnCeremony(() =>
+    turnkey.signRawPayload({
+      type: 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2',
+      timestampMs: String(Date.now()),
+      organizationId: subOrgId,
+      parameters: {
+        signWith: solanaAddress,
+        payload: bytesToHex(vtx.message.serialize()),
+        encoding: 'PAYLOAD_ENCODING_HEXADECIMAL',
+        hashFunction: 'HASH_FUNCTION_NOT_APPLICABLE',
+      },
+    })
+  );
   const result = signResult?.activity?.result?.signRawPayloadResult;
   if (!result?.r || !result?.s) throw new Error('Signing failed — no signature returned');
 
