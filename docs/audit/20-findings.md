@@ -1002,3 +1002,28 @@ Funds: unaffected throughout — the USDC was delivered; only the
 reporting lied. Same family as #62 (the client's view of a finished
 money movement must come from a durable signal, not from one fragile
 in-page loop surviving to the end).
+
+## #65 — Stellar mint confirmation used Soroban RPC's bounded history: month-stuck transfer (FIXED 2026-08-14)
+
+Found while running the #63/#64 cleanup cron live: a July 17 SOL→USDC
+inbound transfer sat at MINT_SUBMITTED for a MONTH. Horizon showed the
+mint tx succeeded within 30 minutes of submission — the ~$11.84 USDC was
+delivered on 2026-07-17; only our row never learned it.
+
+Cause: `isStellarTxConfirmed` asks Soroban RPC (`getTransaction`), whose
+history retention is roughly a day. NOT_FOUND was treated as "still
+pending" — correct within the window, but once a transfer's confirmation
+was missed for longer than retention (no cron on localhost during July
+testing), every subsequent probe returned NOT_FOUND until the end of
+time. The row was unfixable by waiting.
+
+Fix: on RPC NOT_FOUND the checker now falls back to Horizon
+(`HORIZON_URL/transactions/<hash>`, full ledger history): successful →
+confirmed; failed → error; 404 → genuinely pending. Horizon unreachable →
+stay pending, next tick retries. Combined with #64's server-side
+dstAmount write, the next cron tick completed the July row with its true
+delivered amount (verified live: COMPLETED, 11.839938 USDC).
+
+Class note: this is the retention-window sibling of #62/#64 — an
+"absence of evidence" read (cache expiry, token expiry, history expiry)
+must never be interpreted as a stable fact.

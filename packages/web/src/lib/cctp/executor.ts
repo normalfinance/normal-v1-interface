@@ -210,7 +210,27 @@ export async function isStellarTxConfirmed(params: {
   const res = await server.getTransaction(params.txHash);
   if (res.status === 'SUCCESS') return true;
   if (res.status === 'FAILED') throw new Error(`stellar tx failed: ${params.txHash}`);
-  return false; // NOT_FOUND = still pending (or dropped; advance loop retries)
+
+  // NOT_FOUND from Soroban RPC is ambiguous: still pending, dropped — or just
+  // OLDER THAN THE RPC'S HISTORY RETENTION (about a day). Horizon keeps full
+  // ledger history, so ask it before concluding "pending". Without this, a
+  // MINT_SUBMITTED row that slipped past the retention window could NEVER
+  // complete: a July mint sat "unconfirmed" for a month while Horizon knew it
+  // had succeeded within 30 minutes (finding #65).
+  let hz: Response;
+  try {
+    hz = await fetch(`${stellarCfg.HORIZON_URL}/transactions/${params.txHash}`, {
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch {
+    return false; // Horizon unreachable — stay "pending", next tick retries
+  }
+  if (hz.ok) {
+    const tx = (await hz.json().catch(() => null)) as { successful?: boolean } | null;
+    if (tx?.successful === true) return true;
+    if (tx?.successful === false) throw new Error(`stellar tx failed: ${params.txHash}`);
+  }
+  return false; // 404 = genuinely not on-chain yet
 }
 
 /** Which destination chain executes the mint for a transfer row. */

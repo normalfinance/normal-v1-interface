@@ -146,3 +146,15 @@ causes, both about reporting, not money:
 Rule this reinforces (same as #62): a fact about finished money movement
 must be recorded by something durable (the server), never only by a
 browser tab that may not live to tell it.
+
+## 6. Addendum 3 (2026-08-14): the $25 that was "in the bridge" for a month (#65)
+
+While cleaning up the rows above, the cron surfaced a July swap stuck at
+"mint submitted" for a month. The money had actually arrived within 30
+minutes — Stellar's full history (Horizon) proved it. Our checker asked
+a different service (Soroban RPC) that only remembers about a day of
+history: cause and effect — confirmation missed for longer than a day →
+the checker's "not found" answer became permanent → the row could never
+complete, no matter how long you waited. The checker now falls back to
+Horizon (which never forgets) before calling a transaction "pending".
+The July row completed on the next tick with its real delivered amount.
