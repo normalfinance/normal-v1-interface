@@ -4,6 +4,7 @@ import type { BoxProps } from '@mui/material';
 
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
+import { useRouter } from 'next/navigation';
 import { chainOfActivityEvent } from '@/lib/tx-events';
 import { usePersistStore } from '@normalfinance/state';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
@@ -11,7 +12,7 @@ import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
-import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
+import { xlmFeeStatus, xlmAvailableForFees } from '@/utils/stellar-reserve';
 import {
   getYieldCommission,
   getSavingsDepositFee,
@@ -46,6 +47,7 @@ interface SavingsCardProps extends BoxProps {}
 
 const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const { t } = useTranslate();
+  const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
   const { tokenState, wallet, getAllTokens } = usePersistStore();
   const config = useStellarConfig();
@@ -306,16 +308,20 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   // transaction would fail on-chain — so we warn and block until they top up.
   // Most important for withdrawals: money is locked in savings and can't come
   // out without a little XLM for the fee.
-  const lowXlmForSavings =
-    accountExists && xlmAvailableForFees(xlmBalance).lt(MIN_XLM_FOR_SAVINGS_TX);
+  // #67 semaphore: ONE classifier drives the always-visible light AND the
+  // action block, so they can never disagree — 'blocked' is exactly the old
+  // lowXlmForSavings line (fee-available < MIN_XLM_FOR_SAVINGS_TX).
+  const feeStatus = accountExists ? xlmFeeStatus(xlmBalance) : null;
+  const feeXlmAvailable = xlmAvailableForFees(xlmBalance);
+  const lowXlmForSavings = feeStatus === 'blocked';
 
-  // While XLM is too low to transact, keep re-checking so the warning clears
-  // itself the moment the user tops up — same auto-detect as the setup flow.
+  // While XLM is low or blocked, keep re-checking so the light clears itself
+  // the moment the user tops up — same auto-detect as the setup flow.
   useEffect(() => {
-    if (!lowXlmForSavings) return undefined;
+    if (feeStatus === null || feeStatus === 'ok') return undefined;
     const id = setInterval(() => refetchRef.current(), 4000);
     return () => clearInterval(id);
-  }, [lowXlmForSavings]);
+  }, [feeStatus]);
 
   const isWithdrawPositionLoading = mode === 'withdraw' && positionFetching && !userPosition;
   const isActionDisabled =
@@ -778,9 +784,22 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         <Typography sx={{ fontSize: '12px', color: 'error.main', mb: '12px' }}>{error}</Typography>
       )}
 
-      {/* Low-XLM warning — savings fees are paid in XLM, so you can't
-          deposit or (crucially) withdraw without a little XLM in your wallet. */}
-      {!needsSetup && lowXlmForSavings && (
+      {/* #67 XLM fee semaphore — ALWAYS visible once the account exists.
+          Savings fees are paid in XLM: green = the outflow guard's buffer is
+          intact, yellow = roughly one action left, red = actions are paused
+          (the disable logic keys on the same classifier, so the light and the
+          buttons can never disagree). */}
+      {!needsSetup && feeStatus === 'ok' && (
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: '12px', px: '2px' }}>
+          <Box
+            sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#1AB37D', flexShrink: 0 }}
+          />
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', lineHeight: 1.4 }}>
+            {t('XLM fee reserve healthy — deposits & withdrawals covered.')}
+          </Typography>
+        </Stack>
+      )}
+      {!needsSetup && (feeStatus === 'low' || feeStatus === 'blocked') && (
         <Box
           sx={(theme) => ({
             display: 'flex',
@@ -788,32 +807,63 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             p: '12px 14px',
             mb: '12px',
             borderRadius: '14px',
-            bgcolor: 'rgba(245,158,11,0.08)',
-            border: '1px solid rgba(245,158,11,0.28)',
-            ...theme.applyStyles('dark', { bgcolor: 'rgba(245,158,11,0.12)' }),
+            ...(feeStatus === 'blocked'
+              ? {
+                  bgcolor: 'rgba(220,38,38,0.06)',
+                  border: '1px solid rgba(220,38,38,0.24)',
+                  ...theme.applyStyles('dark', { bgcolor: 'rgba(220,38,38,0.1)' }),
+                }
+              : {
+                  bgcolor: 'rgba(245,158,11,0.08)',
+                  border: '1px solid rgba(245,158,11,0.28)',
+                  ...theme.applyStyles('dark', { bgcolor: 'rgba(245,158,11,0.12)' }),
+                }),
           })}
         >
           <Iconify
             icon="eva:alert-triangle-fill"
             width={18}
-            sx={{ color: '#B26A00', mt: '1px', flexShrink: 0 }}
+            sx={{
+              color: feeStatus === 'blocked' ? '#B91C1C' : '#B26A00',
+              mt: '1px',
+              flexShrink: 0,
+            }}
           />
           <Box sx={{ flex: 1 }}>
             <Typography
-              sx={{ fontSize: '13px', fontWeight: 600, color: '#7A4A00', lineHeight: 1.4 }}
+              sx={{
+                fontSize: '13px',
+                fontWeight: 600,
+                color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
+                lineHeight: 1.4,
+              }}
             >
-              {mode === 'withdraw'
-                ? t('You need a little XLM to withdraw')
-                : t('You need a little XLM to deposit')}
+              {feeStatus === 'blocked'
+                ? mode === 'withdraw'
+                  ? t('You need a little XLM to withdraw')
+                  : t('You need a little XLM to deposit')
+                : t('XLM running low')}
             </Typography>
-            <Typography sx={{ fontSize: '12px', color: '#8A6A2E', lineHeight: 1.5, mt: '2px' }}>
-              {t(
-                'Savings network fees are paid in XLM. Add some XLM to your wallet to move money in or out of savings.'
-              )}
+            <Typography
+              sx={{
+                fontSize: '12px',
+                color: feeStatus === 'blocked' ? '#8A3A3A' : '#8A6A2E',
+                lineHeight: 1.5,
+                mt: '2px',
+              }}
+            >
+              {feeStatus === 'blocked'
+                ? t(
+                    'Savings network fees are paid in XLM. Deposits and withdrawals are paused until you add a little XLM.'
+                  )
+                : t(
+                    'About {{n}} XLM left for fees — roughly one more deposit or withdrawal. Top up a little to stay safe.',
+                    { n: feeXlmAvailable.toFixed(2) }
+                  )}
             </Typography>
-            <Stack direction="row" spacing={1} sx={{ mt: '10px' }}>
+            <Stack direction="row" spacing={1} sx={{ mt: '10px', flexWrap: 'wrap', rowGap: 1 }}>
               <Button
-                onClick={() => startFlow('buy', 'XLM')}
+                onClick={() => router.push('/swap?from=USDC')}
                 sx={{
                   bgcolor: '#0A0A0F',
                   color: '#fff',
@@ -826,21 +876,50 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   '&:hover': { bgcolor: '#1A1A28' },
                 }}
               >
-                {t('Buy XLM')}
+                {t('Swap USDC → XLM')}
               </Button>
               <Button
-                onClick={() => startFlow('receive', 'XLM')}
+                onClick={() => startFlow('buy', 'XLM')}
                 sx={{
                   bgcolor: 'transparent',
-                  color: '#7A4A00',
+                  color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
                   fontSize: '12px',
                   fontWeight: 600,
                   textTransform: 'none',
                   borderRadius: '10px',
                   px: '12px',
                   py: '6px',
-                  border: '1px solid rgba(245,158,11,0.4)',
-                  '&:hover': { bgcolor: 'rgba(245,158,11,0.12)' },
+                  border:
+                    feeStatus === 'blocked'
+                      ? '1px solid rgba(220,38,38,0.35)'
+                      : '1px solid rgba(245,158,11,0.4)',
+                  '&:hover': {
+                    bgcolor:
+                      feeStatus === 'blocked' ? 'rgba(220,38,38,0.08)' : 'rgba(245,158,11,0.12)',
+                  },
+                }}
+              >
+                {t('Buy XLM')}
+              </Button>
+              <Button
+                onClick={() => startFlow('receive', 'XLM')}
+                sx={{
+                  bgcolor: 'transparent',
+                  color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  borderRadius: '10px',
+                  px: '12px',
+                  py: '6px',
+                  border:
+                    feeStatus === 'blocked'
+                      ? '1px solid rgba(220,38,38,0.35)'
+                      : '1px solid rgba(245,158,11,0.4)',
+                  '&:hover': {
+                    bgcolor:
+                      feeStatus === 'blocked' ? 'rgba(220,38,38,0.08)' : 'rgba(245,158,11,0.12)',
+                  },
                 }}
               >
                 {t('Receive XLM')}
