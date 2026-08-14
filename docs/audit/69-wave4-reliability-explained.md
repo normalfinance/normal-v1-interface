@@ -60,3 +60,57 @@ could still **fall over or forget things** under real-world conditions.
 - A Coinbase sale survives anything short of Coinbase forgetting it.
 - The path to spike-proof database connections is proven and scripted,
   with a rollback measured in seconds.
+
+## 4. Addendum (2026-08-14): why the live test swap failed, and what we changed
+
+Niko ran the first real ETH → USDC(Stellar) swap and it failed at the very
+first passkey prompt with "operation timed out or was not allowed" — and a
+"Pending" row was left in the activity feed forever. Two separate lessons:
+
+### a. The passkey bodyguard was only guarding some doors (#63, round 3 of #51)
+
+- We HAVE a fix for exactly this error since #51: a guard that queues
+  passkey prompts, waits for the previous dialog to settle, and silently
+  retries one instant (<2s) failure — because an instant failure means the
+  browser rejected the ceremony before any human saw a dialog.
+- Cause and effect: the guard was wired into the Stellar and EVM signer
+  libraries only → the LI.FI swap path (and the plain send buttons) called
+  Turnkey directly → the exact same browser hiccup that #51 already solved
+  killed a live swap on an unguarded door.
+- This is the THIRD time narrow scoping of this guard produced a live
+  failure (#51 savings → #54 external wallets → now LI.FI). The rule we
+  wrote down: a ceremony guard is infrastructure — it protects EVERY door
+  or it protects nothing.
+- Fix: all six remaining unguarded signing sites now go through the guard.
+  If the same browser hiccup happens again → the app retries it silently →
+  you see one extra second, not a dead swap.
+
+### b. A swap that dies before moving money must say "Failed", not "Pending"
+
+- We create the transfer's database row BEFORE anything moves (on purpose —
+  a crashed tab must never lose a record of moving money).
+- Cause and effect: the swap died before its first transaction → the row
+  stayed in its newborn "CREATED" state → the activity feed shows every
+  not-finished row as "Pending" → a swap that moved zero money looked
+  stuck forever.
+- Fix, in three layers (client, server rule, cron janitor):
+  1. The engine knows whether anything reached a chain; if not, it marks
+     the row FAILED on the way out.
+  2. The server accepts that mark ONLY while the row has no transaction
+     hashes — so a buggy or malicious client can never bury a transfer
+     whose money actually moved.
+  3. The cron sweeper expires hash-less CREATED rows older than an hour —
+     this is what cleans up the phantom row from the failed test, and any
+     future case where the tab died before it could report.
+- Trade-off we accepted (written in the code): if a transaction broadcast
+  but the "attach the hash" call failed, the row could be wrongly expired.
+  The money is still in your own addresses either way — only the label can
+  lie, and it takes two independent failures at once.
+
+### What we accomplish
+
+- The WebAuthn hiccup class of failure now self-heals on every signing
+  path in the app, not just savings.
+- The activity feed can no longer show an eternal "Pending" for a swap
+  that never moved money — and no cleanup path exists that could mislabel
+  a transfer that DID move money, except the documented double-failure.

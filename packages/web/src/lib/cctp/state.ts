@@ -147,11 +147,34 @@ export async function advanceTransfer(transfer: CctpTransfer): Promise<CctpTrans
   return prisma.cctpTransfer.findUniqueOrThrow({ where: { id: transfer.id } });
 }
 
+// A row born CREATED that never gained a tx hash within this window is a
+// swap that died at (or before) its first signature — nothing reached a
+// chain, so nothing will ever advance it. Expire it instead of re-scanning
+// it on every cron tick forever (and rendering an eternal "pending" row in
+// the activity feed). Trade-off, documented: if a broadcast succeeded but
+// the hash-attaching PATCH failed, this marks a live transfer FAILED — the
+// funds are still safe (every recipient address is the user's own), only
+// the row's label lies, and it takes two independent failures to get there.
+const STALE_CREATED_MS = 60 * 60_000;
+
 /** Advance every in-flight transfer (cron entrypoint). */
 export async function advancePendingTransfers(): Promise<{
   advanced: number;
   byStatus: Record<string, number>;
 }> {
+  await prisma.cctpTransfer.updateMany({
+    where: {
+      status: 'CREATED',
+      burnTxHash: null,
+      srcSwapTxHash: null,
+      createdAt: { lt: new Date(Date.now() - STALE_CREATED_MS) },
+    },
+    data: {
+      status: 'FAILED',
+      errorDetail: 'Expired — no transaction was ever sent; no funds moved',
+    },
+  });
+
   const pending = await prisma.cctpTransfer.findMany({
     where: { status: { in: [...PENDING_STATUSES] } },
     orderBy: { createdAt: 'asc' },

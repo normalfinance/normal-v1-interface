@@ -233,7 +233,7 @@ export function useCctpEngine({
       const headers = await buildAuthHeaders();
       return {
         headers,
-        patch: (body: Record<string, string>) =>
+        patch: (body: Record<string, string | boolean>) =>
           fetch(`/api/cctp/transfers/${transferId}`, {
             method: 'PATCH',
             headers,
@@ -302,6 +302,11 @@ export function useCctpEngine({
       const { patch, pollStatus, topUp } = await makePatcher(transferId);
       const baseline = await readBaseUsdc(evmAddress!);
       let arrivedWire = 0n;
+      // Flips the moment the first transaction reaches a chain. While false, a
+      // failure (declined passkey, build error) means no money moved — the
+      // CREATED row would otherwise render as eternally "pending" in the
+      // activity feed, so we mark it FAILED instead.
+      let broadcastStarted = false;
 
       try {
         setStage('lifi');
@@ -310,6 +315,7 @@ export function useCctpEngine({
           ethereumAddress: addresses.ETH,
           solanaAddress: addresses.SOL,
         });
+        broadcastStarted = true;
         await patch({ srcSwapTxHash: srcTx });
 
         setStage('arriving');
@@ -357,6 +363,12 @@ export function useCctpEngine({
           console.error('[cctp engine] stage failed:', e); // surface stack
           setStageError(String(e?.message ?? e));
         }
+        if (!broadcastStarted) {
+          // Server re-checks the precondition (CREATED + no tx hashes), so a
+          // race can only leave the row pending — never bury a real transfer.
+          await patch({ markFailed: true }).catch(() => {});
+          window.dispatchEvent(new Event('nf:activity-updated'));
+        }
       }
     },
     [evmAddress, stellarAddress, network, addresses, makePatcher, finish, t]
@@ -367,6 +379,8 @@ export function useCctpEngine({
     async (transferId: string, amountWire: bigint) => {
       cancelled.current = false;
       const { patch, pollStatus, topUp } = await makePatcher(transferId);
+      // Same contract as runInbound: false ⇒ nothing reached a chain yet.
+      let broadcastStarted = false;
 
       try {
         setStage('burn');
@@ -377,6 +391,7 @@ export function useCctpEngine({
           destinationDomain: CCTP_DOMAIN.base,
           mintRecipient: evmAddressToBytes(evmAddress!),
         });
+        broadcastStarted = true;
         await patch({ burnTxHash });
 
         setStage('bridging');
@@ -408,6 +423,10 @@ export function useCctpEngine({
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
           setStageError(String(e?.message ?? e));
+        }
+        if (!broadcastStarted) {
+          await patch({ markFailed: true }).catch(() => {});
+          window.dispatchEvent(new Event('nf:activity-updated'));
         }
       }
     },

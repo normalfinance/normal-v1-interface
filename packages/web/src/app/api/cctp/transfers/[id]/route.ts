@@ -59,6 +59,20 @@ export const PATCH = withAuth(async (req, { user, params }) => {
     if (!transfer!.errorDetail)
       data.errorDetail = 'Refunded — USDC returned to your Stellar account';
   }
+  // Retire a transfer that never left the gate (signature declined, build
+  // error): allowed ONLY while the row is CREATED with no tx hash on either
+  // side — i.e. provably no money moved. Once any hash exists the recovery
+  // banner + cron own the row and a client cannot bury it.
+  if (
+    body.markFailed &&
+    transfer!.status === 'CREATED' &&
+    !transfer!.burnTxHash &&
+    !transfer!.srcSwapTxHash
+  ) {
+    data.status = 'FAILED';
+    if (!transfer!.errorDetail)
+      data.errorDetail = 'Cancelled before any transaction was sent — no funds moved';
+  }
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: 'nothing to update' }, { status: 400 });
   }

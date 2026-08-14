@@ -926,3 +926,42 @@ now the exact send-dialog input pattern, Geist Mono digits, same-size sans $).
   ALL PASS; rollback = env revert.
 
 1 new test surface (route under conformance), 180 total.
+
+## #63 — LIVE CCTP swap failed at first signature: guard-scoping miss, round 3 (FIXED 2026-08-14)
+
+Niko's ETH→USDC(Stellar) test swap (~$24.50) died instantly at the LI.FI
+leg with WebAuthn "operation timed out or was not allowed", leaving an
+eternal "Pending" row in the activity feed. Two distinct bugs:
+
+**Bug 1 — the #51 guard never covered this path.** `runWebauthnCeremony`
+(queue + settle + fast-fail retry) was wired into stellar-signer and
+evm-signer only. The LI.FI executor (`lib/lifi/execute.ts` — the exact
+signature that failed) and all three send adapters called Turnkey raw.
+This is the THIRD casualty of the same scoping decision: #51 scoped to
+"savings only", #54 proved external wallets needed it, now the LI.FI path.
+Fix: all 6 unguarded sign sites wrapped (execute.ts ETH/SOL/BTC, send
+adapters ethereum/solana/bitcoin). Every passkey ceremony in the app now
+goes through the guard. Lesson recorded: a ceremony guard is
+infrastructure, not a per-feature fix — partial rollouts of it keep
+producing live incidents.
+
+**Bug 2 — a pre-broadcast failure left the transfer row CREATED forever.**
+The engine creates the CctpTransfer row BEFORE anything moves (correct —
+that's #27's record-first rule), but its catch only set the UI error; the
+row stayed CREATED, and the activity feed maps every non-terminal status
+to "pending". Fix, three layers: (1) engine tracks `broadcastStarted`;
+on failure with nothing broadcast it PATCHes `markFailed`; (2) the PATCH
+handler accepts it ONLY while status=CREATED with no burn/src hash — once
+any hash exists the client cannot bury a real transfer; (3) cron
+`advancePendingTransfers` expires CREATED rows >60min old with no hashes
+(cleans Niko's existing phantom, and any future one where the client died
+before patching). Documented trade-off: a broadcast that succeeded but
+whose hash-PATCH failed could be wrongly expired — funds unaffected
+(every recipient address is the user's own; the row label is the only lie)
+and it requires two independent failures.
+
+Funds: never at risk — the failure was BEFORE any signature completed;
+nothing left any wallet. Root cause of the WebAuthn error itself:
+environmental (browser/authenticator rejected the ceremony instantly —
+the #51 class); with the guard now in path, the same event auto-retries
+once and otherwise surfaces a human message instead of a dead swap.

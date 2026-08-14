@@ -98,16 +98,21 @@ export function createBitcoinAdapter(
         const stamper = new WebauthnStamper({ rpId });
         const client = new TurnkeyClient({ baseUrl: 'https://api.turnkey.com' }, stamper);
 
-        const signResult = await client.signTransaction({
-          type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
-          timestampMs: String(Date.now()),
-          organizationId: subOrgId,
-          parameters: {
-            signWith: bitcoinAddress,
-            unsignedTransaction: psbtHex,
-            type: 'TRANSACTION_TYPE_BITCOIN',
-          },
-        });
+        // Guarded ceremony (#51 coverage completed 2026-08-14): queued +
+        // fast-fail-retried like every other passkey signature.
+        const { runWebauthnCeremony } = await import('@/lib/turnkey/webauthn-guard');
+        const signResult = await runWebauthnCeremony(() =>
+          client.signTransaction({
+            type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
+            timestampMs: String(Date.now()),
+            organizationId: subOrgId,
+            parameters: {
+              signWith: bitcoinAddress,
+              unsignedTransaction: psbtHex,
+              type: 'TRANSACTION_TYPE_BITCOIN',
+            },
+          })
+        );
 
         const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
         if (!signedTx) throw new Error('Signing failed — no signed transaction returned');

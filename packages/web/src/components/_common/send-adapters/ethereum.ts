@@ -142,17 +142,22 @@ export function createEthereumAdapter(
           new WebauthnStamper({ rpId })
         );
 
-        const signResult = await turnkeyClient.signTransaction({
-          type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
-          timestampMs: String(Date.now()),
-          organizationId: subOrgId,
-          parameters: {
-            signWith: ethereumAddress,
-            // Turnkey expects the serialized tx without the 0x prefix
-            unsignedTransaction: unsigned.startsWith('0x') ? unsigned.slice(2) : unsigned,
-            type: 'TRANSACTION_TYPE_ETHEREUM',
-          },
-        });
+        // Guarded ceremony (#51 coverage completed 2026-08-14): queued +
+        // fast-fail-retried like every other passkey signature.
+        const { runWebauthnCeremony } = await import('@/lib/turnkey/webauthn-guard');
+        const signResult = await runWebauthnCeremony(() =>
+          turnkeyClient.signTransaction({
+            type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
+            timestampMs: String(Date.now()),
+            organizationId: subOrgId,
+            parameters: {
+              signWith: ethereumAddress,
+              // Turnkey expects the serialized tx without the 0x prefix
+              unsignedTransaction: unsigned.startsWith('0x') ? unsigned.slice(2) : unsigned,
+              type: 'TRANSACTION_TYPE_ETHEREUM',
+            },
+          })
+        );
 
         const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
         if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
