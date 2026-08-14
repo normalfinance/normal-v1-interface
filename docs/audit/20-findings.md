@@ -1055,3 +1055,12 @@ Fix (mirrors #62's tracker):
   itself look stuck).
 
 9th instance of the fire-and-forget-refresh-races-the-UI root cause.
+
+**#66 follow-up (same day, Niko's retest):** the retest passed, but the
+resume banner above the swap card ("Completing automatically") kept
+spinning ~30s after the modal said Done. The banner refreshed only on
+mount + a 30s interval; the engine's finish() already dispatches
+nf:activity-updated at the exact settle moment, but the banner never
+subscribed. Fix: banner now listens for that event and re-reads
+immediately — it clears the instant the modal completes. (Timer-instead-
+of-signal, again — the event existed; the consumer just didn't listen.)

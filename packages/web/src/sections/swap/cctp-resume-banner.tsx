@@ -147,7 +147,18 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     if (!user) return undefined;
     refresh();
     const id = setInterval(refresh, 30_000);
-    return () => clearInterval(id);
+    // The engine announces every settle instantly (finish()/markFailed
+    // dispatch nf:activity-updated) — re-read NOW instead of waiting out the
+    // 30s tick, so a completed swap's "Completing automatically" row doesn't
+    // keep spinning above the card after the modal already said Done (#66).
+    const onActivity = () => {
+      refresh();
+    };
+    window.addEventListener('nf:activity-updated', onActivity);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('nf:activity-updated', onActivity);
+    };
   }, [user, refresh]);
 
   const patch = useCallback(

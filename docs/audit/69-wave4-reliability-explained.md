@@ -176,3 +176,9 @@ as the regular LI.FI swaps (#62), applied to the CCTP engine:
   modal closes with "BTC is on its way" and the activity feed's pending
   badge tracks the arrival — a 20-minute spinner would be worse than the
   message.
+
+**Follow-up to #66:** the banner above the swap card used to check the
+server only every 30 seconds — so after the modal said Done, the banner's
+spinner could linger up to half a minute. The engine already broadcasts
+"something settled" at the exact moment; the banner now listens for that
+broadcast and clears instantly.
