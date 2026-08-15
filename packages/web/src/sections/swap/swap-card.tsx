@@ -29,6 +29,7 @@ import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 
 import PickToken from '@/components/_common/pick-token';
 import { Iconify } from '@/components/template/iconify';
+import NormalWalletSetupDialog from '@/components/_common/normal-wallet-setup-dialog';
 
 import { CctpRecoveryBanner } from './cctp-resume-banner';
 import { useLifiEngine } from './engines/use-lifi-engine';
@@ -78,6 +79,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const [amountIn, setAmountIn] = useState('');
   const [isFiatMode, setIsFiatMode] = useState(false);
   const [pickerSide, setPickerSide] = useState<'from' | 'to' | null>(null);
+  // #32 chunk 3: guided Normal-wallet setup (external-wallet users, cctp pairs)
+  const [setupOpen, setSetupOpen] = useState(false);
 
   // Zero-balance stand-in so an asset stays selectable before its balance loads.
   const placeholder = useCallback((symbol: SwapSymbol): Token => {
@@ -261,12 +264,14 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const engine = pairType === 'stellar' ? soroswap : pairType === 'crosschain' ? lifi : cctp;
   const { toAmount, quoteLoading, quoteError } = engine;
 
-  // The CTA for the gate computed above. `action: null` is the load-bearing
-  // part: it is what guarantees no signature fires.
+  // The gate CTA (#32 chunk 3): instead of a dead button, external-wallet
+  // users get the guided Normal-wallet setup. The invariant survives — the
+  // action opens a DIALOG, never an engine; the engines themselves stay
+  // enabled:false for these pairs until chunk 4 wires them.
   const button: SwapEngineButton = needsNormalWallet
     ? {
-        label: t('Cross-chain swaps need your Normal wallet'),
-        action: null,
+        label: t('Continue with your Normal wallet'),
+        action: () => setSetupOpen(true),
         loading: false,
         helper: (
           <Typography
@@ -278,7 +283,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
             }}
           >
             {t(
-              'Your connected wallet can only swap XLM ↔ USDC. Swapping BTC, ETH or SOL signs on other chains, which needs your Normal passkey wallet.'
+              'Cross-chain swaps run through your Normal wallet — a passkey-secured wallet that can hold BTC, ETH and SOL.'
             )}
           </Typography>
         ),
@@ -733,6 +738,13 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         />
 
         {engine.modals}
+
+        {/* #32 chunk 3: guided Normal-wallet setup for external-wallet users */}
+        <NormalWalletSetupDialog
+          open={setupOpen}
+          onClose={() => setSetupOpen(false)}
+          neededUsdc={pairType === 'cctp' && fromSymbol === 'USDC' ? amount.toNumber() : 0}
+        />
       </Box>
     </Box>
   );

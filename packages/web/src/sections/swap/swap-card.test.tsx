@@ -20,7 +20,7 @@
 // from there, not the ambient global — see 47-testing-plan.md).
 import '@testing-library/jest-dom/jest-globals';
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { it, jest, expect, describe, beforeEach } from '@jest/globals';
 
 import type * as SwapCardModule from './swap-card';
@@ -107,6 +107,13 @@ jest.mock('@/hooks/use-chain-portfolio', () => ({
 jest.mock('@/components/_common/pick-token', () => ({ __esModule: true, default: () => null }));
 jest.mock('@/components/template/iconify', () => ({ Iconify: () => null }));
 jest.mock('./cctp-resume-banner', () => ({ CctpRecoveryBanner: () => null }));
+// #32 chunk 3: the guided setup dialog renders a marker so the tests can
+// assert the gate CTA opens IT — a dialog, never an engine.
+jest.mock('@/components/_common/normal-wallet-setup-dialog', () => ({
+  __esModule: true,
+  default: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="normal-wallet-setup-dialog" /> : null,
+}));
 jest.mock('./engines/use-soroswap-engine', () => ({
   useSoroswapEngine: (props: unknown) => {
     mockEngineCalls.soroswap.push(props);
@@ -132,7 +139,7 @@ jest.mock('./engines/use-cctp-engine', () => ({
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const SwapCard = require('./swap-card').default as typeof SwapCardModule.default;
 
-const GATE_LABEL = 'Cross-chain swaps need your Normal wallet';
+const GATE_LABEL = 'Continue with your Normal wallet';
 const lastCall = (calls: any[]) => calls[calls.length - 1];
 
 describe('swap card — external-wallet gate (the twice-lost decision)', () => {
@@ -142,14 +149,20 @@ describe('swap card — external-wallet gate (the twice-lost decision)', () => {
     mockEngineCalls.cctp.length = 0;
   });
 
-  it('external wallet + BTC pair: the CTA is the disabled gate, not the engine', () => {
+  it('external wallet + BTC pair: the CTA opens the guided setup, never an engine (#32 chunk 3)', () => {
     mockWalletState.walletType = 'lobstr';
     render(<SwapCard initial="BTC" />);
 
+    // The invariant survives the UX change: the gate CTA's action is a
+    // DIALOG — the engines' own buttons stay unreachable.
     const cta = screen.getByRole('button', { name: GATE_LABEL });
-    expect(cta).toBeDisabled();
+    expect(screen.queryByTestId('normal-wallet-setup-dialog')).not.toBeInTheDocument();
+    fireEvent.click(cta);
+    expect(screen.getByTestId('normal-wallet-setup-dialog')).toBeInTheDocument();
     // The explanation a confused user actually needs:
-    expect(screen.getByText(/Your connected wallet can only swap XLM/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Cross-chain swaps run through your Normal wallet/)
+    ).toBeInTheDocument();
     // And the engine's own button must NOT be reachable:
     expect(screen.queryByRole('button', { name: 'lifi-swap' })).not.toBeInTheDocument();
   });

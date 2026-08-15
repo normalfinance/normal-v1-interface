@@ -9,6 +9,7 @@ import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
+import { shouldAdoptIntoSlot } from '@/lib/wallet-slot';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
@@ -648,7 +649,13 @@ export default function OnboardingWizard({
         throw new Error(t('Wallet creation did not return a Stellar address'));
 
       await linkWallet(result.stellarAddress);
-      await connectWalletWithoutKeypair(result.stellarAddress);
+      // #32 chunk 3: adopt into the wallet slot only when nothing is connected
+      // (signup — unchanged). With an external wallet connected, the new
+      // Normal wallet is a companion; the user's chosen wallet stays put
+      // (invariant I1 — the last remaining slot-stealer, closed).
+      if (shouldAdoptIntoSlot(persist.wallet.address)) {
+        await connectWalletWithoutKeypair(result.stellarAddress);
+      }
       setWizardWalletAddress(result.stellarAddress);
       enqueueSnackbar(t('Wallet created and secured with your passkey!'), { variant: 'success' });
       // Asset-first: land on "get started" (buy/receive) instead of forcing the

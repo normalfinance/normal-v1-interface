@@ -614,10 +614,22 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 </span>
               </Tooltip>
 
-              <Tooltip title={t('Create New Account')}>
+              <Tooltip
+                title={
+                  turnkeyHasWallet === true ? t('Connect external wallet') : t('Create New Account')
+                }
+              >
                 <IconButton
                   size="small"
                   onClick={() => {
+                    // #32 chunk 3: a user who already HAS a Normal wallet adds
+                    // an EXTERNAL wallet here (kit picker, links + connects —
+                    // doc 72 §4d/§4f); only wallet-less users get the wizard.
+                    if (turnkeyHasWallet === true) {
+                      connectWallet();
+                      onClose();
+                      return;
+                    }
                     setWizardInitialStep('choose-wallet');
                     setShowLoginModal(true);
                     onClose();
@@ -632,7 +644,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 </IconButton>
               </Tooltip>
 
-              <Tooltip title={t('Switch Wallets')}>
+              <Tooltip title={t('All wallets')}>
                 <IconButton
                   size="small"
                   onClick={() => {

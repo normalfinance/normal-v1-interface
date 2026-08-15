@@ -1163,3 +1163,31 @@ no-picker model):
 
 197 tests, build clean. Chunks remaining: 3 (guided setup dialog),
 4 (engine wiring), 5 (polish).
+
+## #32 chunk 3 — guided Normal-wallet setup (SHIPPED 2026-08-15)
+
+The external-user path to cross-chain swaps, per Niko's UX directive
+(doc 72 §3; junior explainer: doc 73). Signup/onboarding untouched.
+
+- **NormalWalletSetupDialog**: opened by the swap gate CTA (now
+  "Continue with your Normal wallet" instead of a dead button). Four
+  steps — create (passkey) → activate (default 4 XLM from the external
+  wallet, editable) → USDC trustline (passkey; the universal signer
+  routes by the tx's SOURCE account, so the companion's trustline signs
+  with the passkey while the sends sign in the external wallet) → fund
+  (pre-filled with the typed swap amount). RESUMABLE BY CONSTRUCTION:
+  the step is derived from chain+DB state on every open
+  (deriveSetupStep, pure, 6 named kill-the-tab tests), never remembered.
+- **Drawer**: "+" becomes "Connect external wallet" for users who
+  already have a Normal wallet (opens the kit picker directly); wizard
+  only for wallet-less users. ⟳ renamed "All wallets".
+- **Chunk-1 leftover closed**: the wizard's create-wallet path now uses
+  the same no-steal guard (adopt only into an empty slot) — the last
+  automatic slot-writer is guarded.
+- **Component test evolved, invariant intact**: the "twice-lost
+  decision" suite now asserts the CTA opens the DIALOG (marker mock) and
+  the engines stay enabled:false — external users still cannot reach
+  engine signing (that unlock is chunk 4).
+
+203 tests, build clean. Note for testers: until chunk 4, completing the
+dialog leaves the swap still gated — the engines are wired next.
