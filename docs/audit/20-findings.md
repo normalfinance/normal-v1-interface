@@ -1261,3 +1261,20 @@ BTC↔ETH↔SOL for external users (4d early). Component tests: +2 (hybrid
 pinned to companion; normal-wallet no override). 206 tests, build clean.
 Remaining: 4b move-and-swap + source picker, 4c deliver-to selector,
 4e explainer/testing wrap.
+
+## #32 chunk 4b — source picker + inline move-and-swap (SHIPPED 2026-08-15)
+
+Doc 72 §4h S2/S3 per Niko's decisions (user picks source; everything
+visible). Swap card: source pills (Normal wallet / <external>) with
+per-wallet balances — balance display, validation and MAX follow the
+SELECTION; engine: `fundFromExternal` prop — CTA "Move X USDC from
+<wallet> & swap" + helper, new 'funding' stage as the progress modal's
+first step, move runs through useSendToken (kit-signed, #29/#54 funnels)
+BEFORE the transfer row exists, and `execute` resolves only once the
+moved USDC is VISIBLE on the companion (probeCompanion verify-loop —
+the #62 verify-before-act rule; burn can never outrun the transfer).
+Trustline preflight extended to outbound-with-funding (the move delivers
+USDC to the companion). Jest: jsdom suite gained contract-faithful
+stubs for the stellar-sdk/wallet-kit graphs (normal-wallet-setup,
+use-send-token, cdn in the utils mock). 206 tests, build clean.
+Remaining: 4c deliver-to selector, 4e wrap.

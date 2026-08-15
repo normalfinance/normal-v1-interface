@@ -179,3 +179,32 @@ covering every place funds can sit. 4a ships the foundation:
 
 Still to come: 4b the "Move X USDC from Lobstr & swap" inline funding +
 source picker, 4c the "Deliver to" selector for inbound.
+
+## Chunk 4b — swapping straight from the external wallet (move-and-swap)
+
+Niko's decision: the user PICKS which wallet funds a cross-chain swap.
+
+- **The source picker.** On USDC → BTC/ETH/SOL pairs, a hybrid user sees
+  two pills above the amount: "Normal wallet · 27.48" and
+  "Lobstr · 12.50". Balance, validation and MAX all follow the selected
+  pill — every number on screen is spendable by exactly the wallet named
+  next to it.
+- **Picking the external wallet = move-and-swap.** The button itself
+  announces the plan: "Move 12.50 USDC from Lobstr & swap", with a
+  helper line underneath spelling out the two halves (one approval in
+  Lobstr, then passkey). Nothing is ever silent: the progress modal
+  gains a first step — "Moving USDC from Lobstr" — and the move is a
+  normal recorded transfer in the activity feed.
+- **The safety rule that makes it sound:** the engine does not touch the
+  bridge until the moved USDC is VISIBLE on the Normal wallet. The
+  funding call resolves only after re-reading the companion's balance
+  (bounded retries) — the same verify-before-act rule as #62 — so a
+  burn can never fire against money that hasn't arrived. If the move
+  fails or is declined, the error says plainly: "nothing was swapped".
+- **A trustline subtlety caught in review:** the move DELIVERS USDC to
+  the Normal wallet, which therefore needs its USDC trustline even for
+  an outbound swap — the trustline preflight now covers both directions
+  whenever the funding path is active.
+
+With 4a + 4b, every scenario in the design matrix except the inbound
+"Deliver to" choice (4c) is live.

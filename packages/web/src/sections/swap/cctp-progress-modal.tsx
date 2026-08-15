@@ -18,6 +18,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Iconify } from '@/components/template/iconify';
 
 export type CctpStage =
+  | 'funding'
   | 'lifi'
   | 'arriving'
   | 'topup'
@@ -34,6 +35,9 @@ interface Props {
   error: string | null;
   fromSymbol: string;
   toSymbol: string;
+  /** #32 chunk 4b: this run started by moving USDC from the external wallet. */
+  includeFunding?: boolean;
+  fundingWalletLabel?: string;
   onClose: () => void;
 }
 
@@ -44,6 +48,8 @@ export function CctpProgressModal({
   error,
   fromSymbol,
   toSymbol,
+  includeFunding = false,
+  fundingWalletLabel,
   onClose,
 }: Props) {
   const { t } = useTranslate();
@@ -79,6 +85,19 @@ export function CctpProgressModal({
           { id: 'done', label: t('Done'), sub: t('{{sym}} delivered', { sym: toSymbol }) },
         ]
       : [
+          // #32 chunk 4b: swapping FROM the external wallet starts with the
+          // visible funding move — never a silent transfer.
+          ...(includeFunding
+            ? [
+                {
+                  id: 'funding' as CctpStage,
+                  label: t('Moving USDC from {{wallet}}', {
+                    wallet: fundingWalletLabel ?? t('your connected wallet'),
+                  }),
+                  sub: t('Approve in your wallet — funds go to your own Normal wallet'),
+                },
+              ]
+            : []),
           {
             id: 'burn',
             label: t('Starting the Circle bridge'),

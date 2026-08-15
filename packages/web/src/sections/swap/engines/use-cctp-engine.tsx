@@ -69,6 +69,14 @@ export interface CctpEngineProps {
   /** Opens the guided Normal-wallet setup (create/activate/trustline/fund)
    *  when a preflight fails for an external-wallet user. */
   onNeedsSetup?: () => void;
+  /**
+   * #32 chunk 4b: the user picked their EXTERNAL wallet as the swap source
+   * (doc 72 §4h S2). `execute` moves the typed USDC to the companion Normal
+   * wallet (kit-signed, and resolves only once the funds are VISIBLE there),
+   * after which the swap continues passkey-only. The CTA and the progress
+   * modal both announce the move — never a silent transfer.
+   */
+  fundFromExternal?: { label: string; execute: (amountUsdc: string) => Promise<boolean> };
 }
 
 const NATIVE_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
@@ -137,6 +145,7 @@ export function useCctpEngine({
   refetchChain,
   stellarAddressOverride,
   onNeedsSetup,
+  fundFromExternal,
 }: CctpEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
@@ -164,6 +173,9 @@ export function useCctpEngine({
   const [stage, setStage] = useState<CctpStage | null>(null);
   const [stageError, setStageError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  // #32 chunk 4b: whether THIS run started with the external→Normal funding
+  // move (drives the extra step in the progress modal).
+  const [usedFunding, setUsedFunding] = useState(false);
   const cancelled = useRef(false);
 
   const evmAddress = addresses.ETH; // the Base pivot is always the user's own EVM address
@@ -254,8 +266,13 @@ export function useCctpEngine({
         : null;
 
   const insufficient = amount.gt(0) && amount.gt(fromBalance);
+  // Inbound delivery AND the 4b funding move both land USDC on the Stellar
+  // side — either way the account needs the trustline first.
   const needsTrustline =
-    direction === 'in' && !isCheckingAccount && accountExists && !hasUsdcTrustline;
+    (direction === 'in' || !!fundFromExternal) &&
+    !isCheckingAccount &&
+    accountExists &&
+    !hasUsdcTrustline;
   const missingStellar = !stellarAddress || (!isCheckingAccount && !accountExists);
   // #32 chunk 4a: the outbound burn's Soroban fees are paid in XLM from the
   // BURN SOURCE — for hybrid users that's the companion Normal wallet, whose
@@ -578,6 +595,27 @@ export function useCctpEngine({
     setStageError(null);
     setModalOpen(true);
     try {
+      // #32 chunk 4b: source = external wallet → move the USDC to the Normal
+      // wallet FIRST (kit-signed; execute resolves only once the funds are
+      // visible on the companion — the #62 verify-before-act rule, so a burn
+      // can never fire against a balance that hasn't arrived). The move runs
+      // BEFORE the transfer row is created: it is a plain send, recorded by
+      // the send funnel, not a CCTP leg.
+      if (direction === 'out' && fundFromExternal) {
+        setUsedFunding(true);
+        setStage('funding');
+        const funded = await fundFromExternal.execute(amount.toFixed(7, BigNumber.ROUND_DOWN));
+        if (!funded) {
+          throw new Error(
+            t('The USDC transfer from {{wallet}} was not completed — nothing was swapped.', {
+              wallet: fundFromExternal.label,
+            })
+          );
+        }
+      } else {
+        setUsedFunding(false);
+      }
+
       const headers = await buildAuthHeaders();
       const amountWire =
         direction === 'in'
@@ -620,6 +658,7 @@ export function useCctpEngine({
     fromSymbol,
     toSymbol,
     feePercent,
+    fundFromExternal,
     runInbound,
     runOutbound,
     t,
@@ -711,6 +750,25 @@ export function useCctpEngine({
     if (quoteError) return { label: t('Try a different amount'), action: null, loading: false };
     if (quoteLoading || !quote)
       return { label: t('Fetching quote…'), action: null, loading: false };
+    // #32 chunk 4b: swapping FROM the external wallet — the CTA names the
+    // move before any signature, never a silent transfer.
+    if (direction === 'out' && fundFromExternal)
+      return {
+        label: t('Move {{amt}} USDC from {{wallet}} & swap', {
+          amt: amount.toFixed(2, BigNumber.ROUND_DOWN),
+          wallet: fundFromExternal.label,
+        }),
+        action: handleExecute,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t(
+              'Your USDC moves to your Normal wallet first (one approval in {{wallet}}), then the swap runs with your passkey.',
+              { wallet: fundFromExternal.label }
+            )}
+          </Typography>
+        ),
+      };
     return { label: t('Swap'), action: handleExecute, loading: false };
   }, [
     enabled,
@@ -721,6 +779,7 @@ export function useCctpEngine({
     needsTrustline,
     lowFeeXlm,
     onNeedsSetup,
+    fundFromExternal,
     amount,
     insufficient,
     stage,
@@ -799,6 +858,8 @@ export function useCctpEngine({
         error={stageError}
         fromSymbol={fromSymbol}
         toSymbol={toSymbol}
+        includeFunding={usedFunding}
+        fundingWalletLabel={fundFromExternal?.label}
         onClose={() => {
           cancelled.current = true;
           setModalOpen(false);

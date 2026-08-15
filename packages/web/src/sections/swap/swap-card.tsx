@@ -10,8 +10,11 @@ import { useStellarConfig } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { usePendingOutflow } from '@/lib/spendable';
 import { usePersistStore } from '@normalfinance/state';
+import { probeCompanion } from '@/lib/normal-wallet-setup';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
+import { useSendToken } from '@/hooks/stellar/use-send-token';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { spendableXlmForOutflow } from '@/utils/stellar-reserve';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
@@ -82,6 +85,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const [pickerSide, setPickerSide] = useState<'from' | 'to' | null>(null);
   // #32 chunk 3: guided Normal-wallet setup (external-wallet users, cctp pairs)
   const [setupOpen, setSetupOpen] = useState(false);
+  // #32 chunk 4b: which wallet funds a cctp swap (decision: the user picks).
+  const [cctpSource, setCctpSource] = useState<'normal' | 'external'>('normal');
 
   // Zero-balance stand-in so an asset stays selectable before its balance loads.
   const placeholder = useCallback((symbol: SwapSymbol): Token => {
@@ -191,11 +196,20 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const companionUsdcBalance = BigNumber(
     companionStellar?.assets.find((a) => a.symbol === 'USDC')?.balance ?? 0
   );
-  // Outbound (USDC→chain) for hybrid users spends the COMPANION's USDC —
-  // the swap runs on Turnkey rails (transfer-first, doc 72 §4h S1).
-  const cctpUsesCompanionBalance =
+  // #32 chunk 4b: outbound hybrid swaps let the user PICK the source wallet
+  // (doc 72 §4h). Normal wallet (default) = plain passkey swap (S1); the
+  // external wallet = inline move-and-swap (S2): one kit-signed transfer to
+  // the Normal wallet — named in the CTA and shown in the progress modal —
+  // then the swap continues passkey-only. Balance, validation and MAX all
+  // follow the SELECTED wallet, so every number is spendable by exactly it.
+  const showCctpSourcePicker =
     pairType === 'cctp' && isExternalWallet && !!companionStellar && fromSymbol === 'USDC';
-  const cctpFromBalance = cctpUsesCompanionBalance ? companionUsdcBalance : fromBalance;
+  const cctpSourceActive: 'normal' | 'external' = showCctpSourcePicker ? cctpSource : 'normal';
+  const cctpFromBalance = showCctpSourcePicker
+    ? cctpSourceActive === 'normal'
+      ? companionUsdcBalance
+      : grossFromBalance
+    : fromBalance;
 
   // `amount` is always the canonical token amount; in fiat mode the typed value
   // is USD, divided by the live price (0 until the price loads).
@@ -270,6 +284,49 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     resetInput,
     refetchChain,
   });
+  // #32 chunk 4b: the external-source funding move. `execute` sends the
+  // typed USDC to the companion via the connected wallet (kit signs) and
+  // resolves only once the moved funds are VISIBLE on the companion — the
+  // #62 verify-before-act rule, so the burn can never outrun the transfer.
+  const { send: stellarSend } = useSendToken();
+  const fundFromExternal = useMemo(
+    () =>
+      showCctpSourcePicker && cctpSourceActive === 'external' && companionStellar
+        ? {
+            label: connectedWalletLabel(wallet.walletType),
+            execute: async (amountUsdc: string) => {
+              const hash = await stellarSend({
+                destination: companionStellar.address,
+                token: tokenBySymbol.USDC,
+                amount: amountUsdc,
+              });
+              if (!hash) return false;
+              for (let i = 0; i < 10; i += 1) {
+                try {
+                  const probe = await probeCompanion(companionStellar.address, config);
+                  if (BigNumber(probe.usdcBalance).gte(amountUsdc)) return true;
+                } catch {
+                  /* transient Horizon hiccup — retry */
+                }
+                await new Promise((r) => {
+                  setTimeout(r, 3000);
+                });
+              }
+              return false;
+            },
+          }
+        : undefined,
+    [
+      showCctpSourcePicker,
+      cctpSourceActive,
+      companionStellar,
+      wallet.walletType,
+      tokenBySymbol,
+      stellarSend,
+      config,
+    ]
+  );
+
   const cctp = useCctpEngine({
     fromSymbol: pairType === 'cctp' ? fromSymbol : 'ETH',
     toSymbol: pairType === 'cctp' ? toSymbol : 'USDC',
@@ -282,6 +339,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     refetchChain,
     stellarAddressOverride: cctpStellarAddress,
     onNeedsSetup: isExternalWallet ? () => setSetupOpen(true) : undefined,
+    fundFromExternal,
   });
   const engine = pairType === 'stellar' ? soroswap : pairType === 'crosschain' ? lifi : cctp;
   const { toAmount, quoteLoading, quoteError } = engine;
@@ -458,15 +516,62 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                     : `${cctpFromBalance.toFixed(6, BigNumber.ROUND_DOWN)} ${fromSymbol}`}
                 </Box>
               )}
-              {/* #32 chunk 4a: the swap spends the Normal wallet's USDC — say
-                  so whenever the connected wallet is a different one. */}
-              {cctpUsesCompanionBalance && (
+              {/* #32 chunk 4a/4b: name the wallet this number belongs to —
+                  the swap spends exactly the SELECTED wallet's USDC. */}
+              {showCctpSourcePicker && (
                 <Box component="span" sx={{ color: 'rgba(10,10,15,0.4)' }}>
-                  {t('· Normal wallet')}
+                  {cctpSourceActive === 'normal'
+                    ? t('· Normal wallet')
+                    : `· ${connectedWalletLabel(wallet.walletType)}`}
                 </Box>
               )}
             </Typography>
           </Box>
+
+          {/* #32 chunk 4b: pick the wallet that funds this swap. External
+              source = the CTA and progress modal show the move explicitly. */}
+          {showCctpSourcePicker && (
+            <Box sx={{ display: 'flex', gap: '6px', mb: '10px', flexWrap: 'wrap' }}>
+              {(
+                [
+                  { key: 'normal', label: t('Normal wallet'), bal: companionUsdcBalance },
+                  {
+                    key: 'external',
+                    label: connectedWalletLabel(wallet.walletType),
+                    bal: grossFromBalance,
+                  },
+                ] as const
+              ).map((opt) => {
+                const selected = cctpSourceActive === opt.key;
+                return (
+                  <Box
+                    key={opt.key}
+                    component="button"
+                    onClick={() => setCctpSource(opt.key)}
+                    sx={{
+                      appearance: 'none',
+                      border: selected
+                        ? '1px solid rgba(10,10,15,0.9)'
+                        : '1px solid rgba(10,10,15,0.12)',
+                      borderRadius: '999px',
+                      px: '11px',
+                      py: '5px',
+                      fontSize: '11.5px',
+                      fontWeight: 600,
+                      fontFamily: 'inherit',
+                      cursor: 'pointer',
+                      bgcolor: selected ? '#0A0A0F' : 'transparent',
+                      color: selected ? '#fff' : '#6B6B76',
+                      transition: 'all .15s ease',
+                      '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.3)' },
+                    }}
+                  >
+                    {`${opt.label} · ${opt.bal.toFixed(2, BigNumber.ROUND_DOWN)}`}
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
 
           <Box
             sx={{

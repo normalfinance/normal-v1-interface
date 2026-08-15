@@ -80,9 +80,25 @@ const mockCompanion: { value: { address: string; assets: any[] } | null } = { va
 jest.mock('@/hooks/use-wallet-balances', () => ({
   useWalletBalances: () => ({ companionStellar: mockCompanion.value }),
 }));
+// #32 chunk 4b: the funding move's building blocks pull the stellar-sdk and
+// wallet-kit module graphs, which this jsdom suite can't load — contract-
+// faithful stubs (the tests only assert gating, not transfers).
+jest.mock('@/lib/normal-wallet-setup', () => ({
+  probeCompanion: async () => ({
+    exists: true,
+    hasUsdcTrustline: true,
+    xlmBalance: 4,
+    usdcBalance: 0,
+  }),
+}));
+jest.mock('@/hooks/stellar/use-send-token', () => ({
+  useSendToken: () => ({ send: async () => '' }),
+}));
 jest.mock('@normalfinance/utils', () => ({
   getCryptoIconUrl: () => '',
   sanitizeAmountInput: (s: string) => s,
+  // display.ts builds its icon map with cdn() at module load (#32 4b).
+  cdn: (p: string) => p,
 }));
 jest.mock('@/utils/format-number', () => ({ fCurrency: (n: unknown) => String(n) }));
 jest.mock('@/utils/token-selectors', () => ({
