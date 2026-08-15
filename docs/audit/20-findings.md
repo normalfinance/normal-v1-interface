@@ -1278,3 +1278,15 @@ USDC to the companion). Jest: jsdom suite gained contract-faithful
 stubs for the stellar-sdk/wallet-kit graphs (normal-wallet-setup,
 use-send-token, cdn in the utils mock). 206 tests, build clean.
 Remaining: 4c deliver-to selector, 4e wrap.
+
+## #32 chunk 4c — inbound "Deliver to" selector (SHIPPED 2026-08-15)
+
+Doc 72 §4h S4 + decision 2. Hybrid users get a "Deliver to: Normal
+wallet / <external>" pill row on inbound cctp pairs (default Normal);
+the engine's stellarAddressOverride follows the selection (mint
+recipient + preflight target). External delivery is trustline-gated
+inline: missing trustline → pill reads "· add trustline" → kit-signed
+changeTrust on the CONNECTED wallet, then selects. jsdom stubs added
+for use-trustline / use-account-status / snackbar template graphs.
+206 tests, build clean. Chunk 4 functionally complete (4a/4b/4c/4d);
+4e wrap remains (live matrix, doc close-out).

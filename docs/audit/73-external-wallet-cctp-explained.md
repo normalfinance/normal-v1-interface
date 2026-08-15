@@ -208,3 +208,27 @@ Niko's decision: the user PICKS which wallet funds a cross-chain swap.
 
 With 4a + 4b, every scenario in the design matrix except the inbound
 "Deliver to" choice (4c) is live.
+
+## Chunk 4c — choosing where inbound USDC lands
+
+The last piece of the matrix: when a hybrid user swaps BTC/ETH/SOL into
+USDC, the USDC arrives on Stellar — and they now have two Stellar
+wallets it could land in.
+
+- A **"Deliver to: Normal wallet / Lobstr"** row appears under the
+  You-Receive side (hybrid users only, default Normal wallet). The
+  engine's mint recipient follows the selection — the same explicit
+  address threading as everything else in chunk 4.
+- **The trustline catch, handled inline:** a Stellar wallet can only
+  hold USDC after opting in with a trustline. If the external wallet
+  lacks one, its pill reads "Lobstr · add trustline" — tapping it runs
+  the changeTrust signed by the external wallet itself (one kit
+  approval), then selects it. No dead ends, no detours.
+- Delivering to the Normal wallet keeps funds where the next swap can
+  use them passkey-only; delivering to Lobstr puts them straight in the
+  user's own external wallet. Their money, their choice — the design's
+  whole theme.
+
+Chunk 4 is now functionally complete (4a wiring, 4b move-and-swap,
+4c delivery choice, 4d LI.FI un-gate). What remains is 4e: the wrap-up —
+live test matrix, component-test additions, register close-out.

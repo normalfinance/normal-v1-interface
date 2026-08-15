@@ -94,6 +94,20 @@ jest.mock('@/lib/normal-wallet-setup', () => ({
 jest.mock('@/hooks/stellar/use-send-token', () => ({
   useSendToken: () => ({ send: async () => '' }),
 }));
+// #32 chunk 4c: deliver-to selector's building blocks (trustline add via the
+// wallet kit; live account status) — same ESM-graph reason as above.
+jest.mock('@/hooks/stellar/tokens/use-trustline', () => ({
+  useTrustLine: () => ({ addTrustLine: async () => {}, loading: false }),
+}));
+jest.mock('@/hooks/stellar/use-account-status', () => ({
+  useAccountStatus: () => ({
+    isLoading: false,
+    accountExists: true,
+    xlmBalance: 4,
+    hasUsdcTrustline: true,
+    refetch: async () => {},
+  }),
+}));
 jest.mock('@normalfinance/utils', () => ({
   getCryptoIconUrl: () => '',
   sanitizeAmountInput: (s: string) => s,
@@ -129,6 +143,9 @@ jest.mock('@/hooks/use-chain-portfolio', () => ({
 }));
 jest.mock('@/components/_common/pick-token', () => ({ __esModule: true, default: () => null }));
 jest.mock('@/components/template/iconify', () => ({ Iconify: () => null }));
+jest.mock('@/components/template/snackbar', () => ({
+  useSnackbar: () => ({ enqueueSnackbar: () => {} }),
+}));
 jest.mock('./cctp-resume-banner', () => ({ CctpRecoveryBanner: () => null }));
 // #32 chunk 3: the guided setup dialog renders a marker so the tests can
 // assert the gate CTA opens IT — a dialog, never an engine.

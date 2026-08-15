@@ -18,6 +18,8 @@ import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { spendableXlmForOutflow } from '@/utils/stellar-reserve';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
+import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useMemo, useState, useCallback } from 'react';
 import { getXlmToken, getSwapUsdcToken } from '@/utils/token-selectors';
 import { getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
@@ -33,6 +35,7 @@ import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 
 import PickToken from '@/components/_common/pick-token';
 import { Iconify } from '@/components/template/iconify';
+import { useSnackbar } from '@/components/template/snackbar';
 import NormalWalletSetupDialog from '@/components/_common/normal-wallet-setup-dialog';
 
 import { CctpRecoveryBanner } from './cctp-resume-banner';
@@ -87,6 +90,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const [setupOpen, setSetupOpen] = useState(false);
   // #32 chunk 4b: which wallet funds a cctp swap (decision: the user picks).
   const [cctpSource, setCctpSource] = useState<'normal' | 'external'>('normal');
+  // #32 chunk 4c: where inbound USDC lands (decision: the user picks).
+  const [cctpDeliverTo, setCctpDeliverTo] = useState<'normal' | 'external'>('normal');
 
   // Zero-balance stand-in so an asset stays selectable before its balance loads.
   const placeholder = useCallback((symbol: SwapSymbol): Token => {
@@ -192,7 +197,21 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const isExternalWallet = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
   const { companionStellar } = useWalletBalances(true);
   const needsNormalWallet = isExternalWallet && pairType !== 'stellar' && !companionStellar;
-  const cctpStellarAddress = isExternalWallet ? (companionStellar?.address ?? null) : undefined;
+  // #32 chunk 4c: inbound delivery choice. The external option requires the
+  // EXTERNAL wallet's USDC trustline (checked live below; selecting offers a
+  // kit-signed changeTrust when missing).
+  const showCctpDeliverPicker =
+    pairType === 'cctp' && isExternalWallet && !!companionStellar && toSymbol === 'USDC';
+  const externalStatus = useAccountStatus(showCctpDeliverPicker ? wallet.address : undefined);
+  const deliverToExternal = showCctpDeliverPicker && cctpDeliverTo === 'external';
+  // The engine's Stellar side: inbound-with-external-delivery targets the
+  // connected wallet's address; every other hybrid case is the companion
+  // (burn source outbound / default delivery inbound).
+  const cctpStellarAddress = isExternalWallet
+    ? deliverToExternal
+      ? (wallet.address ?? null)
+      : (companionStellar?.address ?? null)
+    : undefined;
   const companionUsdcBalance = BigNumber(
     companionStellar?.assets.find((a) => a.symbol === 'USDC')?.balance ?? 0
   );
@@ -284,6 +303,24 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     resetInput,
     refetchChain,
   });
+  // #32 chunk 4c: selecting external delivery adds the missing USDC
+  // trustline on the CONNECTED wallet first (kit signs its own changeTrust).
+  const { enqueueSnackbar } = useSnackbar();
+  const { addTrustLine, loading: trustlineBusy } = useTrustLine();
+  const handleDeliverExternal = useCallback(async () => {
+    if (externalStatus.hasUsdcTrustline) {
+      setCctpDeliverTo('external');
+      return;
+    }
+    try {
+      await addTrustLine('USDC', config.USDC_ISSUER);
+      await externalStatus.refetch();
+      setCctpDeliverTo('external');
+    } catch (e: any) {
+      enqueueSnackbar(e?.message || t('Could not add the USDC trustline.'), { variant: 'error' });
+    }
+  }, [externalStatus, addTrustLine, config.USDC_ISSUER, enqueueSnackbar, t]);
+
   // #32 chunk 4b: the external-source funding move. `execute` sends the
   // typed USDC to the companion via the connected wallet (kit signs) and
   // resolves only once the moved funds are VISIBLE on the companion — the
@@ -763,6 +800,70 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           >
             <AssetSelector side="to" />
           </Box>
+
+          {/* #32 chunk 4c: where the swapped USDC lands — the user picks.
+              External delivery needs the connected wallet's USDC trustline;
+              picking it offers the kit-signed add when missing. */}
+          {showCctpDeliverPicker && (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                mt: '10px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)' }}>
+                {t('Deliver to:')}
+              </Typography>
+              {(
+                [
+                  {
+                    key: 'normal',
+                    label: t('Normal wallet'),
+                    onPick: () => setCctpDeliverTo('normal'),
+                  },
+                  {
+                    key: 'external',
+                    label: externalStatus.hasUsdcTrustline
+                      ? connectedWalletLabel(wallet.walletType)
+                      : `${connectedWalletLabel(wallet.walletType)} · ${t('add trustline')}`,
+                    onPick: handleDeliverExternal,
+                  },
+                ] as const
+              ).map((opt) => {
+                const selected = cctpDeliverTo === opt.key;
+                return (
+                  <Box
+                    key={opt.key}
+                    component="button"
+                    onClick={opt.onPick}
+                    disabled={trustlineBusy}
+                    sx={{
+                      appearance: 'none',
+                      border: selected
+                        ? '1px solid rgba(10,10,15,0.9)'
+                        : '1px solid rgba(10,10,15,0.12)',
+                      borderRadius: '999px',
+                      px: '11px',
+                      py: '5px',
+                      fontSize: '11.5px',
+                      fontWeight: 600,
+                      fontFamily: 'inherit',
+                      cursor: trustlineBusy ? 'wait' : 'pointer',
+                      bgcolor: selected ? '#0A0A0F' : 'transparent',
+                      color: selected ? '#fff' : '#6B6B76',
+                      transition: 'all .15s ease',
+                      '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.3)' },
+                    }}
+                  >
+                    {opt.label}
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '8px', mt: '12px' }}>
             {quoteLoading ? (
               <Skeleton variant="text" width={150} sx={{ fontSize: '24px', borderRadius: '6px' }} />
