@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { Activity } from '@/types/activity';
 import type { Token } from '@normalfinance/types';
 
+import { useState } from 'react';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
@@ -95,6 +96,8 @@ export default function ConnectedWallet({
   ];
 
   const tabs = useTabs('assets');
+  // #32: selected wallet tab in dual-wallet mode (0 = Normal wallet).
+  const [walletTab, setWalletTab] = useState(0);
 
   const TAB_ITEMS = [
     { value: 'assets', label: t('Assets') },
@@ -289,29 +292,62 @@ export default function ConnectedWallet({
       {/* ------- tab panels ---------------------------------------- */}
       {tabs.value === 'assets' &&
         (sections && sections.length > 0 ? (
-          // Dual-wallet mode: one labeled group per wallet, numbers never
-          // summed across wallets (each figure is spendable by exactly the
-          // wallet it sits under — doc 72 §4f).
-          <Stack spacing={1}>
-            {sections.map((section) => (
-              <Box key={section.address}>
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{ px: '8px', pb: '2px' }}
-                >
-                  <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#6B6B76' }}>
+          // Dual-wallet mode: one WALLET TAB per wallet (Niko's direction —
+          // stacked groups read as one continuous list). Numbers are never
+          // summed across wallets: each tab shows exactly what that wallet
+          // can spend (doc 72 §4f).
+          <Box>
+            <Stack direction="row" spacing={0.75} sx={{ mb: '10px' }}>
+              {sections.map((section, idx) => {
+                const selected = Math.min(walletTab, sections.length - 1) === idx;
+                return (
+                  <Box
+                    key={section.address}
+                    component="button"
+                    onClick={() => setWalletTab(idx)}
+                    sx={{
+                      appearance: 'none',
+                      border: selected
+                        ? '1px solid rgba(10,10,15,0.9)'
+                        : '1px solid rgba(10,10,15,0.1)',
+                      borderRadius: '999px',
+                      px: '12px',
+                      py: '6px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      fontFamily: 'inherit',
+                      cursor: 'pointer',
+                      bgcolor: selected ? '#0A0A0F' : 'transparent',
+                      color: selected ? '#fff' : '#6B6B76',
+                      transition: 'all .15s ease',
+                      '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.25)' },
+                    }}
+                  >
                     {t(section.label)}
+                  </Box>
+                );
+              })}
+            </Stack>
+            {(() => {
+              const active = sections[Math.min(walletTab, sections.length - 1)];
+              return (
+                <Box>
+                  <Typography
+                    sx={{ fontSize: '11px', color: '#9A9AA5', px: '8px', pb: '2px', ...MONO }}
+                  >
+                    {`${active.address.slice(0, 6)}…${active.address.slice(-6)}`}
                   </Typography>
-                  <Typography sx={{ fontSize: '11px', color: '#9A9AA5', ...MONO }}>
-                    {`${section.address.slice(0, 4)}…${section.address.slice(-4)}`}
-                  </Typography>
-                </Stack>
-                <TokensTab loading={tokensFetching} tokens={section.tokens} />
-              </Box>
-            ))}
-          </Stack>
+                  {active.tokens.length > 0 ? (
+                    <TokensTab loading={tokensFetching} tokens={active.tokens} />
+                  ) : (
+                    <Typography sx={{ fontSize: '13px', color: '#9A9AA5', px: '8px', py: '18px' }}>
+                      {t('No assets in this wallet yet.')}
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })()}
+          </Box>
         ) : (
           <TokensTab
             loading={tokensFetching}

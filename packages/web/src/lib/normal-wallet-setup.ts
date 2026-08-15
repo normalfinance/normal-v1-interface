@@ -16,6 +16,7 @@
 import type { NetworkConfig } from '@normalfinance/types';
 
 import { Asset, Horizon, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
+import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
 
 export type SetupStep = 'create' | 'activate' | 'trustline' | 'fund' | 'ready';
 
@@ -39,6 +40,10 @@ export function deriveSetupStep(
 ): SetupStep {
   if (!companionAddress) return 'create';
   if (!probe || !probe.exists) return 'activate';
+  // #32 chunk 4a: an activated wallet whose fee-XLM ran dry can't pay the
+  // swap's Soroban burn fee — the activate step doubles as an XLM top-up.
+  // Same threshold as the savings action-block and the #67 semaphore.
+  if (xlmAvailableForFees(probe.xlmBalance).lt(MIN_XLM_FOR_SAVINGS_TX)) return 'activate';
   if (!probe.hasUsdcTrustline) return 'trustline';
   if (probe.usdcBalance < neededUsdc || (neededUsdc <= 0 && probe.usdcBalance <= 0)) return 'fund';
   return 'ready';

@@ -44,7 +44,14 @@ export function connectedWalletLabel(walletType?: string | null): string {
 }
 
 export function portfolioAssetToToken(a: PortfolioAsset): Token {
-  const d = NATIVE_DISPLAY[a.symbol] ?? { name: a.symbol, contract: a.symbol, icon: '' };
+  // Fall back to the shared asset display so XLM/USDC get their real name and
+  // icon — the old `icon: ''` fallback rendered broken images the first time
+  // the drawer showed companion XLM/USDC rows (observed live 2026-08-15).
+  const d = NATIVE_DISPLAY[a.symbol] ?? {
+    name: assetDisplay(a.symbol).name,
+    contract: a.symbol,
+    icon: assetDisplay(a.symbol).icon,
+  };
   return {
     symbol: a.symbol,
     contract: d.contract,

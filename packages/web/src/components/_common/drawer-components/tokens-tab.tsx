@@ -96,7 +96,7 @@ export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsPr
               <Box display="flex" alignItems="center" gap="12px">
                 <Box
                   component="img"
-                  src={token.icon ?? getCryptoIconUrl(token.symbol)}
+                  src={token.icon || getCryptoIconUrl(token.symbol)}
                   sx={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
                 />
                 <Box sx={{ display: 'flex', flexDirection: 'column' }}>

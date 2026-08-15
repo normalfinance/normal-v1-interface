@@ -144,3 +144,38 @@ account already has a working Normal wallet. The general lesson for this
 feature: every surface must decide explicitly whether it shows THE
 ACCOUNT or ONE WALLET — defaulting to "whatever is connected" is how
 assets appear to vanish.
+
+## Chunk 4a — the swap actually runs (engine wiring)
+
+The design for the whole of chunk 4 is doc 72 §4h — six scenarios
+covering every place funds can sit. 4a ships the foundation:
+
+- **The engine's Stellar side is now an explicit input.** For an
+  external-wallet user the CCTP engine burns from / delivers to the
+  companion Normal wallet — passed in explicitly, never guessed. If the
+  companion is missing, the card shows the setup CTA; the engine never
+  silently falls back to the connected wallet. (Silent fallback is how
+  money ends up in the wrong place.)
+- **The gate became a ladder.** Before: external user → everything off.
+  Now: no companion → "Continue with your Normal wallet" (setup dialog);
+  companion exists but needs something → the button names it and opens
+  the dialog at exactly that step — "Set up your Normal wallet", "Add
+  USDC to your Normal wallet", "Top up XLM to swap"; everything ready →
+  the swap just runs, passkey-only.
+- **New preflight: fee XLM.** The outbound burn pays its Stellar fee in
+  XLM from the Normal wallet — a wallet the user may never have topped
+  up. The engine checks it (same 0.5 threshold as savings and the #67
+  light), and the setup dialog's XLM step now doubles as a top-up
+  (deriveSetupStep gained the low-XLM condition, with a test).
+- **Balance honesty:** for hybrid users the card's USDC balance shows
+  the Normal wallet's USDC labeled "· Normal wallet" — the number the
+  swap will actually spend.
+- **Free win:** the same gate rework un-gates BTC↔ETH↔SOL swaps (pure
+  Turnkey-chain, no Stellar involved) for external users — that was
+  sub-chunk 4d, delivered early.
+- Tests: the gate suite gained two cases — hybrid user's engines are
+  live and pinned to the companion address; normal-wallet users get no
+  override at all. 206 total.
+
+Still to come: 4b the "Move X USDC from Lobstr & swap" inline funding +
+source picker, 4c the "Deliver to" selector for inbound.

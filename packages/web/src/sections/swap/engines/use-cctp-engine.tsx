@@ -32,6 +32,7 @@ import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -57,6 +58,17 @@ export interface CctpEngineProps {
   resetInput: () => void;
   /** Refresh a target chain's balance right after delivery (outbound). */
   refetchChain?: (chain: 'bitcoin' | 'ethereum' | 'solana') => Promise<void>;
+  /**
+   * #32 chunk 4a: the Stellar address this swap burns from / delivers to —
+   * threaded EXPLICITLY (doc 72 §4h). For an external-wallet user this is
+   * the companion Normal wallet, never `wallet.address`; the engine must not
+   * silently fall back across wallets. Omitted (single-wallet users) →
+   * the connected wallet, exactly as before.
+   */
+  stellarAddressOverride?: string | null;
+  /** Opens the guided Normal-wallet setup (create/activate/trustline/fund)
+   *  when a preflight fails for an external-wallet user. */
+  onNeedsSetup?: () => void;
 }
 
 const NATIVE_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
@@ -123,6 +135,8 @@ export function useCctpEngine({
   enabled,
   resetInput,
   refetchChain,
+  stellarAddressOverride,
+  onNeedsSetup,
 }: CctpEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
@@ -132,10 +146,14 @@ export function useCctpEngine({
   // 'in': crosschain → stellar; 'out': USDC(stellar) → crosschain.
   const direction: 'in' | 'out' = groupOf(fromSymbol) === 'stellar' ? 'out' : 'in';
 
-  const stellarAddress = wallet.address;
+  // undefined = no override (single-wallet user → connected wallet);
+  // null = external user whose companion doesn't exist yet (gated below).
+  const stellarAddress =
+    stellarAddressOverride === undefined ? wallet.address : (stellarAddressOverride ?? undefined);
   const {
     isLoading: isCheckingAccount,
     accountExists,
+    xlmBalance,
     hasUsdcTrustline,
   } = useAccountStatus(enabled ? stellarAddress : undefined);
 
@@ -239,6 +257,15 @@ export function useCctpEngine({
   const needsTrustline =
     direction === 'in' && !isCheckingAccount && accountExists && !hasUsdcTrustline;
   const missingStellar = !stellarAddress || (!isCheckingAccount && !accountExists);
+  // #32 chunk 4a: the outbound burn's Soroban fees are paid in XLM from the
+  // BURN SOURCE — for hybrid users that's the companion Normal wallet, whose
+  // XLM the user may never have topped up. Same threshold as the savings
+  // action-block (#67), so the light and the gate can't disagree.
+  const lowFeeXlm =
+    direction === 'out' &&
+    !isCheckingAccount &&
+    accountExists &&
+    xlmAvailableForFees(xlmBalance).lt(MIN_XLM_FOR_SAVINGS_TX);
 
   // MAX leaves the source chain's network fee behind. Outbound USDC needs no
   // reserve (Soroban fees are paid in XLM); inbound mirrors the LI.FI engine,
@@ -639,17 +666,40 @@ export function useCctpEngine({
           </Typography>
         ),
       };
+    // #32 chunk 4a: for external-wallet users every Stellar-side preflight
+    // failure routes into the guided setup dialog, which derives the exact
+    // step to resume at (create / activate / trustline / top-up).
     if (missingStellar)
-      return { label: t('Set up Stellar wallet first'), action: null, loading: false };
+      return onNeedsSetup
+        ? { label: t('Set up your Normal wallet'), action: onNeedsSetup, loading: false }
+        : { label: t('Set up Stellar wallet first'), action: null, loading: false };
     if (needsTrustline)
+      return onNeedsSetup
+        ? { label: t('Add USDC to your Normal wallet'), action: onNeedsSetup, loading: false }
+        : {
+            label: t('Add USDC Trustline first'),
+            action: null,
+            loading: false,
+            helper: (
+              <Typography
+                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}
+              >
+                {t(
+                  'Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.'
+                )}
+              </Typography>
+            ),
+          };
+    if (lowFeeXlm)
       return {
-        label: t('Add USDC Trustline first'),
-        action: null,
+        label: t('Top up XLM to swap'),
+        action: onNeedsSetup ?? null,
         loading: false,
         helper: (
           <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
             {t(
-              'Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.'
+              'The swap pays its Stellar network fee in XLM from {{which}} — a little XLM is needed there.',
+              { which: onNeedsSetup ? t('your Normal wallet') : t('your wallet') }
             )}
           </Typography>
         ),
@@ -669,6 +719,8 @@ export function useCctpEngine({
     evmAddress,
     missingStellar,
     needsTrustline,
+    lowFeeXlm,
+    onNeedsSetup,
     amount,
     insufficient,
     stage,

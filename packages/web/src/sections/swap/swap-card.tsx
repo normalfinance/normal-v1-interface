@@ -12,6 +12,7 @@ import { usePendingOutflow } from '@/lib/spendable';
 import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { spendableXlmForOutflow } from '@/utils/stellar-reserve';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import React, { useRef, useMemo, useState, useCallback } from 'react';
@@ -176,8 +177,25 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   //
   // XLM ↔ USDC stays fully enabled. Restores the gate from 3e1ab40, which was
   // lost in the squash that produced PR #466 — see docs/audit/46-external-wallets.md.
+  //
+  // #32 chunk 4a: the gate now has TWO levels. With NO companion Normal
+  // wallet the engines stay fully off (setup dialog owns the CTA — chunk 3).
+  // WITH a companion, cross-chain pairs run FOR REAL: the cctp engine's
+  // Stellar side is pinned to the companion (never the connected external
+  // wallet — no silent cross-wallet fallback), and remaining preflights
+  // (trustline, fee-XLM) route back into the setup dialog per-step.
   const isExternalWallet = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
-  const needsNormalWallet = isExternalWallet && pairType !== 'stellar';
+  const { companionStellar } = useWalletBalances(true);
+  const needsNormalWallet = isExternalWallet && pairType !== 'stellar' && !companionStellar;
+  const cctpStellarAddress = isExternalWallet ? (companionStellar?.address ?? null) : undefined;
+  const companionUsdcBalance = BigNumber(
+    companionStellar?.assets.find((a) => a.symbol === 'USDC')?.balance ?? 0
+  );
+  // Outbound (USDC→chain) for hybrid users spends the COMPANION's USDC —
+  // the swap runs on Turnkey rails (transfer-first, doc 72 §4h S1).
+  const cctpUsesCompanionBalance =
+    pairType === 'cctp' && isExternalWallet && !!companionStellar && fromSymbol === 'USDC';
+  const cctpFromBalance = cctpUsesCompanionBalance ? companionUsdcBalance : fromBalance;
 
   // `amount` is always the canonical token amount; in fiat mode the typed value
   // is USD, divided by the live price (0 until the price loads).
@@ -188,7 +206,9 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
       : ZERO
     : rawInput;
   const fiatAmount = fromPrice.gt(0) ? amount.multipliedBy(fromPrice) : ZERO;
-  const insufficient = amount.gt(0) && amount.gt(fromBalance);
+  // cctpFromBalance equals fromBalance except for hybrid cctp-USDC, where the
+  // swap spends the companion Normal wallet's USDC (#32 chunk 4a).
+  const insufficient = amount.gt(0) && amount.gt(cctpFromBalance);
 
   const addresses = useMemo(
     () => ({ BTC: btc.bitcoinAddress, ETH: eth.ethereumAddress, SOL: sol.solanaAddress }),
@@ -255,11 +275,13 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     toSymbol: pairType === 'cctp' ? toSymbol : 'USDC',
     addresses,
     amount: pairType === 'cctp' ? amount : ZERO,
-    fromBalance: pairType === 'cctp' ? fromBalance : ZERO,
+    fromBalance: pairType === 'cctp' ? cctpFromBalance : ZERO,
     fromPrice: pairType === 'cctp' ? fromPrice : ZERO,
     enabled: pairType === 'cctp' && !needsNormalWallet,
     resetInput,
     refetchChain,
+    stellarAddressOverride: cctpStellarAddress,
+    onNeedsSetup: isExternalWallet ? () => setSetupOpen(true) : undefined,
   });
   const engine = pairType === 'stellar' ? soroswap : pairType === 'crosschain' ? lifi : cctp;
   const { toAmount, quoteLoading, quoteError } = engine;
@@ -432,8 +454,15 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               ) : (
                 <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 600 }}>
                   {isFiatMode && fromPrice.gt(0)
-                    ? fCurrency(fromBalance.multipliedBy(fromPrice))
-                    : `${fromBalance.toFixed(6, BigNumber.ROUND_DOWN)} ${fromSymbol}`}
+                    ? fCurrency(cctpFromBalance.multipliedBy(fromPrice))
+                    : `${cctpFromBalance.toFixed(6, BigNumber.ROUND_DOWN)} ${fromSymbol}`}
+                </Box>
+              )}
+              {/* #32 chunk 4a: the swap spends the Normal wallet's USDC — say
+                  so whenever the connected wallet is a different one. */}
+              {cctpUsesCompanionBalance && (
+                <Box component="span" sx={{ color: 'rgba(10,10,15,0.4)' }}>
+                  {t('· Normal wallet')}
                 </Box>
               )}
             </Typography>

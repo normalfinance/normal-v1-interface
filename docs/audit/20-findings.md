@@ -1231,3 +1231,33 @@ its owning wallet — slot Stellar rows carry the external wallet's name
 (new `connectedWalletLabel`), BTC/ETH/SOL + companion rows carry
 "Normal wallet"; the drawer's external section header now names the
 wallet (Lobstr/Freighter/…). Single-wallet users see zero change.
+
+**#32 field fix round 4 (drawer polish):** (1) broken XLM/USDC icons in
+the companion section — `portfolioAssetToToken`'s fallback set
+`icon: ''` (only BTC/ETH/SOL had display entries) and TokensTab's
+`icon ?? fallback` doesn't catch an empty STRING; fixed both layers
+(mapper now uses the shared assetDisplay names+icons — rows also gain
+proper names like "USD Coin"). (2) Stacked wallet sections replaced
+with WALLET TABS inside the Assets tab (Niko: stacked groups read as
+one list) — pill per wallet, address shown, per-wallet token list,
+"No assets in this wallet yet." empty state. Caching audit for the
+companion path came back clean: one extra Horizon call riding the
+existing 15s response cache + SWR 30s + localStorage first paint;
+savings companion rides the same SWR family + 30s server cache.
+
+## #32 chunk 4a — engine wiring (SHIPPED 2026-08-15)
+
+Design: doc 72 §4h (full asset-location matrix S1-S6, decisions locked:
+source picker + MAX per selected wallet, deliver-to selector, transfer-
+first confirmed). 4a ships: cctp engine `stellarAddressOverride` (+
+`onNeedsSetup`) — companion pinned explicitly, no silent cross-wallet
+fallback; preflight ladder CTA (setup/trustline/fee-XLM each open the
+guided dialog at the derived step); lowFeeXlm gate (MIN_XLM_FOR_
+SAVINGS_TX, same constant as #67); deriveSetupStep low-XLM → activate-
+as-top-up (+test); swap-card companion USDC balance labeled "· Normal
+wallet" feeding display/validation/MAX; two-level gate (no companion =
+chunk-3 CTA; companion = engines LIVE) — which also un-gates LI.FI
+BTC↔ETH↔SOL for external users (4d early). Component tests: +2 (hybrid
+pinned to companion; normal-wallet no override). 206 tests, build clean.
+Remaining: 4b move-and-swap + source picker, 4c deliver-to selector,
+4e explainer/testing wrap.

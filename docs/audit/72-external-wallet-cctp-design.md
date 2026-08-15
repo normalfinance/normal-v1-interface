@@ -264,6 +264,109 @@ The swap card's source labeling is mandatory (I4): whenever the source
 wallet is NOT the active drawer wallet, the card says so explicitly —
 no silent cross-wallet spending, ever.
 
+## 4h. CHUNK 4 DETAILED DESIGN — the swap itself (added 2026-08-15, Niko's directive: cover every asset-location possibility)
+
+### The complete asset-location × direction matrix
+
+Assets can sit in exactly two signable places: the Normal wallet (N) and
+the connected external wallet (E). BTC/ETH/SOL exist ONLY on N (external
+Stellar wallets cannot hold them), so the full matrix is:
+
+| Scenario | Source of funds | How the swap runs | Signatures |
+|---|---|---|---|
+| S1 USDC on N → BTC/ETH/SOL | N | today's engine, stellar side = companion | 1–2 passkey (approve cached after first) |
+| S2 USDC on E → BTC/ETH/SOL | E | **inline move-and-swap**: one pre-filled USDC transfer E→N (kit signs, #54-guarded), then S1 passkey-only | 1 kit + 1–2 passkey |
+| S3 USDC split N+E → more than N holds | N+E | same as S2, moving only the SHORTFALL | 1 kit + 1–2 passkey |
+| S4 BTC/ETH/SOL → USDC (inbound) | N (only possibility) | today's engine; delivery target selectable (below) | passkey only |
+| S5 BTC ↔ ETH ↔ SOL (LI.FI) | N | pure Turnkey-chain swap — no Stellar leg at all; just un-gate for external users whose chain addresses exist | passkey only |
+| S6 XLM → cross-chain | n/a | unchanged: XLM pairs only with USDC (Soroswap, active wallet); user swaps XLM→USDC first | — |
+
+**"Swap from the external wallet" = S2/S3, implemented as transfer-first
+with the transfer INLINE.** This honors the locked decision (external
+wallets never sign non-Stellar legs; hybrid per-leg signing stays ruled
+out) while making the external-wallet path feel native: the user types an
+amount, and if their Normal wallet is short but the external wallet
+covers it, the CTA simply becomes
+**"Move 12.5 USDC from Lobstr & swap"** — one kit approval, then the
+swap continues passkey-only. Not an error, not a detour through a
+separate dialog. Note the signature math: a direct-from-external burn
+would ALSO cost 1–2 kit sigs, so transfer-first loses nothing on the
+one-off and wins on every repeat (funds now live on N).
+
+### Engine wiring (the core change)
+
+- `cctpStellarAddress` — a NEW explicit input to the CCTP engine:
+  companion address when the slot is external, `wallet.address`
+  otherwise. Used for burn source, mint recipient, trustline/account
+  preflights, and balance display. NEVER silently falls back across
+  wallets — a missing companion renders the setup CTA, not a guess.
+- Outbound USDC balance for hybrid = the COMPANION's USDC (from the
+  portfolio aggregate), not the token store. Displayed labeled.
+- Burn signing needs zero new code: `signStellarTxForMgi` routes by the
+  transaction's source account — companion source → passkey.
+- **Preflights** (before enabling the swap button):
+  1. companion exists + activated + USDC trustline (deriveSetupStep —
+     reuse; unmet → CTA opens the chunk-3 dialog which resumes at the
+     right step);
+  2. companion fee-XLM ≥ MIN_XLM_FOR_SAVINGS_TX (Soroban burn fees are
+     paid from the companion!) — deriveSetupStep gains a low-XLM
+     condition so the dialog's activate step doubles as top-up;
+  3. for S2/S3: external USDC ≥ shortfall.
+- **Move-and-swap mechanics** (S2/S3): the engine runs the pre-filled
+  E→N USDC transfer through the existing send funnel (kit signing,
+  #29 record-before-broadcast + double-send guard, #54 wallet-kit
+  guard), then MUST verify the companion balance actually moved before
+  burning — the #62 verify-and-retry pattern (refreshFresh, compare,
+  bounded wait) so a cache-lagged read can't trigger a burn the balance
+  can't cover. Progress modal gains a step 0: "Moving USDC from Lobstr —
+  approve in your wallet".
+- Inbound delivery: mintRecipient = the SELECTED delivery address
+  (default companion). Delivering to E requires E's USDC trustline —
+  checked live; missing → selector shows "needs USDC trustline · add"
+  (changeTrust signed by the kit, source = E).
+- Gate rework: `needsNormalWallet` stops disabling engines outright.
+  New per-pair logic: cctp/lifi pairs are ENABLED for external users
+  whose Turnkey prerequisites exist; the CTA degrades gracefully:
+  ready → swap · shortfall-coverable → "Move X & swap" · low fee-XLM →
+  "Top up XLM" (dialog) · no companion → "Continue with your Normal
+  wallet" (dialog). Quote fetching enables exactly when the swap could
+  actually run (LI.FI quota discipline — the old gate's invisible half
+  survives as a smaller condition).
+
+### UI/UX (swap card, hybrid users only — single-wallet users unchanged)
+
+- You-Pay side shows a small source chip for cctp pairs: "From · Normal
+  wallet". Below the balance: "+ 12.5 USDC in Lobstr" when E holds USDC.
+- MAX = N + E combined (DECISION 1 below): "everything I can swap", with
+  the move made explicit in the CTA label before any signature.
+- You-Receive side (inbound, hybrid only): "Deliver to · Normal wallet ▾"
+  selector (DECISION 2): Normal wallet (default) / the external wallet
+  (trustline-gated). One row, hidden for single-wallet users.
+- Every number on the card is wallet-attributed — same labeling rule as
+  the drawer/portfolio (§4f-0's lesson).
+
+### Sub-chunks (each testable, in order)
+
+- **4a** engine address wiring + preflights + gate rework. TEST (Niko's
+  account, companion funded): Lobstr connected, USDC→BTC runs
+  passkey-only end to end.
+- **4b** inline move-and-swap (S2/S3) + progress step + balance
+  verify-gate. TEST: USDC only on Lobstr; MAX; kill-tab-mid-move resume.
+- **4c** inbound delivery selector (cuttable to later without breaking
+  anything — default-to-companion ships in 4a).
+- **4d** LI.FI pair un-gate (S5) — small.
+- **4e** component-test evolution + doc 73 chunk-4 explainer + register.
+
+### Decisions for Niko before 4a starts
+
+1. **MAX includes external USDC?** Recommend YES — MAX means "everything
+   I can swap"; the move is explicit in the CTA, never silent.
+2. **Inbound "Deliver to" selector in v1?** Recommend YES (default
+   Normal wallet); cutting it to a follow-up costs nothing structurally.
+3. **Confirm the S2 reading**: "swap from external wallet" = inline
+   move-and-swap (transfer-first), NOT direct external-wallet burn — the
+   locked decision stands; this design makes it feel one-step.
+
 ## 5. Risk register — what could break, and the countermeasure
 
 | Risk | Countermeasure |

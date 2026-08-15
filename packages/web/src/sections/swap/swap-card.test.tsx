@@ -73,6 +73,13 @@ jest.mock('@normalfinance/state', () => ({
 jest.mock('@/hooks/use-savings-position', () => ({
   useSavingsPosition: () => ({ position: null }),
 }));
+// #32 chunk 4a: the card reads the companion Normal wallet from the shared
+// balances hook — null = external user WITHOUT a companion (fully gated);
+// set per-test to simulate a hybrid user whose swaps run for real.
+const mockCompanion: { value: { address: string; assets: any[] } | null } = { value: null };
+jest.mock('@/hooks/use-wallet-balances', () => ({
+  useWalletBalances: () => ({ companionStellar: mockCompanion.value }),
+}));
 jest.mock('@normalfinance/utils', () => ({
   getCryptoIconUrl: () => '',
   sanitizeAmountInput: (s: string) => s,
@@ -147,6 +154,7 @@ describe('swap card — external-wallet gate (the twice-lost decision)', () => {
     mockEngineCalls.soroswap.length = 0;
     mockEngineCalls.lifi.length = 0;
     mockEngineCalls.cctp.length = 0;
+    mockCompanion.value = null;
   });
 
   it('external wallet + BTC pair: the CTA opens the guided setup, never an engine (#32 chunk 3)', () => {
@@ -202,5 +210,31 @@ describe('swap card — external-wallet gate (the twice-lost decision)', () => {
 
     expect(screen.queryByText(GATE_LABEL)).not.toBeInTheDocument();
     expect(lastCall(mockEngineCalls.lifi).enabled).toBe(true);
+  });
+
+  it('#32 4a: external wallet WITH a companion — engines run for real, pinned to the companion', () => {
+    mockWalletState.walletType = 'lobstr';
+    mockCompanion.value = {
+      address: 'GCOMPANIONNORMALWALLET',
+      assets: [{ symbol: 'USDC', balance: '50', price: '1' }],
+    };
+    render(<SwapCard initial="BTC" />);
+
+    // The setup gate is gone — the engines are live…
+    expect(screen.queryByRole('button', { name: GATE_LABEL })).not.toBeInTheDocument();
+    expect(lastCall(mockEngineCalls.lifi).enabled).toBe(true);
+    // …and the CCTP engine's Stellar side is EXPLICITLY the companion, never
+    // the connected external wallet (doc 72 §4h: no silent cross-wallet
+    // fallback).
+    expect(lastCall(mockEngineCalls.cctp).stellarAddressOverride).toBe('GCOMPANIONNORMALWALLET');
+    expect(typeof lastCall(mockEngineCalls.cctp).onNeedsSetup).toBe('function');
+  });
+
+  it('#32 4a: a NORMAL-wallet user gets no override — the engine uses the connected wallet', () => {
+    mockWalletState.walletType = 'normal-wallet';
+    render(<SwapCard initial="BTC" />);
+
+    expect(lastCall(mockEngineCalls.cctp).stellarAddressOverride).toBeUndefined();
+    expect(lastCall(mockEngineCalls.cctp).onNeedsSetup).toBeUndefined();
   });
 });

@@ -35,6 +35,12 @@ describe('deriveSetupStep (#32 guided setup resumability)', () => {
     );
   });
 
+  it('#32 4a: activated but fee-XLM ran dry → activate doubles as top-up', () => {
+    // 1.6 XLM total with a 1.5 reserve leaves ~0.1 spendable — below the
+    // 0.5 a Soroban burn needs; the swap must route back to the XLM step.
+    expect(deriveSetupStep('GNEW', probe({ xlmBalance: 1.6 }), 20)).toBe('activate');
+  });
+
   it('trustline set but not enough USDC for the typed swap → fund', () => {
     expect(deriveSetupStep('GNEW', probe({ usdcBalance: 5 }), 20)).toBe('fund');
   });
