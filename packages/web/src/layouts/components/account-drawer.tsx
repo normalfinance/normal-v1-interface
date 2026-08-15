@@ -66,6 +66,7 @@ function WalletConnected({
 
   const {
     tokenState: { tokens },
+    wallet: persistWallet,
     getAllTokens,
   } = usePersistStore();
   const network = useNetworkStore((s) => s.network);
@@ -75,7 +76,7 @@ function WalletConnected({
   const bitcoinAddress = getChainAddress(addresses, 'bitcoin');
 
   // Unified, deduped source: native balances + savings from one place.
-  const { getAsset, savings } = usePortfolio(true);
+  const { getAsset, savings, wallet: walletBalances } = usePortfolio(true);
   const userPosition = savings.position;
   const savingsFetching = savings.positionLoading;
   const savingsRef = useRef(savings);
@@ -137,14 +138,60 @@ function WalletConnected({
     [tokens, btcToken, ethToken, solToken]
   );
 
-  const assetsBalance = useMemo(
+  // #32 chunk 2 — dual-wallet display. When the CONNECTED wallet is external
+  // and the account also owns a Turnkey (Normal) wallet with a funded Stellar
+  // address, the drawer shows two SPLIT sections (doc 72 §4f): every number
+  // stays spendable by exactly one wallet — never a combined sum no action
+  // could spend. Companion with zero balances is NOT shown (an unactivated
+  // creation would only confuse; the guided flow introduces it properly).
+  const isExternalConnected =
+    persistWallet.walletType != null && persistWallet.walletType !== 'normal-wallet';
+  const companion = walletBalances.companionStellar;
+  const companionTokens = useMemo(
     () =>
-      allTokens.reduce(
-        (acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)),
-        BigNumber(0)
-      ),
-    [allTokens]
+      (companion?.assets ?? [])
+        .map(portfolioAssetToToken)
+        .filter((tkn) => BigNumber(tkn.balance).gt(0)),
+    [companion]
   );
+  const walletSections = useMemo(() => {
+    if (!isExternalConnected || !companion) return null;
+    const chainTokens = [btcToken, ethToken, solToken].filter(
+      (tkn): tkn is NonNullable<typeof tkn> => !!tkn && BigNumber(tkn.balance).gt(0)
+    );
+    const normalTokens = [...companionTokens, ...chainTokens];
+    if (normalTokens.length === 0) return null; // nothing to show for the companion yet
+    const externalTokens = tokens.filter((tkn) => BigNumber(tkn.balance).gt(0));
+    return [
+      { label: 'Normal wallet', address: companion.address, tokens: normalTokens },
+      { label: 'Connected wallet', address, tokens: externalTokens },
+    ];
+  }, [
+    isExternalConnected,
+    companion,
+    companionTokens,
+    btcToken,
+    ethToken,
+    solToken,
+    tokens,
+    address,
+  ]);
+
+  const assetsBalance = useMemo(() => {
+    const base = allTokens.reduce(
+      (acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)),
+      BigNumber(0)
+    );
+    // Total balance = everything the ACCOUNT owns; in dual-wallet mode the
+    // companion's funds are part of it (the per-wallet split lives in the
+    // sections below, where numbers must map to actions).
+    return walletSections
+      ? companionTokens.reduce(
+          (acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)),
+          base
+        )
+      : base;
+  }, [allTokens, walletSections, companionTokens]);
 
   const savingsValue = Math.max(parseFloat(userPosition?.currentValue || '0'), 0);
   const savingsLoaded = userPosition !== null;
@@ -175,6 +222,7 @@ function WalletConnected({
         tokensFetching={tokensFetching}
         percentageChange={0}
         tokens={allTokens}
+        sections={walletSections ?? undefined}
         activity={recentActivity}
         bitcoinAddress={bitcoinAddress}
       />
@@ -245,6 +293,18 @@ export function AccountDrawer(props: AccountDrawerProps) {
       { id: id as string, name: chain.name as string, color: chain.brandColor as string, addr },
     ];
   });
+  // #32 chunk 2: with an external wallet connected, the companion Normal
+  // wallet's Stellar address gets its own labeled row — previously invisible
+  // (the Stellar row only ever showed the slot; finding #40).
+  const companionStellarAddr = getChainAddress(turnkeyAddresses, 'stellar');
+  if (companionStellarAddr && connectedAddress && companionStellarAddr !== connectedAddress) {
+    chainRows.push({
+      id: 'stellar-normal',
+      name: 'Normal',
+      color: CHAINS.stellar.brandColor as string,
+      addr: companionStellarAddr,
+    });
+  }
 
   // Turnkey lookup not resolved yet (still loading, or the API errored — e.g.
   // a revoked session returning 401). While unresolved we must NOT claim the

@@ -55,6 +55,10 @@ export interface UseWalletBalancesResult {
    *  #66 arrival race: a refresh fired the instant a bridge delivers can
    *  read the pre-delivery balance and lock it into the server cache). */
   refreshFresh: () => Promise<PortfolioAsset[] | null>;
+  /** #32 chunk 2: the companion Normal wallet's Stellar balances, when the
+   *  connected wallet is external; null otherwise. Displayed as its own
+   *  drawer section — never merged into `assets`. */
+  companionStellar: { address: string; assets: PortfolioAsset[] } | null;
 }
 
 export function useWalletBalances(enabled = true): UseWalletBalancesResult {
@@ -78,7 +82,13 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
       if (!res.ok) throw new Error(`portfolio ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error ?? 'portfolio error');
-      const payload: PortfolioPayload = { updatedAt: json.updatedAt, assets: json.assets };
+      const payload: PortfolioPayload = {
+        updatedAt: json.updatedAt,
+        assets: json.assets,
+        // #32 chunk 2: the companion Normal wallet's Stellar balances (only
+        // present when the connected wallet is external).
+        companionStellar: json.companionStellar ?? null,
+      };
       writeCache(cacheKey, payload);
       return payload;
     },
@@ -137,6 +147,7 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
     assets,
     getAsset,
     totalUsd,
+    companionStellar: data?.companionStellar ?? null,
     updatedAt: data?.updatedAt ?? null,
     isLoading: (isLoading && !data) || (cacheMissingStellar && isValidating),
     isValidating,

@@ -1135,3 +1135,31 @@ until their next connect. 6 tests (197 total). NOTE: the onboarding
 wizard's own create-wallet path still adopts unconditionally — it is
 only reachable with an empty slot today except via the drawer's "+"
 button, which chunk 3 redesigns; tracked there.
+
+## #32 chunk 2 — companion read model + dual-wallet drawer (SHIPPED 2026-08-15)
+
+The account's wallets now COEXIST on screen (doc 72 §4f-0, Niko's
+no-picker model):
+
+- **Server**: /api/wallet/portfolio returns `companionStellar` — the
+  Turnkey wallet's XLM/USDC — whenever the connected wallet is external
+  (param address ≠ DB stellarAddress). One extra Horizon call via the new
+  `aggregateStellarOnly` (shared cached spot prices); rides the existing
+  15s response cache; deliberately outside the stale-snapshot machinery
+  (fails to empty, self-heals next cycle).
+- **Drawer**: dual SPLIT sections — "Normal wallet" (companion XLM/USDC +
+  BTC/ETH/SOL) and "Connected wallet" (the external wallet's tokens),
+  each with its shortened address; numbers never summed across wallets
+  in the lists (the #55 lesson), while the Total-balance row sums the
+  whole account. Header gains a labeled "Normal" Stellar address row
+  (previously the companion address was invisible — finding #40's core).
+  Zero-balance/unactivated companions are NOT shown — the guided flow
+  (chunk 3) introduces them properly; single-wallet users see today's
+  drawer pixel-identical.
+- **Unlink guard**: the settings page offered to unlink the Turnkey
+  wallet (observed live 2026-08-15 with all funds on it). Server now
+  refuses (400) and the card shows a "Normal wallet" badge with the
+  disconnect button replaced by an explanation. Defense in both layers.
+
+197 tests, build clean. Chunks remaining: 3 (guided setup dialog),
+4 (engine wiring), 5 (polish).

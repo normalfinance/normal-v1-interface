@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import type { ChainId } from '@/lib/chains/registry';
 import type { NetworkType } from '@normalfinance/utils';
-import type { PortfolioAsset } from '@/types/portfolio';
+import type { PortfolioAsset, PortfolioPayload } from '@/types/portfolio';
 
 import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/with-auth';
@@ -9,7 +9,11 @@ import { NextResponse } from 'next/server';
 import { redis } from '@/server/rateLimiter';
 import { logger } from '@normalfinance/utils';
 import { CHAIN_IDS, ADDRESS_SELECT, getChainAddress } from '@/lib/chains/registry';
-import { aggregatePortfolio, applyStaleFallback } from '@/lib/portfolio/aggregate';
+import {
+  aggregatePortfolio,
+  applyStaleFallback,
+  aggregateStellarOnly,
+} from '@/lib/portfolio/aggregate';
 
 // ---------------------------------------------------------------------------
 // GET /api/wallet/portfolio?stellar=<G…>&network=<mainnet|testnet>
@@ -56,6 +60,12 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
       stellar,
     };
 
+    // #32 chunk 2: when the connected wallet is EXTERNAL (the stellar param
+    // differs from the user's Turnkey Stellar address), also return the
+    // companion Normal wallet's XLM/USDC so the drawer can show both wallets.
+    const turnkeyStellar = getChainAddress(wallet, 'stellar');
+    const includeCompanion = !!turnkeyStellar && turnkeyStellar !== stellar;
+
     const cacheKey = `portfolio:${user.id}:${network}:${stellar ?? 'none'}`;
     const snapshotKey = `portfolio:snap:${user.id}:${network}:${stellar ?? 'none'}`;
     const floorKey = `portfolio:floor:${user.id}`;
@@ -70,7 +80,7 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
     try {
       const withinFloor = wantsFresh ? await redis.get(floorKey) : null;
       if (!wantsFresh || withinFloor) {
-        const cached = await redis.get<{ updatedAt: number; assets: PortfolioAsset[] }>(cacheKey);
+        const cached = await redis.get<PortfolioPayload>(cacheKey);
         if (cached) return NextResponse.json({ success: true, ...cached });
       }
       if (wantsFresh && !withinFloor) await redis.set(floorKey, 1, { ex: 5 });
@@ -78,7 +88,12 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
       /* cache unavailable — aggregate fresh */
     }
 
-    const fresh = await aggregatePortfolio(addresses, network, Date.now());
+    const [fresh, companionAssets] = await Promise.all([
+      aggregatePortfolio(addresses, network, Date.now()),
+      includeCompanion
+        ? aggregateStellarOnly(turnkeyStellar!, network).catch(() => [] as PortfolioAsset[])
+        : Promise.resolve(null),
+    ]);
 
     // Backfill any failed chains from the last-good snapshot (marked `stale`).
     let lastGood: Record<string, PortfolioAsset> | null = null;
@@ -89,14 +104,26 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
     }
     const { merged, snapshot } = applyStaleFallback(fresh, lastGood);
 
+    // Companion rides the response cache but stays OUT of the stale-snapshot
+    // machinery: a failed companion read returns empty assets and self-heals
+    // on the next 15s cycle — simpler than threading a second wallet through
+    // the fallback merge, and the drawer degrades to a loading row.
+    const body: PortfolioPayload = {
+      ...merged,
+      companionStellar:
+        includeCompanion && turnkeyStellar
+          ? { address: turnkeyStellar, assets: companionAssets ?? [] }
+          : null,
+    };
+
     try {
-      await redis.set(cacheKey, merged, { ex: RESPONSE_TTL_SECONDS });
+      await redis.set(cacheKey, body, { ex: RESPONSE_TTL_SECONDS });
       await redis.set(snapshotKey, snapshot, { ex: SNAPSHOT_TTL_SECONDS });
     } catch {
       /* cache write non-fatal */
     }
 
-    return NextResponse.json({ success: true, ...merged });
+    return NextResponse.json({ success: true, ...body });
   } catch (error) {
     logger.error('[wallet/portfolio] error:', error);
     return NextResponse.json(

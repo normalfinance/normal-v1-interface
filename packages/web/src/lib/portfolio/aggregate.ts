@@ -151,6 +151,43 @@ async function fetchStellarBalances(
 
 // ------------------------------ orchestration ------------------------------
 
+/**
+ * #32 chunk 2: XLM/USDC of ONE additional Stellar address — the companion
+ * Normal wallet, fetched when the connected wallet is external. Same fetcher
+ * and normalization as the main aggregate; spot prices come from the shared
+ * Redis-cached read, so this adds exactly one Horizon call.
+ */
+export async function aggregateStellarOnly(
+  address: string,
+  network: NetworkType
+): Promise<PortfolioAsset[]> {
+  const [pricesR, stellarR] = await Promise.allSettled([
+    getSpotPrices(),
+    fetchStellarBalances(address, network),
+  ]);
+  const spot = pricesR.status === 'fulfilled' ? pricesR.value : { prices: {}, changes: {} };
+  const priceOf = (s: string): number | null => (s in spot.prices ? spot.prices[s] : null);
+  const changeOf = (s: string): number | null => (s in spot.changes ? spot.changes[s] : null);
+  const stellar = stellarR.status === 'fulfilled' ? stellarR.value : null;
+  const failed = stellarR.status === 'rejected';
+  return [
+    buildAsset(
+      'XLM',
+      address,
+      failed ? null : (stellar?.xlm ?? 0),
+      priceOf('XLM'),
+      changeOf('XLM')
+    ),
+    buildAsset(
+      'USDC',
+      address,
+      failed ? null : (stellar?.usdc ?? 0),
+      priceOf('USDC'),
+      changeOf('USDC')
+    ),
+  ];
+}
+
 /** Orchestrates all sources in parallel and returns the normalized payload. */
 export async function aggregatePortfolio(
   addresses: PortfolioAddresses,

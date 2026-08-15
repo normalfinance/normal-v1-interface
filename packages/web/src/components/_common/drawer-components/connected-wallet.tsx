@@ -32,6 +32,15 @@ const MONO = {
   fontVariantNumeric: 'tabular-nums',
 } as const;
 
+export interface WalletSection {
+  /** Section header, e.g. "Normal wallet" / "Connected wallet". */
+  label: string;
+  /** The wallet's Stellar (or primary) address, shown shortened. */
+  address: string;
+  /** Pre-filtered tokens belonging to THIS wallet. */
+  tokens: Token[];
+}
+
 export interface ConnectedWalletProps {
   address: string;
   balance?: number;
@@ -40,6 +49,9 @@ export interface ConnectedWalletProps {
   tokensFetching?: boolean;
   percentageChange?: number;
   tokens?: Token[];
+  /** #32 chunk 2: dual-wallet display — when present, the assets tab renders
+   *  one labeled group per wallet (doc 72 §4f) instead of the flat list. */
+  sections?: WalletSection[];
   activity?: Activity[];
   bitcoinAddress?: string | null;
 }
@@ -51,6 +63,7 @@ export default function ConnectedWallet({
   savingsFetching = false,
   tokensFetching = false,
   tokens,
+  sections,
   activity,
 }: ConnectedWalletProps) {
   const { t } = useTranslate();
@@ -274,14 +287,39 @@ export default function ConnectedWallet({
       </Tabs>
 
       {/* ------- tab panels ---------------------------------------- */}
-      {tabs.value === 'assets' && (
-        <TokensTab
-          loading={tokensFetching}
-          tokens={tokens?.filter(
-            (tkn) => BigNumber(tkn.balance).gt(0) || tkn.contract === '__btc__'
-          )}
-        />
-      )}
+      {tabs.value === 'assets' &&
+        (sections && sections.length > 0 ? (
+          // Dual-wallet mode: one labeled group per wallet, numbers never
+          // summed across wallets (each figure is spendable by exactly the
+          // wallet it sits under — doc 72 §4f).
+          <Stack spacing={1}>
+            {sections.map((section) => (
+              <Box key={section.address}>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{ px: '8px', pb: '2px' }}
+                >
+                  <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#6B6B76' }}>
+                    {t(section.label)}
+                  </Typography>
+                  <Typography sx={{ fontSize: '11px', color: '#9A9AA5', ...MONO }}>
+                    {`${section.address.slice(0, 4)}…${section.address.slice(-4)}`}
+                  </Typography>
+                </Stack>
+                <TokensTab loading={tokensFetching} tokens={section.tokens} />
+              </Box>
+            ))}
+          </Stack>
+        ) : (
+          <TokensTab
+            loading={tokensFetching}
+            tokens={tokens?.filter(
+              (tkn) => BigNumber(tkn.balance).gt(0) || tkn.contract === '__btc__'
+            )}
+          />
+        ))}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
     </Stack>
   );

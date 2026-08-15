@@ -197,7 +197,27 @@ because it is server-known:
 | Savings card/page | implicit from slot | unchanged (I3) |
 | Swap card | balances from slot + Turnkey chain hooks | cctp pairs read companion Stellar balance, labeled (§4) |
 
-## 4f. Drawer design — DECIDED (Niko, third review): both wallets, split sections
+## 4f-0. REVISION (Niko, review 4): coexistence, NO picker, actions carry the wallet
+
+Niko's clarified model supersedes the "active wallet + make-active
+switcher" framing below where they conflict:
+
+- The account's wallets simply COEXIST and are ALL displayed — Normal
+  wallet, the connected external wallet, and other linked Stellar
+  wallets (read-only balance display; Stellar balances are public).
+  No picker modal anywhere; login lands in the app showing everything.
+- "Which wallet signs" is answered by WHERE the action starts, not by a
+  global active-wallet toggle: an action launched from a wallet's own
+  row acts on that wallet (external rows → kit signing, connecting on
+  demand if the session lapsed); cross-chain swaps always act on the
+  Normal wallet (labeled); savings act on the wallet holding the
+  position. Global surfaces default to today's behavior (the wallet the
+  user connected), so nothing existing moves.
+- The wizard's linked-accounts picker and the "Switch Wallets" button
+  remain ONLY as legacy paths for accounts with no Turnkey wallet; they
+  are not part of the dual-wallet UX and shrink over time.
+
+## 4f. Drawer design — both wallets, split sections (layout still applies)
 
 **Assets are displayed SPLIT per wallet, never combined.** Why, cause →
 effect: a combined XLM row would sum two wallets → no single action can
@@ -271,9 +291,13 @@ no silent cross-wallet spending, ever.
    unconditionally — redesigned there anyway.
    TEST: connect Freighter → disconnect → reload → still disconnected;
    Turnkey user unaffected.
-2. **Companion read model**: expose companion Stellar address + balances
-   (portfolio aggregate + useTurnkeyWallet), drawer dual listing.
-   TEST: external user with a manually-created row sees both wallets,
+2. **Companion read model — DONE 2026-08-15.** /api/wallet/portfolio
+   returns `companionStellar` (aggregateStellarOnly, one Horizon call,
+   15s cache) when the connected wallet is external; drawer renders split
+   sections per §4f-0 (zero-balance companions hidden; single-wallet
+   users pixel-identical); header shows the labeled Normal Stellar row;
+   settings blocks unlinking the Turnkey wallet (server 400 + UI badge).
+   TEST: external user with a funded companion sees both wallets,
    balances correct, savings untouched.
 3. **NormalWalletSetupDialog**: the 4-step guided flow, wired to the swap
    CTA for external users (gate → "Continue with your Normal wallet").
