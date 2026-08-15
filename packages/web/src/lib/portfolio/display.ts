@@ -26,6 +26,23 @@ export function assetDisplay(symbol: string): { name: string; icon: string } {
   return ASSET_DISPLAY[symbol] ?? { name: symbol, icon: getCryptoIconUrl(symbol) };
 }
 
+/** #32: short human label for the connected external wallet, used to tag
+ *  per-wallet asset rows on account-wide surfaces. */
+export function connectedWalletLabel(walletType?: string | null): string {
+  switch (walletType) {
+    case 'freighter':
+      return 'Freighter';
+    case 'lobstr':
+      return 'Lobstr';
+    case 'ledger':
+      return 'Ledger';
+    case 'wallet-connect':
+      return 'WalletConnect';
+    default:
+      return 'Connected wallet';
+  }
+}
+
 export function portfolioAssetToToken(a: PortfolioAsset): Token {
   const d = NATIVE_DISPLAY[a.symbol] ?? { name: a.symbol, contract: a.symbol, icon: '' };
   return {

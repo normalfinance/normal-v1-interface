@@ -8,9 +8,9 @@ import { usePortfolio } from '@/hooks/use-portfolio';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
-import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { assetDisplay, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
@@ -76,7 +76,13 @@ export default function PortfolioView() {
 
   const { user } = useSupabaseAuth();
   // Single source of truth for all balances + savings.
-  const { getAsset, savings, savingsUsd, isLoading: balancesLoading } = usePortfolio(!!user);
+  const {
+    getAsset,
+    savings,
+    savingsUsd,
+    wallet: walletBalances,
+    isLoading: balancesLoading,
+  } = usePortfolio(!!user);
   const bitcoinAddress = getAsset('BTC')?.address ?? null;
   const ethereumAddress = getAsset('ETH')?.address ?? null;
   const solanaAddress = getAsset('SOL')?.address ?? null;
@@ -112,13 +118,34 @@ export default function PortfolioView() {
   // to be fixed twice and this page always lagged behind the others. The token
   // list is exactly XLM + USDC on mainnet (Blend USDC on testnet) — the same
   // assets the aggregator returns — so there is nothing to lose by unifying.
-  const walletTokens = useMemo(
-    () =>
-      (['XLM', 'USDC', 'BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[])
-        .filter((a): a is PortfolioAsset => !!a && a.balance != null && BigNumber(a.balance).gt(0))
-        .map(portfolioAssetToToken),
-    [getAsset]
-  );
+  const walletTokens = useMemo(() => {
+    // #32: this page is the ACCOUNT-WIDE view (doc 72 §4f). On a hybrid
+    // account EVERY row is labeled by its owning wallet — the slot wallet's
+    // Stellar assets carry the external wallet's name, BTC/ETH/SOL and the
+    // companion's XLM/USDC carry "Normal wallet" — so it is always clear
+    // which wallet's money each number is. Single-wallet users see no labels.
+    const hybrid = !!walletBalances.companionStellar;
+    const connLabel = connectedWalletLabel(wallet.walletType);
+    const slot = (
+      ['XLM', 'USDC', 'BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[]
+    )
+      .filter((a): a is PortfolioAsset => !!a && a.balance != null && BigNumber(a.balance).gt(0))
+      .map((a) => {
+        const tkn = portfolioAssetToToken(a);
+        if (!hybrid) return tkn;
+        const owner = a.chain === 'stellar' ? connLabel : 'Normal wallet';
+        return { ...tkn, name: `${assetDisplay(a.symbol).name} · ${owner}` };
+      });
+    // Distinct contract ids keep React keys + row identity collision-free.
+    const companion = (walletBalances.companionStellar?.assets ?? [])
+      .filter((a) => a.balance != null && BigNumber(a.balance).gt(0))
+      .map((a) => ({
+        ...portfolioAssetToToken(a),
+        contract: `__companion_${a.symbol.toLowerCase()}__`,
+        name: `${assetDisplay(a.symbol).name} · Normal wallet`,
+      }));
+    return [...slot, ...companion];
+  }, [getAsset, walletBalances.companionStellar, wallet.walletType]);
 
   // "Wallet" = everything the user holds outside of savings, on any chain
   const walletBalance = useMemo(

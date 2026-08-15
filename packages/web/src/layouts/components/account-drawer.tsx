@@ -14,12 +14,12 @@ import { usePortfolio } from '@/hooks/use-portfolio';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getLinkedWallets } from '@/services/linked-wallets';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
-import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import { CHAINS, CHAIN_IDS, getChainAddress, availableChains } from '@/lib/chains/registry';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
@@ -164,7 +164,11 @@ function WalletConnected({
     const externalTokens = tokens.filter((tkn) => BigNumber(tkn.balance).gt(0));
     return [
       { label: 'Normal wallet', address: companion.address, tokens: normalTokens },
-      { label: 'Connected wallet', address, tokens: externalTokens },
+      {
+        label: connectedWalletLabel(persistWallet.walletType),
+        address,
+        tokens: externalTokens,
+      },
     ];
   }, [
     isExternalConnected,
@@ -175,6 +179,7 @@ function WalletConnected({
     solToken,
     tokens,
     address,
+    persistWallet.walletType,
   ]);
 
   const assetsBalance = useMemo(() => {
@@ -193,8 +198,11 @@ function WalletConnected({
       : base;
   }, [allTokens, walletSections, companionTokens]);
 
-  const savingsValue = Math.max(parseFloat(userPosition?.currentValue || '0'), 0);
-  const savingsLoaded = userPosition !== null;
+  // #32: account-wide savings display — slot wallet's position + the
+  // companion Normal wallet's (one product; actions stay per-wallet).
+  const savingsValue =
+    Math.max(parseFloat(userPosition?.currentValue || '0'), 0) + savings.companionValue;
+  const savingsLoaded = userPosition !== null || savings.companionValue > 0;
 
   // Render whenever the user has ANY wallet — a Turnkey-only (e.g. BTC-first)
   // user has no Stellar `address` but should still see their real drawer.

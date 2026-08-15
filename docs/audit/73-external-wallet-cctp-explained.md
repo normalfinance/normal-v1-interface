@@ -126,3 +126,21 @@ The CCTP engines learn to read the Normal wallet explicitly while an
 external wallet is connected: burn from it, deliver to it, display its
 USDC as the swap balance ("From Normal wallet"). The gate disappears;
 the guided dialog + engines connect end to end.
+
+## Chunk 3 field note — "my assets disappeared" (and why they hadn't)
+
+First live hybrid test: connecting an empty Lobstr made the portfolio
+page drop from $32 to $1.86 and pop "Set up Normal Savings" — while the
+drawer showed both wallets correctly. Nothing was lost: page surfaces
+read the CONNECTED wallet's Stellar assets, and the connected wallet had
+just become an empty Lobstr. Cause and effect: slot switches → any
+surface reading only the slot shows the new wallet's (empty) numbers.
+
+Fixed the two offenders: the portfolio page now folds the Normal
+wallet's XLM/USDC back in as rows labeled "· Normal wallet" (the page is
+the account-wide wealth view; labels keep every number honest), and the
+savings setup no longer nags you to activate a SECOND wallet when your
+account already has a working Normal wallet. The general lesson for this
+feature: every surface must decide explicitly whether it shows THE
+ACCOUNT or ONE WALLET — defaulting to "whatever is connected" is how
+assets appear to vanish.

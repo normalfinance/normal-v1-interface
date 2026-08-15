@@ -1191,3 +1191,43 @@ The external-user path to cross-chain swaps, per Niko's UX directive
 
 203 tests, build clean. Note for testers: until chunk 4, completing the
 dialog leaves the swap still gated — the engines are wired next.
+
+**#32 chunk 3 follow-up (Niko's live test, 2026-08-15):** connecting the
+empty Lobstr made the Normal wallet's XLM/USDC vanish from the PORTFOLIO
+PAGE (hero $1.86, chain assets only) and auto-popped "Set up Normal
+Savings" for the unactivated Lobstr account — while the drawer (chunk 2)
+showed everything correctly. Root cause: the page surfaces read only the
+slot wallet's Stellar assets, contradicting doc 72 §4f ("the portfolio
+page is the ACCOUNT-WIDE total-wealth view"). Fixes: (1) usePortfolio
+folds companionStellar into positions/totals as rows labeled
+"· Normal wallet" — no number pretends to be spendable by the connected
+wallet; (2) the savings setup dialog no longer AUTO-opens for an
+external wallet when the account already owns a Normal wallet (manual
+setup unchanged). Remaining slot-reading surfaces (savings position
+display across two Stellar wallets, swap balances) are chunk 4/5 scope
+as planned.
+
+**#32 field fix round 2 (same day):** the first fix landed in
+usePortfolio's `positions`/`walletUsd` — fields NEITHER page hero reads.
+The portfolio page hand-rolls its list from `getAsset()` and the home
+hero reads `walletPositions`: the register's oldest root cause ("two
+sources for the same number") struck again. Proper fix: `walletPositions`
+now IS account-wide (slot + labeled companion rows, `companion:` ids),
+the portfolio page's walletTokens appends companion tokens (distinct
+`__companion_*__` contracts for row identity), and the home hero labels
+companion rows "XLM · Normal". Totals include the companion everywhere.
+
+**#32 field fix round 3 (Niko: savings missing + unclear ownership):**
+two more slot-readers converted to the account view. (1) Savings: the
+shared hook now ALSO reads the companion Normal wallet's position when
+the slot is external — exposed as `companionValue`/`companionPosition`,
+STRICTLY display-time (deposit/withdraw math stays scoped to the
+connected wallet so limits/commissions can never mix wallets). Folded
+into: portfolio savings number, drawer savings row, savings-page hero
+(deposits/value/earnings), plus a savings-card banner telling a hybrid
+user WHERE their savings live when the connected wallet has none.
+(2) Ownership labels: on hybrid accounts EVERY asset row is labeled by
+its owning wallet — slot Stellar rows carry the external wallet's name
+(new `connectedWalletLabel`), BTC/ETH/SOL + companion rows carry
+"Normal wallet"; the drawer's external section header now names the
+wallet (Lobstr/Freighter/…). Single-wallet users see zero change.

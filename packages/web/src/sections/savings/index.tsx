@@ -3,6 +3,7 @@
 import { logger } from '@normalfinance/utils';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
+import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
@@ -33,16 +34,29 @@ export default function SavingsView() {
   const { wallet, getAllTokens } = usePersistStore();
 
   const { vaultInfo, userPosition, fetching, positionFetching } = useDefindexSavings();
+  // #32: account-wide savings display — the hero must include the companion
+  // Normal wallet's position when an external wallet is connected, or a
+  // hybrid user's savings look vanished (observed live 2026-08-15). One
+  // product, so summing is honest; deposit/withdraw stay per-wallet.
+  const { companionPosition } = useSavingsPosition();
 
   const currentValue = useMemo(
-    () => Math.max(parseFloat(userPosition?.currentValue || '0'), 0),
-    [userPosition]
+    () =>
+      Math.max(parseFloat(userPosition?.currentValue || '0'), 0) +
+      Math.max(parseFloat(companionPosition?.currentValue || '0'), 0),
+    [userPosition, companionPosition]
   );
   const totalDeposited = useMemo(
-    () => Math.max(parseFloat(userPosition?.totalDeposited || '0'), 0),
-    [userPosition]
+    () =>
+      Math.max(parseFloat(userPosition?.totalDeposited || '0'), 0) +
+      Math.max(parseFloat(companionPosition?.totalDeposited || '0'), 0),
+    [userPosition, companionPosition]
   );
-  const earnings = useMemo(() => parseFloat(userPosition?.earnings || '0'), [userPosition]);
+  const earnings = useMemo(
+    () =>
+      parseFloat(userPosition?.earnings || '0') + parseFloat(companionPosition?.earnings || '0'),
+    [userPosition, companionPosition]
+  );
   const apy = vaultInfo ? Number(vaultInfo.apy) : null;
   const heroLoading = fetching || positionFetching;
 

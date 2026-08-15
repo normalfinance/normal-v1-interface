@@ -7,6 +7,7 @@ import { useStellarConfig } from '@/hooks';
 import { useRouter } from 'next/navigation';
 import { chainOfActivityEvent } from '@/lib/tx-events';
 import { usePersistStore } from '@normalfinance/state';
+import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
@@ -61,6 +62,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     refetch: refetchAccountStatus,
   } = useAccountStatus(wallet.address, { assetIssuer: savingsUsdcIssuer });
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
+  // #32: companion Normal wallet's savings — display-only (see the banner).
+  const { companionValue: companionSavingsValue } = useSavingsPosition();
   const { startFlow } = useAssetActionsContext();
 
   const {
@@ -190,12 +193,35 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
 
   // Auto-open the guided setup once when it's first needed (the user can reopen
   // it later via the "Set up savings" button).
+  //
+  // #32: NOT for hybrid users. Connecting a fresh external wallet while the
+  // account already owns a working Normal wallet made this pop "Set up Normal
+  // Savings" for the empty external account (observed live 2026-08-15) — the
+  // user's savings-capable wallet exists; nagging them to activate a second
+  // one is noise. Manual setup via the button still works for every wallet.
   useEffect(() => {
-    if (needsSetup && !setupAutoOpened.current) {
-      setupAutoOpened.current = true;
-      setSetupOpen(true);
-    }
-  }, [needsSetup]);
+    if (!needsSetup || setupAutoOpened.current) return undefined;
+    let stale = false;
+    (async () => {
+      const isExternal = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+      if (isExternal) {
+        try {
+          const { getTurnkeyWalletInfo } = await import('@/lib/turnkey/wallet-info');
+          const tk = await getTurnkeyWalletInfo();
+          if (tk?.stellarAddress) return; // companion exists — no nag
+        } catch {
+          /* lookup failed — fall through to today's behavior */
+        }
+      }
+      if (!stale && !setupAutoOpened.current) {
+        setupAutoOpened.current = true;
+        setSetupOpen(true);
+      }
+    })();
+    return () => {
+      stale = true;
+    };
+  }, [needsSetup, wallet.walletType]);
 
   // Close it only when setup is genuinely complete — never while a re-check is in
   // flight — and return the card to the normal deposit UI.
@@ -783,6 +809,32 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       {error && (
         <Typography sx={{ fontSize: '12px', color: 'error.main', mb: '12px' }}>{error}</Typography>
       )}
+
+      {/* #32: hybrid account whose savings live on the Normal wallet while an
+          external wallet is connected — say WHERE the money is instead of
+          showing a bare zero. Actions here stay scoped to the CONNECTED
+          wallet on purpose. */}
+      {!needsSetup &&
+        companionSavingsValue > 0 &&
+        parseFloat(userPosition?.currentValue || '0') <= 0 && (
+          <Box
+            sx={{
+              px: '14px',
+              py: '12px',
+              mb: '12px',
+              borderRadius: '14px',
+              bgcolor: 'rgba(59,130,246,0.05)',
+              border: '1px solid rgba(59,130,246,0.15)',
+            }}
+          >
+            <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
+              {t(
+                'Your savings ({{n}} USDC) are on your Normal wallet. This card deposits and withdraws with the connected wallet — open the account drawer to use the Normal wallet.',
+                { n: companionSavingsValue.toFixed(2) }
+              )}
+            </Typography>
+          </Box>
+        )}
 
       {/* #67 XLM fee semaphore — ALWAYS visible once the account exists.
           Savings fees are paid in XLM: green = the outflow guard's buffer is

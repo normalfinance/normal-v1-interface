@@ -157,6 +157,14 @@ export interface UseSavingsPositionResult {
   /** Current USD value of the position (USDC ≈ $1). */
   value: number;
   earnings: number;
+  /**
+   * #32: the companion Normal wallet's savings position, read ONLY when the
+   * connected wallet is external. STRICTLY display-time data — `position`,
+   * `value` and every deposit/withdraw computation stay scoped to the
+   * CONNECTED wallet, so action limits and commissions can never mix wallets.
+   */
+  companionPosition: SavingsPosition | null;
+  companionValue: number;
   vaultLoading: boolean;
   positionLoading: boolean;
   isValidating: boolean;
@@ -231,11 +239,45 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
 
   const earnings = useMemo(() => parseFloat(pos.data?.earnings || '0'), [pos.data]);
 
+  // #32 companion savings (display-only — see the interface note). The
+  // address resolves through the cached single-flight Turnkey lookup; the
+  // position rides the same SWR key family as a normal-wallet user's own
+  // read, so nothing is fetched twice.
+  const isExternalSlot = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+  const companionAddr = useSWR<string | null>(
+    enabled && isExternalSlot ? ['turnkey-stellar-address'] : null,
+    async () => {
+      const { getTurnkeyWalletInfo } = await import('@/lib/turnkey/wallet-info');
+      const info = await getTurnkeyWalletInfo();
+      return info?.stellarAddress ?? null;
+    },
+    { revalidateOnFocus: false, dedupingInterval: 300_000 }
+  );
+  const companionAddress =
+    companionAddr.data && companionAddr.data !== address ? companionAddr.data : null;
+  const companionPos = useSWR<SavingsPosition>(
+    enabled && companionAddress ? ['savings-position', companionAddress, network] : null,
+    () => fetchUserPosition(companionAddress!, network),
+    {
+      fallbackData: getCachedPosition(companionAddress ?? undefined) ?? undefined,
+      revalidateOnFocus: false,
+      dedupingInterval: 20_000,
+      keepPreviousData: true,
+      errorRetryCount: 3,
+    }
+  );
+  const companionValue = useMemo(() => {
+    const v = parseFloat(companionPos.data?.currentValue || '0');
+    return v > 0 ? v : 0;
+  }, [companionPos.data]);
+
   return {
     vaultInfo: vault.data ?? null,
     position: pos.data ?? null,
     value,
     earnings,
+    companionPosition: companionPos.data ?? null,
+    companionValue,
     vaultLoading: vault.isLoading && !vault.data,
     positionLoading: pos.isLoading && !pos.data,
     isValidating: vault.isValidating || pos.isValidating,
