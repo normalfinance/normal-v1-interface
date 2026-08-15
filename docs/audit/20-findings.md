@@ -1105,3 +1105,33 @@ prevent: external-wallet spending outside the app, fee spikes, pre-guard
 drained users. 11 unit tests (boundaries + guard-keeps-green invariant),
 191 total. Client-only, no schema/routes/cron. Docs 70 (plan) + 71
 (explainer).
+
+## #32 chunk 1 — wallet-slot protection + #42 structural fix (SHIPPED 2026-08-15, branch feat/external-wallet-cctp)
+
+Foundation for dual-wallet support (design: doc 72). Two automatic
+slot-writers existed, both correct in a one-wallet world, both
+wallet-SWITCHERS in a two-wallet world:
+
+1. The Turnkey self-heal connected the Turnkey Stellar wallet whenever
+   the slot was empty — but "empty" also describes an external-wallet
+   user who chose to disconnect (finding #42's silent switch). Fix: a
+   persisted `lastWalletType` breadcrumb (written on every connect —
+   all connect paths verified to funnel through persistStore.connectWallet
+   — and deliberately surviving disconnect). Self-heal now runs only when
+   the breadcrumb is 'normal-wallet' or ABSENT (fresh device = today's
+   new-device login, unchanged); an explicit external breadcrumb means
+   "disconnected by choice" → no restore. #42 closed structurally.
+2. ChainSetupDialog's stellar branch adopted the new wallet into the slot
+   unconditionally. Now: adopt only when the slot is EMPTY (signup /
+   onboarding — behavior unchanged there); with an external wallet
+   connected, the new Turnkey wallet is linked as a COMPANION and the
+   user's chosen wallet stays put.
+
+Decision logic extracted pure (`lib/wallet-slot.ts`) with the doc-72
+invariants as named tests (I1 no-steal, I2/I7 external-stays-silent,
+I5 signup-adopts, I6 new-device-login-restores). Migration: additive
+store field; existing users have no breadcrumb → exact today-behavior
+until their next connect. 6 tests (197 total). NOTE: the onboarding
+wizard's own create-wallet path still adopts unconditionally — it is
+only reachable with an empty slot today except via the drawer's "+"
+button, which chunk 3 redesigns; tracked there.

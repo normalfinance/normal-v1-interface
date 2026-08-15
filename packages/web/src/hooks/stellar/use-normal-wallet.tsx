@@ -1,5 +1,6 @@
 import type { MnemonicStrength } from '@normalfinance/utils';
 
+import { shouldRestoreTurnkeyStellar } from '@/lib/wallet-slot';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { linkWallet, updateLastUsed } from '@/services/linked-wallets';
 import { useWalletPassword } from '@/providers/WalletPasswordProvider';
@@ -111,9 +112,16 @@ export const useNormalWallet = () => {
   //
   // Turnkey is the authority on which Stellar address belongs to this user, so
   // if the persisted one is missing while Turnkey has it, restore it.
+  //
+  // #32 chunk 1: guarded by the lastWalletType breadcrumb — an empty slot
+  // whose breadcrumb records an EXTERNAL wallet means the user disconnected
+  // by choice; restoring the Turnkey wallet there silently switched their
+  // wallet (finding #42). Absent breadcrumb (fresh device) restores as
+  // always. Decision logic + invariants: lib/wallet-slot.ts.
   useEffect(() => {
     if (recoveryChecked.current) return;
-    if (persistStore.wallet.address) return;
+    if (!shouldRestoreTurnkeyStellar(persistStore.wallet.address, persistStore.lastWalletType))
+      return;
 
     recoveryChecked.current = true;
     (async () => {
@@ -121,7 +129,8 @@ export const useNormalWallet = () => {
         const info = await getTurnkeyWalletInfo();
         if (!info?.stellarAddress) return;
         // Re-check: another path may have connected while we were awaiting.
-        if (usePersistStore.getState().wallet.address) return;
+        const latest = usePersistStore.getState();
+        if (!shouldRestoreTurnkeyStellar(latest.wallet.address, latest.lastWalletType)) return;
 
         logger.warn(
           '[NORMAL WALLET] Persisted Stellar address was missing; restoring it from Turnkey'
