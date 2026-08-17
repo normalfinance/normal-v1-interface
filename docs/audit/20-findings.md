@@ -1383,3 +1383,26 @@ silently orphan every browser's cache). 219 tests, build clean.
 Rule for the register: a best-effort helper that maps failure → null
 must NEVER feed a cache — callers cache the lie. Strict-vs-lenient is
 the callee's contract, not the caller's guess.
+
+**#32 chunk 4f — Stellar-pair source pills (Niko GO, 2026-08-17):**
+hybrid account on the swap page saw USDC/XLM balance 0.00 — the doc-72
+table locked "Soroswap = active wallet" before the coexistence model
+existed, so Stellar↔Stellar pairs read ONLY the slot wallet (empty
+Lobstr) while the funds sat in the Normal wallet; the swap card was the
+last money surface still silently slot-bound (a picker covering only
+SOME engines — same family as the partial-loading-flag root cause).
+Fix: the wallet pills now cover Stellar pairs. `useSwap(targetAddress)`
+gained the same explicit override contract as
+`useDefindexSavings(targetAddress)` — sender, fee-pair caller and BOTH
+signatures follow the target; universal signer routes by tx source
+account (companion → passkey, lazy kit-signer import for jsdom);
+`normalCanSign` skipped under override. Soroswap engine gained
+`stellarAddressOverride` + `onNeedsSetup`; account/trustline preflights
+probe the SELECTED wallet, and companion gaps route to the setup dialog
+(a kit cannot sign the companion's changeTrust). Default source = the
+wallet that can pay (pure `defaultStellarSource`, ties → Normal wallet,
+4 tests). Balance header, pills, MAX, `insufficient` and the #67 XLM
+reserve (companion's OWN savings position decides the buffer) all
+follow the selection via one `activeFromBalance`. Amends doc-72 §4g:
+"Soroswap = active wallet" → "Soroswap = picked wallet (pills)".
+223 tests, build clean.

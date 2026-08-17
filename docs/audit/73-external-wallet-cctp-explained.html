@@ -315,7 +315,8 @@
   <tr><td>B3</td><td>BTC → USDC, Deliver to <strong>Normal wallet</strong> (default)</td><td>USDC lands on the Normal wallet (drawer's Normal tab)</td></tr>
   <tr><td>B4</td><td>BTC → USDC, Deliver to <strong>Lobstr</strong></td><td>If the trustline is missing the pill offers “add trustline” (one Lobstr approval), then delivery lands in Lobstr</td></tr>
   <tr><td>B5</td><td>ETH → SOL</td><td>Runs passkey-only (no Stellar involved at all)</td></tr>
-  <tr><td>B6</td><td>XLM ↔ USDC on Lobstr</td><td>Unchanged — Soroswap, Lobstr signs</td></tr>
+  <tr><td>B6</td><td>XLM ↔ USDC, source pill <strong>Lobstr</strong></td><td>Soroswap; Lobstr kit signs both transactions (swap + fee)</td></tr>
+  <tr><td>B7</td><td>XLM ↔ USDC, source pill <strong>Normal wallet</strong> (chunk 4f)</td><td>Balance and MAX show the <strong>Normal wallet’s</strong> funds; <strong>passkey</strong> signs both transactions, Lobstr never prompted; with an empty Lobstr the Normal pill is <strong>pre-selected</strong> — the card must never greet you with 0.00</td></tr>
 </table>
 
 <h3>Part C — displays &amp; guards</h3>

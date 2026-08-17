@@ -31,6 +31,17 @@ export interface SoroswapEngineProps {
   /** true only while this engine's group is the active selection */
   enabled: boolean;
   resetInput: () => void;
+  /**
+   * #32 chunk 4f: run the swap FROM this wallet instead of the connected slot
+   * wallet (hybrid: external wallet connected, user picked the Normal wallet
+   * as source). Build, balance checks and both signatures all follow it —
+   * explicit, never a silent fallback.
+   */
+  stellarAddressOverride?: string | null;
+  /** Routes companion-wallet preflight gaps (activation/trustline) into the
+   *  guided setup dialog — the kit-signed inline fixes below only work for
+   *  the CONNECTED wallet, which can sign its own changeTrust. */
+  onNeedsSetup?: () => void;
 }
 
 export function useSoroswapEngine({
@@ -41,6 +52,8 @@ export function useSoroswapEngine({
   fromPrice,
   enabled,
   resetInput,
+  stellarAddressOverride,
+  onNeedsSetup,
 }: SoroswapEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
@@ -52,13 +65,17 @@ export function useSoroswapEngine({
     USDC: config.USDC_ADDRESS,
   };
 
-  const { quote, quoteLoading, loading, error, getQuote, executeSwap, clearQuote } = useSwap();
+  const overrideActive = !!stellarAddressOverride;
+  const { quote, quoteLoading, loading, error, getQuote, executeSwap, clearQuote } = useSwap(
+    stellarAddressOverride ?? undefined
+  );
+  // Preflights probe the wallet the swap will actually run from.
   const {
     isLoading: isCheckingAccount,
     accountExists,
     hasUsdcTrustline,
     refetch: refetchAccountStatus,
-  } = useAccountStatus(wallet.address);
+  } = useAccountStatus(stellarAddressOverride ?? wallet.address);
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
 
   const debouncedAmount = useDebounce(enabled ? amount.toFixed() : '', 500);
@@ -122,6 +139,20 @@ export function useSoroswapEngine({
 
   const button = useMemo(() => {
     if (!enabled) return { label: t('Enter an amount'), action: null, loading: false };
+    // Companion-wallet gaps route to the guided setup dialog: the inline
+    // fixes below sign with the CONNECTED wallet's kit, which cannot add a
+    // trustline on the companion (only an account's own key can changeTrust).
+    if (overrideActive && (needsAccountActivation || needsTrustline) && onNeedsSetup)
+      return {
+        label: t('Finish Normal wallet setup'),
+        action: onNeedsSetup,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t('Your Normal wallet needs a quick setup step before it can swap.')}
+          </Typography>
+        ),
+      };
     if (needsAccountActivation)
       return {
         label: t('Activate account to swap'),
@@ -157,6 +188,8 @@ export function useSoroswapEngine({
     return { label: t('Swap'), action: handleSwap, loading: false };
   }, [
     enabled,
+    overrideActive,
+    onNeedsSetup,
     needsAccountActivation,
     needsTrustline,
     isAddingTrustline,

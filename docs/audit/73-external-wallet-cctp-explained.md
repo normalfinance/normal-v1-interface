@@ -280,5 +280,6 @@ With Lobstr connected and funded (a few USDC + XLM):
 | 6 | Swap BTC→USDC, Deliver to "Normal wallet" | lands on Normal wallet |
 | 7 | Swap BTC→USDC, Deliver to "Lobstr" | trustline pill flow if needed, lands in Lobstr |
 | 8 | Swap ETH→SOL | passkey-only (no Stellar at all) |
-| 9 | XLM↔USDC on Lobstr | unchanged (Soroswap, kit signs) |
-| 10 | A single-wallet account (your main flow) | zero visual difference anywhere |
+| 9 | XLM↔USDC, source pill "Lobstr" | Soroswap, Lobstr kit signs both txs (swap + fee) |
+| 9b | XLM↔USDC, source pill "Normal wallet" (chunk 4f) | balance/MAX show the Normal wallet's funds; passkey signs both txs; Lobstr never prompted; with an EMPTY Lobstr the Normal pill is pre-selected (never a 0.00 greeting) |
+| 10 | A single-wallet account (your main flow) | zero visual difference anywhere — no pills |
