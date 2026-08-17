@@ -339,6 +339,38 @@
   <tr><td>D3</td><td>Walk steps 2–4 (4 XLM → trustline → USDC)</td><td>Dialog reaches “Your Normal wallet is ready”; the swap then runs</td></tr>
 </table>
 
+<h2 id="later" class="pagebreak">9b · Added after the matrix was written (2026-08-17)</h2>
+<p>Everything below landed on this same branch after live testing began. Junior summary per feature, then the extra test rows.</p>
+
+<h3>Stellar swaps from either wallet (chunk 4f)</h3>
+<p>XLM↔USDC swaps got the same wallet pills as cross-chain: pick <strong>Normal wallet</strong> → passkey signs both transactions, pick <strong>Lobstr</strong> → the kit signs, and balance/MAX/validation follow the picked wallet. The card opens on whichever wallet can actually pay. (Rows B6/B7 above.)</p>
+
+<h3>USDC-readiness notices (#74)</h3>
+<p>A wallet without a USDC trustline BOUNCES incoming USDC back to the sender. One shared probe now drives every notice: swap-page banners, a warning next to the receive QR, a badge inside each drawer wallet tab, and a one-time toast after connecting an external wallet. A FAILED probe shows nothing — the app never claims "not activated" off a network blip. The <em>Set up</em> button opens a guided popup: QR to fund with XLM (auto-advances when the payment lands — no button to press), then a kit-signed trustline.</p>
+
+<h3>Send: own wallets as first-class citizens (#74b/c)</h3>
+<p>"Your wallets" chips fill the destination (companion + ALL linked wallets, readiness-aware: unactivated targets stay selectable for XLM — that send activates them — but are disabled with the reason for USDC). And the companion Normal wallet's XLM/USDC are now <strong>sendable</strong> while an external wallet is connected — rows named "· Normal wallet", passkey signs, MAX/reserve/savings-buffer follow the owning wallet. The self-send guard now compares against the wallet the send RUNS FROM, so Normal→Lobstr works.</p>
+
+<h3>One data source everywhere (#75)</h3>
+<p>Root cause of "surfaces disagree": a legacy client-side token store that only refreshed on certain mounts, next to the server portfolio aggregate that refreshes after every transaction. Send, drawer and the fee card now read the aggregate; a layout listener keeps the store fresh for the one remaining consumer (swap card, Phase 2). Also composed for hybrid: the Earnings stat (slot + companion), the savings chart/history (follow the wallet HOLDING the savings), Holdings wallet tabs on /portfolio, per-wallet XLM fee rows ("2.00 XLM · 0.50 for fees") with a worst-wallet header chip, and the drawer address list collapsed to "Addresses · N".</p>
+
+<h3>Part E — the new test rows</h3>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>E1</td><td>Connect a fresh external wallet (clean browser)</td><td>ONE warning toast ("not active on Stellar yet"); never repeats for that address</td></tr>
+  <tr><td>E2</td><td>Drawer → Lobstr tab while unactivated</td><td>Amber badge with <strong>Set up</strong> → QR popup; send 2 XLM from anywhere → popup advances BY ITSELF → kit-signed trustline step → badges vanish everywhere</td></tr>
+  <tr><td>E3</td><td>Receive → USDC on a wallet without the trustline</td><td>Bounce warning next to the QR + inline Add trustline; copying still allowed</td></tr>
+  <tr><td>E4</td><td>Kill the network, reload</td><td>NO readiness warnings anywhere (failed probe asserts nothing)</td></tr>
+  <tr><td>E5</td><td>Send → asset picker (hybrid)</td><td>"USD Coin · Normal wallet" etc. listed next to Lobstr's own assets; best-value preselected; "Available" line names the wallet</td></tr>
+  <tr><td>E6</td><td>Send USDC · Normal wallet → tap Lobstr chip</td><td>Greyed "no USDC trustline" until E2 done; XLM → selectable with "sending XLM activates it"</td></tr>
+  <tr><td>E7</td><td>Send XLM · Normal wallet → Lobstr chip → Review</td><td>NO "Cannot send to your own address"; one passkey prompt; Lobstr balance appears on every surface within seconds, no reload</td></tr>
+  <tr><td>E8</td><td>/portfolio Holdings (hybrid)</td><td>Wallet TABS (Normal wallet | Lobstr); Savings row under Normal; single-wallet accounts unchanged</td></tr>
+  <tr><td>E9</td><td>/portfolio top block</td><td>Earnings shows the real composed amount (slot + companion), not $0.00</td></tr>
+  <tr><td>E10</td><td>/savings chart + history (hybrid)</td><td>Real earnings curve + transaction list from the wallet HOLDING the savings — not a flat $0 line</td></tr>
+  <tr><td>E11</td><td>/savings "Network fees (XLM)" card</td><td>One row per wallet: total XLM first, "· X for fees" second; header chip = WORST wallet (red while Lobstr is short, per-row dots say which)</td></tr>
+  <tr><td>E12</td><td>Cold tab after dev-server restart</td><td>Savings paint immediately (cached) or skeleton — never a confident $0.00; drawer shows "Addresses · N" collapsed</td></tr>
+</table>
+
 <h2 id="status">10 · Status &amp; what remains</h2>
 <ul>
   <li><strong>Done and gated</strong> (typecheck, lint, 212 unit/component tests, production build): chunks 1, 2 (+ field fixes), 3, 4a–4e.</li>
@@ -349,7 +381,7 @@
 
 <p class="kv" style="margin-top:40px">
   Branch <code>feat/external-wallet-cctp</code> · Findings register: docs/audit/20-findings.md (#32 chunks) ·
-  Architecture: docs/audit/72 · This document: docs/audit/73 (.md + .html) · Generated 2026-08-16
+  Architecture: docs/audit/72 · Surface audit: docs/audit/75 · This document: docs/audit/73 (.md + .html) · Generated 2026-08-16, extended 2026-08-17
 </p>
 
 </body>
