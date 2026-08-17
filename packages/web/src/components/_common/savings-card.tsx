@@ -7,7 +7,8 @@ import { useStellarConfig } from '@/hooks';
 import { useRouter } from 'next/navigation';
 import { chainOfActivityEvent } from '@/lib/tx-events';
 import { usePersistStore } from '@normalfinance/state';
-import { useSavingsPosition } from '@/hooks/use-savings-position';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
@@ -54,16 +55,27 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const config = useStellarConfig();
   const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
 
+  // #32: hybrid users PICK which wallet this card operates on (Niko's
+  // direction — "you can do savings from any wallet"). Default: the Normal
+  // wallet, where a hybrid user's savings usually live and where every
+  // action is passkey-only. EVERYTHING below — position, balances, setup
+  // state, fee semaphore, deposit/withdraw signing — follows the TARGET.
+  const { companionStellar } = useWalletBalances(true);
+  const isExternalConnected = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+  const savingsHybrid = isExternalConnected && !!companionStellar;
+  const [savingsWalletTab, setSavingsWalletTab] = useState<'normal' | 'connected'>('normal');
+  const activeSavingsTab = savingsHybrid ? savingsWalletTab : 'connected';
+  const savingsTargetAddress =
+    savingsHybrid && activeSavingsTab === 'normal' ? companionStellar!.address : undefined;
+
   const {
     isLoading: isCheckingAccount,
     accountExists,
     xlmBalance,
     hasUsdcTrustline,
     refetch: refetchAccountStatus,
-  } = useAccountStatus(wallet.address, { assetIssuer: savingsUsdcIssuer });
+  } = useAccountStatus(savingsTargetAddress ?? wallet.address, { assetIssuer: savingsUsdcIssuer });
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
-  // #32: companion Normal wallet's savings — display-only (see the banner).
-  const { companionValue: companionSavingsValue } = useSavingsPosition();
   const { startFlow } = useAssetActionsContext();
 
   const {
@@ -78,7 +90,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     txStep,
     deposit,
     withdraw,
-  } = useDefindexSavings();
+  } = useDefindexSavings(savingsTargetAddress);
 
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
@@ -86,7 +98,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const [setupOpen, setSetupOpen] = useState(false);
   const setupAutoOpened = useRef(false);
 
-  const rawDepositBalance = getTokenBalance(getSavingsDepositToken(tokenState.tokens, config));
+  // #32: the deposit balance is the TARGET wallet's USDC — the companion's
+  // (from the portfolio aggregate) when the Normal-wallet tab is active,
+  // the connected wallet's token store otherwise.
+  const rawDepositBalance = savingsTargetAddress
+    ? Number(companionStellar?.assets.find((a) => a.symbol === 'USDC')?.balance ?? 0).toFixed(7)
+    : getTokenBalance(getSavingsDepositToken(tokenState.tokens, config));
   const rawDepositBalanceNum = parseFloat(rawDepositBalance);
 
   // `spentOnDeposits` optimistically subtracts what the user just deposited, so
@@ -459,6 +476,49 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         )}
       </Stack>
 
+      {/* #32: hybrid accounts pick the wallet this card operates on — the
+          position, balances, fee light and the deposit/withdraw signing all
+          follow the selected wallet (Normal = passkey; the external wallet
+          signs in its own app). Single-wallet users never see this row. */}
+      {savingsHybrid && (
+        <Box sx={{ display: 'flex', gap: '6px', mb: '14px', flexWrap: 'wrap' }}>
+          {(
+            [
+              { key: 'normal', label: t('Normal wallet') },
+              { key: 'connected', label: connectedWalletLabel(wallet.walletType) },
+            ] as const
+          ).map((opt) => {
+            const selected = activeSavingsTab === opt.key;
+            return (
+              <Box
+                key={opt.key}
+                component="button"
+                onClick={() => setSavingsWalletTab(opt.key)}
+                sx={{
+                  appearance: 'none',
+                  border: selected
+                    ? '1px solid rgba(10,10,15,0.9)'
+                    : '1px solid rgba(10,10,15,0.12)',
+                  borderRadius: '999px',
+                  px: '12px',
+                  py: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  bgcolor: selected ? '#0A0A0F' : 'transparent',
+                  color: selected ? '#fff' : '#6B6B76',
+                  transition: 'all .15s ease',
+                  '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.3)' },
+                }}
+              >
+                {opt.label}
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+
       {/* Stats */}
       <Box
         sx={(theme) => ({
@@ -809,32 +869,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       {error && (
         <Typography sx={{ fontSize: '12px', color: 'error.main', mb: '12px' }}>{error}</Typography>
       )}
-
-      {/* #32: hybrid account whose savings live on the Normal wallet while an
-          external wallet is connected — say WHERE the money is instead of
-          showing a bare zero. Actions here stay scoped to the CONNECTED
-          wallet on purpose. */}
-      {!needsSetup &&
-        companionSavingsValue > 0 &&
-        parseFloat(userPosition?.currentValue || '0') <= 0 && (
-          <Box
-            sx={{
-              px: '14px',
-              py: '12px',
-              mb: '12px',
-              borderRadius: '14px',
-              bgcolor: 'rgba(59,130,246,0.05)',
-              border: '1px solid rgba(59,130,246,0.15)',
-            }}
-          >
-            <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
-              {t(
-                'Your savings ({{n}} USDC) are on your Normal wallet. This card deposits and withdraws with the connected wallet — open the account drawer to use the Normal wallet.',
-                { n: companionSavingsValue.toFixed(2) }
-              )}
-            </Typography>
-          </Box>
-        )}
 
       {/* #67 XLM fee semaphore — ALWAYS visible once the account exists.
           Savings fees are paid in XLM: green = the outflow guard's buffer is

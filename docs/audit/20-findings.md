@@ -1308,3 +1308,32 @@ state deliberately does NOT block — the chain stays the judge).
 212 tests, build clean. Doc 73 carries the full chunk-4 live test
 matrix for Niko's sign-off; chunk 5 (activity labels, #40 close-out)
 remains after it.
+
+## #32 — savings wallet tabs (SHIPPED 2026-08-17, Niko's report)
+
+Live hybrid test: the savings card showed 0.00 deposits + a setup nag —
+it reads the CONNECTED wallet (empty Lobstr), and the earlier "your
+savings are elsewhere" banner was swallowed by the setup state. Niko's
+direction: savings can run from ANY wallet → the card gets WALLET TABS.
+
+- savings-card: [Normal wallet | <external>] pills (hybrid only; default
+  Normal — where a hybrid user's savings usually live and where actions
+  are passkey-only). Position, deposit balance (companion USDC from the
+  aggregate), account status, fee semaphore, setup state and signing all
+  follow the TARGET tab. The obsolete banner removed.
+- useDefindexSavings(targetAddress?): full engine retarget — the target
+  builds (caller=target everywhere: deposit/withdraw/fee-pair routes,
+  balance preflight) AND signs (universal signer routes by the tx's
+  source account → passkey for the Turnkey-managed companion; the
+  normalCanSign local-key check is skipped under override). userPosition
+  = target's position, so withdraw commission math and the #52-style
+  optimistic snapshots can never mix wallets. Optimistic cache writes go
+  to the ACTING wallet's key (setCachedPosition(target)), the
+  POSITION_SYNC handler now refreshes the companion's SWR too, and
+  post-op refresh timers hit the companion when overridden.
+- Single-wallet users: zero change (no tabs, no override, engine path
+  byte-identical).
+
+212 tests, build clean. LIVE-TEST NOTE for the matrix: deposit/withdraw
+on the Normal-wallet tab while Lobstr is connected = passkey signatures;
+switch to the Lobstr tab = today's kit-signed flow.

@@ -165,6 +165,7 @@ export interface UseSavingsPositionResult {
    */
   companionPosition: SavingsPosition | null;
   companionValue: number;
+  refreshCompanionPosition: () => void;
   vaultLoading: boolean;
   positionLoading: boolean;
   isValidating: boolean;
@@ -211,38 +212,10 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     }
   );
 
-  // Cross-instance / legacy sync: when an optimistic write hits the cache,
-  // re-seed SWR from it so every consumer updates at once.
-  useEffect(() => {
-    const handler = () => {
-      // 1) Show the optimistic value instantly.
-      const cached = getCachedPosition(address);
-      if (cached) pos.mutate(cached, { revalidate: false });
-      // 2) Then confirm against the chain, bypassing the server cache. A
-      //    30s-old balance immediately after depositing would look like the
-      //    deposit never landed. The route floors this per address, so it
-      //    can't be used to hammer DeFindex.
-      if (address) {
-        pos
-          .mutate(fetchUserPosition(address, network, true), { revalidate: false })
-          .catch(() => {});
-      }
-    };
-    window.addEventListener(POSITION_SYNC_EVENT, handler);
-    return () => window.removeEventListener(POSITION_SYNC_EVENT, handler);
-  }, [address, network, pos]);
-
-  const value = useMemo(() => {
-    const v = parseFloat(pos.data?.currentValue || '0');
-    return v > 0 ? v : 0;
-  }, [pos.data]);
-
-  const earnings = useMemo(() => parseFloat(pos.data?.earnings || '0'), [pos.data]);
-
-  // #32 companion savings (display-only — see the interface note). The
-  // address resolves through the cached single-flight Turnkey lookup; the
-  // position rides the same SWR key family as a normal-wallet user's own
-  // read, so nothing is fetched twice.
+  // #32 companion savings (display + companion-scoped actions — see the
+  // interface note). The address resolves through the cached single-flight
+  // Turnkey lookup; the position rides the same SWR key family as a
+  // normal-wallet user's own read, so nothing is fetched twice.
   const isExternalSlot = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
   const companionAddr = useSWR<string | null>(
     enabled && isExternalSlot ? ['turnkey-stellar-address'] : null,
@@ -271,6 +244,43 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     return v > 0 ? v : 0;
   }, [companionPos.data]);
 
+  // Cross-instance / legacy sync: when an optimistic write hits the cache,
+  // re-seed SWR from it so every consumer updates at once.
+  useEffect(() => {
+    const handler = () => {
+      // 1) Show the optimistic value instantly.
+      const cached = getCachedPosition(address);
+      if (cached) pos.mutate(cached, { revalidate: false });
+      // 2) Then confirm against the chain, bypassing the server cache. A
+      //    30s-old balance immediately after depositing would look like the
+      //    deposit never landed. The route floors this per address, so it
+      //    can't be used to hammer DeFindex.
+      if (address) {
+        pos
+          .mutate(fetchUserPosition(address, network, true), { revalidate: false })
+          .catch(() => {});
+      }
+      // #32: companion ops write the COMPANION's cache — mirror the same
+      // optimistic-then-confirm dance for it.
+      if (companionAddress) {
+        const cachedCompanion = getCachedPosition(companionAddress);
+        if (cachedCompanion) companionPos.mutate(cachedCompanion, { revalidate: false });
+        companionPos
+          .mutate(fetchUserPosition(companionAddress, network, true), { revalidate: false })
+          .catch(() => {});
+      }
+    };
+    window.addEventListener(POSITION_SYNC_EVENT, handler);
+    return () => window.removeEventListener(POSITION_SYNC_EVENT, handler);
+  }, [address, network, pos, companionAddress, companionPos]);
+
+  const value = useMemo(() => {
+    const v = parseFloat(pos.data?.currentValue || '0');
+    return v > 0 ? v : 0;
+  }, [pos.data]);
+
+  const earnings = useMemo(() => parseFloat(pos.data?.earnings || '0'), [pos.data]);
+
   return {
     vaultInfo: vault.data ?? null,
     position: pos.data ?? null,
@@ -278,6 +288,9 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     earnings,
     companionPosition: companionPos.data ?? null,
     companionValue,
+    refreshCompanionPosition: () => {
+      companionPos.mutate();
+    },
     vaultLoading: vault.isLoading && !vault.data,
     positionLoading: pos.isLoading && !pos.data,
     isValidating: vault.isValidating || pos.isValidating,
