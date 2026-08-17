@@ -211,11 +211,24 @@ export function HeroPortfolioCard() {
   // background refetch must never flash the skeleton back.
   const [firstPaintDone, setFirstPaintDone] = useState(false);
   useEffect(() => {
-    if (!portfolio.isLoading && !portfolio.savings.positionLoading) setFirstPaintDone(true);
-  }, [portfolio.isLoading, portfolio.savings.positionLoading]);
+    if (
+      !portfolio.isLoading &&
+      !portfolio.savings.positionLoading &&
+      !portfolio.savings.companionPositionLoading
+    )
+      setFirstPaintDone(true);
+  }, [
+    portfolio.isLoading,
+    portfolio.savings.positionLoading,
+    portfolio.savings.companionPositionLoading,
+  ]);
 
   const loading =
-    isAuthed && !firstPaintDone && (portfolio.isLoading || portfolio.savings.positionLoading);
+    isAuthed &&
+    !firstPaintDone &&
+    (portfolio.isLoading ||
+      portfolio.savings.positionLoading ||
+      portfolio.savings.companionPositionLoading);
 
   const changeColor = overallChange >= 0 ? UP : DOWN;
 

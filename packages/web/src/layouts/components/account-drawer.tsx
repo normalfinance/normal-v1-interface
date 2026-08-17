@@ -78,7 +78,9 @@ function WalletConnected({
   // Unified, deduped source: native balances + savings from one place.
   const { getAsset, savings, wallet: walletBalances } = usePortfolio(true);
   const userPosition = savings.position;
-  const savingsFetching = savings.positionLoading;
+  // Savings load like any other asset: the skeleton holds until EVERY source
+  // (slot + companion) has answered — never a confident $0 mid-load.
+  const savingsFetching = savings.positionLoading || savings.companionPositionLoading;
   const savingsRef = useRef(savings);
   useEffect(() => {
     savingsRef.current = savings;
@@ -202,7 +204,7 @@ function WalletConnected({
   // companion Normal wallet's (one product; actions stay per-wallet).
   const savingsValue =
     Math.max(parseFloat(userPosition?.currentValue || '0'), 0) + savings.companionValue;
-  const savingsLoaded = userPosition !== null || savings.companionValue > 0;
+  const savingsLoaded = !savingsFetching;
 
   // Render whenever the user has ANY wallet — a Turnkey-only (e.g. BTC-first)
   // user has no Stellar `address` but should still see their real drawer.

@@ -135,7 +135,9 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
   const overrideActive = !!targetAddress && targetAddress !== connectedAddress;
   const userPosition = overrideActive ? savings.companionPosition : savings.position;
   const fetching = savings.vaultLoading;
-  const positionFetching = savings.positionLoading;
+  // Companion loading included on purpose: a loading flag must cover EVERY
+  // source a display derives from (false for single-wallet users anyway).
+  const positionFetching = savings.positionLoading || savings.companionPositionLoading;
   const fetchError = savings.vaultError
     ? ((savings.vaultError as Error)?.message ?? 'Failed to fetch vault info')
     : null;

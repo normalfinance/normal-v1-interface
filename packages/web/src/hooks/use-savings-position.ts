@@ -21,7 +21,14 @@ export const POSITION_SYNC_EVENT = 'nf:savings-position-updated';
 
 // --- position cache (localStorage, keyed by address) ---
 const POSITION_CACHE_KEY = 'nf_savings_position_cache_v2';
-const POSITION_TTL_MS = 10 * 60 * 1000;
+// 24h stale-while-revalidate (was 10 min): a cold tab paints the last-known
+// position instantly — the same treatment every other asset already gets via
+// the portfolio's localStorage cache — and the fetch then confirms in the
+// background. Savings correctness never rested on this TTL: the reconciler's
+// no-clobber logic and the #52 epoch guard protect every WRITE regardless of
+// the cached value's age. (Observed live 2026-08-17: a cold tab showed a
+// confident $0.00 for the 15-25s a cold Soroban position read takes.)
+const POSITION_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface CacheEntry {
   position: SavingsPosition;
@@ -165,6 +172,11 @@ export interface UseSavingsPositionResult {
    */
   companionPosition: SavingsPosition | null;
   companionValue: number;
+  /** True while the companion's position (or its address lookup) is still
+   *  resolving — display gates MUST include this, or a hybrid account shows
+   *  a confident $0 while the slow half is loading (the register's oldest
+   *  root cause: a loading flag covering only SOME of the data sources). */
+  companionPositionLoading: boolean;
   refreshCompanionPosition: () => void;
   vaultLoading: boolean;
   positionLoading: boolean;
@@ -243,6 +255,12 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     const v = parseFloat(companionPos.data?.currentValue || '0');
     return v > 0 ? v : 0;
   }, [companionPos.data]);
+  // Loading spans BOTH phases: the address lookup and the position read.
+  const companionPositionLoading =
+    enabled &&
+    isExternalSlot &&
+    (companionAddr.isLoading ||
+      (!!companionAddress && companionPos.isLoading && !companionPos.data));
 
   // Cross-instance / legacy sync: when an optimistic write hits the cache,
   // re-seed SWR from it so every consumer updates at once.
@@ -288,6 +306,7 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     earnings,
     companionPosition: companionPos.data ?? null,
     companionValue,
+    companionPositionLoading,
     refreshCompanionPosition: () => {
       companionPos.mutate();
     },

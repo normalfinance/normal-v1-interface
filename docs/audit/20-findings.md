@@ -1337,3 +1337,21 @@ direction: savings can run from ANY wallet → the card gets WALLET TABS.
 212 tests, build clean. LIVE-TEST NOTE for the matrix: deposit/withdraw
 on the Normal-wallet tab while Lobstr is connected = passkey signatures;
 switch to the Lobstr tab = today's kit-signed flow.
+
+**#32 cold-load savings fix (Niko, 2026-08-17):** fresh tab showed
+Savings $0.00 until a reload, and savings painted last. Root cause = the
+register's OLDEST root cause, 5th occurrence: the savings figure derives
+from slot + companion, but every skeleton gate watched only the SLOT
+position (empty Lobstr — resolves instantly) while the COMPANION read —
+a cold Soroban call, 15-25s — had NO loading flag anywhere. Skeleton
+dropped early → confident $0.00. Fixes: (1) `companionPositionLoading`
+exposed from the shared hook (covers the address lookup AND the
+position read) and included in EVERY savings loading gate — engine
+positionFetching, portfolio composer status, drawer, portfolio page
+firstPaint, home hero firstPaint; (2) the position localStorage cache
+TTL raised 10min → 24h — stale-while-revalidate, the same treatment
+every other asset gets from the portfolio cache; write-correctness
+never rested on this TTL (reconciler no-clobber + #52 epoch guard
+protect writes regardless of cache age). Result: cold tab paints the
+last-known savings instantly and revalidates; a true first visit holds
+the skeleton until BOTH positions answer. 212 tests, build clean.

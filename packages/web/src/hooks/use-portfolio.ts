@@ -80,11 +80,12 @@ export function usePortfolio(enabled = true): UsePortfolioResult {
   const savingsPosition = useMemo<Position | null>(() => {
     if (!enabled) return null;
     const v = savingsDisplayValue;
-    const status: PositionStatus = savings.positionLoading
-      ? 'loading'
-      : savings.positionError
-        ? 'error'
-        : 'ok';
+    const status: PositionStatus =
+      savings.positionLoading || savings.companionPositionLoading
+        ? 'loading'
+        : savings.positionError
+          ? 'error'
+          : 'ok';
     return {
       id: 'savings:usdc',
       kind: 'savings',
@@ -97,7 +98,13 @@ export function usePortfolio(enabled = true): UsePortfolioResult {
       decimals: 4,
       status,
     };
-  }, [enabled, savingsDisplayValue, savings.positionLoading, savings.positionError]);
+  }, [
+    enabled,
+    savingsDisplayValue,
+    savings.positionLoading,
+    savings.companionPositionLoading,
+    savings.positionError,
+  ]);
 
   // #32: the companion Normal wallet's Stellar assets (present only when the
   // CONNECTED wallet is external). The portfolio page is the ACCOUNT-WIDE

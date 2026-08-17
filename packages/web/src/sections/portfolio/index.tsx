@@ -101,14 +101,18 @@ export default function PortfolioView() {
 
   const savingsValue = savingsUsd;
   const earnings = savings.earnings;
-  const savingsLoading = savings.vaultLoading || savings.positionLoading;
+  // Companion loading included: savings load like any other asset — the
+  // skeleton holds until EVERY source has answered.
+  const savingsLoading =
+    savings.vaultLoading || savings.positionLoading || savings.companionPositionLoading;
 
   // True once balances AND savings have both resolved at least once. Used to
   // gate first-paint skeletons without letting later refetches re-trigger them.
   const [firstPaintDone, setFirstPaintDone] = useState(false);
   useEffect(() => {
-    if (!balancesLoading && !savings.positionLoading) setFirstPaintDone(true);
-  }, [balancesLoading, savings.positionLoading]);
+    if (!balancesLoading && !savings.positionLoading && !savings.companionPositionLoading)
+      setFirstPaintDone(true);
+  }, [balancesLoading, savings.positionLoading, savings.companionPositionLoading]);
 
   // ONE source for every chain, including XLM/USDC.
   //
