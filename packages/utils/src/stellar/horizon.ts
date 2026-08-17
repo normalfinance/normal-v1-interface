@@ -34,6 +34,32 @@ export async function fetchAccount(
 }
 
 /**
+ * Like `fetchAccount`, but a FAILED lookup is distinguishable from "account
+ * does not exist": returns the account, `null` on a genuine Horizon 404
+ * (unfunded address), and THROWS on anything else (network failure, timeout,
+ * 5xx). Use this wherever the caller shows or caches a "not activated" /
+ * "missing" state — the lenient variant maps every failure to `undefined`,
+ * which readers then present as a confident empty answer.
+ */
+export async function fetchAccountStrict(
+  publicKey: string,
+  config: NetworkConfig = constants.StellarConfig
+): Promise<Horizon.ServerApi.AccountRecord | null> {
+  if (!StrKey.isValidEd25519PublicKey(publicKey)) {
+    throw new Error('invalid public key');
+  }
+  const horizonServer = new Horizon.Server(config.HORIZON_URL, {
+    allowHttp: config.HORIZON_URL.startsWith('http://'),
+  });
+  try {
+    return await horizonServer.accounts().accountId(publicKey).call();
+  } catch (err: any) {
+    if (err?.response?.status === 404) return null;
+    throw err;
+  }
+}
+
+/**
  * Fetches and returns details about a transaciton on the Stellar network.
  * @async
  * @function fetchTransaction

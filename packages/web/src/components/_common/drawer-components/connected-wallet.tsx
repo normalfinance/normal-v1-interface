@@ -40,6 +40,10 @@ export interface WalletSection {
   address: string;
   /** Pre-filtered tokens belonging to THIS wallet. */
   tokens: Token[];
+  /** #74: per-wallet readiness notice (missing trustline / not activated),
+   *  rendered under THIS wallet's tab only — the fix action must belong to
+   *  the wallet it is shown for. */
+  notice?: ReactNode;
 }
 
 export interface ConnectedWalletProps {
@@ -53,6 +57,8 @@ export interface ConnectedWalletProps {
   /** #32 chunk 2: dual-wallet display — when present, the assets tab renders
    *  one labeled group per wallet (doc 72 §4f) instead of the flat list. */
   sections?: WalletSection[];
+  /** #74: readiness notice for single-wallet mode (no sections). */
+  walletNotice?: ReactNode;
   activity?: Activity[];
   bitcoinAddress?: string | null;
 }
@@ -65,6 +71,7 @@ export default function ConnectedWallet({
   tokensFetching = false,
   tokens,
   sections,
+  walletNotice,
   activity,
 }: ConnectedWalletProps) {
   const { t } = useTranslate();
@@ -337,6 +344,7 @@ export default function ConnectedWallet({
                   >
                     {`${active.address.slice(0, 6)}…${active.address.slice(-6)}`}
                   </Typography>
+                  {active.notice && <Box sx={{ pb: '8px' }}>{active.notice}</Box>}
                   {active.tokens.length > 0 ? (
                     <TokensTab loading={tokensFetching} tokens={active.tokens} />
                   ) : (
@@ -349,12 +357,15 @@ export default function ConnectedWallet({
             })()}
           </Box>
         ) : (
-          <TokensTab
-            loading={tokensFetching}
-            tokens={tokens?.filter(
-              (tkn) => BigNumber(tkn.balance).gt(0) || tkn.contract === '__btc__'
-            )}
-          />
+          <Box>
+            {walletNotice && <Box sx={{ pb: '8px' }}>{walletNotice}</Box>}
+            <TokensTab
+              loading={tokensFetching}
+              tokens={tokens?.filter(
+                (tkn) => BigNumber(tkn.balance).gt(0) || tkn.contract === '__btc__'
+              )}
+            />
+          </Box>
         ))}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
     </Stack>

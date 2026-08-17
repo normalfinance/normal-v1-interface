@@ -1406,3 +1406,45 @@ reserve (companion's OWN savings position decides the buffer) all
 follow the selection via one `activeFromBalance`. Amends doc-72 §4g:
 "Soroswap = active wallet" → "Soroswap = picked wallet (pills)".
 223 tests, build clean.
+
+**#74 trustline notices (Niko GO, 2026-08-17):** "tell the user about a
+wallet without a trustline in different places, with an option to set
+it up." Root exposure: incoming USDC to a trustline-less wallet BOUNCES
+on-chain (op_no_trust) — and the receive modal, the one surface that
+hands out the address, was trustline-blind. Foundation first:
+`fetchAccount` (utils) swallowed EVERY error into undefined, making a
+network failure indistinguishable from "account doesn't exist" — the
+same failure→empty defect class as the cold-load savings bug, one layer
+deeper. Added `fetchAccountStrict` (404 → null, anything else THROWS);
+`useAccountStatus` now uses it, so its `error` field is trustworthy.
+On top: ONE pure mapper `deriveWalletReadiness` →
+checking/unknown/not-activated/no-trustline/ready (5 tests; checking
+and unknown outrank the booleans because the hook resets them to false
+while loading/failed), and ONE self-contained `WalletReadinessNotice`
+(renders NOTHING on checking/unknown/ready; fix follows the wallet's
+signer — slot wallet adds its own trustline inline via kit/normal,
+companion routes to the passkey setup dialog; kind is explicit, never
+crossed). Surfaces: swap page (slot + companion notices above the
+grid), receive modal (USDC-bounce warning next to the QR, activation
+suppressed — modal has its own), drawer (per-TAB badge so the fix
+always belongs to the wallet shown + single-wallet variant),
+post-connect toast (once EVER per address, localStorage; probe failure
+→ silent AND not marked seen). Verified-covered, no change: settings
+(AddUsdcTrustlineButton self-hides), onramp (delivery target = probed
+target = fix signer), send flow, both swap engines. 228 tests.
+
+**#74 follow-up — guided external-wallet setup dialog (Niko,
+2026-08-17):** the not-activated notice shipped as guidance TEXT with
+no action — breaking the feature's own rule that a notice carries its
+fix. New `ExternalWalletSetupDialog`: step 1 = QR + copyable address
+("send ≥2 XLM — 1 activates, ~0.5 is the trustline reserve") with a 4s
+Horizon poll that advances AUTOMATICALLY when the payment lands (no
+"I did it" button; derived-from-chain-state = resumable, same principle
+as the Normal-wallet setup dialog); step 2 = kit-signed USDC trustline;
+done state. Steps are a pure VIEW over deriveWalletReadiness — a
+transient probe failure ('unknown') keeps the QR up and keeps polling,
+never claims progress. Mounted INSIDE WalletReadinessNotice (slot
+kind), so drawer badge + swap-page notice get the flow for free;
+closing re-probes so the badge updates instantly. Slot no-trustline
+keeps the one-click inline add (a popup would add a step to a
+single-signature fix). Toast copy now points to the drawer. 228 tests.

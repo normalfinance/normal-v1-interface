@@ -26,6 +26,7 @@ import {
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import WalletReadinessNotice from '@/components/_common/wallet-readiness-notice';
 
 export type ReceiveModalContext = 'deposit' | 'receive';
 
@@ -466,6 +467,20 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         {!isCheckingAccount && accountExists && (
           <Stack spacing={1.5} alignItems="center">
             {QrBox}
+
+            {/* #74: warn BEFORE the address is shared — USDC sent to a wallet
+                without the trustline bounces back to the sender on-chain. The
+                notice self-hides when ready; activation is this modal's own
+                UI above, hence hideActivation. Copying stays allowed (the
+                user may add the trustline in their wallet app instead). */}
+            <Box sx={{ width: '100%' }}>
+              <WalletReadinessNotice
+                address={walletAddress}
+                walletLabel={t('This wallet')}
+                kind="slot"
+                hideActivation
+              />
+            </Box>
 
             {/* Stellar-only warning */}
             <Box

@@ -48,8 +48,12 @@ import { Scrollbar } from '@/components/template/scrollbar';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import WalletSelectionModal from '@/components/_common/wallet-selection-modal';
+import NormalWalletSetupDialog from '@/components/_common/normal-wallet-setup-dialog';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import OnboardingWizard, { type WizardStep } from '@/components/_common/onboarding-wizard';
+import WalletReadinessNotice, {
+  PostConnectReadinessToast,
+} from '@/components/_common/wallet-readiness-notice';
 
 import { AccountButton } from './account-button';
 
@@ -156,6 +160,10 @@ function WalletConnected({
         .filter((tkn) => BigNumber(tkn.balance).gt(0)),
     [companion]
   );
+  // #74: per-wallet readiness badges — each tab carries ITS wallet's notice,
+  // and the fix routes to that wallet's signer (companion → setup dialog,
+  // connected wallet → its own inline changeTrust).
+  const [setupOpen, setSetupOpen] = useState(false);
   const walletSections = useMemo(() => {
     if (!isExternalConnected || !companion) return null;
     const chainTokens = [btcToken, ethToken, solToken].filter(
@@ -165,11 +173,30 @@ function WalletConnected({
     if (normalTokens.length === 0) return null; // nothing to show for the companion yet
     const externalTokens = tokens.filter((tkn) => BigNumber(tkn.balance).gt(0));
     return [
-      { label: 'Normal wallet', address: companion.address, tokens: normalTokens },
+      {
+        label: 'Normal wallet',
+        address: companion.address,
+        tokens: normalTokens,
+        notice: (
+          <WalletReadinessNotice
+            address={companion.address}
+            walletLabel="Normal wallet"
+            kind="companion"
+            onOpenSetup={() => setSetupOpen(true)}
+          />
+        ),
+      },
       {
         label: connectedWalletLabel(persistWallet.walletType),
         address,
         tokens: externalTokens,
+        notice: (
+          <WalletReadinessNotice
+            address={address}
+            walletLabel={connectedWalletLabel(persistWallet.walletType)}
+            kind="slot"
+          />
+        ),
       },
     ];
   }, [
@@ -233,8 +260,24 @@ function WalletConnected({
         percentageChange={0}
         tokens={allTokens}
         sections={walletSections ?? undefined}
+        walletNotice={
+          // #74 single-wallet mode: the slot wallet's own badge. A wallet with
+          // no Stellar address renders nothing (notice self-hides).
+          address ? (
+            <WalletReadinessNotice
+              address={address}
+              walletLabel={connectedWalletLabel(persistWallet.walletType)}
+              kind="slot"
+            />
+          ) : undefined
+        }
         activity={recentActivity}
         bitcoinAddress={bitcoinAddress}
+      />
+      <NormalWalletSetupDialog
+        open={setupOpen}
+        onClose={() => setSetupOpen(false)}
+        neededUsdc={0}
       />
     </Box>
   );
@@ -524,6 +567,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   return (
     <>
+      {/* #74 P5: one-time "this wallet can't hold USDC" toast right after an
+          external wallet is first seen. Renders nothing itself. */}
+      {session && <PostConnectReadinessToast />}
       {session ? (
         <AccountButton
           data-testid="account-button"
