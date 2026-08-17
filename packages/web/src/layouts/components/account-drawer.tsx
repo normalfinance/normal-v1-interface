@@ -47,6 +47,7 @@ import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
+import TokenStoreRefresher from '@/components/_common/token-store-refresher';
 import WalletSelectionModal from '@/components/_common/wallet-selection-modal';
 import NormalWalletSetupDialog from '@/components/_common/normal-wallet-setup-dialog';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
@@ -68,11 +69,7 @@ function WalletConnected({
 }) {
   const { setGlobalIsLoading } = useAppStore();
 
-  const {
-    tokenState: { tokens },
-    wallet: persistWallet,
-    getAllTokens,
-  } = usePersistStore();
+  const { wallet: persistWallet, getAllTokens } = usePersistStore();
   const network = useNetworkStore((s) => s.network);
   const [tokensFetching, setTokensFetching] = useState(true);
 
@@ -132,16 +129,29 @@ function WalletConnected({
     return a ? portfolioAssetToToken(a) : null;
   }, [getAsset]);
 
+  // #75: the slot wallet's Stellar rows come from the AGGREGATE — the same
+  // source as every other display surface, refreshed on activity events. The
+  // legacy store only refreshed on drawer mount, so a drawer left open showed
+  // pre-transaction balances (and a freshly activated external wallet as
+  // empty).
+  const slotStellarTokens = useMemo(
+    () =>
+      walletBalances.assets
+        .filter((a) => a.chain === 'stellar' && a.balance != null && BigNumber(a.balance).gt(0))
+        .map(portfolioAssetToToken),
+    [walletBalances.assets]
+  );
+
   const allTokens = useMemo(
     () =>
-      [...tokens, btcToken, ethToken, solToken]
+      [...slotStellarTokens, btcToken, ethToken, solToken]
         .filter((tkn): tkn is NonNullable<typeof tkn> => !!tkn)
         // Only assets the user actually holds. The portfolio aggregator always
         // emits a BTC/ETH/SOL/XLM/USDC entry (0 when there's no address/balance),
         // so without this a Stellar-only user sees a phantom "BTC $0". Mirrors the
         // balance>0 filtering the holdings/hero views already use.
         .filter((tkn) => BigNumber(tkn.balance).gt(0)),
-    [tokens, btcToken, ethToken, solToken]
+    [slotStellarTokens, btcToken, ethToken, solToken]
   );
 
   // #32 chunk 2 — dual-wallet display. When the CONNECTED wallet is external
@@ -171,7 +181,7 @@ function WalletConnected({
     );
     const normalTokens = [...companionTokens, ...chainTokens];
     if (normalTokens.length === 0) return null; // nothing to show for the companion yet
-    const externalTokens = tokens.filter((tkn) => BigNumber(tkn.balance).gt(0));
+    const externalTokens = slotStellarTokens;
     return [
       {
         label: 'Normal wallet',
@@ -206,7 +216,7 @@ function WalletConnected({
     btcToken,
     ethToken,
     solToken,
-    tokens,
+    slotStellarTokens,
     address,
     persistWallet.walletType,
   ]);
@@ -306,6 +316,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   /*  drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
+  // #75: address list collapsed by default (5 rows pushed content down).
+  const [addressesOpen, setAddressesOpen] = useState(false);
 
   const {
     value: isDisconnecting,
@@ -570,6 +582,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
       {/* #74 P5: one-time "this wallet can't hold USDC" toast right after an
           external wallet is first seen. Renders nothing itself. */}
       {session && <PostConnectReadinessToast />}
+      {/* #75: keeps the legacy token store in step with the activity events
+          every flow already announces (transitional — see doc 75 Phase 2). */}
+      {session && <TokenStoreRefresher />}
       {session ? (
         <AccountButton
           data-testid="account-button"
@@ -782,40 +797,86 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     Note the Stellar row prefers the *connected* address, which
                     is why an imported wallet currently hides the Turnkey one
                     (finding #40 — the list should eventually show both). */}
+                {/* #75: collapsed by default — five address rows pushed the
+                    balance card below the fold (Niko). One summary line with
+                    the count; expanding shows the same rows as before. */}
                 {chainRows.length > 0 && (
-                  <Box sx={{ mt: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {chainRows.map(({ id, name, color, addr }) => (
-                      <Stack key={id} direction="row" alignItems="center" gap="8px">
-                        <Box
-                          sx={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: '50%',
-                            bgcolor: color,
-                            flexShrink: 0,
-                          }}
-                        />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>
-                          {name}
-                        </Box>
-                        <Box
-                          sx={{
-                            fontFamily: '"Geist Mono", ui-monospace, monospace',
-                            fontSize: '11.5px',
-                            color: '#2A2A33',
-                            letterSpacing: '-0.01em',
-                            flex: 1,
-                            minWidth: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {`${addr.slice(0, 8)}...${addr.slice(-6)}`}
-                        </Box>
-                        <CopyIconButton value={addr} alert={`${name} address copied`} />
-                      </Stack>
-                    ))}
+                  <Box sx={{ mt: '10px' }}>
+                    <Box
+                      component="button"
+                      onClick={() => setAddressesOpen((p) => !p)}
+                      sx={{
+                        appearance: 'none',
+                        border: 'none',
+                        bgcolor: 'transparent',
+                        p: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        color: '#6B6B76',
+                        fontSize: '11.5px',
+                        '&:hover': { color: '#2A2A33' },
+                      }}
+                    >
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-flex',
+                          transition: 'transform 150ms ease',
+                          transform: addressesOpen ? 'rotate(90deg)' : 'none',
+                        }}
+                      >
+                        ▸
+                      </Box>
+                      {t('Addresses')} · {chainRows.length}
+                    </Box>
+                    {addressesOpen && (
+                      <Box
+                        sx={{
+                          mt: '6px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                        }}
+                      >
+                        {chainRows.map(({ id, name, color, addr }) => (
+                          <Stack key={id} direction="row" alignItems="center" gap="8px">
+                            <Box
+                              sx={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                bgcolor: color,
+                                flexShrink: 0,
+                              }}
+                            />
+                            <Box
+                              sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}
+                            >
+                              {name}
+                            </Box>
+                            <Box
+                              sx={{
+                                fontFamily: '"Geist Mono", ui-monospace, monospace',
+                                fontSize: '11.5px',
+                                color: '#2A2A33',
+                                letterSpacing: '-0.01em',
+                                flex: 1,
+                                minWidth: 0,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {`${addr.slice(0, 8)}...${addr.slice(-6)}`}
+                            </Box>
+                            <CopyIconButton value={addr} alert={`${name} address copied`} />
+                          </Stack>
+                        ))}
+                      </Box>
+                    )}
                   </Box>
                 )}
               </Box>

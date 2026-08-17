@@ -10,6 +10,7 @@ import { useStellarConfig } from '@/hooks';
 import { announceTransaction } from '@/lib/tx-events';
 import { detectMemoType } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
+import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { spendableXlm, stellarMinReserve } from '@/utils/stellar-reserve';
 import { planStellarSend, MIN_ACTIVATION_XLM } from '@/lib/stellar/send-plan';
 import { Memo, Asset, Horizon, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
@@ -27,6 +28,16 @@ export type TransferArgs = {
   token: Token;
   amount: string;
   memo?: string;
+  /**
+   * #74c: send FROM this wallet instead of the connected slot wallet (the
+   * hybrid case: external wallet connected, asset lives in the companion
+   * Normal wallet). Same contract as the savings/swap overrides — EXPLICIT,
+   * never a silent fallback; the universal signer routes by the tx's source
+   * account (Turnkey-managed source → passkey prompt). Reserve math,
+   * subentries and the #4e destination gates all follow this account
+   * automatically because the send loads ITS account.
+   */
+  sourceAddress?: string;
 };
 
 interface ReturnType {
@@ -68,12 +79,16 @@ export function useSendToken(): ReturnType {
 
       const walletType = wallet.walletType;
       const isNormalWallet = walletType === 'normal-wallet';
-      if (isNormalWallet && !normalCanSign) {
-        throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
-      }
-      const walletAddress = isNormalWallet
+      const connectedAddress = isNormalWallet
         ? normalPublicKey || wallet.address
         : stellarPublicKey || wallet.address;
+      const overrideActive = !!args.sourceAddress && args.sourceAddress !== connectedAddress;
+      // Under an override the source signs via the universal signer below —
+      // the slot wallet's local-key state is irrelevant to this send.
+      if (!overrideActive && isNormalWallet && !normalCanSign) {
+        throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
+      }
+      const walletAddress = overrideActive ? args.sourceAddress! : connectedAddress;
       const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
       const horizonServer = new Horizon.Server(config.HORIZON_URL, {
@@ -207,9 +222,18 @@ export function useSendToken(): ReturnType {
 
       const unsignedXDR = builtTx.toXDR();
 
-      const signedXDR = isNormalWallet
-        ? await signTransaction(unsignedXDR, config.NETWORK_PASSPHRASE)
-        : await signTransaction(unsignedXDR);
+      // Override → universal signer routes by the tx's SOURCE account.
+      // Lazy import: kit-signer pulls the wallets-kit ESM graph, which jsdom
+      // suites can't parse — same pattern as use-swap.
+      const signedXDR = overrideActive
+        ? normalizeSignedXDR(
+            await (
+              await import('@/lib/mgi/kit-signer')
+            ).signStellarTxForMgi(unsignedXDR, config.NETWORK_PASSPHRASE, walletAddress)
+          )
+        : isNormalWallet
+          ? await signTransaction(unsignedXDR, config.NETWORK_PASSPHRASE)
+          : await signTransaction(unsignedXDR);
 
       if (!signedXDR) {
         throw new Error('Transaction signing failed — no signed XDR returned');

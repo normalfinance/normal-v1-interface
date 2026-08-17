@@ -2,6 +2,7 @@
 
 import type { AssetActionKey } from '@/hooks/use-asset-actions';
 
+import { useState } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
@@ -45,6 +46,9 @@ const ACTIONS: { key: AssetActionKey; label: string; icon: string }[] = [
 // ----------------------------------------------------------------------
 interface HoldingsCardProps {
   holdingsData: HoldingData[];
+  /** #75: hybrid accounts get one TAB per wallet (Niko's preference —
+   *  same pattern as the drawer). Absent = single flat table. */
+  sections?: { label: string; data: HoldingData[] }[];
   totalBalance: number;
   /** Show skeleton rows while balances load with nothing cached yet. */
   loading?: boolean;
@@ -67,10 +71,16 @@ function HoldingsSkeleton() {
   );
 }
 
-export function HoldingsCard({ holdingsData, totalBalance, loading }: HoldingsCardProps) {
+export function HoldingsCard({ holdingsData, sections, totalBalance, loading }: HoldingsCardProps) {
   const { t } = useTranslate();
   const router = useRouter();
   const { startAction } = useAssetActionsContext();
+  const [walletTab, setWalletTab] = useState(0);
+  // The active tab's rows; flat list when there are no sections.
+  const tabbed = !!sections && sections.length > 0;
+  const rows = tabbed
+    ? (sections[Math.min(walletTab, sections.length - 1)]?.data ?? [])
+    : holdingsData;
 
   return (
     <Box sx={{ ...CARD_SX, minWidth: 0 }}>
@@ -133,7 +143,42 @@ export function HoldingsCard({ holdingsData, totalBalance, loading }: HoldingsCa
         </Box>
       </Box>
 
-      {holdingsData.length === 0 ? (
+      {/* #75: wallet tabs — same pills as the drawer sections. */}
+      {tabbed && (
+        <Box sx={{ display: 'flex', gap: '6px', mb: '12px', flexWrap: 'wrap' }}>
+          {sections!.map((s, idx) => {
+            const selected = Math.min(walletTab, sections!.length - 1) === idx;
+            return (
+              <Box
+                key={s.label}
+                component="button"
+                onClick={() => setWalletTab(idx)}
+                sx={{
+                  appearance: 'none',
+                  border: selected
+                    ? '1px solid rgba(10,10,15,0.9)'
+                    : '1px solid rgba(10,10,15,0.1)',
+                  borderRadius: '999px',
+                  px: '12px',
+                  py: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  bgcolor: selected ? '#0A0A0F' : 'transparent',
+                  color: selected ? '#fff' : '#6B6B76',
+                  transition: 'all .15s ease',
+                  '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.25)' },
+                }}
+              >
+                {t(s.label)}
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+
+      {rows.length === 0 ? (
         loading ? (
           <HoldingsSkeleton />
         ) : (
@@ -164,7 +209,7 @@ export function HoldingsCard({ holdingsData, totalBalance, loading }: HoldingsCa
             </Box>
 
             {/* Rows */}
-            {holdingsData.map((h, i) => {
+            {rows.map((h, i) => {
               const pct =
                 totalBalance > 0
                   ? BigNumber(h.value).dividedBy(totalBalance).multipliedBy(100).toFixed(1)

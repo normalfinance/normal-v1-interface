@@ -5,14 +5,20 @@
 // paused?", with the same live traffic light as the savings card (same
 // classifier, so the two can never disagree).
 //
-// Data comes from the token store (display-grade; the savings card's own
-// action gate uses a fresh Horizon read) and the shared deduped
-// savings-position SWR — zero additional network requests.
+// #75 round 2 (Niko): on a hybrid account this card showed ONE wallet — the
+// connected slot's XLM (0.50 for a fresh Lobstr) while savings actually runs
+// from either wallet via the savings-card tabs. It now shows a row PER
+// wallet, each with its own semaphore; the header chip is the BEST status
+// (money can always move via the healthy wallet). Balances come from the
+// portfolio aggregate — the one display source (doc 75 rule), refreshed on
+// every activity event.
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
 import { usePersistStore } from '@normalfinance/state';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { xlmFeeStatus, SAVINGS_XLM_BUFFER, xlmAvailableForFees } from '@/utils/stellar-reserve';
 
@@ -29,22 +35,48 @@ const STATUS_STYLE = {
   blocked: { dot: '#DC2626', label: 'Add XLM', color: '#7F1D1D', bg: 'rgba(220,38,38,0.1)' },
 } as const;
 
+const STATUS_RANK = { ok: 0, low: 1, blocked: 2 } as const;
+
 export function SavingsXlmFeesCard() {
   const { t } = useTranslate();
   const router = useRouter();
-  const { wallet, tokenState } = usePersistStore();
-  const { position } = useSavingsPosition();
+  const { wallet } = usePersistStore();
+  const { position, companionPosition } = useSavingsPosition();
+  const { assets, companionStellar } = useWalletBalances(true);
 
   if (!wallet.address) return null;
 
-  const xlmBalance = BigNumber(
-    tokenState.tokens.find((tok) => tok.symbol === 'XLM')?.balance ?? 0
+  const isExternalSlot = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+  const slotXlm = BigNumber(
+    assets.find((a) => a.chain === 'stellar' && a.symbol === 'XLM')?.balance ?? 0
   ).toNumber();
-  const status = xlmFeeStatus(xlmBalance);
-  const style = STATUS_STYLE[status];
-  const feeAvailable = xlmAvailableForFees(xlmBalance);
+  const companionXlm = companionStellar
+    ? BigNumber(companionStellar.assets.find((a) => a.symbol === 'XLM')?.balance ?? 0).toNumber()
+    : null;
+
+  // One row per wallet that can run savings transactions. Normal wallet
+  // first — same order as the savings-card tabs.
+  const rows = [
+    ...(isExternalSlot && companionXlm != null
+      ? [{ key: 'normal', label: t('Normal wallet'), xlm: companionXlm }]
+      : []),
+    {
+      key: 'slot',
+      label: isExternalSlot ? connectedWalletLabel(wallet.walletType) : null,
+      xlm: slotXlm,
+    },
+  ].map((r) => ({ ...r, status: xlmFeeStatus(r.xlm), feeAvailable: xlmAvailableForFees(r.xlm) }));
+
+  // Header chip = the WORST wallet's status (Niko: a red row under a green
+  // "Healthy" chip reads as a contradiction). The per-row dots say which
+  // wallet needs the XLM.
+  const worst = rows.reduce((a, b) => (STATUS_RANK[a.status] >= STATUS_RANK[b.status] ? a : b));
+  const style = STATUS_STYLE[worst.status];
   const hasActiveSavings =
-    BigNumber(position?.currentValue || 0).gt(0) || BigNumber(position?.shares || 0).gt(0);
+    BigNumber(position?.currentValue || 0).gt(0) ||
+    BigNumber(position?.shares || 0).gt(0) ||
+    BigNumber(companionPosition?.currentValue || 0).gt(0) ||
+    BigNumber(companionPosition?.shares || 0).gt(0);
 
   return (
     <Box
@@ -95,28 +127,52 @@ export function SavingsXlmFeesCard() {
         </Typography>
       )}
 
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{
-          mt: '14px',
-          px: '12px',
-          py: '10px',
-          borderRadius: '12px',
-          bgcolor: '#fff',
-          border: '1px solid rgba(10,10,15,0.06)',
-        }}
-      >
-        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-          {t('XLM available for fees')}
-        </Typography>
-        <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
-          {feeAvailable.toFixed(2)} XLM
-        </Typography>
+      <Stack spacing={0.75} sx={{ mt: '14px' }}>
+        {rows.map((r) => {
+          const rowStyle = STATUS_STYLE[r.status];
+          return (
+            <Stack
+              key={r.key}
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{
+                px: '12px',
+                py: '10px',
+                borderRadius: '12px',
+                bgcolor: '#fff',
+                border: '1px solid rgba(10,10,15,0.06)',
+              }}
+            >
+              <Stack direction="row" alignItems="center" gap="8px" sx={{ minWidth: 0 }}>
+                <Box
+                  sx={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    bgcolor: rowStyle.dot,
+                    flexShrink: 0,
+                  }}
+                />
+                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                  {r.label ?? t('Your wallet')}
+                </Typography>
+              </Stack>
+              {/* Total first, spendable-after-reserve second — showing only
+                  the fee number read as a WRONG balance (Niko: "it tells
+                  Lobstr has 0.5 XLM, but it actually has 2"). */}
+              <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+                {r.xlm.toFixed(2)} XLM
+                <Box component="span" sx={{ color: 'rgba(10,10,15,0.45)', fontWeight: 500 }}>
+                  {` · ${r.feeAvailable.toFixed(2)} ${t('for fees')}`}
+                </Box>
+              </Typography>
+            </Stack>
+          );
+        })}
       </Stack>
 
-      {status !== 'ok' && (
+      {worst.status !== 'ok' && (
         <Button
           onClick={() => router.push('/swap?from=USDC')}
           fullWidth

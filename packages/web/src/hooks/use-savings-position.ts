@@ -173,6 +173,9 @@ export interface UseSavingsPositionResult {
    */
   companionPosition: SavingsPosition | null;
   companionValue: number;
+  /** #75: the companion's earnings — display stats compose slot + companion,
+   *  same as value; a slot-only Earnings read shows $0.00 for hybrid. */
+  companionEarnings: number;
   /** True while the companion's position (or its address lookup) is still
    *  resolving — display gates MUST include this, or a hybrid account shows
    *  a confident $0 while the slow half is loading (the register's oldest
@@ -334,6 +337,7 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     earnings,
     companionPosition: companionPos.data ?? null,
     companionValue,
+    companionEarnings: parseFloat(companionPos.data?.earnings || '0'),
     companionPositionLoading,
     refreshCompanionPosition: () => {
       companionPos.mutate();

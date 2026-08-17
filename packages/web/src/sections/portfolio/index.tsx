@@ -100,7 +100,10 @@ export default function PortfolioView() {
   const walletChecking = !!user && !wallet.address && hasTurnkeyWallet === null;
 
   const savingsValue = savingsUsd;
-  const earnings = savings.earnings;
+  // #75: earnings compose slot + companion, exactly like the value does —
+  // with an external wallet in the slot, `savings.earnings` alone is the
+  // EMPTY wallet's earnings and showed a confident $0.00.
+  const earnings = savings.earnings + savings.companionEarnings;
   // Companion loading included: savings load like any other asset — the
   // skeleton holds until EVERY source has answered.
   const savingsLoading =
@@ -195,6 +198,21 @@ export default function PortfolioView() {
 
     return entries.sort((a, b) => b.value - a.value);
   }, [walletTokens, totalBalance, savingsValue]);
+
+  // #75 round 2A: hybrid → one Holdings TAB per wallet (Niko's preference,
+  // same pills as the drawer). Row identity by contract: slot Stellar tokens
+  // keep their real contracts; everything Turnkey-side is synthetic
+  // (`__btc__`, `__companion_*__`, `__savings__`) — so "starts with __" IS
+  // the Normal-wallet side. Savings (account product) rides the Normal tab.
+  const holdingsSections = useMemo(() => {
+    if (!walletBalances.companionStellar) return undefined;
+    const normal = holdingsData.filter((h) => h.token.contract.startsWith('__'));
+    const external = holdingsData.filter((h) => !h.token.contract.startsWith('__'));
+    return [
+      { label: 'Normal wallet', data: normal },
+      { label: connectedWalletLabel(wallet.walletType), data: external },
+    ];
+  }, [holdingsData, walletBalances.companionStellar, wallet.walletType]);
 
   // Nothing on this page reads the token store any more, but the swap card and
   // the account drawer still do — so we keep refreshing it here and simply
@@ -328,6 +346,7 @@ export default function PortfolioView() {
       >
         <HoldingsCard
           holdingsData={holdingsData}
+          sections={holdingsSections}
           totalBalance={totalBalance}
           // Savings is one of the holdings rows, so the card must wait for it
           // too — otherwise the coins paint and the savings row drops in a

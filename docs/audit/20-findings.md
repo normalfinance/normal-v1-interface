@@ -1448,3 +1448,125 @@ kind), so drawer badge + swap-page notice get the flow for free;
 closing re-probes so the badge updates instantly. Slot no-trustline
 keeps the one-click inline add (a popup would add a step to a
 single-signature fix). Toast copy now points to the drawer. 228 tests.
+
+**#74b — "send to your own wallet" chips (Niko GO "all linked
+wallets", 2026-08-17):** the Send dialog's destination was free-text
+only; moving money between your OWN wallets (external ↔ Normal) meant
+copy-pasting addresses. New quick-pick row under "To" for Stellar
+assets: one chip per OTHER wallet the account owns — companion Normal
+wallet + ALL linked external wallets (pure buildOwnWalletCandidates:
+sender excluded, deduped, name falls back to short address; 4 tests).
+Tapping a chip only FILLS the destination — every existing
+pre-signature gate (send-plan activation minimum, trustline block,
+memo rules) still runs unchanged. Chips are asset-aware via the #74
+readiness mapper with per-asset trustline probe (useAccountStatus
+assetCode/assetIssuer): XLM → an unactivated target stays selectable
+with the hint "sending XLM activates it" (that IS the funding path);
+any trustline asset → unready target disabled WITH the reason (that
+send could only bounce). Checking/failed probe = plain selectable chip
+(asserts nothing; downstream gates protect). BTC/ETH/SOL sends get no
+chips — your own wallet is the sender there. Linked-wallets fetch
+failure = no chips (missing shortcut, never a wrong claim). 232 tests.
+
+**Send-modal dead "Select an asset" under hybrid (Niko, 2026-08-17):**
+the open-time reset picks a token from the list AS OF the open instant;
+with an empty external wallet in the slot there are no Stellar tokens
+and the BTC/ETH/SOL hooks only START fetching on open → empty list →
+sendToken null — and the balance-sync effect explicitly refused to fill
+a null selection, so the modal stayed dead. Never seen before because a
+normal-wallet slot always has cached XLM/USDC instantly (pre-existing
+race, exposed by #32 hybrid). Fix: the sync effect now ADOPTS the
+selection when it arrives (same initialSymbol/best-value rules as the
+open-time reset). Root-cause family: "snapshot pretending to be a live
+view" — a one-shot read of an async list. 232 tests.
+
+**#74c — send FROM the Normal wallet (Niko, 2026-08-17, "why do you
+half ass everything"):** with an external wallet connected the Send
+picker showed only BTC/ETH/SOL — Stellar sends were slot-signed, the
+slot (Lobstr) held nothing, and the companion's XLM/USDC were simply
+absent. Deserved the callout: the coexistence rule this whole branch
+is built on is "everything in the drawer is actionable", and Send was
+the last surface violating it — I had scoped the override out of #74b
+and asked permission instead of finishing the pattern. Fix = the third
+application of the explicit-override pattern:
+`TransferArgs.sourceAddress` — the send is BUILT for the source
+account (reserve math, subentries and the #4e destination gates follow
+automatically because the hook loads THAT account) and signed via the
+universal signer (companion → passkey), normalCanSign skipped under
+override. Send modal: companion XLM/USDC join the sendable list as
+`__companion_*__` tokens named "· Normal wallet" (issuer set from
+config — portfolioAssetToToken is display-only and leaves it empty);
+ONE `effectiveSender` drives subentries probe, fresh MAX read, #67
+savings buffer (companion's OWN position) and the chip row's sender —
+so a companion send offers the connected wallet as a destination
+(builder gained slotWallet, deduped against its linked row; 1 new
+test). The override is injected in exactly one place (sendWithSource)
+so the adapter and every other caller stay untouched. Best-value
+preselect now lands on companion USDC for the reported account.
+233 tests.
+
+**#74c follow-up — self-send guard misfire (Niko, 2026-08-17):** the
+Normal→Lobstr send the chips exist for was blocked with "Cannot send to
+your own address". The guard predates the override and compared the
+destination against the CONNECTED wallet — under a companion send the
+connected wallet IS the legitimate destination. Now compares against
+`effectiveSenderAddress` (a true self-send — companion→companion or
+slot→slot — is still blocked). Also: the compact asset pill shows only
+the symbol, so a hybrid account couldn't see WHOSE XLM was selected —
+the Available line now carries "· Normal wallet" / "· Lobstr". Rule
+restated: every sender-relative check must read the EFFECTIVE sender,
+never wallet.address — grep for persist.wallet.address when adding
+override surfaces. 233 tests.
+
+**#75 Phase 1 — hybrid surface audit fixes (Niko's 5-issue report,
+2026-08-17, "stop half assing... real scalable solutions"):** after
+Lobstr's live activation, store-fed surfaces still showed it empty
+while aggregate-fed ones were right — the documented #7/#12 duplicate
+data path finally bit visibly. Full audit in doc 75 (every money
+surface × hybrid, verdict each). Fixes: (1) send modal's slot Stellar
+sendables now built from the AGGREGATE (same mapper as companion rows,
+labeled by owning wallet when hybrid; store no longer consulted);
+(2) Earnings stat composed slot + companion via new
+`companionEarnings` (was slot-only → confident $0.00 for hybrid);
+(3) `TokenStoreRefresher` in the layout refreshes the legacy store on
+every `nf:activity-updated` (debounced 1.5s) — a class-wide safety net
+for remaining store consumers (swap card) until Phase 2 retires the
+store; (4) drawer's slot rows + wallet sections read the aggregate;
+(5) drawer address list collapsed to "Addresses · N" accordion
+(5 rows pushed the balance card below the fold). Verified correct
+as-is: composer, home hero rows, /portfolio walletTokens/donut,
+savings card, activity. Phase 2 queued (doc 75): retire tokenState
+from swap card; asset detail pages per-wallet split. RULE: display
+surfaces read exactly ONE source (the aggregate); tokenState must not
+gain consumers. 233 tests, isolated build clean.
+
+**#75 round 2C — per-wallet XLM fee semaphore (Niko, 2026-08-17):**
+the savings page's "Network fees (XLM)" card showed ONE wallet — the
+slot's XLM (0.50 for fresh Lobstr) — while savings runs from either
+wallet via the tabs. Now: one row PER wallet (Normal first, same order
+as the tabs), each with its own semaphore dot + spendable-for-fees
+number; header chip = the BEST wallet's status (alarm only when EVERY
+wallet is short — savings can always run via the healthy one);
+hasActiveSavings buffer note covers slot OR companion position; and the
+card moved off tokenState onto the aggregate (doc 75 rule — it was a
+remaining store consumer). Items A (portfolio holdings wallet TABS)
+and B (savings chart flat under hybrid — slot-scoped history read,
+overlaps queued #53) are RECORDED in doc 75/backlog as next session's
+first tasks — deliberately not rushed at end of context. 233 tests,
+isolated build clean.
+
+**#75 round 2 complete — A+B+C all shipped (Niko: "why aren't you
+fixing things the most optimal way"; fair — I had deferred A+B and
+made the chip call without asking):** (A) Holdings TABS on /portfolio:
+HoldingsCard gained optional `sections` (drawer-style pills); page
+splits by row identity — synthetic `__*__` contracts = Normal-wallet
+side (chain assets, companion, savings), real contracts = the external
+wallet. (B) flat savings chart: hero stats compose slot+companion but
+the CHART+history read wallet.address (Lobstr = zero history) →
+savingsHistoryAddress now points at the wallet that HOLDS the savings
+(companion when it has the position). (C) fee card round 2: rows show
+TOTAL first, "· X for fees" second (fee-only number read as a wrong
+balance: 2.00 XLM showed as 0.50), and the header chip is now the
+WORST wallet's status per Niko (a red row under "Healthy" reads as a
+contradiction — my best-status call reversed). 233 tests, isolated
+build clean.

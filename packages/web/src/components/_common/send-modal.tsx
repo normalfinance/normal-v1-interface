@@ -12,11 +12,15 @@ import { fCurrency } from '@/utils/format-number';
 import { usePendingOutflow } from '@/lib/spendable';
 import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
-import { useSendToken } from '@/hooks/stellar/use-send-token';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
-import React, { useRef, useMemo, useState, useEffect } from 'react';
+import { buildOwnWalletCandidates } from '@/lib/stellar/own-wallets';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
+import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
+import { useSendToken, type TransferArgs } from '@/hooks/stellar/use-send-token';
+import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { SAVINGS_XLM_BUFFER, spendableXlmForOutflow } from '@/utils/stellar-reserve';
+import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import { knownMemoRequirement, fetchMemoRequirement } from '@/lib/stellar/memo-required';
 import { getMaxAmount, getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 
@@ -34,6 +38,7 @@ import {
 import PickToken from './pick-token';
 import SendReview from './send-review';
 import { Iconify } from '../template/iconify';
+import OwnWalletChips from './own-wallet-chips';
 import PasteIconButton from '../paste-icon-button';
 import { BtcTxStatusModal } from './btc-tx-status-modal';
 import { createSolanaAdapter } from './send-adapters/solana';
@@ -69,24 +74,85 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   // #67: an active savings position holds SAVINGS_XLM_BUFFER back from every
   // XLM outflow (MAX and typed). Shared deduped read, fetched only while the
   // dialog is open; localStorage fallback answers instantly on reopen.
-  const { position: savingsPosition } = useSavingsPosition(open);
+  const { position: savingsPosition, companionPosition } = useSavingsPosition(open);
   const hasActiveSavings =
     BigNumber(savingsPosition?.currentValue || 0).gt(0) ||
     BigNumber(savingsPosition?.shares || 0).gt(0);
   const savingsPositionKnown = savingsPosition != null;
+  const companionHasActiveSavings =
+    BigNumber(companionPosition?.currentValue || 0).gt(0) ||
+    BigNumber(companionPosition?.shares || 0).gt(0);
+  const companionSavingsKnown = companionPosition != null;
 
-  // Build the full sendable list: Stellar tokens + native chains with balance
+  // #74c: with an external wallet connected, the companion Normal wallet's
+  // XLM/USDC are SENDABLE — built for and signed by the companion (passkey)
+  // via the sourceAddress override, never the connected wallet. Marked with a
+  // __companion_*__ contract so the two wallets' same-symbol tokens stay
+  // distinct rows, and named so the picker says whose money it is.
+  const isExternalSlot =
+    persist.wallet.walletType != null && persist.wallet.walletType !== 'normal-wallet';
+  const { companionStellar, assets: aggregateAssets } = useWalletBalances(open);
+  const companionSendable = useMemo(() => {
+    if (!isExternalSlot || !companionStellar) return [] as Token[];
+    return companionStellar.assets
+      .filter((a) => (a.symbol === 'XLM' || a.symbol === 'USDC') && BigNumber(a.balance ?? 0).gt(0))
+      .map((a) => {
+        const tk = portfolioAssetToToken(a);
+        return {
+          ...tk,
+          contract: `__companion_${tk.symbol.toLowerCase()}__`,
+          name: `${tk.name} · Normal wallet`,
+          // portfolioAssetToToken is display-oriented and leaves issuer empty;
+          // a SEND builds the asset from it, so set the real issuer here.
+          issuer: tk.symbol === 'USDC' ? config.USDC_ISSUER : '',
+        } as Token;
+      });
+  }, [isExternalSlot, companionStellar, config.USDC_ISSUER]);
+
+  // Build the full sendable list: Stellar tokens + native chains with balance.
+  // #75: the SLOT wallet's Stellar assets come from the portfolio AGGREGATE —
+  // the same source as every display surface, refreshed on every activity
+  // event. The legacy token store only refreshes on certain mounts, so it
+  // still said "empty" after the just-sent activation XLM landed (observed
+  // live 2026-08-17: freshly activated Lobstr unselectable in Send).
   const sendableTokens = useMemo(() => {
-    const stellar = tokens.filter((tkn) => BigNumber(tkn.balance).gt(0));
+    const hybrid = isExternalSlot && !!companionStellar;
+    const stellar = aggregateAssets
+      .filter((a) => a.chain === 'stellar' && BigNumber(a.balance ?? 0).gt(0))
+      .map((a) => {
+        const tk = portfolioAssetToToken(a);
+        return {
+          ...tk,
+          issuer: tk.symbol === 'USDC' ? config.USDC_ISSUER : '',
+          name: hybrid
+            ? `${tk.name} · ${connectedWalletLabel(persist.wallet.walletType)}`
+            : tk.name,
+        } as Token;
+      });
     const natives = [btcToken, ethToken, solToken].filter(
       (tkn): tkn is Token => !!tkn && BigNumber(tkn.balance).gt(0)
     );
-    return [...stellar, ...natives];
-  }, [tokens, btcToken, ethToken, solToken]);
+    return [...stellar, ...companionSendable, ...natives];
+  }, [
+    aggregateAssets,
+    isExternalSlot,
+    companionStellar,
+    config.USDC_ISSUER,
+    persist.wallet.walletType,
+    companionSendable,
+    btcToken,
+    ethToken,
+    solToken,
+  ]);
 
   const xlmPrice = useMemo(
-    () => BigNumber(tokens.find((tok) => tok.symbol === 'XLM')?.price ?? 0).toNumber(),
-    [tokens]
+    () =>
+      BigNumber(
+        tokens.find((tok) => tok.symbol === 'XLM')?.price ??
+          aggregateAssets.find((a) => a.symbol === 'XLM')?.price ??
+          0
+      ).toNumber(),
+    [tokens, aggregateAssets]
   );
 
   const [sendToken, setSendToken] = useState<Token | null>(null);
@@ -115,6 +181,67 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   const isEth = sendToken?.contract === '__eth__';
   const isSol = sendToken?.contract === '__sol__';
   const isNative = isBtc || isEth || isSol;
+
+  // #74c: which wallet THIS send runs from — the companion when a
+  // __companion_*__ token is selected, the connected wallet otherwise. Every
+  // sender-side number (subentries, MAX, savings buffer) follows it.
+  const isCompanionToken = !!sendToken?.contract?.startsWith('__companion_');
+  const effectiveSenderAddress = isCompanionToken
+    ? (companionStellar?.address ?? null)
+    : (persist.wallet.address ?? null);
+  const effectiveHasActiveSavings = isCompanionToken ? companionHasActiveSavings : hasActiveSavings;
+  const effectiveSavingsKnown = isCompanionToken ? companionSavingsKnown : savingsPositionKnown;
+
+  // #74c: the one place the override is injected — a companion token routes
+  // the send through the companion (sourceAddress → passkey signs); anything
+  // else is exactly the send we've always had.
+  const sendWithSource = useCallback(
+    (args: TransferArgs) =>
+      stellarSend(
+        isCompanionToken && companionStellar
+          ? { ...args, sourceAddress: companionStellar.address }
+          : args
+      ),
+    [stellarSend, isCompanionToken, companionStellar]
+  );
+
+  // #74b: "send to your own wallet" quick-pick (Stellar assets only — for
+  // BTC/ETH/SOL your own wallet IS the sender). Companion address rides the
+  // portfolio's cached payload; linked wallets are fetched once per open.
+  // A failed fetch just means no chips — a missing shortcut, never a wrong
+  // claim.
+  const [linkedWallets, setLinkedWallets] = useState<LinkedWallet[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    getLinkedWallets()
+      .then(setLinkedWallets)
+      .catch(() => setLinkedWallets([]));
+  }, [open]);
+  const ownWalletCandidates = useMemo(
+    () =>
+      buildOwnWalletCandidates({
+        // The EFFECTIVE sender: a companion send offers the connected wallet
+        // as a destination, and vice versa — never the sender itself.
+        senderAddress: effectiveSenderAddress,
+        companionAddress: companionStellar?.address,
+        slotWallet:
+          isExternalSlot && persist.wallet.address
+            ? {
+                address: persist.wallet.address,
+                label: connectedWalletLabel(persist.wallet.walletType),
+              }
+            : null,
+        linkedWallets,
+      }),
+    [
+      effectiveSenderAddress,
+      companionStellar?.address,
+      isExternalSlot,
+      persist.wallet.address,
+      persist.wallet.walletType,
+      linkedWallets,
+    ]
+  );
 
   // Reset form each time the dialog opens — and ONLY then. sendableTokens is
   // read through a ref: with the P0-1 shared-cache hooks, the token list's
@@ -151,26 +278,43 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   // touching the typed amount or destination.
   useEffect(() => {
     setSendToken((prev) => {
-      if (!prev) return prev;
+      if (!prev) {
+        // The open-time reset saw an EMPTY list (observed live 2026-08-17:
+        // empty external wallet in the slot → no Stellar tokens, and the
+        // BTC/ETH/SOL hooks only START fetching when the modal opens) — so
+        // adopt the selection when the list arrives, same rules as on open.
+        if (!open || sendableTokens.length === 0) return prev;
+        const preselected = initialSymbol
+          ? sendableTokens.find((tkn) => tkn.symbol === initialSymbol)
+          : undefined;
+        const best = [...sendableTokens].sort(
+          (a, b) =>
+            BigNumber(b.balance)
+              .multipliedBy(b.price)
+              .comparedTo(BigNumber(a.balance).multipliedBy(a.price)) ?? 0
+        )[0];
+        return preselected ?? best ?? null;
+      }
       const updated = sendableTokens.find(
         (tkn) => tkn.symbol === prev.symbol && tkn.contract === prev.contract
       );
       return updated ?? prev;
     });
-  }, [sendableTokens]);
+  }, [sendableTokens, open, initialSymbol]);
 
-  // Fetch XLM subentry count for accurate reserve calculation
+  // Fetch XLM subentry count for accurate reserve calculation — from the
+  // EFFECTIVE sender (#74c: the companion's reserve when its XLM is selected).
   useEffect(() => {
-    if (!open || sendToken?.symbol !== 'XLM' || !persist.wallet.address) return;
+    if (!open || sendToken?.symbol !== 'XLM' || !effectiveSenderAddress) return;
     setXlmSubentries(null);
     const horizonServer = new Horizon.Server(config.HORIZON_URL, {
       allowHttp: config.HORIZON_URL.startsWith('http://'),
     });
     horizonServer
-      .loadAccount(persist.wallet.address)
+      .loadAccount(effectiveSenderAddress)
       .then((acc) => setXlmSubentries(acc.subentry_count))
       .catch(() => setXlmSubentries(null));
-  }, [open, sendToken?.symbol, persist.wallet.address, config.HORIZON_URL]);
+  }, [open, sendToken?.symbol, effectiveSenderAddress, config.HORIZON_URL]);
 
   // Fetch BTC fee rate when BTC is selected
   useEffect(() => {
@@ -199,7 +343,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       if (!solanaAddress) return null;
       return createSolanaAdapter(solanaAddress, onError);
     }
-    return createStellarAdapter(stellarSend, xlmPrice, hasActiveSavings);
+    return createStellarAdapter(sendWithSource, xlmPrice, effectiveHasActiveSavings);
   }, [
     sendToken,
     isBtc,
@@ -208,9 +352,9 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     bitcoinAddress,
     ethereumAddress,
     solanaAddress,
-    stellarSend,
+    sendWithSource,
     xlmPrice,
-    hasActiveSavings,
+    effectiveHasActiveSavings,
     enqueueSnackbar,
   ]);
 
@@ -313,23 +457,26 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       setAmount(spendableBalance.toFixed(8, BigNumber.ROUND_DOWN));
       return;
     }
-    if (sendToken.symbol === 'XLM' && persist.wallet.address) {
+    if (sendToken.symbol === 'XLM' && effectiveSenderAddress) {
       // Fresh on-chain read so MAX exactly matches what the send will accept —
       // the cached store balance/subentry count can lag, and the send execution
       // does its own fresh read. Same spendableXlm helper on both sides.
+      // #74c: reads the EFFECTIVE sender — the companion's balance, reserve
+      // and savings buffer when its XLM is selected.
       setMaxLoading(true);
       try {
         const server = new Horizon.Server(config.HORIZON_URL, {
           allowHttp: config.HORIZON_URL.startsWith('http://'),
         });
-        const acc = await server.loadAccount(persist.wallet.address);
+        const acc = await server.loadAccount(effectiveSenderAddress);
         setXlmSubentries(acc.subentry_count);
         const nativeBal = acc.balances.find((b) => b.asset_type === 'native')?.balance ?? '0';
         // #67: the buffer applies when the user HAS savings (confirmed) — or,
         // while the position is still loading, falls back to the conservative
         // trustline proxy so MAX never over-offers in the gap. Same helper as
         // the typed-amount validation, so the two can never disagree.
-        const holdBuffer = hasActiveSavings || (!savingsPositionKnown && acc.subentry_count > 0);
+        const holdBuffer =
+          effectiveHasActiveSavings || (!effectiveSavingsKnown && acc.subentry_count > 0);
         const max = spendableXlmForOutflow(nativeBal, acc.subentry_count, holdBuffer);
         setAmount(max.toFixed(7, BigNumber.ROUND_DOWN));
       } catch {
@@ -349,7 +496,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
   // position is still loading.
   const savingsBufferApplies =
     sendToken?.symbol === 'XLM' &&
-    (hasActiveSavings || (!savingsPositionKnown && (xlmSubentries ?? 0) > 0));
+    (effectiveHasActiveSavings || (!effectiveSavingsKnown && (xlmSubentries ?? 0) > 0));
 
   const toggleMode = () => {
     if (!sendToken || !amount) {
@@ -388,7 +535,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
 
   const handleReviewClick = () => {
     if (!sendToken || !isReviewReady) return;
-    if (adapter?.network === 'stellar' && destination === persist.wallet.address) {
+    // Self-send = destination equals the wallet the send RUNS FROM (#74c:
+    // the companion under an override). Comparing against the connected
+    // wallet blocked the legitimate Normal→Lobstr transfer the own-wallet
+    // chips exist for (observed live 2026-08-17).
+    if (adapter?.network === 'stellar' && destination === effectiveSenderAddress) {
       enqueueSnackbar(t('Cannot send to your own address'), { variant: 'error' });
       return;
     }
@@ -503,6 +654,16 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                               BigNumber.ROUND_DOWN
                             )} ${sendToken.symbol}`}
                       </Box>
+                      {/* #74c: name the wallet this balance belongs to — the
+                          compact pill shows only the symbol, and a hybrid
+                          account has two wallets holding the same asset. */}
+                      {isExternalSlot && !isNative && (
+                        <Box component="span" sx={{ color: 'rgba(10,10,15,0.4)' }}>
+                          {isCompanionToken
+                            ? ` · ${t('Normal wallet')}`
+                            : ` · ${connectedWalletLabel(persist.wallet.walletType)}`}
+                        </Box>
+                      )}
                     </Typography>
                   </Box>
                   <Box
@@ -725,6 +886,16 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               >
                 {t('To')}
               </Typography>
+              {!isNative && sendToken && (
+                <OwnWalletChips
+                  open={open}
+                  candidates={ownWalletCandidates}
+                  assetSymbol={sendToken.symbol}
+                  assetIssuer={sendToken.issuer || undefined}
+                  selectedAddress={destination}
+                  onSelect={setDestination}
+                />
+              )}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Box
                   component="input"
