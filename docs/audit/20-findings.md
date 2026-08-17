@@ -1355,3 +1355,31 @@ never rested on this TTL (reconciler no-clobber + #52 epoch guard
 protect writes regardless of cache age). Result: cold tab paints the
 last-known savings instantly and revalidates; a true first visit holds
 the skeleton until BOTH positions answer. 212 tests, build clean.
+
+**#32 cold-load savings — ACTUAL root cause (Niko, 2026-08-17, second
+round):** the loading-gate fix above was correct but downstream of the
+real failure. The companion address SWR fetcher used the BEST-EFFORT
+`getTurnkeyWalletInfo()`, which returns `null` on any failure. On a
+cold tab the first `/api/turnkey/wallet` call routinely dies (dev:
+route not yet compiled blows the 10s timeout; prod: slow session
+refresh) → the fetcher RESOLVED with null → SWR cached it as a real
+answer ("user has no companion wallet") for the 5-min dedupe window →
+no position fetch ever fired, the loading flag dropped, Savings showed
+a confident $0.00 with zero failed requests in the console. Classic
+error-swallowed-as-empty: a failed lookup impersonating a legitimate
+"no wallet". Fixes: (1) new `getTurnkeyWalletInfoStrict()` throws
+`TurnkeyWalletInfoUnavailableError` instead of degrading — the savings
+fetcher now uses it, so SWR RETRIES failures (errorRetryCount 5,
+revalidateOnFocus, 60s dedupe matching the module's own TTL);
+(2) the companion address is seeded from the portfolio's localStorage
+snapshot (`nf:portfolio:v1:*` already carries `companionStellar`) via a
+new shared `lib/portfolio/client-cache.ts` module — cold-tab savings
+now paint with ZERO network calls, exactly like every other asset;
+(3) loading semantics switched from `isLoading` to `data === undefined`
+— isLoading drops between error retries, which would flash a wrong $0
+during backoff; undefined = "no answer yet", null = a real "no
+companion". 7 contract tests pin the cache key format (a drift would
+silently orphan every browser's cache). 219 tests, build clean.
+Rule for the register: a best-effort helper that maps failure → null
+must NEVER feed a cache — callers cache the lie. Strict-vs-lenient is
+the callee's contract, not the caller's guess.

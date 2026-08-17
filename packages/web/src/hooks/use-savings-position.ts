@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { useMemo, useEffect } from 'react';
 import { reconcileSavingsPosition } from '@/lib/portfolio/normalize';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { readCachedCompanionStellarAddress } from '@/lib/portfolio/client-cache';
 import { savingsReadEpoch, assertReadStillFresh } from '@/lib/savings-read-guard';
 
 // ---------------------------------------------------------------------------
@@ -232,11 +233,35 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
   const companionAddr = useSWR<string | null>(
     enabled && isExternalSlot ? ['turnkey-stellar-address'] : null,
     async () => {
-      const { getTurnkeyWalletInfo } = await import('@/lib/turnkey/wallet-info');
-      const info = await getTurnkeyWalletInfo();
+      // STRICT lookup: a failed request must THROW so SWR keeps retrying.
+      // The best-effort variant returns null on failure, and SWR would cache
+      // that null as a real answer — "this user has no companion wallet" —
+      // and not ask again within the deduping window. That was the cold-tab
+      // bug: right after a dev-server restart (or a slow prod session
+      // refresh) the very first /api/turnkey/wallet call times out, the
+      // savings chain dies silently at this step, and the account shows a
+      // confident Savings $0.00 for the rest of the session.
+      const { getTurnkeyWalletInfoStrict } = await import('@/lib/turnkey/wallet-info');
+      const info = await getTurnkeyWalletInfoStrict();
       return info?.stellarAddress ?? null;
     },
-    { revalidateOnFocus: false, dedupingInterval: 300_000 }
+    {
+      // Seed from the portfolio's localStorage snapshot — the SAME cache that
+      // makes every other asset paint instantly on a cold tab. With it, the
+      // savings figure needs ZERO network calls for first paint: cached
+      // companion address → cached companion position (24h TTL below). The
+      // live lookup then confirms in the background. `?? undefined` matters:
+      // a null seed would assert "no companion wallet", which only the live
+      // lookup may do.
+      fallbackData: readCachedCompanionStellarAddress(address, network) ?? undefined,
+      revalidateOnFocus: true,
+      // Matches the wallet-info module's own 60s TTL — shorter would add no
+      // freshness (the module would answer from ITS cache), longer would
+      // delay recovery after a failed first attempt.
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      errorRetryCount: 5,
+    }
   );
   const companionAddress =
     companionAddr.data && companionAddr.data !== address ? companionAddr.data : null;
@@ -256,11 +281,14 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     return v > 0 ? v : 0;
   }, [companionPos.data]);
   // Loading spans BOTH phases: the address lookup and the position read.
+  // `data === undefined` — not `isLoading` — is the honest test: SWR's
+  // isLoading drops between error retries, which would let the skeleton fall
+  // to a wrong $0 during the backoff gap. `undefined` means "no answer yet"
+  // (keep the skeleton); `null` is a REAL answer ("no companion wallet").
   const companionPositionLoading =
     enabled &&
     isExternalSlot &&
-    (companionAddr.isLoading ||
-      (!!companionAddress && companionPos.isLoading && !companionPos.data));
+    (companionAddr.data === undefined || (!!companionAddress && companionPos.data === undefined));
 
   // Cross-instance / legacy sync: when an optimistic write hits the cache,
   // re-seed SWR from it so every consumer updates at once.

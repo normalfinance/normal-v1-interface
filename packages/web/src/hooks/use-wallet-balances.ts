@@ -6,6 +6,11 @@ import useSWR from 'swr';
 import { buildAuthHeaders } from '@/utils/http';
 import { useMemo, useEffect, useCallback } from 'react';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
+import {
+  portfolioCacheKey,
+  readCachedPortfolio,
+  writeCachedPortfolio,
+} from '@/lib/portfolio/client-cache';
 
 // ---------------------------------------------------------------------------
 // Fast wallet-balance source: one SWR instance (deduped across every view) over
@@ -17,27 +22,6 @@ import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 // NOTE: DISPLAY only. Action-time freshness (swap MAX, send max, off-ramp
 // pre-flight) must keep its own direct live read.
 // ---------------------------------------------------------------------------
-
-const LS_KEY = 'nf:portfolio:v1';
-
-function readCache(key: string): PortfolioPayload | undefined {
-  if (typeof window === 'undefined') return undefined;
-  try {
-    const raw = localStorage.getItem(`${LS_KEY}:${key}`);
-    return raw ? (JSON.parse(raw) as PortfolioPayload) : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function writeCache(key: string, payload: PortfolioPayload) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(`${LS_KEY}:${key}`, JSON.stringify(payload));
-  } catch {
-    /* quota / serialization — non-fatal */
-  }
-}
 
 export interface UseWalletBalancesResult {
   assets: PortfolioAsset[];
@@ -69,7 +53,7 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
   // Fetch for any signed-in user (enabled), even without a Stellar address — the
   // server aggregator reads the BTC/ETH/SOL addresses from the authed DB row, so
   // a chain-only wallet (e.g. BTC-first) still gets its balances.
-  const swrKey = enabled ? `${stellar || 'none'}:${network}` : null;
+  const swrKey = enabled ? portfolioCacheKey(stellar, network) : null;
 
   const fetchPayload = useCallback(
     async (cacheKey: string, fresh: boolean): Promise<PortfolioPayload> => {
@@ -89,7 +73,7 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
         // present when the connected wallet is external).
         companionStellar: json.companionStellar ?? null,
       };
-      writeCache(cacheKey, payload);
+      writeCachedPortfolio(cacheKey, payload);
       return payload;
     },
     [stellar, network]
@@ -99,7 +83,7 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
     swrKey,
     (key: string) => fetchPayload(key, false),
     {
-      fallbackData: swrKey ? readCache(swrKey) : undefined,
+      fallbackData: swrKey ? readCachedPortfolio(swrKey) : undefined,
       revalidateOnFocus: true,
       dedupingInterval: 10_000,
       refreshInterval: 30_000,
