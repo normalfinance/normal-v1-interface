@@ -11,6 +11,7 @@ import { announceTransaction } from '@/lib/tx-events';
 import { detectMemoType } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { spendableXlm, stellarMinReserve } from '@/utils/stellar-reserve';
+import { planStellarSend, MIN_ACTIVATION_XLM } from '@/lib/stellar/send-plan';
 import { Memo, Asset, Horizon, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { useSnackbar } from '@/components/template/snackbar';
@@ -100,13 +101,74 @@ export function useSendToken(): ReturnType {
         }
       }
 
+      // #32 4e — plan the send against the DESTINATION's real state BEFORE any
+      // signature: a brand-new account needs createAccount (≥1 XLM), and a
+      // non-XLM asset needs the destination's trustline. These used to fail
+      // ON-CHAIN (op_no_destination / op_no_trust) with the fee burned and a
+      // raw code as the error. Probe only classic G addresses — muxed/other
+      // formats keep today's behavior.
+      let destinationExists = true;
+      let destinationHasTrustline: boolean | null = null;
+      if (/^G[A-Z2-7]{55}$/.test(args.destination)) {
+        try {
+          const destAccount = await horizonServer.loadAccount(args.destination);
+          if (args.token.symbol !== 'XLM') {
+            destinationHasTrustline = !!destAccount.balances.find(
+              (b) =>
+                'asset_code' in b &&
+                b.asset_code === args.token.symbol &&
+                b.asset_issuer === args.token.issuer
+            );
+          }
+        } catch (probeErr: any) {
+          if (probeErr?.response?.status === 404 || probeErr?.name === 'NotFoundError') {
+            destinationExists = false;
+          }
+          // Any other Horizon failure: leave the defaults (exists, unknown
+          // trustline) — the chain stays the judge rather than a guess.
+        }
+      }
+
+      const plan = planStellarSend({
+        symbol: args.token.symbol,
+        amount: args.amount,
+        destinationExists,
+        destinationHasTrustline,
+      });
+      if (plan.kind === 'blocked') {
+        const sym = args.token.symbol;
+        const messages = {
+          'activation-minimum': t(
+            'This account isn’t active on Stellar yet — the first transfer must be at least {{min}} XLM to activate it.',
+            { min: MIN_ACTIVATION_XLM }
+          ),
+          'destination-not-active': t(
+            'This account isn’t active on Stellar yet. Send it at least {{min}} XLM first, add a {{sym}} trustline there, and then send {{sym}}.',
+            { min: MIN_ACTIVATION_XLM, sym }
+          ),
+          'destination-needs-trustline': t(
+            'That wallet can’t hold {{sym}} yet — it needs a {{sym}} trustline. Add the asset in that wallet’s app, then try again.',
+            { sym }
+          ),
+        } as const;
+        throw new Error(messages[plan.reason]);
+      }
+
       const tx = new TransactionBuilder(account, {
         fee: '2000',
         timebounds: { minTime: 0, maxTime: Math.floor(Date.now() / 1000) + 2 * 60 },
         networkPassphrase: config.NETWORK_PASSPHRASE,
       });
 
-      if (args.token.symbol === 'XLM') {
+      if (plan.kind === 'create-account') {
+        // First XLM to a brand-new account activates it on-chain.
+        tx.addOperation(
+          Operation.createAccount({
+            destination: args.destination,
+            startingBalance: args.amount,
+          })
+        );
+      } else if (args.token.symbol === 'XLM') {
         tx.addOperation(
           Operation.payment({
             destination: args.destination,

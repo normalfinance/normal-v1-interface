@@ -232,3 +232,53 @@ wallets it could land in.
 Chunk 4 is now functionally complete (4a wiring, 4b move-and-swap,
 4c delivery choice, 4d LI.FI un-gate). What remains is 4e: the wrap-up —
 live test matrix, component-test additions, register close-out.
+
+## 4e — the "send to my empty Lobstr" scenario, and the wrap-up
+
+Niko's question: "I have an empty Lobstr wallet — can I send XLM there
+from my Normal wallet? USDC too, or do I need a trustline first?"
+
+**Stellar's rules (not ours):** an address that has never received XLM
+does not exist on-chain yet — the FIRST XLM must arrive via a special
+createAccount operation carrying at least 1 XLM. And a wallet can only
+hold USDC after opting in with a trustline, which only that wallet's own
+key can add.
+
+**What our app used to do:** every send was a plain payment. Sending XLM
+to a fresh address → failed ON-CHAIN with `op_no_destination`; USDC
+without a trustline → `op_no_trust`. Both AFTER you signed, with the fee
+burned and a raw error code as the explanation.
+
+**What it does now** (in the one shared send funnel, so the send modal,
+the guided setup and the move-and-swap all benefit):
+
+1. Before anything is signed, the destination is probed.
+2. XLM to a fresh account → automatically switches to createAccount
+   (if under 1 XLM: a clear message about the activation minimum).
+3. USDC to a fresh account → blocked BEFORE signing: "send it at least
+   1 XLM first, add a USDC trustline there, then send USDC."
+4. USDC to an active account without the trustline → blocked BEFORE
+   signing, telling the user to add the asset in that wallet's app.
+
+The decision logic is a pure function with the scenario as named tests.
+So the answer to the question: send XLM first (the app now handles the
+activation automatically), add USDC in the Lobstr app (two taps there —
+or connect Lobstr and use the swap card's "add trustline" pill), then
+USDC flows normally.
+
+## The live test matrix (chunk 4 sign-off)
+
+With Lobstr connected and funded (a few USDC + XLM):
+
+| # | Test | Expect |
+|---|---|---|
+| 1 | Send 4 XLM from Normal wallet to the empty Lobstr | works (auto-activation) |
+| 2 | Try sending USDC to Lobstr BEFORE adding its trustline | clear block message, no signature |
+| 3 | Add USDC in Lobstr app, send USDC again | arrives |
+| 4 | Swap USDC→BTC, source pill "Normal wallet" | passkey-only |
+| 5 | Swap USDC→BTC, source pill "Lobstr" | "Move X & swap": 1 Lobstr approval + passkey; move visible in modal + activity |
+| 6 | Swap BTC→USDC, Deliver to "Normal wallet" | lands on Normal wallet |
+| 7 | Swap BTC→USDC, Deliver to "Lobstr" | trustline pill flow if needed, lands in Lobstr |
+| 8 | Swap ETH→SOL | passkey-only (no Stellar at all) |
+| 9 | XLM↔USDC on Lobstr | unchanged (Soroswap, kit signs) |
+| 10 | A single-wallet account (your main flow) | zero visual difference anywhere |

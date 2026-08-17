@@ -1290,3 +1290,21 @@ changeTrust on the CONNECTED wallet, then selects. jsdom stubs added
 for use-trustline / use-account-status / snackbar template graphs.
 206 tests, build clean. Chunk 4 functionally complete (4a/4b/4c/4d);
 4e wrap remains (live matrix, doc close-out).
+
+## #32 4e — destination-aware Stellar sends (SHIPPED 2026-08-15) + wrap
+
+Niko's scenario ("send XLM/USDC from Normal wallet to my empty Lobstr")
+exposed that the send funnel ALWAYS built a plain payment: XLM to a
+never-funded address died on-chain with op_no_destination, USDC without
+a destination trustline with op_no_trust — both after signing, fee
+burned, raw code as the error. Fix in the ONE funnel (use-send-token, so
+the send modal, guided-setup funding steps and 4b move-and-swap all
+inherit it): the destination is probed BEFORE signing; XLM to a fresh
+account auto-switches to createAccount (≥1 XLM enforced with a clear
+message); assets to fresh/trustline-less destinations are blocked
+pre-signature with instructions. Decision logic pure in
+lib/stellar/send-plan.ts (+6 named scenario tests; unknown trustline
+state deliberately does NOT block — the chain stays the judge).
+212 tests, build clean. Doc 73 carries the full chunk-4 live test
+matrix for Niko's sign-off; chunk 5 (activity labels, #40 close-out)
+remains after it.
