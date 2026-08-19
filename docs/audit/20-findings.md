@@ -1738,3 +1738,16 @@ the card listens to BOTH events. Rule restated: an event-driven
 surface must subscribe to every event family that mutates what it
 shows — grep the dispatchers when adding a listener. 233 tests,
 build clean.
+
+**Activity-at-start sweep, all flows (Niko, 2026-08-19):** verified or
+wired per flow — cctp: row pre-broadcast (#27) + announce at creation;
+statuses pending→completed, markFailed pre-broadcast, '—' value while
+delivered amount unknown. LI.FI: row recorded server-side at source
+broadcast; engine now announces right after broadcast (was: first
+tracker tick); tracker announces progress + terminal (done/refunded/
+failed each with distinct snackbar + row status). Soroswap: server
+records before broadcasting inside the fee-pair call (atomic), engine
+announces on return — earliest possible. Sends: announceTransaction
+primitive dispatches immediately with a pending row + confirmed flip.
+Savings: own event family, card subscribed. Activity card listens to
+BOTH families. 233 tests, build clean.
