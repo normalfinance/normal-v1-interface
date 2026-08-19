@@ -1570,3 +1570,46 @@ balance: 2.00 XLM showed as 0.50), and the header chip is now the
 WORST wallet's status per Niko (a red row under "Healthy" reads as a
 contradiction — my best-status call reversed). 233 tests, isolated
 build clean.
+
+**#75 Phase 2a + chunk 5 activity (Niko GO "whats left", 2026-08-17):**
+(1) swap card off the legacy token store — XLM/USDC now from the
+portfolio aggregate (issuer patched from config since the 4b funding
+move sends that token object); tokenState has ZERO display consumers
+left — the TokenStoreRefresher net stays until the store itself is
+deleted. (2) Activity feed covers BOTH wallets on hybrid: second
+useUserActivity instance for the companion, feeds merged
+newest-first, each row tagged with its owning wallet ("Normal wallet"
+/ "Lobstr") next to the type chip — previously every companion-side
+action (savings deposits, cctp legs) was simply invisible in the feed.
+REMAINING for #32 close: asset detail pages per-wallet split; ⟳ "All
+wallets" button final fate (decision). 233 tests, build clean.
+
+**Drawer Assets tab — Savings row (Niko, 2026-08-17):** the drawer's
+summary showed Savings but the Assets tab never listed it. Added a
+"Normal Savings" row: account-wide value (slot + companion), $1-pegged
+so TokensTab's USD sort places it among the coins; rides the Normal
+wallet tab on hybrid (same placement as the /portfolio Holdings tabs);
+absent while loading with nothing cached (never a confident $0 row);
+clicking it opens /savings — TokensTab special-cases the __savings__
+contract, since /assets/Savings does not exist. 233 tests, build
+clean.
+
+**Drawer double-count fix (Niko, 2026-08-17, same hour):** adding the
+Savings row into allTokens fed it into assetsBalance too, and the
+summary already counts savings in its own line → Total showed $73.52
+for a $52.85 account. Fix: assetsBalance skips the __savings__ row —
+it is a display row; its value lives in the Savings line only. Same
+defect family as #55 (a summed number no action can spend): any
+synthetic display row added to a token list must be excluded from
+every SUM over that list — check sums when adding rows. 233 tests,
+build clean.
+
+**Swap picker slot-scoped values (Niko, 2026-08-18):** the asset picker
+showed XLM $0.31 — the Lobstr slot's — while 13 XLM sat in the Normal
+wallet, and USDC (slot balance 0) fell into "All assets" as unowned.
+The picker answers "do I have this asset?", so its rows now show the
+ACCOUNT-WIDE balance (slot + companion) for XLM/USDC on hybrid; the
+wallet pills answer "which wallet pays" after picking. tokenBySymbol
+itself deliberately stays slot-scoped — every engine computation
+(fromBalance, reserve, MAX) depends on per-wallet numbers; only the
+display-facing pickerToken widens. 233 tests, build clean.

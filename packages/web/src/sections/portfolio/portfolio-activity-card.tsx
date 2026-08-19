@@ -6,7 +6,10 @@ import type { ChainId } from '@/lib/chains/registry';
 import { useTranslate } from '@/locales';
 import { CHAINS } from '@/lib/chains/registry';
 import { fCurrency } from '@/utils/format-number';
-import { useMemo, useState, useEffect } from 'react';
+import { usePersistStore } from '@normalfinance/state';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useUserActivity } from '@/hooks/stellar/use-user-activity';
 
 import Box from '@mui/material/Box';
@@ -392,11 +395,36 @@ export function ActivityCard({
   // MoneyGram rows (id `mgi:<id>`) open our detail modal instead of an explorer.
   const [mgiDetailId, setMgiDetailId] = useState<string | null>(null);
 
-  const { recentActivity, isLoading, mutate } = useUserActivity(walletAddress, {
+  // #32 chunk 5: on hybrid accounts the feed covers BOTH wallets — the slot
+  // feed alone hid every companion-side action (savings deposits, cctp legs).
+  // Two instances of the same deduped hook; merged newest-first below.
+  const { companionStellar } = useWalletBalances(true);
+  const persistWallet = usePersistStore().wallet;
+  const isHybrid =
+    !!companionStellar &&
+    persistWallet.walletType != null &&
+    persistWallet.walletType !== 'normal-wallet' &&
+    companionStellar.address !== walletAddress;
+  const slotFeed = useUserActivity(walletAddress, {
     bitcoinAddress,
     ethereumAddress,
     solanaAddress,
   });
+  const companionFeed = useUserActivity(isHybrid ? companionStellar.address : null, {});
+  const isLoading = slotFeed.isLoading || (isHybrid && companionFeed.isLoading);
+  const mutate = useCallback(() => {
+    slotFeed.mutate();
+    if (isHybrid) companionFeed.mutate();
+  }, [slotFeed.mutate, isHybrid, companionFeed.mutate]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recentActivity = useMemo(() => {
+    if (!isHybrid) return slotFeed.recentActivity;
+    const tag = (list: Activity[], wallet: string) =>
+      list.map((a) => ({ ...a, walletTag: wallet }) as Activity & { walletTag?: string });
+    return [
+      ...tag(slotFeed.recentActivity, connectedWalletLabel(persistWallet.walletType)),
+      ...tag(companionFeed.recentActivity, 'Normal wallet'),
+    ].sort((a, b) => b.timestamp - a.timestamp);
+  }, [isHybrid, slotFeed.recentActivity, companionFeed.recentActivity, persistWallet.walletType]);
 
   // Re-fetch wallet activity after a deposit or withdrawal completes.
   useEffect(() => {
@@ -556,6 +584,14 @@ export function ActivityCard({
                       sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}
                     >
                       <TypeTag tagKey={tagKey} />
+                      {(activity as Activity & { walletTag?: string }).walletTag && (
+                        <Box
+                          component="span"
+                          sx={{ fontSize: '10.5px', color: 'rgba(10,10,15,0.4)' }}
+                        >
+                          {(activity as Activity & { walletTag?: string }).walletTag}
+                        </Box>
+                      )}
                       {(((activity.type === 'Sent' || activity.type === 'Receive') &&
                         activity.confirmed === false) ||
                         (activity.type === 'Swap' && activity.pending) ||

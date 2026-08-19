@@ -77,10 +77,22 @@ export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsPr
               key={token.contract}
               role="button"
               tabIndex={0}
-              onClick={() => router.push(paths.assets.details(token.symbol))}
+              // Savings is a product, not a chain asset — its row opens the
+              // savings page, never a (nonexistent) /assets/Savings detail.
+              onClick={() =>
+                router.push(
+                  token.contract === '__savings__'
+                    ? paths.savings
+                    : paths.assets.details(token.symbol)
+                )
+              }
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ')
-                  router.push(paths.assets.details(token.symbol));
+                  router.push(
+                    token.contract === '__savings__'
+                      ? paths.savings
+                      : paths.assets.details(token.symbol)
+                  );
               }}
               sx={{
                 display: 'flex',

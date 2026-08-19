@@ -14,16 +14,15 @@ import { probeCompanion } from '@/lib/normal-wallet-setup';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
-import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { spendableXlmForOutflow } from '@/utils/stellar-reserve';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useMemo, useState, useCallback } from 'react';
-import { getXlmToken, getSwapUsdcToken } from '@/utils/token-selectors';
 import { getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
+import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -75,7 +74,7 @@ const CHAIN_OF_SYMBOL: Partial<Record<SwapSymbol, ChainId>> = {
 
 export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const { t } = useTranslate();
-  const { tokenState, wallet } = usePersistStore();
+  const { wallet } = usePersistStore();
   const config = useStellarConfig();
   const btc = useBtcPortfolio(true);
   const eth = useEthPortfolio(true);
@@ -118,8 +117,23 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   }, []);
 
   // Single source of truth for balances / prices / icons across both engines.
-  const xlmToken = getXlmToken(tokenState.tokens);
-  const usdcToken = getSwapUsdcToken(tokenState.tokens, config);
+  // #75 Phase 2: XLM/USDC come from the portfolio AGGREGATE — the last legacy
+  // token-store consumer is gone; balances here now update seconds after any
+  // transaction like every other surface. Issuer is patched from config (the
+  // aggregate mapper is display-oriented and leaves it empty; the 4b funding
+  // move sends this token, so it must carry the real issuer).
+  const { companionStellar, assets: aggAssets } = useWalletBalances(true);
+  const aggStellarToken = useCallback(
+    (sym: 'XLM' | 'USDC'): Token | null => {
+      const a = aggAssets?.find((x) => x.symbol === sym && x.chain === 'stellar');
+      if (!a) return null;
+      const tk = portfolioAssetToToken(a);
+      return { ...tk, issuer: sym === 'USDC' ? config.USDC_ISSUER : '' } as Token;
+    },
+    [aggAssets, config.USDC_ISSUER]
+  );
+  const xlmToken = aggStellarToken('XLM');
+  const usdcToken = aggStellarToken('USDC');
   const tokenBySymbol = useMemo(
     () =>
       ({
@@ -200,7 +214,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   // wallet — no silent cross-wallet fallback), and remaining preflights
   // (trustline, fee-XLM) route back into the setup dialog per-step.
   const isExternalWallet = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
-  const { companionStellar } = useWalletBalances(true);
+  // (companionStellar + aggregate assets destructured once, above tokenBySymbol)
   const needsNormalWallet = isExternalWallet && pairType !== 'stellar' && !companionStellar;
   // #32 chunk 4c: inbound delivery choice. The external option requires the
   // EXTERNAL wallet's USDC trustline (checked live below; selecting offers a
@@ -496,16 +510,32 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     setIsFiatMode((p) => !p);
   };
 
+  // Picker rows show the ACCOUNT-WIDE value for XLM/USDC on hybrid accounts
+  // (slot + companion): the picker answers "do I have this asset?", and the
+  // wallet pills answer "which wallet pays" AFTER picking. tokenBySymbol
+  // itself stays slot-scoped — every engine/balance computation depends on
+  // per-wallet numbers (observed live 2026-08-17: picker said XLM $0.31 —
+  // the empty-ish Lobstr — while 13 XLM sat in the Normal wallet).
+  const pickerToken = useCallback(
+    (sym: SwapSymbol): Token => {
+      const tk = tokenBySymbol[sym];
+      if ((sym !== 'XLM' && sym !== 'USDC') || !companionStellar) return tk;
+      const comp = companionStellar.assets.find((a) => a.symbol === sym)?.balance ?? 0;
+      if (!BigNumber(comp).gt(0)) return tk;
+      return { ...tk, balance: BigNumber(tk.balance).plus(comp).toString() } as Token;
+    },
+    [tokenBySymbol, companionStellar]
+  );
   const fromPickerTokens = useMemo(
-    () => SWAP_ASSETS.map((a) => tokenBySymbol[a.symbol]),
-    [tokenBySymbol]
+    () => SWAP_ASSETS.map((a) => pickerToken(a.symbol)),
+    [pickerToken]
   );
   const toPickerTokens = useMemo(
     () =>
-      SWAP_ASSETS.filter((a) => a.symbol !== fromSymbol && canPair(fromSymbol, a.symbol)).map(
-        (a) => tokenBySymbol[a.symbol]
+      SWAP_ASSETS.filter((a) => a.symbol !== fromSymbol && canPair(fromSymbol, a.symbol)).map((a) =>
+        pickerToken(a.symbol)
       ),
-    [tokenBySymbol, fromSymbol]
+    [pickerToken, fromSymbol]
   );
 
   const AssetSelector = ({ side }: { side: 'from' | 'to' }) => {

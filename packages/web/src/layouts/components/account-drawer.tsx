@@ -142,16 +142,40 @@ function WalletConnected({
     [walletBalances.assets]
   );
 
+  // Savings as an ASSETS-TAB row (Niko): account-wide value (slot +
+  // companion), $1-pegged so TokensTab's USD sort places it naturally;
+  // clicking it opens /savings (special-cased in TokensTab). Absent while
+  // loading with nothing cached — never a confident $0 row.
+  const savingsTokenValue =
+    Math.max(parseFloat(userPosition?.currentValue || '0'), 0) + savings.companionValue;
+  const savingsToken = useMemo<ReturnType<typeof portfolioAssetToToken> | null>(() => {
+    if (!(savingsTokenValue > 0)) return null;
+    return {
+      symbol: 'Savings',
+      contract: '__savings__',
+      name: 'Normal Savings',
+      issuer: '',
+      org: '',
+      domain: '',
+      icon: cdn('logo/logo-single.png'),
+      decimals: 4,
+      featured: false,
+      balance: String(savingsTokenValue),
+      price: '1',
+      percentageChange: 0,
+    } as ReturnType<typeof portfolioAssetToToken>;
+  }, [savingsTokenValue]);
+
   const allTokens = useMemo(
     () =>
-      [...slotStellarTokens, btcToken, ethToken, solToken]
+      [...slotStellarTokens, btcToken, ethToken, solToken, savingsToken]
         .filter((tkn): tkn is NonNullable<typeof tkn> => !!tkn)
         // Only assets the user actually holds. The portfolio aggregator always
         // emits a BTC/ETH/SOL/XLM/USDC entry (0 when there's no address/balance),
         // so without this a Stellar-only user sees a phantom "BTC $0". Mirrors the
         // balance>0 filtering the holdings/hero views already use.
         .filter((tkn) => BigNumber(tkn.balance).gt(0)),
-    [slotStellarTokens, btcToken, ethToken, solToken]
+    [slotStellarTokens, btcToken, ethToken, solToken, savingsToken]
   );
 
   // #32 chunk 2 — dual-wallet display. When the CONNECTED wallet is external
@@ -179,7 +203,13 @@ function WalletConnected({
     const chainTokens = [btcToken, ethToken, solToken].filter(
       (tkn): tkn is NonNullable<typeof tkn> => !!tkn && BigNumber(tkn.balance).gt(0)
     );
-    const normalTokens = [...companionTokens, ...chainTokens];
+    // Savings rides the Normal-wallet tab — same placement as the /portfolio
+    // Holdings tabs (it's the account product, held via the Normal wallet).
+    const normalTokens = [
+      ...companionTokens,
+      ...chainTokens,
+      ...(savingsToken ? [savingsToken] : []),
+    ];
     if (normalTokens.length === 0) return null; // nothing to show for the companion yet
     const externalTokens = slotStellarTokens;
     return [
@@ -217,13 +247,20 @@ function WalletConnected({
     ethToken,
     solToken,
     slotStellarTokens,
+    savingsToken,
     address,
     persistWallet.walletType,
   ]);
 
   const assetsBalance = useMemo(() => {
+    // Savings is a DISPLAY row in the tokens list, but the summary already
+    // counts it in its own "Savings" line — summing it here doubled the
+    // total ($73.52 for a $52.85 account, observed live 2026-08-17).
     const base = allTokens.reduce(
-      (acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)),
+      (acc, tkn) =>
+        tkn.contract === '__savings__'
+          ? acc
+          : acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)),
       BigNumber(0)
     );
     // Total balance = everything the ACCOUNT owns; in dual-wallet mode the
