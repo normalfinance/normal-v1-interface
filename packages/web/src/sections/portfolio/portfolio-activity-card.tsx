@@ -440,7 +440,14 @@ export function ActivityCard({
   useEffect(() => {
     const handler = () => setTimeout(mutate, 1500);
     window.addEventListener('nf:savings-position-updated', handler);
-    return () => window.removeEventListener('nf:savings-position-updated', handler);
+    // Swaps/sends announce here — the feed refreshed only on savings events,
+    // so a just-started swap's row (#27, created before broadcast) stayed
+    // invisible until Done (Niko live test 2026-08-19).
+    window.addEventListener('nf:activity-updated', handler);
+    return () => {
+      window.removeEventListener('nf:savings-position-updated', handler);
+      window.removeEventListener('nf:activity-updated', handler);
+    };
   }, [mutate]);
 
   const filtered = useMemo(() => {

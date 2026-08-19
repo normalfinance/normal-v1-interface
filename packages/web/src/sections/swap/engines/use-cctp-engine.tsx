@@ -657,6 +657,9 @@ export function useCctpEngine({
       });
       const data = await res.json();
       if (!res.ok || !data.id) throw new Error(data.error ?? t('Could not start the swap'));
+      // #27's row exists NOW — tell the activity feed so it appears the
+      // moment the swap starts, not at Done (Niko live test 2026-08-19).
+      window.dispatchEvent(new Event('nf:activity-updated'));
       if (direction === 'in') await runInbound(data.id, quote);
       else await runOutbound(data.id, amountWire);
     } catch (e: any) {

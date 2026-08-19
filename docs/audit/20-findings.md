@@ -1727,3 +1727,14 @@ anti-stuck cap. LI.FI engine verified already gated (#62/#66,
 live-tested); Soroswap: Horizon submit is inclusion-synchronous, so
 funds are chain-confirmed at toast time and the refresh follows
 immediately. 233 tests, build clean.
+
+**Activity row invisible at swap start (Niko live test, 2026-08-19):**
+the #27 transfer row IS created before broadcast, but the Activity
+CARD only listened to 'nf:savings-position-updated', and the cctp
+engine only dispatched 'nf:activity-updated' at Done — so the row
+stayed invisible until the swap finished or the feed's own poll. Two
+wires: engine dispatches the event right after the row is created;
+the card listens to BOTH events. Rule restated: an event-driven
+surface must subscribe to every event family that mutates what it
+shows — grep the dispatchers when adding a listener. 233 tests,
+build clean.
