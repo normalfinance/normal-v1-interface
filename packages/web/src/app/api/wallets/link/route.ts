@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
@@ -182,6 +183,22 @@ export const DELETE = withAuth(async (request: NextRequest, { user }) => {
     const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
     if (!isLinked) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // #32 chunk 2: the Turnkey (Normal) wallet's Stellar address can never be
+    // unlinked — it holds the user's funds and the link row backs the
+    // ownership checks CCTP/swap logging relies on. Observed live 2026-08-15:
+    // the settings page happily offered to unlink the wallet holding all of
+    // the user's money.
+    const tk = await prisma.turnkeyWallet.findUnique({
+      where: { supabaseUid: user.id },
+      select: { stellarAddress: true },
+    });
+    if (tk?.stellarAddress && tk.stellarAddress === walletAddress) {
+      return NextResponse.json(
+        { error: 'Your Normal wallet cannot be unlinked from your account.' },
+        { status: 400 }
+      );
     }
 
     // Unlink the wallet

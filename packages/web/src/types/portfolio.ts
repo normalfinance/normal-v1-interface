@@ -21,6 +21,14 @@ export interface PortfolioAsset {
 export interface PortfolioPayload {
   updatedAt: number; // ms
   assets: PortfolioAsset[];
+  /**
+   * #32 chunk 2: the companion Normal wallet's Stellar balances, present only
+   * when the connected wallet is an EXTERNAL Stellar wallet and the user's
+   * Turnkey wallet has a (different) Stellar address. The drawer renders it
+   * as its own section — never summed into `assets`, so every displayed
+   * number stays spendable by exactly one wallet.
+   */
+  companionStellar?: { address: string; assets: PortfolioAsset[] } | null;
 }
 
 // ---------------------------------------------------------------------------

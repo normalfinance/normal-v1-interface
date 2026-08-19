@@ -2,7 +2,7 @@
 
 import { useStellarConfig } from '@/hooks';
 import { useState, useEffect, useCallback } from 'react';
-import { logger, fetchAccount, checkTrustline } from '@normalfinance/utils';
+import { logger, checkTrustline, fetchAccountStrict } from '@normalfinance/utils';
 
 export interface AccountStatus {
   isLoading: boolean;
@@ -50,8 +50,12 @@ export function useAccountStatus(
     setError(null);
 
     try {
-      // Fetch account from Horizon
-      const account = await fetchAccount(walletAddress, config);
+      // Strict fetch: a Horizon 404 (unfunded) is `null`; a FAILED lookup
+      // throws and lands in `error` below — so "not activated" is only ever
+      // asserted from a real answer, never from a network blip. (The lenient
+      // fetchAccount maps failures to undefined, which readers would show as
+      // a confident "account doesn't exist".)
+      const account = await fetchAccountStrict(walletAddress, config);
 
       if (!account) {
         // Account doesn't exist on the network

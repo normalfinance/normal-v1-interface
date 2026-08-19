@@ -53,6 +53,11 @@ export interface ChainDef {
   /** Brand colour, for chain dots/badges in the UI. */
   brandColor: string;
   explorerTx: (hash: string) => string;
+  /** Typical cross-chain settlement window, minutes. Every delivery ETA
+   *  label and polling cap derives from THIS — a chain's timing lives here,
+   *  never hardcoded in UI copy (lesson 2026-08-19: "a few minutes" was
+   *  written for ETH/SOL and met Bitcoin). */
+  settlement: { minMinutes: number; maxMinutes: number };
 }
 
 export const CHAINS = {
@@ -67,6 +72,7 @@ export const CHAINS = {
     turnkeyAddressFormat: 'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH',
     brandColor: '#F7931A',
     explorerTx: (h: string) => `https://mempool.space/tx/${h}`,
+    settlement: { minMinutes: 10, maxMinutes: 60 },
   },
   ethereum: {
     id: 'ethereum',
@@ -81,6 +87,7 @@ export const CHAINS = {
     evmChainId: 1,
     cctpDomain: 0,
     explorerTx: (h: string) => `https://etherscan.io/tx/${h}`,
+    settlement: { minMinutes: 1, maxMinutes: 5 },
   },
   solana: {
     id: 'solana',
@@ -94,6 +101,7 @@ export const CHAINS = {
     brandColor: '#9945FF',
     cctpDomain: 5,
     explorerTx: (h: string) => `https://solscan.io/tx/${h}`,
+    settlement: { minMinutes: 1, maxMinutes: 3 },
   },
   stellar: {
     id: 'stellar',
@@ -106,6 +114,7 @@ export const CHAINS = {
     turnkeyAddressFormat: 'ADDRESS_FORMAT_XLM',
     brandColor: '#14B8A6',
     explorerTx: (h: string) => `https://stellar.expert/explorer/public/tx/${h}`,
+    settlement: { minMinutes: 1, maxMinutes: 3 },
   },
 } as const satisfies Record<string, ChainDef>;
 

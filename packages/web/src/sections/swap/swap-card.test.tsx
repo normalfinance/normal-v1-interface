@@ -20,7 +20,7 @@
 // from there, not the ambient global — see 47-testing-plan.md).
 import '@testing-library/jest-dom/jest-globals';
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { it, jest, expect, describe, beforeEach } from '@jest/globals';
 
 import type * as SwapCardModule from './swap-card';
@@ -73,9 +73,46 @@ jest.mock('@normalfinance/state', () => ({
 jest.mock('@/hooks/use-savings-position', () => ({
   useSavingsPosition: () => ({ position: null }),
 }));
+// #32 chunk 4a: the card reads the companion Normal wallet from the shared
+// balances hook — null = external user WITHOUT a companion (fully gated);
+// set per-test to simulate a hybrid user whose swaps run for real.
+const mockCompanion: { value: { address: string; assets: any[] } | null } = { value: null };
+jest.mock('@/hooks/use-wallet-balances', () => ({
+  useWalletBalances: () => ({ companionStellar: mockCompanion.value }),
+}));
+// #32 chunk 4b: the funding move's building blocks pull the stellar-sdk and
+// wallet-kit module graphs, which this jsdom suite can't load — contract-
+// faithful stubs (the tests only assert gating, not transfers).
+jest.mock('@/lib/normal-wallet-setup', () => ({
+  probeCompanion: async () => ({
+    exists: true,
+    hasUsdcTrustline: true,
+    xlmBalance: 4,
+    usdcBalance: 0,
+  }),
+}));
+jest.mock('@/hooks/stellar/use-send-token', () => ({
+  useSendToken: () => ({ send: async () => '' }),
+}));
+// #32 chunk 4c: deliver-to selector's building blocks (trustline add via the
+// wallet kit; live account status) — same ESM-graph reason as above.
+jest.mock('@/hooks/stellar/tokens/use-trustline', () => ({
+  useTrustLine: () => ({ addTrustLine: async () => {}, loading: false }),
+}));
+jest.mock('@/hooks/stellar/use-account-status', () => ({
+  useAccountStatus: () => ({
+    isLoading: false,
+    accountExists: true,
+    xlmBalance: 4,
+    hasUsdcTrustline: true,
+    refetch: async () => {},
+  }),
+}));
 jest.mock('@normalfinance/utils', () => ({
   getCryptoIconUrl: () => '',
   sanitizeAmountInput: (s: string) => s,
+  // display.ts builds its icon map with cdn() at module load (#32 4b).
+  cdn: (p: string) => p,
 }));
 jest.mock('@/utils/format-number', () => ({ fCurrency: (n: unknown) => String(n) }));
 jest.mock('@/utils/token-selectors', () => ({
@@ -106,7 +143,17 @@ jest.mock('@/hooks/use-chain-portfolio', () => ({
 }));
 jest.mock('@/components/_common/pick-token', () => ({ __esModule: true, default: () => null }));
 jest.mock('@/components/template/iconify', () => ({ Iconify: () => null }));
+jest.mock('@/components/template/snackbar', () => ({
+  useSnackbar: () => ({ enqueueSnackbar: () => {} }),
+}));
 jest.mock('./cctp-resume-banner', () => ({ CctpRecoveryBanner: () => null }));
+// #32 chunk 3: the guided setup dialog renders a marker so the tests can
+// assert the gate CTA opens IT — a dialog, never an engine.
+jest.mock('@/components/_common/normal-wallet-setup-dialog', () => ({
+  __esModule: true,
+  default: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="normal-wallet-setup-dialog" /> : null,
+}));
 jest.mock('./engines/use-soroswap-engine', () => ({
   useSoroswapEngine: (props: unknown) => {
     mockEngineCalls.soroswap.push(props);
@@ -132,7 +179,7 @@ jest.mock('./engines/use-cctp-engine', () => ({
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const SwapCard = require('./swap-card').default as typeof SwapCardModule.default;
 
-const GATE_LABEL = 'Cross-chain swaps need your Normal wallet';
+const GATE_LABEL = 'Continue with your Normal wallet';
 const lastCall = (calls: any[]) => calls[calls.length - 1];
 
 describe('swap card — external-wallet gate (the twice-lost decision)', () => {
@@ -140,16 +187,23 @@ describe('swap card — external-wallet gate (the twice-lost decision)', () => {
     mockEngineCalls.soroswap.length = 0;
     mockEngineCalls.lifi.length = 0;
     mockEngineCalls.cctp.length = 0;
+    mockCompanion.value = null;
   });
 
-  it('external wallet + BTC pair: the CTA is the disabled gate, not the engine', () => {
+  it('external wallet + BTC pair: the CTA opens the guided setup, never an engine (#32 chunk 3)', () => {
     mockWalletState.walletType = 'lobstr';
     render(<SwapCard initial="BTC" />);
 
+    // The invariant survives the UX change: the gate CTA's action is a
+    // DIALOG — the engines' own buttons stay unreachable.
     const cta = screen.getByRole('button', { name: GATE_LABEL });
-    expect(cta).toBeDisabled();
+    expect(screen.queryByTestId('normal-wallet-setup-dialog')).not.toBeInTheDocument();
+    fireEvent.click(cta);
+    expect(screen.getByTestId('normal-wallet-setup-dialog')).toBeInTheDocument();
     // The explanation a confused user actually needs:
-    expect(screen.getByText(/Your connected wallet can only swap XLM/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Cross-chain swaps run through your Normal wallet/)
+    ).toBeInTheDocument();
     // And the engine's own button must NOT be reachable:
     expect(screen.queryByRole('button', { name: 'lifi-swap' })).not.toBeInTheDocument();
   });
@@ -189,5 +243,31 @@ describe('swap card — external-wallet gate (the twice-lost decision)', () => {
 
     expect(screen.queryByText(GATE_LABEL)).not.toBeInTheDocument();
     expect(lastCall(mockEngineCalls.lifi).enabled).toBe(true);
+  });
+
+  it('#32 4a: external wallet WITH a companion — engines run for real, pinned to the companion', () => {
+    mockWalletState.walletType = 'lobstr';
+    mockCompanion.value = {
+      address: 'GCOMPANIONNORMALWALLET',
+      assets: [{ symbol: 'USDC', balance: '50', price: '1' }],
+    };
+    render(<SwapCard initial="BTC" />);
+
+    // The setup gate is gone — the engines are live…
+    expect(screen.queryByRole('button', { name: GATE_LABEL })).not.toBeInTheDocument();
+    expect(lastCall(mockEngineCalls.lifi).enabled).toBe(true);
+    // …and the CCTP engine's Stellar side is EXPLICITLY the companion, never
+    // the connected external wallet (doc 72 §4h: no silent cross-wallet
+    // fallback).
+    expect(lastCall(mockEngineCalls.cctp).stellarAddressOverride).toBe('GCOMPANIONNORMALWALLET');
+    expect(typeof lastCall(mockEngineCalls.cctp).onNeedsSetup).toBe('function');
+  });
+
+  it('#32 4a: a NORMAL-wallet user gets no override — the engine uses the connected wallet', () => {
+    mockWalletState.walletType = 'normal-wallet';
+    render(<SwapCard initial="BTC" />);
+
+    expect(lastCall(mockEngineCalls.cctp).stellarAddressOverride).toBeUndefined();
+    expect(lastCall(mockEngineCalls.cctp).onNeedsSetup).toBeUndefined();
   });
 });

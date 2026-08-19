@@ -19,6 +19,7 @@
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { fCurrency } from '@/utils/format-number';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -29,9 +30,11 @@ import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
+import { setActiveCctpTransfer } from '@/lib/cctp/active-transfer';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -57,6 +60,28 @@ export interface CctpEngineProps {
   resetInput: () => void;
   /** Refresh a target chain's balance right after delivery (outbound). */
   refetchChain?: (chain: 'bitcoin' | 'ethereum' | 'solana') => Promise<void>;
+  /** Awaitable, cache-bypassing refresh of the portfolio aggregate — the
+   *  source every display reads (#75). 'Done' waits on it. */
+  refreshAggregate?: () => Promise<unknown>;
+  /**
+   * #32 chunk 4a: the Stellar address this swap burns from / delivers to —
+   * threaded EXPLICITLY (doc 72 §4h). For an external-wallet user this is
+   * the companion Normal wallet, never `wallet.address`; the engine must not
+   * silently fall back across wallets. Omitted (single-wallet users) →
+   * the connected wallet, exactly as before.
+   */
+  stellarAddressOverride?: string | null;
+  /** Opens the guided Normal-wallet setup (create/activate/trustline/fund)
+   *  when a preflight fails for an external-wallet user. */
+  onNeedsSetup?: () => void;
+  /**
+   * #32 chunk 4b: the user picked their EXTERNAL wallet as the swap source
+   * (doc 72 §4h S2). `execute` moves the typed USDC to the companion Normal
+   * wallet (kit-signed, and resolves only once the funds are VISIBLE there),
+   * after which the swap continues passkey-only. The CTA and the progress
+   * modal both announce the move — never a silent transfer.
+   */
+  fundFromExternal?: { label: string; execute: (amountUsdc: string) => Promise<boolean> };
 }
 
 const NATIVE_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
@@ -75,9 +100,12 @@ async function pollPivotDelivery(
   txHash: string,
   fromChainId: number,
   toChainId: number,
-  cancelledRef: React.MutableRefObject<boolean>
+  cancelledRef: React.MutableRefObject<boolean>,
+  // BTC payouts are mined Bitcoin txs — allow up to ~60 min (Niko 2026-08-19:
+  // the modal now tracks BTC to true delivery like SOL/ETH).
+  maxPolls = 60
 ): Promise<'DONE' | 'REFUNDED' | 'FAILED' | null> {
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < maxPolls; i++) {
     if (cancelledRef.current) throw new Error('cancelled');
     try {
       const res = await fetch(
@@ -123,6 +151,10 @@ export function useCctpEngine({
   enabled,
   resetInput,
   refetchChain,
+  refreshAggregate,
+  stellarAddressOverride,
+  onNeedsSetup,
+  fundFromExternal,
 }: CctpEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
@@ -132,10 +164,14 @@ export function useCctpEngine({
   // 'in': crosschain → stellar; 'out': USDC(stellar) → crosschain.
   const direction: 'in' | 'out' = groupOf(fromSymbol) === 'stellar' ? 'out' : 'in';
 
-  const stellarAddress = wallet.address;
+  // undefined = no override (single-wallet user → connected wallet);
+  // null = external user whose companion doesn't exist yet (gated below).
+  const stellarAddress =
+    stellarAddressOverride === undefined ? wallet.address : (stellarAddressOverride ?? undefined);
   const {
     isLoading: isCheckingAccount,
     accountExists,
+    xlmBalance,
     hasUsdcTrustline,
   } = useAccountStatus(enabled ? stellarAddress : undefined);
 
@@ -146,6 +182,9 @@ export function useCctpEngine({
   const [stage, setStage] = useState<CctpStage | null>(null);
   const [stageError, setStageError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  // #32 chunk 4b: whether THIS run started with the external→Normal funding
+  // move (drives the extra step in the progress modal).
+  const [usedFunding, setUsedFunding] = useState(false);
   const cancelled = useRef(false);
 
   const evmAddress = addresses.ETH; // the Base pivot is always the user's own EVM address
@@ -159,6 +198,8 @@ export function useCctpEngine({
   // out: LI.FI USDC_BASE → target (leg 3) quoted directly — CCTP is 1:1/$0, so
   //      the pivot quote IS the swap quote.
   const debouncedAmount = useDebounce(enabled ? amount.toFixed() : '', 600);
+
+  useEffect(() => () => setActiveCctpTransfer(null), []); // tab/modal gone → banner owns recovery
 
   useEffect(() => {
     const value = BigNumber(debouncedAmount || 0);
@@ -236,9 +277,23 @@ export function useCctpEngine({
         : null;
 
   const insufficient = amount.gt(0) && amount.gt(fromBalance);
+  // Inbound delivery AND the 4b funding move both land USDC on the Stellar
+  // side — either way the account needs the trustline first.
   const needsTrustline =
-    direction === 'in' && !isCheckingAccount && accountExists && !hasUsdcTrustline;
+    (direction === 'in' || !!fundFromExternal) &&
+    !isCheckingAccount &&
+    accountExists &&
+    !hasUsdcTrustline;
   const missingStellar = !stellarAddress || (!isCheckingAccount && !accountExists);
+  // #32 chunk 4a: the outbound burn's Soroban fees are paid in XLM from the
+  // BURN SOURCE — for hybrid users that's the companion Normal wallet, whose
+  // XLM the user may never have topped up. Same threshold as the savings
+  // action-block (#67), so the light and the gate can't disagree.
+  const lowFeeXlm =
+    direction === 'out' &&
+    !isCheckingAccount &&
+    accountExists &&
+    xlmAvailableForFees(xlmBalance).lt(MIN_XLM_FOR_SAVINGS_TX);
 
   // MAX leaves the source chain's network fee behind. Outbound USDC needs no
   // reserve (Soroban fees are paid in XLM); inbound mirrors the LI.FI engine,
@@ -342,34 +397,34 @@ export function useCctpEngine({
   // refetch is AWAITED (capped) before the stage flips; fire-and-forget
   // refreshes raced the modal and lost, so "Done" showed against a stale
   // balance that looked like missing funds.
-  //   out (ETH/SOL): runOutbound has chain-confirmed delivery before calling
-  //     this — await the destination chain's verify-and-retry refetch.
-  //   out (BTC): delivery takes many minutes; the snackbar + activity pending
-  //     badge own that wait, so the refetch stays fire-and-forget (documented
-  //     trade-off: holding the modal open that long would itself look stuck).
-  //   in: USDC lands on Stellar, mint already chain-confirmed — await the
-  //     token-store refresh.
+  //   out: delivery is chain-confirmed before this runs (BTC included since
+  //     2026-08-19 — it tracks to true delivery, so its refetch is AWAITED
+  //     like every other chain; the old fire-and-forget exemption is gone).
+  //   in: USDC lands on Stellar, mint already chain-confirmed.
+  //   BOTH: the portfolio AGGREGATE refresh is awaited too — since #75 the
+  //     drawer/swap displays read the aggregate, so gating only the legacy
+  //     store let "Done" show against stale visible numbers.
   const finish = useCallback(async () => {
     const cap = new Promise<void>((resolve) => {
       setTimeout(resolve, ARRIVAL_CAP_MS);
     });
+    const waits: Promise<unknown>[] = [];
     if (direction === 'out') {
       const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
         toSymbol as CrosschainSymbol
       ];
       getAllTokens(true).catch(() => {}); // source side: USDC left Stellar
-      if (chain === 'bitcoin') {
-        refetchChain?.(chain).catch(() => {});
-      } else if (chain && refetchChain) {
-        await Promise.race([refetchChain(chain).catch(() => {}), cap]);
-      }
+      if (chain && refetchChain) waits.push(refetchChain(chain).catch(() => {}));
     } else {
-      await Promise.race([getAllTokens(true).catch(() => {}), cap]);
+      waits.push(getAllTokens(true).catch(() => {}));
     }
+    if (refreshAggregate) waits.push(refreshAggregate().catch(() => {}));
+    await Promise.race([Promise.all(waits), cap]);
     setStage('done');
+    setActiveCctpTransfer(null); // settled — nothing left to recover
     resetInput();
     window.dispatchEvent(new Event('nf:activity-updated'));
-  }, [direction, toSymbol, resetInput, getAllTokens, refetchChain]);
+  }, [direction, toSymbol, resetInput, getAllTokens, refetchChain, refreshAggregate]);
 
   // ---- INBOUND orchestration -----------------------------------------------------
   const runInbound = useCallback(
@@ -438,6 +493,7 @@ export function useCctpEngine({
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
           setStageError(String(e?.message ?? e));
+          setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
         if (!broadcastStarted) {
           // Server re-checks the precondition (CREATED + no tx hashes), so a
@@ -491,16 +547,12 @@ export function useCctpEngine({
 
         // #66: the pivot tx confirming on BASE is not delivery — the bridged
         // asset lands on the TARGET chain later. 'Done' used to show here,
-        // before the SOL/ETH existed anywhere the wallet could see it. BTC is
-        // exempt (many-minute delivery; snackbar + pending badge own it), as
-        // is a quote that carried no chain ids (can't poll — old behavior).
-        if (toSymbol === 'BTC' || !result.fromChainId || !result.toChainId) {
+        // before the asset existed anywhere the wallet could see it. BTC now
+        // tracks to TRUE delivery like SOL/ETH (Niko 2026-08-19) — just with
+        // a ~60 min cap instead of ~10, since its payout is a mined Bitcoin
+        // tx. Only a quote with no chain ids skips (can't poll).
+        if (!result.fromChainId || !result.toChainId) {
           await patch({ dstAmount });
-          if (toSymbol === 'BTC') {
-            enqueueSnackbar(t('BTC is on its way — delivery takes a few minutes.'), {
-              variant: 'info',
-            });
-          }
           await finish();
           return;
         }
@@ -510,7 +562,19 @@ export function useCctpEngine({
           result.txHash,
           result.fromChainId,
           result.toChainId,
-          cancelled
+          cancelled,
+          // Poll budget derives from the destination chain's settlement
+          // window (registry) + margin — never a hardcoded per-chain number.
+          Math.ceil(
+            ((CHAINS[
+              ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+                toSymbol as CrosschainSymbol
+              ]
+            ]?.settlement.maxMinutes ?? 10) *
+              60 *
+              1.5) /
+              10
+          )
         );
         if (delivery === 'FAILED' || delivery === 'REFUNDED') {
           throw new Error(
@@ -535,6 +599,7 @@ export function useCctpEngine({
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
           setStageError(String(e?.message ?? e));
+          setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
         if (!broadcastStarted) {
           await patch({ markFailed: true }).catch(() => {});
@@ -551,6 +616,27 @@ export function useCctpEngine({
     setStageError(null);
     setModalOpen(true);
     try {
+      // #32 chunk 4b: source = external wallet → move the USDC to the Normal
+      // wallet FIRST (kit-signed; execute resolves only once the funds are
+      // visible on the companion — the #62 verify-before-act rule, so a burn
+      // can never fire against a balance that hasn't arrived). The move runs
+      // BEFORE the transfer row is created: it is a plain send, recorded by
+      // the send funnel, not a CCTP leg.
+      if (direction === 'out' && fundFromExternal) {
+        setUsedFunding(true);
+        setStage('funding');
+        const funded = await fundFromExternal.execute(amount.toFixed(7, BigNumber.ROUND_DOWN));
+        if (!funded) {
+          throw new Error(
+            t('The USDC transfer from {{wallet}} was not completed — nothing was swapped.', {
+              wallet: fundFromExternal.label,
+            })
+          );
+        }
+      } else {
+        setUsedFunding(false);
+      }
+
       const headers = await buildAuthHeaders();
       const amountWire =
         direction === 'in'
@@ -577,11 +663,18 @@ export function useCctpEngine({
       });
       const data = await res.json();
       if (!res.ok || !data.id) throw new Error(data.error ?? t('Could not start the swap'));
+      // #27's row exists NOW — tell the activity feed so it appears the
+      // moment the swap starts, not at Done (Niko live test 2026-08-19).
+      window.dispatchEvent(new Event('nf:activity-updated'));
+      // This tab now owns the transfer — the recovery banner steps aside
+      // until we clear the signal (done / error / unmount).
+      setActiveCctpTransfer(data.id);
       if (direction === 'in') await runInbound(data.id, quote);
       else await runOutbound(data.id, amountWire);
     } catch (e: any) {
       console.error('[cctp engine] execute failed:', e); // surface stack
       setStageError(String(e?.message ?? e));
+      setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
   }, [
     quote,
@@ -593,6 +686,7 @@ export function useCctpEngine({
     fromSymbol,
     toSymbol,
     feePercent,
+    fundFromExternal,
     runInbound,
     runOutbound,
     t,
@@ -639,17 +733,40 @@ export function useCctpEngine({
           </Typography>
         ),
       };
+    // #32 chunk 4a: for external-wallet users every Stellar-side preflight
+    // failure routes into the guided setup dialog, which derives the exact
+    // step to resume at (create / activate / trustline / top-up).
     if (missingStellar)
-      return { label: t('Set up Stellar wallet first'), action: null, loading: false };
+      return onNeedsSetup
+        ? { label: t('Set up your Normal wallet'), action: onNeedsSetup, loading: false }
+        : { label: t('Set up Stellar wallet first'), action: null, loading: false };
     if (needsTrustline)
+      return onNeedsSetup
+        ? { label: t('Add USDC to your Normal wallet'), action: onNeedsSetup, loading: false }
+        : {
+            label: t('Add USDC Trustline first'),
+            action: null,
+            loading: false,
+            helper: (
+              <Typography
+                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}
+              >
+                {t(
+                  'Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.'
+                )}
+              </Typography>
+            ),
+          };
+    if (lowFeeXlm)
       return {
-        label: t('Add USDC Trustline first'),
-        action: null,
+        label: t('Top up XLM to swap'),
+        action: onNeedsSetup ?? null,
         loading: false,
         helper: (
           <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
             {t(
-              'Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.'
+              'The swap pays its Stellar network fee in XLM from {{which}} — a little XLM is needed there.',
+              { which: onNeedsSetup ? t('your Normal wallet') : t('your wallet') }
             )}
           </Typography>
         ),
@@ -661,6 +778,25 @@ export function useCctpEngine({
     if (quoteError) return { label: t('Try a different amount'), action: null, loading: false };
     if (quoteLoading || !quote)
       return { label: t('Fetching quote…'), action: null, loading: false };
+    // #32 chunk 4b: swapping FROM the external wallet — the CTA names the
+    // move before any signature, never a silent transfer.
+    if (direction === 'out' && fundFromExternal)
+      return {
+        label: t('Move {{amt}} USDC from {{wallet}} & swap', {
+          amt: amount.toFixed(2, BigNumber.ROUND_DOWN),
+          wallet: fundFromExternal.label,
+        }),
+        action: handleExecute,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t(
+              'Your USDC moves to your Normal wallet first (one approval in {{wallet}}), then the swap runs with your passkey.',
+              { wallet: fundFromExternal.label }
+            )}
+          </Typography>
+        ),
+      };
     return { label: t('Swap'), action: handleExecute, loading: false };
   }, [
     enabled,
@@ -669,6 +805,9 @@ export function useCctpEngine({
     evmAddress,
     missingStellar,
     needsTrustline,
+    lowFeeXlm,
+    onNeedsSetup,
+    fundFromExternal,
     amount,
     insufficient,
     stage,
@@ -747,6 +886,8 @@ export function useCctpEngine({
         error={stageError}
         fromSymbol={fromSymbol}
         toSymbol={toSymbol}
+        includeFunding={usedFunding}
+        fundingWalletLabel={fundFromExternal?.label}
         onClose={() => {
           cancelled.current = true;
           setModalOpen(false);

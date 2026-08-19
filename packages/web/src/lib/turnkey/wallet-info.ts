@@ -113,6 +113,18 @@ export async function getTurnkeyWalletInfo(): Promise<TurnkeyWalletInfo | null> 
   }
 }
 
+/**
+ * Strict variant: **throws `TurnkeyWalletInfoUnavailableError`** when the
+ * lookup fails instead of degrading to `null`. Use it wherever `null` has a
+ * meaning of its own ("this user has no Turnkey wallet") that a caller will
+ * cache or act on — e.g. the savings hook's SWR fetcher, where a best-effort
+ * `null` after a timeout was cached as a real answer and silently hid the
+ * companion wallet's savings for the rest of the session.
+ */
+export async function getTurnkeyWalletInfoStrict(): Promise<TurnkeyWalletInfo | null> {
+  return loadWalletInfo();
+}
+
 /** True when the given Stellar address is signed by the user's Turnkey passkey. */
 export async function isTurnkeyStellarAddress(
   address: string | null | undefined

@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { useMemo, useEffect } from 'react';
 import { reconcileSavingsPosition } from '@/lib/portfolio/normalize';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { readCachedCompanionStellarAddress } from '@/lib/portfolio/client-cache';
 import { savingsReadEpoch, assertReadStillFresh } from '@/lib/savings-read-guard';
 
 // ---------------------------------------------------------------------------
@@ -21,7 +22,14 @@ export const POSITION_SYNC_EVENT = 'nf:savings-position-updated';
 
 // --- position cache (localStorage, keyed by address) ---
 const POSITION_CACHE_KEY = 'nf_savings_position_cache_v2';
-const POSITION_TTL_MS = 10 * 60 * 1000;
+// 24h stale-while-revalidate (was 10 min): a cold tab paints the last-known
+// position instantly — the same treatment every other asset already gets via
+// the portfolio's localStorage cache — and the fetch then confirms in the
+// background. Savings correctness never rested on this TTL: the reconciler's
+// no-clobber logic and the #52 epoch guard protect every WRITE regardless of
+// the cached value's age. (Observed live 2026-08-17: a cold tab showed a
+// confident $0.00 for the 15-25s a cold Soroban position read takes.)
+const POSITION_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface CacheEntry {
   position: SavingsPosition;
@@ -157,6 +165,23 @@ export interface UseSavingsPositionResult {
   /** Current USD value of the position (USDC ≈ $1). */
   value: number;
   earnings: number;
+  /**
+   * #32: the companion Normal wallet's savings position, read ONLY when the
+   * connected wallet is external. STRICTLY display-time data — `position`,
+   * `value` and every deposit/withdraw computation stay scoped to the
+   * CONNECTED wallet, so action limits and commissions can never mix wallets.
+   */
+  companionPosition: SavingsPosition | null;
+  companionValue: number;
+  /** #75: the companion's earnings — display stats compose slot + companion,
+   *  same as value; a slot-only Earnings read shows $0.00 for hybrid. */
+  companionEarnings: number;
+  /** True while the companion's position (or its address lookup) is still
+   *  resolving — display gates MUST include this, or a hybrid account shows
+   *  a confident $0 while the slow half is loading (the register's oldest
+   *  root cause: a loading flag covering only SOME of the data sources). */
+  companionPositionLoading: boolean;
+  refreshCompanionPosition: () => void;
   vaultLoading: boolean;
   positionLoading: boolean;
   isValidating: boolean;
@@ -203,6 +228,71 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     }
   );
 
+  // #32 companion savings (display + companion-scoped actions — see the
+  // interface note). The address resolves through the cached single-flight
+  // Turnkey lookup; the position rides the same SWR key family as a
+  // normal-wallet user's own read, so nothing is fetched twice.
+  const isExternalSlot = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+  const companionAddr = useSWR<string | null>(
+    enabled && isExternalSlot ? ['turnkey-stellar-address'] : null,
+    async () => {
+      // STRICT lookup: a failed request must THROW so SWR keeps retrying.
+      // The best-effort variant returns null on failure, and SWR would cache
+      // that null as a real answer — "this user has no companion wallet" —
+      // and not ask again within the deduping window. That was the cold-tab
+      // bug: right after a dev-server restart (or a slow prod session
+      // refresh) the very first /api/turnkey/wallet call times out, the
+      // savings chain dies silently at this step, and the account shows a
+      // confident Savings $0.00 for the rest of the session.
+      const { getTurnkeyWalletInfoStrict } = await import('@/lib/turnkey/wallet-info');
+      const info = await getTurnkeyWalletInfoStrict();
+      return info?.stellarAddress ?? null;
+    },
+    {
+      // Seed from the portfolio's localStorage snapshot — the SAME cache that
+      // makes every other asset paint instantly on a cold tab. With it, the
+      // savings figure needs ZERO network calls for first paint: cached
+      // companion address → cached companion position (24h TTL below). The
+      // live lookup then confirms in the background. `?? undefined` matters:
+      // a null seed would assert "no companion wallet", which only the live
+      // lookup may do.
+      fallbackData: readCachedCompanionStellarAddress(address, network) ?? undefined,
+      revalidateOnFocus: true,
+      // Matches the wallet-info module's own 60s TTL — shorter would add no
+      // freshness (the module would answer from ITS cache), longer would
+      // delay recovery after a failed first attempt.
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      errorRetryCount: 5,
+    }
+  );
+  const companionAddress =
+    companionAddr.data && companionAddr.data !== address ? companionAddr.data : null;
+  const companionPos = useSWR<SavingsPosition>(
+    enabled && companionAddress ? ['savings-position', companionAddress, network] : null,
+    () => fetchUserPosition(companionAddress!, network),
+    {
+      fallbackData: getCachedPosition(companionAddress ?? undefined) ?? undefined,
+      revalidateOnFocus: false,
+      dedupingInterval: 20_000,
+      keepPreviousData: true,
+      errorRetryCount: 3,
+    }
+  );
+  const companionValue = useMemo(() => {
+    const v = parseFloat(companionPos.data?.currentValue || '0');
+    return v > 0 ? v : 0;
+  }, [companionPos.data]);
+  // Loading spans BOTH phases: the address lookup and the position read.
+  // `data === undefined` — not `isLoading` — is the honest test: SWR's
+  // isLoading drops between error retries, which would let the skeleton fall
+  // to a wrong $0 during the backoff gap. `undefined` means "no answer yet"
+  // (keep the skeleton); `null` is a REAL answer ("no companion wallet").
+  const companionPositionLoading =
+    enabled &&
+    isExternalSlot &&
+    (companionAddr.data === undefined || (!!companionAddress && companionPos.data === undefined));
+
   // Cross-instance / legacy sync: when an optimistic write hits the cache,
   // re-seed SWR from it so every consumer updates at once.
   useEffect(() => {
@@ -219,10 +309,19 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
           .mutate(fetchUserPosition(address, network, true), { revalidate: false })
           .catch(() => {});
       }
+      // #32: companion ops write the COMPANION's cache — mirror the same
+      // optimistic-then-confirm dance for it.
+      if (companionAddress) {
+        const cachedCompanion = getCachedPosition(companionAddress);
+        if (cachedCompanion) companionPos.mutate(cachedCompanion, { revalidate: false });
+        companionPos
+          .mutate(fetchUserPosition(companionAddress, network, true), { revalidate: false })
+          .catch(() => {});
+      }
     };
     window.addEventListener(POSITION_SYNC_EVENT, handler);
     return () => window.removeEventListener(POSITION_SYNC_EVENT, handler);
-  }, [address, network, pos]);
+  }, [address, network, pos, companionAddress, companionPos]);
 
   const value = useMemo(() => {
     const v = parseFloat(pos.data?.currentValue || '0');
@@ -236,6 +335,13 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     position: pos.data ?? null,
     value,
     earnings,
+    companionPosition: companionPos.data ?? null,
+    companionValue,
+    companionEarnings: parseFloat(companionPos.data?.earnings || '0'),
+    companionPositionLoading,
+    refreshCompanionPosition: () => {
+      companionPos.mutate();
+    },
     vaultLoading: vault.isLoading && !vault.data,
     positionLoading: pos.isLoading && !pos.data,
     isValidating: vault.isValidating || pos.isValidating,

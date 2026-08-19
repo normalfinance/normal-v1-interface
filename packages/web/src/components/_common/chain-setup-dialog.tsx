@@ -4,7 +4,9 @@ import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { usePersistStore } from '@normalfinance/state';
 import { linkWallet } from '@/services/linked-wallets';
+import { shouldAdoptIntoSlot } from '@/lib/wallet-slot';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 
@@ -64,16 +66,21 @@ export function ChainSetupDialog({
       // Lazy provisioning — derives the chain account on the existing wallet,
       // or creates passkey + sub-org + single-chain wallet for first-timers.
       const result = await ensureChainAccount(chain, userId, userEmail);
-      // Stellar is the app's primary wallet: link it and connect it into the
-      // persist store (sets wallet.address) so the rest of the app recognises
-      // it — mirrors the onboarding wizard's create-wallet step. The other
+      // Stellar is the app's primary wallet: link it, and connect it into the
+      // persist store ONLY when nothing is connected (the signup/onboarding
+      // case — mirrors the wizard's create-wallet step). If an EXTERNAL
+      // wallet occupies the slot, the new Turnkey wallet is a COMPANION:
+      // linked and server-known, but the user's chosen wallet stays put
+      // (#32 chunk 1, invariant I1 — the slot is never stolen). The other
       // chains are read via useTurnkeyWallet, which the caller refetches.
       if (chain === 'stellar') {
         if (!result.stellarAddress) {
           throw new Error(t('Wallet creation did not return a Stellar address'));
         }
         await linkWallet(result.stellarAddress);
-        await connectWalletWithoutKeypair(result.stellarAddress);
+        if (shouldAdoptIntoSlot(usePersistStore.getState().wallet.address)) {
+          await connectWalletWithoutKeypair(result.stellarAddress);
+        }
       }
       onSuccess();
     } catch (e) {

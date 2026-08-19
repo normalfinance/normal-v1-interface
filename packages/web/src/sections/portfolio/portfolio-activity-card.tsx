@@ -6,7 +6,10 @@ import type { ChainId } from '@/lib/chains/registry';
 import { useTranslate } from '@/locales';
 import { CHAINS } from '@/lib/chains/registry';
 import { fCurrency } from '@/utils/format-number';
-import { useMemo, useState, useEffect } from 'react';
+import { usePersistStore } from '@normalfinance/state';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useUserActivity } from '@/hooks/stellar/use-user-activity';
 
 import Box from '@mui/material/Box';
@@ -164,6 +167,16 @@ function activityToRow(a: Activity): RowData {
           : a.tokenIn.symbol === 'USDC'
             ? fCurrency(a.tokenIn.amount)
             : `${a.tokenOut.amount.toFixed(7)} ${a.tokenOut.symbol}`;
+      // A PENDING swap whose delivered amount is still unknown must not show
+      // a confident $0 (Niko live test 2026-08-19: in-flight BTC→USDC row).
+      if (a.pending && a.tokenOut.symbol === 'USDC' && !(a.tokenOut.amount > 0)) {
+        return {
+          asset: `${a.tokenIn.symbol} → ${a.tokenOut.symbol}`,
+          amount: a.tokenIn.amount.toFixed(7),
+          value: '—',
+          txHash: a.txHash,
+        };
+      }
       return {
         asset: `${a.tokenIn.symbol} → ${a.tokenOut.symbol}`,
         amount: a.tokenIn.amount.toFixed(7),
@@ -392,17 +405,61 @@ export function ActivityCard({
   // MoneyGram rows (id `mgi:<id>`) open our detail modal instead of an explorer.
   const [mgiDetailId, setMgiDetailId] = useState<string | null>(null);
 
-  const { recentActivity, isLoading, mutate } = useUserActivity(walletAddress, {
+  // #32 chunk 5: on hybrid accounts the feed covers BOTH wallets — the slot
+  // feed alone hid every companion-side action (savings deposits, cctp legs).
+  // Two instances of the same deduped hook; merged newest-first below.
+  const { companionStellar } = useWalletBalances(true);
+  const persistWallet = usePersistStore().wallet;
+  const isHybrid =
+    !!companionStellar &&
+    persistWallet.walletType != null &&
+    persistWallet.walletType !== 'normal-wallet' &&
+    companionStellar.address !== walletAddress;
+  const slotFeed = useUserActivity(walletAddress, {
     bitcoinAddress,
     ethereumAddress,
     solanaAddress,
   });
+  const companionFeed = useUserActivity(isHybrid ? companionStellar.address : null, {});
+  const isLoading = slotFeed.isLoading || (isHybrid && companionFeed.isLoading);
+  const mutate = useCallback(() => {
+    slotFeed.mutate();
+    if (isHybrid) companionFeed.mutate();
+  }, [slotFeed.mutate, isHybrid, companionFeed.mutate]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recentActivity = useMemo(() => {
+    if (!isHybrid) return slotFeed.recentActivity;
+    const tag = (list: Activity[], wallet: string) =>
+      list.map((a) => ({ ...a, walletTag: wallet }) as Activity & { walletTag?: string });
+    // Dedupe by id: a hybrid cctp swap involves BOTH wallets, so both feeds
+    // return the SAME row (observed live 2026-08-19: one swap listed twice).
+    // NaN-safe sort: one row with a missing/string timestamp made the whole
+    // comparator undefined-order, leaving a fresh row below an hour-old one.
+    const ts = (x: Activity) => Number(x.timestamp) || 0;
+    const seen = new Set<string>();
+    return [
+      ...tag(slotFeed.recentActivity, connectedWalletLabel(persistWallet.walletType)),
+      ...tag(companionFeed.recentActivity, 'Normal wallet'),
+    ]
+      .filter((x) => {
+        if (seen.has(x.id)) return false;
+        seen.add(x.id);
+        return true;
+      })
+      .sort((x, y) => ts(y) - ts(x));
+  }, [isHybrid, slotFeed.recentActivity, companionFeed.recentActivity, persistWallet.walletType]);
 
   // Re-fetch wallet activity after a deposit or withdrawal completes.
   useEffect(() => {
     const handler = () => setTimeout(mutate, 1500);
     window.addEventListener('nf:savings-position-updated', handler);
-    return () => window.removeEventListener('nf:savings-position-updated', handler);
+    // Swaps/sends announce here — the feed refreshed only on savings events,
+    // so a just-started swap's row (#27, created before broadcast) stayed
+    // invisible until Done (Niko live test 2026-08-19).
+    window.addEventListener('nf:activity-updated', handler);
+    return () => {
+      window.removeEventListener('nf:savings-position-updated', handler);
+      window.removeEventListener('nf:activity-updated', handler);
+    };
   }, [mutate]);
 
   const filtered = useMemo(() => {
@@ -556,6 +613,14 @@ export function ActivityCard({
                       sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}
                     >
                       <TypeTag tagKey={tagKey} />
+                      {(activity as Activity & { walletTag?: string }).walletTag && (
+                        <Box
+                          component="span"
+                          sx={{ fontSize: '10.5px', color: 'rgba(10,10,15,0.4)' }}
+                        >
+                          {(activity as Activity & { walletTag?: string }).walletTag}
+                        </Box>
+                      )}
                       {(((activity.type === 'Sent' || activity.type === 'Receive') &&
                         activity.confirmed === false) ||
                         (activity.type === 'Swap' && activity.pending) ||

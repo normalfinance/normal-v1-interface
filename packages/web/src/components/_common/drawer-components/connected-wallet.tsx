@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { Activity } from '@/types/activity';
 import type { Token } from '@normalfinance/types';
 
+import { useState } from 'react';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
@@ -32,6 +33,19 @@ const MONO = {
   fontVariantNumeric: 'tabular-nums',
 } as const;
 
+export interface WalletSection {
+  /** Section header, e.g. "Normal wallet" / "Connected wallet". */
+  label: string;
+  /** The wallet's Stellar (or primary) address, shown shortened. */
+  address: string;
+  /** Pre-filtered tokens belonging to THIS wallet. */
+  tokens: Token[];
+  /** #74: per-wallet readiness notice (missing trustline / not activated),
+   *  rendered under THIS wallet's tab only — the fix action must belong to
+   *  the wallet it is shown for. */
+  notice?: ReactNode;
+}
+
 export interface ConnectedWalletProps {
   address: string;
   balance?: number;
@@ -40,6 +54,11 @@ export interface ConnectedWalletProps {
   tokensFetching?: boolean;
   percentageChange?: number;
   tokens?: Token[];
+  /** #32 chunk 2: dual-wallet display — when present, the assets tab renders
+   *  one labeled group per wallet (doc 72 §4f) instead of the flat list. */
+  sections?: WalletSection[];
+  /** #74: readiness notice for single-wallet mode (no sections). */
+  walletNotice?: ReactNode;
   activity?: Activity[];
   bitcoinAddress?: string | null;
 }
@@ -51,6 +70,8 @@ export default function ConnectedWallet({
   savingsFetching = false,
   tokensFetching = false,
   tokens,
+  sections,
+  walletNotice,
   activity,
 }: ConnectedWalletProps) {
   const { t } = useTranslate();
@@ -82,6 +103,8 @@ export default function ConnectedWallet({
   ];
 
   const tabs = useTabs('assets');
+  // #32: selected wallet tab in dual-wallet mode (0 = Normal wallet).
+  const [walletTab, setWalletTab] = useState(0);
 
   const TAB_ITEMS = [
     { value: 'assets', label: t('Assets') },
@@ -274,14 +297,76 @@ export default function ConnectedWallet({
       </Tabs>
 
       {/* ------- tab panels ---------------------------------------- */}
-      {tabs.value === 'assets' && (
-        <TokensTab
-          loading={tokensFetching}
-          tokens={tokens?.filter(
-            (tkn) => BigNumber(tkn.balance).gt(0) || tkn.contract === '__btc__'
-          )}
-        />
-      )}
+      {tabs.value === 'assets' &&
+        (sections && sections.length > 0 ? (
+          // Dual-wallet mode: one WALLET TAB per wallet (Niko's direction —
+          // stacked groups read as one continuous list). Numbers are never
+          // summed across wallets: each tab shows exactly what that wallet
+          // can spend (doc 72 §4f).
+          <Box>
+            <Stack direction="row" spacing={0.75} sx={{ mb: '10px' }}>
+              {sections.map((section, idx) => {
+                const selected = Math.min(walletTab, sections.length - 1) === idx;
+                return (
+                  <Box
+                    key={section.address}
+                    component="button"
+                    onClick={() => setWalletTab(idx)}
+                    sx={{
+                      appearance: 'none',
+                      border: selected
+                        ? '1px solid rgba(10,10,15,0.9)'
+                        : '1px solid rgba(10,10,15,0.1)',
+                      borderRadius: '999px',
+                      px: '12px',
+                      py: '6px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      fontFamily: 'inherit',
+                      cursor: 'pointer',
+                      bgcolor: selected ? '#0A0A0F' : 'transparent',
+                      color: selected ? '#fff' : '#6B6B76',
+                      transition: 'all .15s ease',
+                      '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.25)' },
+                    }}
+                  >
+                    {t(section.label)}
+                  </Box>
+                );
+              })}
+            </Stack>
+            {(() => {
+              const active = sections[Math.min(walletTab, sections.length - 1)];
+              return (
+                <Box>
+                  <Typography
+                    sx={{ fontSize: '11px', color: '#9A9AA5', px: '8px', pb: '2px', ...MONO }}
+                  >
+                    {`${active.address.slice(0, 6)}…${active.address.slice(-6)}`}
+                  </Typography>
+                  {active.notice && <Box sx={{ pb: '8px' }}>{active.notice}</Box>}
+                  {active.tokens.length > 0 ? (
+                    <TokensTab loading={tokensFetching} tokens={active.tokens} />
+                  ) : (
+                    <Typography sx={{ fontSize: '13px', color: '#9A9AA5', px: '8px', py: '18px' }}>
+                      {t('No assets in this wallet yet.')}
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })()}
+          </Box>
+        ) : (
+          <Box>
+            {walletNotice && <Box sx={{ pb: '8px' }}>{walletNotice}</Box>}
+            <TokensTab
+              loading={tokensFetching}
+              tokens={tokens?.filter(
+                (tkn) => BigNumber(tkn.balance).gt(0) || tkn.contract === '__btc__'
+              )}
+            />
+          </Box>
+        ))}
       {tabs.value === 'activity' && <ActivityTab activity={activity} />}
     </Stack>
   );

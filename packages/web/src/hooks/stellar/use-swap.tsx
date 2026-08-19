@@ -43,7 +43,15 @@ interface UseSwapReturn {
 
 // ----------------------------------------------------------------------
 
-export function useSwap(): UseSwapReturn {
+/**
+ * #32 chunk 4f: `targetAddress` retargets the whole swap — build, both
+ * signatures, fee caller — to that wallet (the hybrid case: external wallet in
+ * the slot, swap runs from the companion Normal wallet). Same contract as
+ * `useDefindexSavings(targetAddress)`: the override is EXPLICIT, never a
+ * silent fallback, and the universal signer routes by the tx's source account
+ * (Turnkey-managed target → passkey prompt).
+ */
+export function useSwap(targetAddress?: string): UseSwapReturn {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
@@ -56,6 +64,12 @@ export function useSwap(): UseSwapReturn {
     publicKey: normalPublicKey,
     canSign: normalCanSign,
   } = useNormalWallet();
+
+  const connectedAddress =
+    wallet.walletType === 'normal-wallet'
+      ? normalPublicKey || wallet.address
+      : stellarPublicKey || wallet.address;
+  const overrideActive = !!targetAddress && targetAddress !== connectedAddress;
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -149,18 +163,31 @@ export function useSwap(): UseSwapReturn {
 
         const walletType = wallet.walletType;
         const isNormalWallet = walletType === 'normal-wallet';
-        if (isNormalWallet && !normalCanSign) {
+        // Under an override the target signs via the universal signer below —
+        // the slot wallet's local-key state is irrelevant to this swap.
+        if (!overrideActive && isNormalWallet && !normalCanSign) {
           throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
         }
-        const walletAddress = isNormalWallet
-          ? normalPublicKey || wallet.address
-          : stellarPublicKey || wallet.address;
+        // #32: with an active override every transaction is BUILT for and
+        // SIGNED BY the target wallet — sender, fee caller and both
+        // signatures all follow it, so the swap can never mix wallets.
+        const walletAddress = overrideActive
+          ? targetAddress!
+          : isNormalWallet
+            ? normalPublicKey || wallet.address
+            : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
         // Sign WITHOUT submitting — submission happens server-side as a pair
         // (#26 sign-both-first, see lib/stellar/fee-pair.ts).
+        // Lazy import: kit-signer pulls the wallets-kit ESM graph, which jsdom
+        // test suites can't parse — same pattern as normal-wallet-setup.
         const signOnly = async (xdr: string) => {
-          const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
+          const signResult = overrideActive
+            ? await (
+                await import('@/lib/mgi/kit-signer')
+              ).signStellarTxForMgi(xdr, config.NETWORK_PASSPHRASE, walletAddress)
+            : await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signed = normalizeSignedXDR(signResult);
           if (!signed) throw new Error('Transaction signing failed — no signed XDR returned');
           return signed;
@@ -308,6 +335,8 @@ export function useSwap(): UseSwapReturn {
       stellarPublicKey,
       signNormalWallet,
       signOrReconnect,
+      overrideActive,
+      targetAddress,
       enqueueSnackbar,
       t,
     ]

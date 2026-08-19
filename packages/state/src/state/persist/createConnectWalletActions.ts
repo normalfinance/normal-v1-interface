@@ -12,6 +12,9 @@ export const createConnectWalletActions = () => {
       server: undefined,
       walletType: undefined,
     },
+    // See PersistWalletActions.lastWalletType — written on connect, preserved
+    // across disconnect (#32 chunk 1).
+    lastWalletType: undefined,
 
     // This function stores wallet connection details after the Stellar Wallets Kit
     // has already handled the connection process
@@ -45,6 +48,7 @@ export const createConnectWalletActions = () => {
       usePersistStore.setState((state: AppStorePersist) => ({
         ...state,
         wallet: newState,
+        lastWalletType: newState.walletType,
       }));
 
       logger.log('[WALLET ACTIONS] Wallet state updated successfully');
@@ -82,6 +86,9 @@ export const createConnectWalletActions = () => {
             server: undefined,
             walletType: undefined,
           },
+          // lastWalletType intentionally NOT cleared (carried by the spread):
+          // it must survive disconnect so an empty slot stays distinguishable
+          // from a fresh device (#32 chunk 1, finding #42).
           tokenState: newTokenState,
         };
       });

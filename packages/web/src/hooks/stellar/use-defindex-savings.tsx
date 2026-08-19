@@ -13,6 +13,7 @@ import { buildAuthHeaders } from '@/utils/http';
 // deposit/withdraw transaction engine.
 import { Asset, Horizon } from '@stellar/stellar-sdk';
 import { usePersistStore } from '@normalfinance/state';
+import { signStellarTxForMgi } from '@/lib/mgi/kit-signer';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { bumpSavingsReadEpoch } from '@/lib/savings-read-guard';
 import { useRef, useState, useEffect, useCallback } from 'react';
@@ -28,9 +29,13 @@ import Button from '@mui/material/Button';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import { useStellarWalletsKit } from './use-stellar-wallets-kit';
-import { useSavingsPosition, POSITION_SYNC_EVENT } from '../use-savings-position';
 import { useWalletReconnect, WalletSessionExpiredError } from './use-wallet-reconnect';
 import { useNormalWallet, NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE } from './use-normal-wallet';
+import {
+  setCachedPosition,
+  useSavingsPosition,
+  POSITION_SYNC_EVENT,
+} from '../use-savings-position';
 
 // ----------------------------------------------------------------------
 
@@ -89,7 +94,15 @@ function enqueueSuccessWithStellarExpert(
 
 // ----------------------------------------------------------------------
 
-export function useDefindexSavings(): UseDefindexSavingsReturn {
+/**
+ * @param targetAddress #32: operate savings on a wallet OTHER than the
+ * connected one — the companion Normal wallet while an external wallet holds
+ * the slot. The target's position drives display, commission math and the
+ * optimistic updates; signing routes by the TARGET's account (passkey for a
+ * Turnkey-managed address, via the universal signer). Omitted → the connected
+ * wallet, exactly as before.
+ */
+export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsReturn {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet, getAllTokens } = usePersistStore();
@@ -112,9 +125,19 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   // — one fetch across all views instead of one per mount.
   const savings = useSavingsPosition();
   const vaultInfo = savings.vaultInfo;
-  const userPosition = savings.position;
+  // #32: an active target override means every position-derived number
+  // (display, withdraw commission, optimistic snapshots) comes from the
+  // TARGET wallet's position — the two can never mix.
+  const connectedAddress =
+    wallet.walletType === 'normal-wallet'
+      ? normalPublicKey || wallet.address
+      : stellarPublicKey || wallet.address;
+  const overrideActive = !!targetAddress && targetAddress !== connectedAddress;
+  const userPosition = overrideActive ? savings.companionPosition : savings.position;
   const fetching = savings.vaultLoading;
-  const positionFetching = savings.positionLoading;
+  // Companion loading included on purpose: a loading flag must cover EVERY
+  // source a display derives from (false for single-wallet users anyway).
+  const positionFetching = savings.positionLoading || savings.companionPositionLoading;
   const fetchError = savings.vaultError
     ? ((savings.vaultError as Error)?.message ?? 'Failed to fetch vault info')
     : null;
@@ -124,10 +147,10 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   useEffect(() => {
     savingsRef.current = savings;
   });
-  const userPositionRef = useRef(savings.position);
+  const userPositionRef = useRef(userPosition);
   useEffect(() => {
-    userPositionRef.current = savings.position;
-  }, [savings.position]);
+    userPositionRef.current = userPosition;
+  }, [userPosition]);
 
   // Post-operation refresh timeouts (cancelled before a new op starts).
   const refreshTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -138,7 +161,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
   }, []);
   const refreshUserPosition = useCallback(async () => {
     savingsRef.current.refreshPosition();
-  }, []);
+    // #32: when acting on the companion, its position is the one that moved.
+    if (overrideActive) savingsRef.current.refreshCompanionPosition();
+  }, [overrideActive]);
 
   // Deposit to vault — two transactions signed up front, submitted as a pair
   // (#26): (1) DeFindex deposit for the net amount, (2) classic USDC fee
@@ -180,12 +205,17 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         const walletType = wallet.walletType;
         const isNormalWallet = walletType === 'normal-wallet';
-        if (isNormalWallet && !normalCanSign) {
+        if (!overrideActive && isNormalWallet && !normalCanSign) {
           throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
         }
-        const walletAddress = isNormalWallet
-          ? normalPublicKey || wallet.address
-          : stellarPublicKey || wallet.address;
+        // #32: with an active override every transaction is BUILT for and
+        // SIGNED BY the target wallet — the universal signer routes by the
+        // source account (Turnkey-managed target → passkey).
+        const walletAddress = overrideActive
+          ? targetAddress!
+          : isNormalWallet
+            ? normalPublicKey || wallet.address
+            : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
         const horizonServer = new Horizon.Server(config.HORIZON_URL, {
@@ -194,7 +224,9 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         // Sign WITHOUT submitting — submission happens server-side as a pair.
         const signOnly = async (xdr: string) => {
-          const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
+          const signResult = overrideActive
+            ? await signStellarTxForMgi(xdr, config.NETWORK_PASSPHRASE, walletAddress)
+            : await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
           return signedXDR;
@@ -336,11 +368,15 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
             totalDeposited: '0',
             earnings: '0',
           };
-          savingsRef.current.setPosition({
+          const next = {
             ...base,
             currentValue: (parseFloat(base.currentValue) + netAmount).toFixed(7),
             totalDeposited: (parseFloat(base.totalDeposited) + netAmount).toFixed(7),
-          });
+          };
+          // #32: the optimistic write goes to the wallet that ACTED — the
+          // target's cache when overridden, never the connected wallet's.
+          if (overrideActive) setCachedPosition(walletAddress, next);
+          else savingsRef.current.setPosition(next);
           // Invalidate any position read still in flight from BEFORE this action
           // (finding #52: a pre-action read resolving late overwrote the
           // correct figure and stuck). Bump BEFORE announcing.
@@ -390,6 +426,8 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       stellarPublicKey,
       signNormalWallet,
       signOrReconnect,
+      overrideActive,
+      targetAddress,
       enqueueSnackbar,
       t,
       getAllTokens,
@@ -442,16 +480,21 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
 
         const walletType = wallet.walletType;
         const isNormalWallet = walletType === 'normal-wallet';
-        if (isNormalWallet && !normalCanSign) {
+        if (!overrideActive && isNormalWallet && !normalCanSign) {
           throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
         }
-        const walletAddress = isNormalWallet
-          ? normalPublicKey || wallet.address
-          : stellarPublicKey || wallet.address;
+        // #32: see the matching note in deposit() — target builds AND signs.
+        const walletAddress = overrideActive
+          ? targetAddress!
+          : isNormalWallet
+            ? normalPublicKey || wallet.address
+            : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
         const signOnly = async (xdr: string) => {
-          const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
+          const signResult = overrideActive
+            ? await signStellarTxForMgi(xdr, config.NETWORK_PASSPHRASE, walletAddress)
+            : await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signedXDR = normalizeSignedXDR(signResult);
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
           return signedXDR;
@@ -547,12 +590,15 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
           const base = positionBefore;
           const preCV = Math.max(parseFloat(base.currentValue) - parsedAmount, 0);
           const preTD = Math.max(parseFloat(base.totalDeposited) - parsedAmount, 0);
-          savingsRef.current.setPosition({
+          const next = {
             ...base,
             currentValue: preCV.toFixed(7),
             totalDeposited: preTD.toFixed(7),
             earnings: Math.max(preCV - preTD, 0).toFixed(7),
-          });
+          };
+          // #32: write the ACTING wallet's cache (see deposit()).
+          if (overrideActive) setCachedPosition(walletAddress, next);
+          else savingsRef.current.setPosition(next);
           // Invalidate any position read still in flight from BEFORE this action
           // (finding #52: a pre-action read resolving late overwrote the
           // correct figure and stuck). Bump BEFORE announcing.
@@ -600,6 +646,8 @@ export function useDefindexSavings(): UseDefindexSavingsReturn {
       stellarPublicKey,
       signNormalWallet,
       signOrReconnect,
+      overrideActive,
+      targetAddress,
       enqueueSnackbar,
       t,
       getAllTokens,

@@ -15,6 +15,8 @@ import { useUsdPrice } from '@/hooks/use-price-history';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
 import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { ActivityCard } from '@/sections/portfolio/portfolio-activity-card';
@@ -135,6 +137,19 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
 
   const storeToken = tokens.find((tkn) => tkn.symbol.toLowerCase() === symbol.toLowerCase());
 
+  // #75 Phase 2b: account-wide view for Stellar assets. The page showed the
+  // SLOT wallet's balance only (and read it from the legacy store) — a hybrid
+  // user opening /assets/XLM saw the near-empty Lobstr number while their
+  // XLM sat in the Normal wallet. Balances come from the aggregate; the big
+  // number is the ACCOUNT total, with a per-wallet split line under it.
+  const { companionStellar, assets: aggAssets } = useWalletBalances(true);
+  const aggSlotBalance = aggAssets.find(
+    (a) => a.chain === 'stellar' && a.symbol === upperSymbol
+  )?.balance;
+  const companionBalance = BigNumber(
+    companionStellar?.assets.find((a) => a.symbol === upperSymbol)?.balance ?? 0
+  );
+
   const btc = useBtcPortfolio(isBtc);
   const eth = useEthPortfolio(isEth);
   const sol = useSolPortfolio(isSol);
@@ -210,9 +225,16 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
     return <SpecificNotFound type="asset" />;
   }
 
-  const balance = BigNumber(token.balance || 0);
+  // Stellar assets: slot balance from the aggregate (store kept only for
+  // identity/price fallback), display total = slot + companion.
+  const slotBalance = native
+    ? BigNumber(token.balance || 0)
+    : BigNumber(aggSlotBalance ?? token.balance ?? 0);
+  const balance = slotBalance.plus(native ? 0 : companionBalance);
   const price = BigNumber(token.price || 0);
   const value = balance.multipliedBy(price);
+  // Split line only when BOTH wallets hold some — one owner needs no labels.
+  const showWalletSplit = !native && companionBalance.gt(0);
 
   const requireLogin = (action: () => void) => {
     if (!user) {
@@ -458,6 +480,17 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                   </Box>
                   {fCurrency(price.toNumber())} / {token.symbol}
                 </Box>
+                {/* #75 2b: per-wallet split — the big number is the account
+                    total, this line says who holds what. */}
+                {showWalletSplit && (
+                  <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', mt: '6px', ...MONO }}>
+                    {t('Normal wallet')} {fTokenAmount(companionBalance)}
+                    <Box component="span" sx={{ mx: '6px', color: 'rgba(10,10,15,0.2)' }}>
+                      ·
+                    </Box>
+                    {connectedWalletLabel(wallet.walletType)} {fTokenAmount(slotBalance)}
+                  </Box>
+                )}
               </>
             )}
           </Box>

@@ -8,6 +8,7 @@
 // during 'bridging' is always safe (and we say so).
 
 import { useTranslate } from '@/locales';
+import { CHAINS } from '@/lib/chains/registry';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -18,6 +19,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Iconify } from '@/components/template/iconify';
 
 export type CctpStage =
+  | 'funding'
   | 'lifi'
   | 'arriving'
   | 'topup'
@@ -27,6 +29,20 @@ export type CctpStage =
   | 'delivering'
   | 'done';
 
+// Chain-honest ETA text, derived from the registry's settlement window —
+// never hardcoded per chain in copy (2026-08-19 lesson).
+const CHAIN_OF: Record<string, 'bitcoin' | 'ethereum' | 'solana'> = {
+  BTC: 'bitcoin',
+  ETH: 'ethereum',
+  SOL: 'solana',
+};
+function settlementEta(symbol: string): string {
+  const chain = CHAIN_OF[symbol];
+  if (!chain) return 'a few minutes';
+  const { minMinutes, maxMinutes } = CHAINS[chain].settlement;
+  return maxMinutes <= 5 ? 'a few minutes' : `usually ${minMinutes}–${maxMinutes} minutes`;
+}
+
 interface Props {
   open: boolean;
   direction: 'in' | 'out';
@@ -34,6 +50,9 @@ interface Props {
   error: string | null;
   fromSymbol: string;
   toSymbol: string;
+  /** #32 chunk 4b: this run started by moving USDC from the external wallet. */
+  includeFunding?: boolean;
+  fundingWalletLabel?: string;
   onClose: () => void;
 }
 
@@ -44,6 +63,8 @@ export function CctpProgressModal({
   error,
   fromSymbol,
   toSymbol,
+  includeFunding = false,
+  fundingWalletLabel,
   onClose,
 }: Props) {
   const { t } = useTranslate();
@@ -59,7 +80,7 @@ export function CctpProgressModal({
           {
             id: 'arriving',
             label: t('USDC arriving on Base'),
-            sub: t('Cross-chain delivery — a few minutes'),
+            sub: t('Cross-chain delivery — {{eta}}', { eta: settlementEta(fromSymbol) }),
           },
           {
             id: 'topup',
@@ -79,6 +100,19 @@ export function CctpProgressModal({
           { id: 'done', label: t('Done'), sub: t('{{sym}} delivered', { sym: toSymbol }) },
         ]
       : [
+          // #32 chunk 4b: swapping FROM the external wallet starts with the
+          // visible funding move — never a silent transfer.
+          ...(includeFunding
+            ? [
+                {
+                  id: 'funding' as CctpStage,
+                  label: t('Moving USDC from {{wallet}}', {
+                    wallet: fundingWalletLabel ?? t('your connected wallet'),
+                  }),
+                  sub: t('Approve in your wallet — funds go to your own Normal wallet'),
+                },
+              ]
+            : []),
           {
             id: 'burn',
             label: t('Starting the Circle bridge'),
@@ -99,24 +133,15 @@ export function CctpProgressModal({
             label: t('Swapping USDC to {{sym}}', { sym: toSymbol }),
             sub: t('Via LI.FI · approve in your wallet'),
           },
-          // BTC delivery takes many minutes — the modal closes at 'done' with
-          // an "on its way" note instead of holding a delivery step open (#66).
-          ...(toSymbol === 'BTC'
-            ? []
-            : [
-                {
-                  id: 'delivering' as CctpStage,
-                  label: t('Delivering {{sym}}', { sym: toSymbol }),
-                  sub: t('Cross-chain arrival — usually 1–3 minutes'),
-                },
-              ]),
+          {
+            id: 'delivering' as CctpStage,
+            label: t('Delivering {{sym}}', { sym: toSymbol }),
+            sub: t('Cross-chain arrival — {{eta}}', { eta: settlementEta(toSymbol) }),
+          },
           {
             id: 'done',
             label: t('Done'),
-            sub:
-              toSymbol === 'BTC'
-                ? t('{{sym}} on its way to your wallet', { sym: toSymbol })
-                : t('{{sym}} delivered', { sym: toSymbol }),
+            sub: t('{{sym}} delivered', { sym: toSymbol }),
           },
         ];
 

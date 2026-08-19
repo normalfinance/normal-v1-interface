@@ -7,6 +7,8 @@ import { useStellarConfig } from '@/hooks';
 import { useRouter } from 'next/navigation';
 import { chainOfActivityEvent } from '@/lib/tx-events';
 import { usePersistStore } from '@normalfinance/state';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
@@ -53,13 +55,26 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const config = useStellarConfig();
   const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
 
+  // #32: hybrid users PICK which wallet this card operates on (Niko's
+  // direction — "you can do savings from any wallet"). Default: the Normal
+  // wallet, where a hybrid user's savings usually live and where every
+  // action is passkey-only. EVERYTHING below — position, balances, setup
+  // state, fee semaphore, deposit/withdraw signing — follows the TARGET.
+  const { companionStellar } = useWalletBalances(true);
+  const isExternalConnected = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+  const savingsHybrid = isExternalConnected && !!companionStellar;
+  const [savingsWalletTab, setSavingsWalletTab] = useState<'normal' | 'connected'>('normal');
+  const activeSavingsTab = savingsHybrid ? savingsWalletTab : 'connected';
+  const savingsTargetAddress =
+    savingsHybrid && activeSavingsTab === 'normal' ? companionStellar!.address : undefined;
+
   const {
     isLoading: isCheckingAccount,
     accountExists,
     xlmBalance,
     hasUsdcTrustline,
     refetch: refetchAccountStatus,
-  } = useAccountStatus(wallet.address, { assetIssuer: savingsUsdcIssuer });
+  } = useAccountStatus(savingsTargetAddress ?? wallet.address, { assetIssuer: savingsUsdcIssuer });
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
   const { startFlow } = useAssetActionsContext();
 
@@ -75,7 +90,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     txStep,
     deposit,
     withdraw,
-  } = useDefindexSavings();
+  } = useDefindexSavings(savingsTargetAddress);
 
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
@@ -83,7 +98,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const [setupOpen, setSetupOpen] = useState(false);
   const setupAutoOpened = useRef(false);
 
-  const rawDepositBalance = getTokenBalance(getSavingsDepositToken(tokenState.tokens, config));
+  // #32: the deposit balance is the TARGET wallet's USDC — the companion's
+  // (from the portfolio aggregate) when the Normal-wallet tab is active,
+  // the connected wallet's token store otherwise.
+  const rawDepositBalance = savingsTargetAddress
+    ? Number(companionStellar?.assets.find((a) => a.symbol === 'USDC')?.balance ?? 0).toFixed(7)
+    : getTokenBalance(getSavingsDepositToken(tokenState.tokens, config));
   const rawDepositBalanceNum = parseFloat(rawDepositBalance);
 
   // `spentOnDeposits` optimistically subtracts what the user just deposited, so
@@ -190,12 +210,35 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
 
   // Auto-open the guided setup once when it's first needed (the user can reopen
   // it later via the "Set up savings" button).
+  //
+  // #32: NOT for hybrid users. Connecting a fresh external wallet while the
+  // account already owns a working Normal wallet made this pop "Set up Normal
+  // Savings" for the empty external account (observed live 2026-08-15) — the
+  // user's savings-capable wallet exists; nagging them to activate a second
+  // one is noise. Manual setup via the button still works for every wallet.
   useEffect(() => {
-    if (needsSetup && !setupAutoOpened.current) {
-      setupAutoOpened.current = true;
-      setSetupOpen(true);
-    }
-  }, [needsSetup]);
+    if (!needsSetup || setupAutoOpened.current) return undefined;
+    let stale = false;
+    (async () => {
+      const isExternal = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+      if (isExternal) {
+        try {
+          const { getTurnkeyWalletInfo } = await import('@/lib/turnkey/wallet-info');
+          const tk = await getTurnkeyWalletInfo();
+          if (tk?.stellarAddress) return; // companion exists — no nag
+        } catch {
+          /* lookup failed — fall through to today's behavior */
+        }
+      }
+      if (!stale && !setupAutoOpened.current) {
+        setupAutoOpened.current = true;
+        setSetupOpen(true);
+      }
+    })();
+    return () => {
+      stale = true;
+    };
+  }, [needsSetup, wallet.walletType]);
 
   // Close it only when setup is genuinely complete — never while a re-check is in
   // flight — and return the card to the normal deposit UI.
@@ -432,6 +475,49 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           <Skeleton variant="rounded" width={80} height={26} sx={{ borderRadius: '20px' }} />
         )}
       </Stack>
+
+      {/* #32: hybrid accounts pick the wallet this card operates on — the
+          position, balances, fee light and the deposit/withdraw signing all
+          follow the selected wallet (Normal = passkey; the external wallet
+          signs in its own app). Single-wallet users never see this row. */}
+      {savingsHybrid && (
+        <Box sx={{ display: 'flex', gap: '6px', mb: '14px', flexWrap: 'wrap' }}>
+          {(
+            [
+              { key: 'normal', label: t('Normal wallet') },
+              { key: 'connected', label: connectedWalletLabel(wallet.walletType) },
+            ] as const
+          ).map((opt) => {
+            const selected = activeSavingsTab === opt.key;
+            return (
+              <Box
+                key={opt.key}
+                component="button"
+                onClick={() => setSavingsWalletTab(opt.key)}
+                sx={{
+                  appearance: 'none',
+                  border: selected
+                    ? '1px solid rgba(10,10,15,0.9)'
+                    : '1px solid rgba(10,10,15,0.12)',
+                  borderRadius: '999px',
+                  px: '12px',
+                  py: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  bgcolor: selected ? '#0A0A0F' : 'transparent',
+                  color: selected ? '#fff' : '#6B6B76',
+                  transition: 'all .15s ease',
+                  '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.3)' },
+                }}
+              >
+                {opt.label}
+              </Box>
+            );
+          })}
+        </Box>
+      )}
 
       {/* Stats */}
       <Box

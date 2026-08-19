@@ -91,16 +91,24 @@ export async function signXDRWithWalletKit(
     res = await runWalletKitSigning(() => sign(xdr, networkPassphrase));
   } catch (err) {
     // Lobstr/WalletConnect sessions don't survive page reloads; signing then
-    // fails with "connection key is missing". Surface the same reconnect UX
-    // the savings flow uses instead of the kit's raw error.
+    // fails with "connection key is missing". Inline recovery (same as
+    // signOrReconnect, Niko 2026-08-18): reopen the connect flow and retry
+    // this SAME signature once, so a mid-flow step pauses and continues
+    // instead of failing; only a declined/failed reconnect aborts.
     const walletType = usePersistStore.getState().wallet.walletType ?? '';
     if (SESSION_BASED_WALLET_TYPES.has(walletType) && isSessionError(err)) {
-      showWalletReconnectSnackbar(() =>
-        useStellarWalletKitStore.getState().connectWallet(usePersistStore.getState())
-      );
-      throw new WalletSessionExpiredError();
+      try {
+        await useStellarWalletKitStore.getState().connectWallet(usePersistStore.getState());
+        res = await runWalletKitSigning(() => sign(xdr, networkPassphrase));
+      } catch (retryErr) {
+        showWalletReconnectSnackbar(() =>
+          useStellarWalletKitStore.getState().connectWallet(usePersistStore.getState())
+        );
+        throw isSessionError(retryErr) ? new WalletSessionExpiredError() : retryErr;
+      }
+    } else {
+      throw err;
     }
-    throw err;
   }
 
   // Normalize return shape to a string XDR

@@ -48,7 +48,7 @@ export function usePortfolio(enabled = true): UsePortfolioResult {
   const wallet = useWalletBalances(enabled);
   const savings = useSavingsPosition(enabled);
 
-  const walletPositions = useMemo<Position[]>(
+  const slotPositions = useMemo<Position[]>(
     () =>
       wallet.assets.map((a) => {
         const d = assetDisplay(a.symbol);
@@ -71,14 +71,21 @@ export function usePortfolio(enabled = true): UsePortfolioResult {
     [wallet.assets]
   );
 
+  // #32: savings DISPLAY is account-wide — the connected wallet's position
+  // plus the companion Normal wallet's (one product, so a sum is honest).
+  // Actions stay per-wallet inside the savings card, which reads
+  // `savings.position` directly.
+  const savingsDisplayValue = savings.value + savings.companionValue;
+
   const savingsPosition = useMemo<Position | null>(() => {
     if (!enabled) return null;
-    const v = savings.value;
-    const status: PositionStatus = savings.positionLoading
-      ? 'loading'
-      : savings.positionError
-        ? 'error'
-        : 'ok';
+    const v = savingsDisplayValue;
+    const status: PositionStatus =
+      savings.positionLoading || savings.companionPositionLoading
+        ? 'loading'
+        : savings.positionError
+          ? 'error'
+          : 'ok';
     return {
       id: 'savings:usdc',
       kind: 'savings',
@@ -91,18 +98,68 @@ export function usePortfolio(enabled = true): UsePortfolioResult {
       decimals: 4,
       status,
     };
-  }, [enabled, savings.value, savings.positionLoading, savings.positionError]);
+  }, [
+    enabled,
+    savingsDisplayValue,
+    savings.positionLoading,
+    savings.companionPositionLoading,
+    savings.positionError,
+  ]);
+
+  // #32: the companion Normal wallet's Stellar assets (present only when the
+  // CONNECTED wallet is external). The portfolio page is the ACCOUNT-WIDE
+  // total-wealth view (doc 72 §4f) — connecting an external wallet must never
+  // make the Normal wallet's XLM/USDC vanish from the page (observed live
+  // 2026-08-15). Rows carry a "· Normal wallet" label so no number pretends
+  // to be spendable by the connected wallet.
+  const companionPositions = useMemo<Position[]>(() => {
+    const comp = wallet.companionStellar;
+    if (!comp) return [];
+    return comp.assets
+      .filter((a) => a.balance != null && Number(a.balance) > 0)
+      .map((a) => {
+        const d = assetDisplay(a.symbol);
+        return {
+          id: `companion:${a.symbol}`,
+          kind: 'wallet' as const,
+          symbol: a.symbol,
+          name: `${d.name} · Normal wallet`,
+          iconUrl: d.icon,
+          chain: a.chain,
+          address: a.address,
+          balance: a.balance,
+          price: a.price,
+          usdValue: a.usdValue,
+          change24h: a.change24h,
+          decimals: a.decimals,
+          status: a.status as PositionStatus,
+        };
+      });
+  }, [wallet.companionStellar]);
+
+  // Account-wide wallet positions — what every consumer should render. The
+  // slot wallet's assets plus the companion's (labeled). Companion rows carry
+  // `companion:` ids so views can label or special-case them.
+  const walletPositions = useMemo<Position[]>(
+    () => [...slotPositions, ...companionPositions],
+    [slotPositions, companionPositions]
+  );
 
   // Positions shown to the user: wallet assets with a balance, plus savings when
   // there's value. (Holdings views filter to balance > 0 anyway.)
   const positions = useMemo<Position[]>(() => {
+    // walletPositions already carries the companion rows (pre-filtered).
     const all = walletPositions.filter((p) => p.balance != null && Number(p.balance) > 0);
-    if (savingsPosition && savings.value > 0) all.push(savingsPosition);
+    if (savingsPosition && savingsDisplayValue > 0) all.push(savingsPosition);
     return all;
-  }, [walletPositions, savingsPosition, savings.value]);
+  }, [walletPositions, savingsPosition, savingsDisplayValue]);
 
-  const walletUsd = wallet.totalUsd;
-  const savingsUsd = savings.value;
+  const companionUsd = companionPositions.reduce(
+    (acc, p) => acc + (p.usdValue ? Number(p.usdValue) : 0),
+    0
+  );
+  const walletUsd = wallet.totalUsd + companionUsd;
+  const savingsUsd = savingsDisplayValue;
   const totalUsd = walletUsd + savingsUsd;
 
   return {

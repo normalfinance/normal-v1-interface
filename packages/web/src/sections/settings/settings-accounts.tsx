@@ -6,6 +6,7 @@ import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
+import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 
 import Box from '@mui/material/Box';
@@ -41,6 +42,10 @@ export function SettingsAccounts() {
   const [isUnlinking, setIsUnlinking] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
+  // #32 chunk 2: the Turnkey (Normal) wallet's Stellar address — its card is
+  // labeled and cannot be unlinked (it holds the user's funds; the server
+  // refuses too, this just keeps the button honest).
+  const [turnkeyStellar, setTurnkeyStellar] = useState<string | null>(null);
 
   const loadWallets = async () => {
     try {
@@ -56,6 +61,9 @@ export function SettingsAccounts() {
 
   useEffect(() => {
     loadWallets();
+    getTurnkeyWalletInfo()
+      .then((info) => setTurnkeyStellar(info?.stellarAddress ?? null))
+      .catch(() => {});
     // Mount-only load; loadWallets is recreated per render — listing it would refire
     // the fetch on every render. eslint-disable documents the intent.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -345,8 +353,26 @@ export function SettingsAccounts() {
                   flex: 1,
                 }}
               >
-                {wallet.walletName || t('Unnamed Account')}
+                {wallet.walletAddress === turnkeyStellar
+                  ? wallet.walletName || t('Normal wallet')
+                  : wallet.walletName || t('Unnamed Account')}
               </Typography>
+              {wallet.walletAddress === turnkeyStellar && (
+                <Box
+                  sx={{
+                    px: '8px',
+                    py: '2px',
+                    borderRadius: '999px',
+                    bgcolor: 'rgba(10,10,15,0.06)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: '#2A2A33',
+                    flexShrink: 0,
+                  }}
+                >
+                  {t('Normal wallet')}
+                </Box>
+              )}
               <Box
                 component="button"
                 onClick={() => handleEditName(wallet)}
@@ -445,31 +471,39 @@ export function SettingsAccounts() {
             )}
           </Stack>
 
-          {/* Disconnect */}
-          <Box
-            component="button"
-            onClick={() => handleUnlinkClick(wallet.walletAddress)}
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              px: '12px',
-              py: '8px',
-              borderRadius: '10px',
-              border: '1px solid rgba(239,68,68,0.2)',
-              bgcolor: 'rgba(239,68,68,0.04)',
-              color: '#DC2626',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              transition: 'background 150ms ease',
-              '&:hover': { bgcolor: 'rgba(239,68,68,0.08)' },
-            }}
-          >
-            <Iconify icon="solar:trash-bin-trash-bold" width={15} />
-            {t('Disconnect Account')}
-          </Box>
+          {/* Disconnect — never offered for the Normal wallet: it holds the
+              user's funds and backs the ownership checks swap logging uses
+              (the server refuses the unlink as well). */}
+          {wallet.walletAddress === turnkeyStellar ? (
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.5 }}>
+              {t('This is your Normal wallet — it stays linked to your account.')}
+            </Typography>
+          ) : (
+            <Box
+              component="button"
+              onClick={() => handleUnlinkClick(wallet.walletAddress)}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                px: '12px',
+                py: '8px',
+                borderRadius: '10px',
+                border: '1px solid rgba(239,68,68,0.2)',
+                bgcolor: 'rgba(239,68,68,0.04)',
+                color: '#DC2626',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'background 150ms ease',
+                '&:hover': { bgcolor: 'rgba(239,68,68,0.08)' },
+              }}
+            >
+              <Iconify icon="solar:trash-bin-trash-bold" width={15} />
+              {t('Disconnect Account')}
+            </Box>
+          )}
         </Box>
       ))}
 

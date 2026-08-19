@@ -1105,3 +1105,672 @@ prevent: external-wallet spending outside the app, fee spikes, pre-guard
 drained users. 11 unit tests (boundaries + guard-keeps-green invariant),
 191 total. Client-only, no schema/routes/cron. Docs 70 (plan) + 71
 (explainer).
+
+## #32 chunk 1 — wallet-slot protection + #42 structural fix (SHIPPED 2026-08-15, branch feat/external-wallet-cctp)
+
+Foundation for dual-wallet support (design: doc 72). Two automatic
+slot-writers existed, both correct in a one-wallet world, both
+wallet-SWITCHERS in a two-wallet world:
+
+1. The Turnkey self-heal connected the Turnkey Stellar wallet whenever
+   the slot was empty — but "empty" also describes an external-wallet
+   user who chose to disconnect (finding #42's silent switch). Fix: a
+   persisted `lastWalletType` breadcrumb (written on every connect —
+   all connect paths verified to funnel through persistStore.connectWallet
+   — and deliberately surviving disconnect). Self-heal now runs only when
+   the breadcrumb is 'normal-wallet' or ABSENT (fresh device = today's
+   new-device login, unchanged); an explicit external breadcrumb means
+   "disconnected by choice" → no restore. #42 closed structurally.
+2. ChainSetupDialog's stellar branch adopted the new wallet into the slot
+   unconditionally. Now: adopt only when the slot is EMPTY (signup /
+   onboarding — behavior unchanged there); with an external wallet
+   connected, the new Turnkey wallet is linked as a COMPANION and the
+   user's chosen wallet stays put.
+
+Decision logic extracted pure (`lib/wallet-slot.ts`) with the doc-72
+invariants as named tests (I1 no-steal, I2/I7 external-stays-silent,
+I5 signup-adopts, I6 new-device-login-restores). Migration: additive
+store field; existing users have no breadcrumb → exact today-behavior
+until their next connect. 6 tests (197 total). NOTE: the onboarding
+wizard's own create-wallet path still adopts unconditionally — it is
+only reachable with an empty slot today except via the drawer's "+"
+button, which chunk 3 redesigns; tracked there.
+
+## #32 chunk 2 — companion read model + dual-wallet drawer (SHIPPED 2026-08-15)
+
+The account's wallets now COEXIST on screen (doc 72 §4f-0, Niko's
+no-picker model):
+
+- **Server**: /api/wallet/portfolio returns `companionStellar` — the
+  Turnkey wallet's XLM/USDC — whenever the connected wallet is external
+  (param address ≠ DB stellarAddress). One extra Horizon call via the new
+  `aggregateStellarOnly` (shared cached spot prices); rides the existing
+  15s response cache; deliberately outside the stale-snapshot machinery
+  (fails to empty, self-heals next cycle).
+- **Drawer**: dual SPLIT sections — "Normal wallet" (companion XLM/USDC +
+  BTC/ETH/SOL) and "Connected wallet" (the external wallet's tokens),
+  each with its shortened address; numbers never summed across wallets
+  in the lists (the #55 lesson), while the Total-balance row sums the
+  whole account. Header gains a labeled "Normal" Stellar address row
+  (previously the companion address was invisible — finding #40's core).
+  Zero-balance/unactivated companions are NOT shown — the guided flow
+  (chunk 3) introduces them properly; single-wallet users see today's
+  drawer pixel-identical.
+- **Unlink guard**: the settings page offered to unlink the Turnkey
+  wallet (observed live 2026-08-15 with all funds on it). Server now
+  refuses (400) and the card shows a "Normal wallet" badge with the
+  disconnect button replaced by an explanation. Defense in both layers.
+
+197 tests, build clean. Chunks remaining: 3 (guided setup dialog),
+4 (engine wiring), 5 (polish).
+
+## #32 chunk 3 — guided Normal-wallet setup (SHIPPED 2026-08-15)
+
+The external-user path to cross-chain swaps, per Niko's UX directive
+(doc 72 §3; junior explainer: doc 73). Signup/onboarding untouched.
+
+- **NormalWalletSetupDialog**: opened by the swap gate CTA (now
+  "Continue with your Normal wallet" instead of a dead button). Four
+  steps — create (passkey) → activate (default 4 XLM from the external
+  wallet, editable) → USDC trustline (passkey; the universal signer
+  routes by the tx's SOURCE account, so the companion's trustline signs
+  with the passkey while the sends sign in the external wallet) → fund
+  (pre-filled with the typed swap amount). RESUMABLE BY CONSTRUCTION:
+  the step is derived from chain+DB state on every open
+  (deriveSetupStep, pure, 6 named kill-the-tab tests), never remembered.
+- **Drawer**: "+" becomes "Connect external wallet" for users who
+  already have a Normal wallet (opens the kit picker directly); wizard
+  only for wallet-less users. ⟳ renamed "All wallets".
+- **Chunk-1 leftover closed**: the wizard's create-wallet path now uses
+  the same no-steal guard (adopt only into an empty slot) — the last
+  automatic slot-writer is guarded.
+- **Component test evolved, invariant intact**: the "twice-lost
+  decision" suite now asserts the CTA opens the DIALOG (marker mock) and
+  the engines stay enabled:false — external users still cannot reach
+  engine signing (that unlock is chunk 4).
+
+203 tests, build clean. Note for testers: until chunk 4, completing the
+dialog leaves the swap still gated — the engines are wired next.
+
+**#32 chunk 3 follow-up (Niko's live test, 2026-08-15):** connecting the
+empty Lobstr made the Normal wallet's XLM/USDC vanish from the PORTFOLIO
+PAGE (hero $1.86, chain assets only) and auto-popped "Set up Normal
+Savings" for the unactivated Lobstr account — while the drawer (chunk 2)
+showed everything correctly. Root cause: the page surfaces read only the
+slot wallet's Stellar assets, contradicting doc 72 §4f ("the portfolio
+page is the ACCOUNT-WIDE total-wealth view"). Fixes: (1) usePortfolio
+folds companionStellar into positions/totals as rows labeled
+"· Normal wallet" — no number pretends to be spendable by the connected
+wallet; (2) the savings setup dialog no longer AUTO-opens for an
+external wallet when the account already owns a Normal wallet (manual
+setup unchanged). Remaining slot-reading surfaces (savings position
+display across two Stellar wallets, swap balances) are chunk 4/5 scope
+as planned.
+
+**#32 field fix round 2 (same day):** the first fix landed in
+usePortfolio's `positions`/`walletUsd` — fields NEITHER page hero reads.
+The portfolio page hand-rolls its list from `getAsset()` and the home
+hero reads `walletPositions`: the register's oldest root cause ("two
+sources for the same number") struck again. Proper fix: `walletPositions`
+now IS account-wide (slot + labeled companion rows, `companion:` ids),
+the portfolio page's walletTokens appends companion tokens (distinct
+`__companion_*__` contracts for row identity), and the home hero labels
+companion rows "XLM · Normal". Totals include the companion everywhere.
+
+**#32 field fix round 3 (Niko: savings missing + unclear ownership):**
+two more slot-readers converted to the account view. (1) Savings: the
+shared hook now ALSO reads the companion Normal wallet's position when
+the slot is external — exposed as `companionValue`/`companionPosition`,
+STRICTLY display-time (deposit/withdraw math stays scoped to the
+connected wallet so limits/commissions can never mix wallets). Folded
+into: portfolio savings number, drawer savings row, savings-page hero
+(deposits/value/earnings), plus a savings-card banner telling a hybrid
+user WHERE their savings live when the connected wallet has none.
+(2) Ownership labels: on hybrid accounts EVERY asset row is labeled by
+its owning wallet — slot Stellar rows carry the external wallet's name
+(new `connectedWalletLabel`), BTC/ETH/SOL + companion rows carry
+"Normal wallet"; the drawer's external section header now names the
+wallet (Lobstr/Freighter/…). Single-wallet users see zero change.
+
+**#32 field fix round 4 (drawer polish):** (1) broken XLM/USDC icons in
+the companion section — `portfolioAssetToToken`'s fallback set
+`icon: ''` (only BTC/ETH/SOL had display entries) and TokensTab's
+`icon ?? fallback` doesn't catch an empty STRING; fixed both layers
+(mapper now uses the shared assetDisplay names+icons — rows also gain
+proper names like "USD Coin"). (2) Stacked wallet sections replaced
+with WALLET TABS inside the Assets tab (Niko: stacked groups read as
+one list) — pill per wallet, address shown, per-wallet token list,
+"No assets in this wallet yet." empty state. Caching audit for the
+companion path came back clean: one extra Horizon call riding the
+existing 15s response cache + SWR 30s + localStorage first paint;
+savings companion rides the same SWR family + 30s server cache.
+
+## #32 chunk 4a — engine wiring (SHIPPED 2026-08-15)
+
+Design: doc 72 §4h (full asset-location matrix S1-S6, decisions locked:
+source picker + MAX per selected wallet, deliver-to selector, transfer-
+first confirmed). 4a ships: cctp engine `stellarAddressOverride` (+
+`onNeedsSetup`) — companion pinned explicitly, no silent cross-wallet
+fallback; preflight ladder CTA (setup/trustline/fee-XLM each open the
+guided dialog at the derived step); lowFeeXlm gate (MIN_XLM_FOR_
+SAVINGS_TX, same constant as #67); deriveSetupStep low-XLM → activate-
+as-top-up (+test); swap-card companion USDC balance labeled "· Normal
+wallet" feeding display/validation/MAX; two-level gate (no companion =
+chunk-3 CTA; companion = engines LIVE) — which also un-gates LI.FI
+BTC↔ETH↔SOL for external users (4d early). Component tests: +2 (hybrid
+pinned to companion; normal-wallet no override). 206 tests, build clean.
+Remaining: 4b move-and-swap + source picker, 4c deliver-to selector,
+4e explainer/testing wrap.
+
+## #32 chunk 4b — source picker + inline move-and-swap (SHIPPED 2026-08-15)
+
+Doc 72 §4h S2/S3 per Niko's decisions (user picks source; everything
+visible). Swap card: source pills (Normal wallet / <external>) with
+per-wallet balances — balance display, validation and MAX follow the
+SELECTION; engine: `fundFromExternal` prop — CTA "Move X USDC from
+<wallet> & swap" + helper, new 'funding' stage as the progress modal's
+first step, move runs through useSendToken (kit-signed, #29/#54 funnels)
+BEFORE the transfer row exists, and `execute` resolves only once the
+moved USDC is VISIBLE on the companion (probeCompanion verify-loop —
+the #62 verify-before-act rule; burn can never outrun the transfer).
+Trustline preflight extended to outbound-with-funding (the move delivers
+USDC to the companion). Jest: jsdom suite gained contract-faithful
+stubs for the stellar-sdk/wallet-kit graphs (normal-wallet-setup,
+use-send-token, cdn in the utils mock). 206 tests, build clean.
+Remaining: 4c deliver-to selector, 4e wrap.
+
+## #32 chunk 4c — inbound "Deliver to" selector (SHIPPED 2026-08-15)
+
+Doc 72 §4h S4 + decision 2. Hybrid users get a "Deliver to: Normal
+wallet / <external>" pill row on inbound cctp pairs (default Normal);
+the engine's stellarAddressOverride follows the selection (mint
+recipient + preflight target). External delivery is trustline-gated
+inline: missing trustline → pill reads "· add trustline" → kit-signed
+changeTrust on the CONNECTED wallet, then selects. jsdom stubs added
+for use-trustline / use-account-status / snackbar template graphs.
+206 tests, build clean. Chunk 4 functionally complete (4a/4b/4c/4d);
+4e wrap remains (live matrix, doc close-out).
+
+## #32 4e — destination-aware Stellar sends (SHIPPED 2026-08-15) + wrap
+
+Niko's scenario ("send XLM/USDC from Normal wallet to my empty Lobstr")
+exposed that the send funnel ALWAYS built a plain payment: XLM to a
+never-funded address died on-chain with op_no_destination, USDC without
+a destination trustline with op_no_trust — both after signing, fee
+burned, raw code as the error. Fix in the ONE funnel (use-send-token, so
+the send modal, guided-setup funding steps and 4b move-and-swap all
+inherit it): the destination is probed BEFORE signing; XLM to a fresh
+account auto-switches to createAccount (≥1 XLM enforced with a clear
+message); assets to fresh/trustline-less destinations are blocked
+pre-signature with instructions. Decision logic pure in
+lib/stellar/send-plan.ts (+6 named scenario tests; unknown trustline
+state deliberately does NOT block — the chain stays the judge).
+212 tests, build clean. Doc 73 carries the full chunk-4 live test
+matrix for Niko's sign-off; chunk 5 (activity labels, #40 close-out)
+remains after it.
+
+## #32 — savings wallet tabs (SHIPPED 2026-08-17, Niko's report)
+
+Live hybrid test: the savings card showed 0.00 deposits + a setup nag —
+it reads the CONNECTED wallet (empty Lobstr), and the earlier "your
+savings are elsewhere" banner was swallowed by the setup state. Niko's
+direction: savings can run from ANY wallet → the card gets WALLET TABS.
+
+- savings-card: [Normal wallet | <external>] pills (hybrid only; default
+  Normal — where a hybrid user's savings usually live and where actions
+  are passkey-only). Position, deposit balance (companion USDC from the
+  aggregate), account status, fee semaphore, setup state and signing all
+  follow the TARGET tab. The obsolete banner removed.
+- useDefindexSavings(targetAddress?): full engine retarget — the target
+  builds (caller=target everywhere: deposit/withdraw/fee-pair routes,
+  balance preflight) AND signs (universal signer routes by the tx's
+  source account → passkey for the Turnkey-managed companion; the
+  normalCanSign local-key check is skipped under override). userPosition
+  = target's position, so withdraw commission math and the #52-style
+  optimistic snapshots can never mix wallets. Optimistic cache writes go
+  to the ACTING wallet's key (setCachedPosition(target)), the
+  POSITION_SYNC handler now refreshes the companion's SWR too, and
+  post-op refresh timers hit the companion when overridden.
+- Single-wallet users: zero change (no tabs, no override, engine path
+  byte-identical).
+
+212 tests, build clean. LIVE-TEST NOTE for the matrix: deposit/withdraw
+on the Normal-wallet tab while Lobstr is connected = passkey signatures;
+switch to the Lobstr tab = today's kit-signed flow.
+
+**#32 cold-load savings fix (Niko, 2026-08-17):** fresh tab showed
+Savings $0.00 until a reload, and savings painted last. Root cause = the
+register's OLDEST root cause, 5th occurrence: the savings figure derives
+from slot + companion, but every skeleton gate watched only the SLOT
+position (empty Lobstr — resolves instantly) while the COMPANION read —
+a cold Soroban call, 15-25s — had NO loading flag anywhere. Skeleton
+dropped early → confident $0.00. Fixes: (1) `companionPositionLoading`
+exposed from the shared hook (covers the address lookup AND the
+position read) and included in EVERY savings loading gate — engine
+positionFetching, portfolio composer status, drawer, portfolio page
+firstPaint, home hero firstPaint; (2) the position localStorage cache
+TTL raised 10min → 24h — stale-while-revalidate, the same treatment
+every other asset gets from the portfolio cache; write-correctness
+never rested on this TTL (reconciler no-clobber + #52 epoch guard
+protect writes regardless of cache age). Result: cold tab paints the
+last-known savings instantly and revalidates; a true first visit holds
+the skeleton until BOTH positions answer. 212 tests, build clean.
+
+**#32 cold-load savings — ACTUAL root cause (Niko, 2026-08-17, second
+round):** the loading-gate fix above was correct but downstream of the
+real failure. The companion address SWR fetcher used the BEST-EFFORT
+`getTurnkeyWalletInfo()`, which returns `null` on any failure. On a
+cold tab the first `/api/turnkey/wallet` call routinely dies (dev:
+route not yet compiled blows the 10s timeout; prod: slow session
+refresh) → the fetcher RESOLVED with null → SWR cached it as a real
+answer ("user has no companion wallet") for the 5-min dedupe window →
+no position fetch ever fired, the loading flag dropped, Savings showed
+a confident $0.00 with zero failed requests in the console. Classic
+error-swallowed-as-empty: a failed lookup impersonating a legitimate
+"no wallet". Fixes: (1) new `getTurnkeyWalletInfoStrict()` throws
+`TurnkeyWalletInfoUnavailableError` instead of degrading — the savings
+fetcher now uses it, so SWR RETRIES failures (errorRetryCount 5,
+revalidateOnFocus, 60s dedupe matching the module's own TTL);
+(2) the companion address is seeded from the portfolio's localStorage
+snapshot (`nf:portfolio:v1:*` already carries `companionStellar`) via a
+new shared `lib/portfolio/client-cache.ts` module — cold-tab savings
+now paint with ZERO network calls, exactly like every other asset;
+(3) loading semantics switched from `isLoading` to `data === undefined`
+— isLoading drops between error retries, which would flash a wrong $0
+during backoff; undefined = "no answer yet", null = a real "no
+companion". 7 contract tests pin the cache key format (a drift would
+silently orphan every browser's cache). 219 tests, build clean.
+Rule for the register: a best-effort helper that maps failure → null
+must NEVER feed a cache — callers cache the lie. Strict-vs-lenient is
+the callee's contract, not the caller's guess.
+
+**#32 chunk 4f — Stellar-pair source pills (Niko GO, 2026-08-17):**
+hybrid account on the swap page saw USDC/XLM balance 0.00 — the doc-72
+table locked "Soroswap = active wallet" before the coexistence model
+existed, so Stellar↔Stellar pairs read ONLY the slot wallet (empty
+Lobstr) while the funds sat in the Normal wallet; the swap card was the
+last money surface still silently slot-bound (a picker covering only
+SOME engines — same family as the partial-loading-flag root cause).
+Fix: the wallet pills now cover Stellar pairs. `useSwap(targetAddress)`
+gained the same explicit override contract as
+`useDefindexSavings(targetAddress)` — sender, fee-pair caller and BOTH
+signatures follow the target; universal signer routes by tx source
+account (companion → passkey, lazy kit-signer import for jsdom);
+`normalCanSign` skipped under override. Soroswap engine gained
+`stellarAddressOverride` + `onNeedsSetup`; account/trustline preflights
+probe the SELECTED wallet, and companion gaps route to the setup dialog
+(a kit cannot sign the companion's changeTrust). Default source = the
+wallet that can pay (pure `defaultStellarSource`, ties → Normal wallet,
+4 tests). Balance header, pills, MAX, `insufficient` and the #67 XLM
+reserve (companion's OWN savings position decides the buffer) all
+follow the selection via one `activeFromBalance`. Amends doc-72 §4g:
+"Soroswap = active wallet" → "Soroswap = picked wallet (pills)".
+223 tests, build clean.
+
+**#74 trustline notices (Niko GO, 2026-08-17):** "tell the user about a
+wallet without a trustline in different places, with an option to set
+it up." Root exposure: incoming USDC to a trustline-less wallet BOUNCES
+on-chain (op_no_trust) — and the receive modal, the one surface that
+hands out the address, was trustline-blind. Foundation first:
+`fetchAccount` (utils) swallowed EVERY error into undefined, making a
+network failure indistinguishable from "account doesn't exist" — the
+same failure→empty defect class as the cold-load savings bug, one layer
+deeper. Added `fetchAccountStrict` (404 → null, anything else THROWS);
+`useAccountStatus` now uses it, so its `error` field is trustworthy.
+On top: ONE pure mapper `deriveWalletReadiness` →
+checking/unknown/not-activated/no-trustline/ready (5 tests; checking
+and unknown outrank the booleans because the hook resets them to false
+while loading/failed), and ONE self-contained `WalletReadinessNotice`
+(renders NOTHING on checking/unknown/ready; fix follows the wallet's
+signer — slot wallet adds its own trustline inline via kit/normal,
+companion routes to the passkey setup dialog; kind is explicit, never
+crossed). Surfaces: swap page (slot + companion notices above the
+grid), receive modal (USDC-bounce warning next to the QR, activation
+suppressed — modal has its own), drawer (per-TAB badge so the fix
+always belongs to the wallet shown + single-wallet variant),
+post-connect toast (once EVER per address, localStorage; probe failure
+→ silent AND not marked seen). Verified-covered, no change: settings
+(AddUsdcTrustlineButton self-hides), onramp (delivery target = probed
+target = fix signer), send flow, both swap engines. 228 tests.
+
+**#74 follow-up — guided external-wallet setup dialog (Niko,
+2026-08-17):** the not-activated notice shipped as guidance TEXT with
+no action — breaking the feature's own rule that a notice carries its
+fix. New `ExternalWalletSetupDialog`: step 1 = QR + copyable address
+("send ≥2 XLM — 1 activates, ~0.5 is the trustline reserve") with a 4s
+Horizon poll that advances AUTOMATICALLY when the payment lands (no
+"I did it" button; derived-from-chain-state = resumable, same principle
+as the Normal-wallet setup dialog); step 2 = kit-signed USDC trustline;
+done state. Steps are a pure VIEW over deriveWalletReadiness — a
+transient probe failure ('unknown') keeps the QR up and keeps polling,
+never claims progress. Mounted INSIDE WalletReadinessNotice (slot
+kind), so drawer badge + swap-page notice get the flow for free;
+closing re-probes so the badge updates instantly. Slot no-trustline
+keeps the one-click inline add (a popup would add a step to a
+single-signature fix). Toast copy now points to the drawer. 228 tests.
+
+**#74b — "send to your own wallet" chips (Niko GO "all linked
+wallets", 2026-08-17):** the Send dialog's destination was free-text
+only; moving money between your OWN wallets (external ↔ Normal) meant
+copy-pasting addresses. New quick-pick row under "To" for Stellar
+assets: one chip per OTHER wallet the account owns — companion Normal
+wallet + ALL linked external wallets (pure buildOwnWalletCandidates:
+sender excluded, deduped, name falls back to short address; 4 tests).
+Tapping a chip only FILLS the destination — every existing
+pre-signature gate (send-plan activation minimum, trustline block,
+memo rules) still runs unchanged. Chips are asset-aware via the #74
+readiness mapper with per-asset trustline probe (useAccountStatus
+assetCode/assetIssuer): XLM → an unactivated target stays selectable
+with the hint "sending XLM activates it" (that IS the funding path);
+any trustline asset → unready target disabled WITH the reason (that
+send could only bounce). Checking/failed probe = plain selectable chip
+(asserts nothing; downstream gates protect). BTC/ETH/SOL sends get no
+chips — your own wallet is the sender there. Linked-wallets fetch
+failure = no chips (missing shortcut, never a wrong claim). 232 tests.
+
+**Send-modal dead "Select an asset" under hybrid (Niko, 2026-08-17):**
+the open-time reset picks a token from the list AS OF the open instant;
+with an empty external wallet in the slot there are no Stellar tokens
+and the BTC/ETH/SOL hooks only START fetching on open → empty list →
+sendToken null — and the balance-sync effect explicitly refused to fill
+a null selection, so the modal stayed dead. Never seen before because a
+normal-wallet slot always has cached XLM/USDC instantly (pre-existing
+race, exposed by #32 hybrid). Fix: the sync effect now ADOPTS the
+selection when it arrives (same initialSymbol/best-value rules as the
+open-time reset). Root-cause family: "snapshot pretending to be a live
+view" — a one-shot read of an async list. 232 tests.
+
+**#74c — send FROM the Normal wallet (Niko, 2026-08-17, "why do you
+half ass everything"):** with an external wallet connected the Send
+picker showed only BTC/ETH/SOL — Stellar sends were slot-signed, the
+slot (Lobstr) held nothing, and the companion's XLM/USDC were simply
+absent. Deserved the callout: the coexistence rule this whole branch
+is built on is "everything in the drawer is actionable", and Send was
+the last surface violating it — I had scoped the override out of #74b
+and asked permission instead of finishing the pattern. Fix = the third
+application of the explicit-override pattern:
+`TransferArgs.sourceAddress` — the send is BUILT for the source
+account (reserve math, subentries and the #4e destination gates follow
+automatically because the hook loads THAT account) and signed via the
+universal signer (companion → passkey), normalCanSign skipped under
+override. Send modal: companion XLM/USDC join the sendable list as
+`__companion_*__` tokens named "· Normal wallet" (issuer set from
+config — portfolioAssetToToken is display-only and leaves it empty);
+ONE `effectiveSender` drives subentries probe, fresh MAX read, #67
+savings buffer (companion's OWN position) and the chip row's sender —
+so a companion send offers the connected wallet as a destination
+(builder gained slotWallet, deduped against its linked row; 1 new
+test). The override is injected in exactly one place (sendWithSource)
+so the adapter and every other caller stay untouched. Best-value
+preselect now lands on companion USDC for the reported account.
+233 tests.
+
+**#74c follow-up — self-send guard misfire (Niko, 2026-08-17):** the
+Normal→Lobstr send the chips exist for was blocked with "Cannot send to
+your own address". The guard predates the override and compared the
+destination against the CONNECTED wallet — under a companion send the
+connected wallet IS the legitimate destination. Now compares against
+`effectiveSenderAddress` (a true self-send — companion→companion or
+slot→slot — is still blocked). Also: the compact asset pill shows only
+the symbol, so a hybrid account couldn't see WHOSE XLM was selected —
+the Available line now carries "· Normal wallet" / "· Lobstr". Rule
+restated: every sender-relative check must read the EFFECTIVE sender,
+never wallet.address — grep for persist.wallet.address when adding
+override surfaces. 233 tests.
+
+**#75 Phase 1 — hybrid surface audit fixes (Niko's 5-issue report,
+2026-08-17, "stop half assing... real scalable solutions"):** after
+Lobstr's live activation, store-fed surfaces still showed it empty
+while aggregate-fed ones were right — the documented #7/#12 duplicate
+data path finally bit visibly. Full audit in doc 75 (every money
+surface × hybrid, verdict each). Fixes: (1) send modal's slot Stellar
+sendables now built from the AGGREGATE (same mapper as companion rows,
+labeled by owning wallet when hybrid; store no longer consulted);
+(2) Earnings stat composed slot + companion via new
+`companionEarnings` (was slot-only → confident $0.00 for hybrid);
+(3) `TokenStoreRefresher` in the layout refreshes the legacy store on
+every `nf:activity-updated` (debounced 1.5s) — a class-wide safety net
+for remaining store consumers (swap card) until Phase 2 retires the
+store; (4) drawer's slot rows + wallet sections read the aggregate;
+(5) drawer address list collapsed to "Addresses · N" accordion
+(5 rows pushed the balance card below the fold). Verified correct
+as-is: composer, home hero rows, /portfolio walletTokens/donut,
+savings card, activity. Phase 2 queued (doc 75): retire tokenState
+from swap card; asset detail pages per-wallet split. RULE: display
+surfaces read exactly ONE source (the aggregate); tokenState must not
+gain consumers. 233 tests, isolated build clean.
+
+**#75 round 2C — per-wallet XLM fee semaphore (Niko, 2026-08-17):**
+the savings page's "Network fees (XLM)" card showed ONE wallet — the
+slot's XLM (0.50 for fresh Lobstr) — while savings runs from either
+wallet via the tabs. Now: one row PER wallet (Normal first, same order
+as the tabs), each with its own semaphore dot + spendable-for-fees
+number; header chip = the BEST wallet's status (alarm only when EVERY
+wallet is short — savings can always run via the healthy one);
+hasActiveSavings buffer note covers slot OR companion position; and the
+card moved off tokenState onto the aggregate (doc 75 rule — it was a
+remaining store consumer). Items A (portfolio holdings wallet TABS)
+and B (savings chart flat under hybrid — slot-scoped history read,
+overlaps queued #53) are RECORDED in doc 75/backlog as next session's
+first tasks — deliberately not rushed at end of context. 233 tests,
+isolated build clean.
+
+**#75 round 2 complete — A+B+C all shipped (Niko: "why aren't you
+fixing things the most optimal way"; fair — I had deferred A+B and
+made the chip call without asking):** (A) Holdings TABS on /portfolio:
+HoldingsCard gained optional `sections` (drawer-style pills); page
+splits by row identity — synthetic `__*__` contracts = Normal-wallet
+side (chain assets, companion, savings), real contracts = the external
+wallet. (B) flat savings chart: hero stats compose slot+companion but
+the CHART+history read wallet.address (Lobstr = zero history) →
+savingsHistoryAddress now points at the wallet that HOLDS the savings
+(companion when it has the position). (C) fee card round 2: rows show
+TOTAL first, "· X for fees" second (fee-only number read as a wrong
+balance: 2.00 XLM showed as 0.50), and the header chip is now the
+WORST wallet's status per Niko (a red row under "Healthy" reads as a
+contradiction — my best-status call reversed). 233 tests, isolated
+build clean.
+
+**#75 Phase 2a + chunk 5 activity (Niko GO "whats left", 2026-08-17):**
+(1) swap card off the legacy token store — XLM/USDC now from the
+portfolio aggregate (issuer patched from config since the 4b funding
+move sends that token object); tokenState has ZERO display consumers
+left — the TokenStoreRefresher net stays until the store itself is
+deleted. (2) Activity feed covers BOTH wallets on hybrid: second
+useUserActivity instance for the companion, feeds merged
+newest-first, each row tagged with its owning wallet ("Normal wallet"
+/ "Lobstr") next to the type chip — previously every companion-side
+action (savings deposits, cctp legs) was simply invisible in the feed.
+REMAINING for #32 close: asset detail pages per-wallet split; ⟳ "All
+wallets" button final fate (decision). 233 tests, build clean.
+
+**Drawer Assets tab — Savings row (Niko, 2026-08-17):** the drawer's
+summary showed Savings but the Assets tab never listed it. Added a
+"Normal Savings" row: account-wide value (slot + companion), $1-pegged
+so TokensTab's USD sort places it among the coins; rides the Normal
+wallet tab on hybrid (same placement as the /portfolio Holdings tabs);
+absent while loading with nothing cached (never a confident $0 row);
+clicking it opens /savings — TokensTab special-cases the __savings__
+contract, since /assets/Savings does not exist. 233 tests, build
+clean.
+
+**Drawer double-count fix (Niko, 2026-08-17, same hour):** adding the
+Savings row into allTokens fed it into assetsBalance too, and the
+summary already counts savings in its own line → Total showed $73.52
+for a $52.85 account. Fix: assetsBalance skips the __savings__ row —
+it is a display row; its value lives in the Savings line only. Same
+defect family as #55 (a summed number no action can spend): any
+synthetic display row added to a token list must be excluded from
+every SUM over that list — check sums when adding rows. 233 tests,
+build clean.
+
+**Swap picker slot-scoped values (Niko, 2026-08-18):** the asset picker
+showed XLM $0.31 — the Lobstr slot's — while 13 XLM sat in the Normal
+wallet, and USDC (slot balance 0) fell into "All assets" as unowned.
+The picker answers "do I have this asset?", so its rows now show the
+ACCOUNT-WIDE balance (slot + companion) for XLM/USDC on hybrid; the
+wallet pills answer "which wallet pays" after picking. tokenBySymbol
+itself deliberately stays slot-scoped — every engine computation
+(fromBalance, reserve, MAX) depends on per-wallet numbers; only the
+display-facing pickerToken widens. 233 tests, build clean.
+
+**#75 Phase 2b + chunk 5 close (Niko GO, 2026-08-18):** (1) asset
+detail pages account-wide — they read the LEGACY STORE for Stellar
+(the audit table had wrongly marked them aggregate) and showed the
+slot balance only; now: slot balance from the aggregate, big number =
+slot + companion, split line "Normal wallet X · Lobstr Y" when both
+hold some. (2) ⟳ "All wallets" button REMOVED (decision): wallet
+visibility = Assets-tab pills, connecting = "+" — one control per job;
+it was a duplicate wizard entry point. (3) Swap picker follow-up
+(2026-08-18 report): picker rows show account-wide XLM/USDC totals;
+tokenBySymbol stays slot-scoped for engine math. Doc 73 gained Part F
+(F1-F6). With this, #32's code work is COMPLETE — remaining: Niko's
+live matrix (doc 73 A-F) → fallout → merge. 233 tests, build clean.
+
+**Chart "unavailable" flash + slow drawer addresses (Niko,
+2026-08-18):** (1) /assets price chart rendered its ERROR state while
+SWR was still RETRYING — a cold upstream price cache fails the first
+call and succeeds on retry, so users read "unavailable" seconds before
+the chart drew. Terminal claims need terminal evidence: the message now
+shows only when error && !isValidating && no data; mid-retry keeps the
+skeleton (same rule family as deriveWalletReadiness's
+checking/unknown). keepPreviousData added so range switches don't
+flash. (2) drawer address rows arrived seconds after the assets:
+useTurnkeyWallet only STARTS fetching when the drawer opens and had no
+persistent seed, while assets paint from the portfolio snapshot. Added
+nf:turnkey-addresses:v1 localStorage cache (keyed by user id; Turnkey
+addresses are public + append-only, safe to paint stale) as SWR
+fallbackData, written on every success. Doc 73 rows F7/F8. 233 tests,
+build clean.
+
+**/assets list page account-wide (Niko, 2026-08-18):** the standalone
+Assets page still read the legacy slot store — $2.21 total for a $52.85
+account (Lobstr's 2 XLM; companion + savings invisible). Now: slot
+Stellar rows from the aggregate (labeled by owner on hybrid), companion
+rows ("· Normal wallet", __companion_*__ contracts), and a Normal
+Savings row (account-wide value, routes to /savings — __savings__
+special-cased in the row click). Total sums everything and matches the
+drawer/portfolio. This was the fifth surface found on the store AFTER
+the audit table claimed completeness — the table was built by reading
+consumers I knew of, not by grepping tokenState.tokens; the grep is
+now the rule for "done" claims. 233 tests, build clean.
+
+**Inline session-reconnect (Niko, 2026-08-18):** an expired
+Lobstr/WalletConnect session mid-flow ABORTED the operation — red
+failed step in the cctp modal + a "reconnect" snackbar whose button
+only reconnected, leaving the user to redo the swap by hand. Both
+external signing paths (signOrReconnect + the mgi kit-signer) now
+recover INLINE: info toast explaining why a wallet window is appearing
+→ reopen the connect flow → retry the SAME signature once. The
+in-flight step pauses and continues; only a declined/failed reconnect
+falls back to the old snackbar + WalletSessionExpiredError (callers'
+suppression contract unchanged). Session-based wallets = Lobstr/
+WalletConnect (sessions do not survive reloads) — that's WHY the
+error appeared, not a bug in the swap. Doc 73 row F10. 233 tests,
+build clean.
+
+**BTC delivery expectation (Niko live test, 2026-08-19):** Lobstr→BTC
+completed its Stellar→Base leg, then LI.FI routed via Layerswap whose
+payout is a REAL Bitcoin transaction — 10-40 min is normal (SOL felt
+instant, BTC cannot). Funds were never at risk: every leg lands on the
+user's own addresses (the engine's core invariant), and the #66
+arrival verification refreshes balances when the payout confirms. The
+defect was the EXPECTATION: "delivery takes a few minutes" / done-note
+copy now says "Bitcoin usually takes 10–40 minutes" + points at
+Activity. Doc 73 row F11. 233 tests, build clean.
+
+**BTC delivery parity (Niko, 2026-08-19, reversing the #66 BTC
+exemption):** BTC swaps now track to TRUE delivery like SOL/ETH — the
+"Delivering" step (honest sub: "Bitcoin confirmations — usually 10–40
+minutes") holds until LI.FI reports DONE (poll cap 360×10s ≈ 60 min
+for BTC vs 10 min others; #63 fresh-header polling makes the long
+window safe), then the #66 arrival gate refetches the BTC balance
+before Done — closing the popup shows the BTC already in the wallet.
+Timeout past the cap keeps the honest "on its way" close-out. The
+early-exit branch now fires only for quotes with no chain ids. Doc 73
+F11 rewritten. 233 tests, build clean.
+
+**Inbound BTC ETA + pending $0 (Niko live test, 2026-08-19):**
+(1) inbound BTC→USDC's slow leg is Bitcoin confirmations on the SOURCE
+(~1h observed) but the "USDC arriving on Base" step said "a few
+minutes" unconditionally → now per-chain: BTC → "Bitcoin confirmations
+— usually 10–60 minutes". (2) the pending swap's Activity row showed a
+confident $0 VALUE while the delivered USDC amount was still unknown →
+now shows '—' until the real amount lands (unknown ≠ zero, the
+register's oldest rule). Completed-row content verified correct from
+the screenshot (USDC→BTC 19.15/$19.15); if more rows misreport after
+settlement, needs Niko's expected-vs-actual per row. 233 tests, build
+clean.
+
+**Settlement registry (Niko GO, 2026-08-19 — "why wasn't BTC
+considered / make adding assets easy"):** chain settlement windows now
+live in the chain REGISTRY (`CHAINS[*].settlement = {minMinutes,
+maxMinutes}`: BTC 10–60, ETH 1–5, SOL/Stellar 1–3). Every delivery ETA
+label (both cctp modal steps) and the pivot-delivery poll budget
+(settlement.maxMinutes × 1.5 margin) derive from it; today's `if
+(BTC)` ternaries are DELETED. Adding a chain or a bridge change = one
+registry entry, nothing else. RULE (memory + register): a value that
+differs by chain goes in the registry on day one — a hardcoded value
+true for the tested chains is a bug waiting for the untested one.
+233 tests, build clean.
+
+**"Done waits for refetch" sweep (Niko, 2026-08-19):** two gaps in the
+cctp finish gate: (1) BTC's destination refetch was still
+FIRE-AND-FORGET — the old exemption's leftover, wrong since BTC now
+tracks to true delivery; (2) both directions awaited only the LEGACY
+STORE refresh while displays read the AGGREGATE since #75 — "Done"
+could show against stale visible numbers. Fix: finish() awaits
+Promise.all of [destination-chain refetch (BTC included), inbound
+token-store refresh, AGGREGATE refreshFresh (new refreshAggregate
+prop = useWalletBalances.refreshFresh)] raced against the 15s
+anti-stuck cap. LI.FI engine verified already gated (#62/#66,
+live-tested); Soroswap: Horizon submit is inclusion-synchronous, so
+funds are chain-confirmed at toast time and the refresh follows
+immediately. 233 tests, build clean.
+
+**Activity row invisible at swap start (Niko live test, 2026-08-19):**
+the #27 transfer row IS created before broadcast, but the Activity
+CARD only listened to 'nf:savings-position-updated', and the cctp
+engine only dispatched 'nf:activity-updated' at Done — so the row
+stayed invisible until the swap finished or the feed's own poll. Two
+wires: engine dispatches the event right after the row is created;
+the card listens to BOTH events. Rule restated: an event-driven
+surface must subscribe to every event family that mutates what it
+shows — grep the dispatchers when adding a listener. 233 tests,
+build clean.
+
+**Activity-at-start sweep, all flows (Niko, 2026-08-19):** verified or
+wired per flow — cctp: row pre-broadcast (#27) + announce at creation;
+statuses pending→completed, markFailed pre-broadcast, '—' value while
+delivered amount unknown. LI.FI: row recorded server-side at source
+broadcast; engine now announces right after broadcast (was: first
+tracker tick); tracker announces progress + terminal (done/refunded/
+failed each with distinct snackbar + row status). Soroswap: server
+records before broadcasting inside the fee-pair call (atomic), engine
+announces on return — earliest possible. Sends: announceTransaction
+primitive dispatches immediately with a pending row + confirmed flip.
+Savings: own event family, card subscribed. Activity card listens to
+BOTH families. 233 tests, build clean.
+
+**Activity merge: duplicate + mis-sort (Niko live test, 2026-08-19):**
+a hybrid cctp swap involves BOTH wallets, so both merged feeds returned
+the SAME row → listed twice; and the merge comparator was not NaN-safe,
+so one row with a missing/non-numeric timestamp degraded the whole sort
+(fresh 0m rows below a 1h row). Fix: dedupe by id (first feed wins the
+wallet tag) + Number()-coerced timestamp sort with 0 fallback. RULE:
+merging N sources needs id-dedupe and a total-order comparator — a
+comparator that can return NaN sorts NOTHING reliably. 233 tests,
+build clean.
+
+**Recovery banner defers to the live modal (Niko GO, 2026-08-19 —
+"not duplicate, but must still offer recovery if something goes
+wrong"):** the banner showed the SAME transfer the open modal was
+actively tracking (its 2-min grace timer guessed "abandoned" and
+guessed wrong on ~1h BTC legs — time is the wrong signal). New
+explicit signal `lib/cctp/active-transfer.ts`: the engine claims the
+transfer id at row creation and RELEASES it on error (all three
+stageError sites), on done, and on unmount — the banner hides exactly
+that one id and the row REAPPEARS with its recovery action the moment
+the signal clears. Closed tab = no signal = banner owns recovery, as
+before. One entrance per job, recovery never lost. 233 tests, build
+clean.

@@ -8,9 +8,9 @@ import { usePortfolio } from '@/hooks/use-portfolio';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
-import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { assetDisplay, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
@@ -76,7 +76,13 @@ export default function PortfolioView() {
 
   const { user } = useSupabaseAuth();
   // Single source of truth for all balances + savings.
-  const { getAsset, savings, savingsUsd, isLoading: balancesLoading } = usePortfolio(!!user);
+  const {
+    getAsset,
+    savings,
+    savingsUsd,
+    wallet: walletBalances,
+    isLoading: balancesLoading,
+  } = usePortfolio(!!user);
   const bitcoinAddress = getAsset('BTC')?.address ?? null;
   const ethereumAddress = getAsset('ETH')?.address ?? null;
   const solanaAddress = getAsset('SOL')?.address ?? null;
@@ -94,15 +100,22 @@ export default function PortfolioView() {
   const walletChecking = !!user && !wallet.address && hasTurnkeyWallet === null;
 
   const savingsValue = savingsUsd;
-  const earnings = savings.earnings;
-  const savingsLoading = savings.vaultLoading || savings.positionLoading;
+  // #75: earnings compose slot + companion, exactly like the value does —
+  // with an external wallet in the slot, `savings.earnings` alone is the
+  // EMPTY wallet's earnings and showed a confident $0.00.
+  const earnings = savings.earnings + savings.companionEarnings;
+  // Companion loading included: savings load like any other asset — the
+  // skeleton holds until EVERY source has answered.
+  const savingsLoading =
+    savings.vaultLoading || savings.positionLoading || savings.companionPositionLoading;
 
   // True once balances AND savings have both resolved at least once. Used to
   // gate first-paint skeletons without letting later refetches re-trigger them.
   const [firstPaintDone, setFirstPaintDone] = useState(false);
   useEffect(() => {
-    if (!balancesLoading && !savings.positionLoading) setFirstPaintDone(true);
-  }, [balancesLoading, savings.positionLoading]);
+    if (!balancesLoading && !savings.positionLoading && !savings.companionPositionLoading)
+      setFirstPaintDone(true);
+  }, [balancesLoading, savings.positionLoading, savings.companionPositionLoading]);
 
   // ONE source for every chain, including XLM/USDC.
   //
@@ -112,13 +125,34 @@ export default function PortfolioView() {
   // to be fixed twice and this page always lagged behind the others. The token
   // list is exactly XLM + USDC on mainnet (Blend USDC on testnet) — the same
   // assets the aggregator returns — so there is nothing to lose by unifying.
-  const walletTokens = useMemo(
-    () =>
-      (['XLM', 'USDC', 'BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[])
-        .filter((a): a is PortfolioAsset => !!a && a.balance != null && BigNumber(a.balance).gt(0))
-        .map(portfolioAssetToToken),
-    [getAsset]
-  );
+  const walletTokens = useMemo(() => {
+    // #32: this page is the ACCOUNT-WIDE view (doc 72 §4f). On a hybrid
+    // account EVERY row is labeled by its owning wallet — the slot wallet's
+    // Stellar assets carry the external wallet's name, BTC/ETH/SOL and the
+    // companion's XLM/USDC carry "Normal wallet" — so it is always clear
+    // which wallet's money each number is. Single-wallet users see no labels.
+    const hybrid = !!walletBalances.companionStellar;
+    const connLabel = connectedWalletLabel(wallet.walletType);
+    const slot = (
+      ['XLM', 'USDC', 'BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[]
+    )
+      .filter((a): a is PortfolioAsset => !!a && a.balance != null && BigNumber(a.balance).gt(0))
+      .map((a) => {
+        const tkn = portfolioAssetToToken(a);
+        if (!hybrid) return tkn;
+        const owner = a.chain === 'stellar' ? connLabel : 'Normal wallet';
+        return { ...tkn, name: `${assetDisplay(a.symbol).name} · ${owner}` };
+      });
+    // Distinct contract ids keep React keys + row identity collision-free.
+    const companion = (walletBalances.companionStellar?.assets ?? [])
+      .filter((a) => a.balance != null && BigNumber(a.balance).gt(0))
+      .map((a) => ({
+        ...portfolioAssetToToken(a),
+        contract: `__companion_${a.symbol.toLowerCase()}__`,
+        name: `${assetDisplay(a.symbol).name} · Normal wallet`,
+      }));
+    return [...slot, ...companion];
+  }, [getAsset, walletBalances.companionStellar, wallet.walletType]);
 
   // "Wallet" = everything the user holds outside of savings, on any chain
   const walletBalance = useMemo(
@@ -164,6 +198,21 @@ export default function PortfolioView() {
 
     return entries.sort((a, b) => b.value - a.value);
   }, [walletTokens, totalBalance, savingsValue]);
+
+  // #75 round 2A: hybrid → one Holdings TAB per wallet (Niko's preference,
+  // same pills as the drawer). Row identity by contract: slot Stellar tokens
+  // keep their real contracts; everything Turnkey-side is synthetic
+  // (`__btc__`, `__companion_*__`, `__savings__`) — so "starts with __" IS
+  // the Normal-wallet side. Savings (account product) rides the Normal tab.
+  const holdingsSections = useMemo(() => {
+    if (!walletBalances.companionStellar) return undefined;
+    const normal = holdingsData.filter((h) => h.token.contract.startsWith('__'));
+    const external = holdingsData.filter((h) => !h.token.contract.startsWith('__'));
+    return [
+      { label: 'Normal wallet', data: normal },
+      { label: connectedWalletLabel(wallet.walletType), data: external },
+    ];
+  }, [holdingsData, walletBalances.companionStellar, wallet.walletType]);
 
   // Nothing on this page reads the token store any more, but the swap card and
   // the account drawer still do — so we keep refreshing it here and simply
@@ -297,6 +346,7 @@ export default function PortfolioView() {
       >
         <HoldingsCard
           holdingsData={holdingsData}
+          sections={holdingsSections}
           totalBalance={totalBalance}
           // Savings is one of the holdings rows, so the card must wait for it
           // too — otherwise the coins paint and the savings row drops in a

@@ -134,12 +134,21 @@ export function HeroPortfolioCard() {
   const rows = useMemo<Row[]>(() => {
     if (!isAuthed) return [...DEMO_ROWS].sort((a, b) => b.usd - a.usd);
     const out: Row[] = [];
+    // #32: on hybrid accounts every row is labeled by its owning wallet
+    // (chain assets + companion Stellar = Normal; slot Stellar = the
+    // external wallet). Single-wallet accounts stay label-free.
+    const hybrid = !!portfolio.wallet.companionStellar;
     portfolio.walletPositions
       .filter((p) => p.balance != null && Number(p.balance) > 0)
       .forEach((p) => {
+        const owner = !hybrid
+          ? null
+          : p.id.startsWith('companion:') || p.chain !== 'stellar'
+            ? 'Normal'
+            : 'External';
         out.push({
           id: p.id,
-          name: p.symbol,
+          name: owner ? `${p.symbol} · ${owner}` : p.symbol,
           iconUrl: p.iconUrl,
           sub: fmtCoin(Number(p.balance), p.symbol),
           usd: p.usdValue ? Number(p.usdValue) : 0,
@@ -164,7 +173,13 @@ export function HeroPortfolioCard() {
     }
     // Biggest holdings first (by USD value) — same ordering as the drawer.
     return out.sort((a, b) => b.usd - a.usd);
-  }, [isAuthed, portfolio.walletPositions, portfolio.savingsUsd, apy]);
+  }, [
+    isAuthed,
+    portfolio.walletPositions,
+    portfolio.wallet.companionStellar,
+    portfolio.savingsUsd,
+    apy,
+  ]);
 
   const cryptoUsd = useMemo(
     () => rows.filter((r) => r.group === 'crypto').reduce((a, r) => a + r.usd, 0),
@@ -196,11 +211,24 @@ export function HeroPortfolioCard() {
   // background refetch must never flash the skeleton back.
   const [firstPaintDone, setFirstPaintDone] = useState(false);
   useEffect(() => {
-    if (!portfolio.isLoading && !portfolio.savings.positionLoading) setFirstPaintDone(true);
-  }, [portfolio.isLoading, portfolio.savings.positionLoading]);
+    if (
+      !portfolio.isLoading &&
+      !portfolio.savings.positionLoading &&
+      !portfolio.savings.companionPositionLoading
+    )
+      setFirstPaintDone(true);
+  }, [
+    portfolio.isLoading,
+    portfolio.savings.positionLoading,
+    portfolio.savings.companionPositionLoading,
+  ]);
 
   const loading =
-    isAuthed && !firstPaintDone && (portfolio.isLoading || portfolio.savings.positionLoading);
+    isAuthed &&
+    !firstPaintDone &&
+    (portfolio.isLoading ||
+      portfolio.savings.positionLoading ||
+      portfolio.savings.companionPositionLoading);
 
   const changeColor = overallChange >= 0 ? UP : DOWN;
 

@@ -245,6 +245,9 @@ export function useLifiEngine({
         amountOut: (toAmount ?? BigNumber(0)).toFixed(),
       });
       setStatusOpen(true);
+      // Source tx is broadcast and recorded — surface the row NOW, not at
+      // the first tracker tick (same rule as cctp, 2026-08-19).
+      window.dispatchEvent(new Event('nf:activity-updated'));
       resetInput();
       setQuote(null);
     } catch (err: any) {

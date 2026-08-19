@@ -6,6 +6,11 @@ import useSWR from 'swr';
 import { buildAuthHeaders } from '@/utils/http';
 import { useMemo, useEffect, useCallback } from 'react';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
+import {
+  portfolioCacheKey,
+  readCachedPortfolio,
+  writeCachedPortfolio,
+} from '@/lib/portfolio/client-cache';
 
 // ---------------------------------------------------------------------------
 // Fast wallet-balance source: one SWR instance (deduped across every view) over
@@ -17,27 +22,6 @@ import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 // NOTE: DISPLAY only. Action-time freshness (swap MAX, send max, off-ramp
 // pre-flight) must keep its own direct live read.
 // ---------------------------------------------------------------------------
-
-const LS_KEY = 'nf:portfolio:v1';
-
-function readCache(key: string): PortfolioPayload | undefined {
-  if (typeof window === 'undefined') return undefined;
-  try {
-    const raw = localStorage.getItem(`${LS_KEY}:${key}`);
-    return raw ? (JSON.parse(raw) as PortfolioPayload) : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function writeCache(key: string, payload: PortfolioPayload) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(`${LS_KEY}:${key}`, JSON.stringify(payload));
-  } catch {
-    /* quota / serialization — non-fatal */
-  }
-}
 
 export interface UseWalletBalancesResult {
   assets: PortfolioAsset[];
@@ -55,6 +39,10 @@ export interface UseWalletBalancesResult {
    *  #66 arrival race: a refresh fired the instant a bridge delivers can
    *  read the pre-delivery balance and lock it into the server cache). */
   refreshFresh: () => Promise<PortfolioAsset[] | null>;
+  /** #32 chunk 2: the companion Normal wallet's Stellar balances, when the
+   *  connected wallet is external; null otherwise. Displayed as its own
+   *  drawer section — never merged into `assets`. */
+  companionStellar: { address: string; assets: PortfolioAsset[] } | null;
 }
 
 export function useWalletBalances(enabled = true): UseWalletBalancesResult {
@@ -65,7 +53,7 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
   // Fetch for any signed-in user (enabled), even without a Stellar address — the
   // server aggregator reads the BTC/ETH/SOL addresses from the authed DB row, so
   // a chain-only wallet (e.g. BTC-first) still gets its balances.
-  const swrKey = enabled ? `${stellar || 'none'}:${network}` : null;
+  const swrKey = enabled ? portfolioCacheKey(stellar, network) : null;
 
   const fetchPayload = useCallback(
     async (cacheKey: string, fresh: boolean): Promise<PortfolioPayload> => {
@@ -78,8 +66,14 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
       if (!res.ok) throw new Error(`portfolio ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error ?? 'portfolio error');
-      const payload: PortfolioPayload = { updatedAt: json.updatedAt, assets: json.assets };
-      writeCache(cacheKey, payload);
+      const payload: PortfolioPayload = {
+        updatedAt: json.updatedAt,
+        assets: json.assets,
+        // #32 chunk 2: the companion Normal wallet's Stellar balances (only
+        // present when the connected wallet is external).
+        companionStellar: json.companionStellar ?? null,
+      };
+      writeCachedPortfolio(cacheKey, payload);
       return payload;
     },
     [stellar, network]
@@ -89,7 +83,7 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
     swrKey,
     (key: string) => fetchPayload(key, false),
     {
-      fallbackData: swrKey ? readCache(swrKey) : undefined,
+      fallbackData: swrKey ? readCachedPortfolio(swrKey) : undefined,
       revalidateOnFocus: true,
       dedupingInterval: 10_000,
       refreshInterval: 30_000,
@@ -137,6 +131,7 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
     assets,
     getAsset,
     totalUsd,
+    companionStellar: data?.companionStellar ?? null,
     updatedAt: data?.updatedAt ?? null,
     isLoading: (isLoading && !data) || (cacheMissingStellar && isValidating),
     isValidating,
