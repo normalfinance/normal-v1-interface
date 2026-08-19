@@ -1678,3 +1678,14 @@ arrival verification refreshes balances when the payout confirms. The
 defect was the EXPECTATION: "delivery takes a few minutes" / done-note
 copy now says "Bitcoin usually takes 10–40 minutes" + points at
 Activity. Doc 73 row F11. 233 tests, build clean.
+
+**BTC delivery parity (Niko, 2026-08-19, reversing the #66 BTC
+exemption):** BTC swaps now track to TRUE delivery like SOL/ETH — the
+"Delivering" step (honest sub: "Bitcoin confirmations — usually 10–40
+minutes") holds until LI.FI reports DONE (poll cap 360×10s ≈ 60 min
+for BTC vs 10 min others; #63 fresh-header polling makes the long
+window safe), then the #66 arrival gate refetches the BTC balance
+before Done — closing the popup shows the BTC already in the wallet.
+Timeout past the cap keeps the honest "on its way" close-out. The
+early-exit branch now fires only for quotes with no chain ids. Doc 73
+F11 rewritten. 233 tests, build clean.

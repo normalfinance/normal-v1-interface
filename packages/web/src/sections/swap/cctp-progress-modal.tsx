@@ -118,24 +118,19 @@ export function CctpProgressModal({
             label: t('Swapping USDC to {{sym}}', { sym: toSymbol }),
             sub: t('Via LI.FI · approve in your wallet'),
           },
-          // BTC delivery takes many minutes — the modal closes at 'done' with
-          // an "on its way" note instead of holding a delivery step open (#66).
-          ...(toSymbol === 'BTC'
-            ? []
-            : [
-                {
-                  id: 'delivering' as CctpStage,
-                  label: t('Delivering {{sym}}', { sym: toSymbol }),
-                  sub: t('Cross-chain arrival — usually 1–3 minutes'),
-                },
-              ]),
+          {
+            id: 'delivering' as CctpStage,
+            label: t('Delivering {{sym}}', { sym: toSymbol }),
+            // Honest per-chain ETA: BTC's payout is a mined Bitcoin tx.
+            sub:
+              toSymbol === 'BTC'
+                ? t('Bitcoin confirmations — usually 10–40 minutes')
+                : t('Cross-chain arrival — usually 1–3 minutes'),
+          },
           {
             id: 'done',
             label: t('Done'),
-            sub:
-              toSymbol === 'BTC'
-                ? t('{{sym}} on its way — Bitcoin usually takes 10–40 minutes', { sym: toSymbol })
-                : t('{{sym}} delivered', { sym: toSymbol }),
+            sub: t('{{sym}} delivered', { sym: toSymbol }),
           },
         ];
 

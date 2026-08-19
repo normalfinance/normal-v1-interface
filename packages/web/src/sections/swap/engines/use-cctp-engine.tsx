@@ -95,9 +95,12 @@ async function pollPivotDelivery(
   txHash: string,
   fromChainId: number,
   toChainId: number,
-  cancelledRef: React.MutableRefObject<boolean>
+  cancelledRef: React.MutableRefObject<boolean>,
+  // BTC payouts are mined Bitcoin txs — allow up to ~60 min (Niko 2026-08-19:
+  // the modal now tracks BTC to true delivery like SOL/ETH).
+  maxPolls = 60
 ): Promise<'DONE' | 'REFUNDED' | 'FAILED' | null> {
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < maxPolls; i++) {
     if (cancelledRef.current) throw new Error('cancelled');
     try {
       const res = await fetch(
@@ -535,16 +538,12 @@ export function useCctpEngine({
 
         // #66: the pivot tx confirming on BASE is not delivery — the bridged
         // asset lands on the TARGET chain later. 'Done' used to show here,
-        // before the SOL/ETH existed anywhere the wallet could see it. BTC is
-        // exempt (many-minute delivery; snackbar + pending badge own it), as
-        // is a quote that carried no chain ids (can't poll — old behavior).
-        if (toSymbol === 'BTC' || !result.fromChainId || !result.toChainId) {
+        // before the asset existed anywhere the wallet could see it. BTC now
+        // tracks to TRUE delivery like SOL/ETH (Niko 2026-08-19) — just with
+        // a ~60 min cap instead of ~10, since its payout is a mined Bitcoin
+        // tx. Only a quote with no chain ids skips (can't poll).
+        if (!result.fromChainId || !result.toChainId) {
           await patch({ dstAmount });
-          if (toSymbol === 'BTC') {
-            enqueueSnackbar(t('BTC is on its way — Bitcoin confirmations usually take 10–40 minutes. Track it in Activity; your balance updates the moment it arrives.'), {
-              variant: 'info',
-            });
-          }
           await finish();
           return;
         }
@@ -554,7 +553,8 @@ export function useCctpEngine({
           result.txHash,
           result.fromChainId,
           result.toChainId,
-          cancelled
+          cancelled,
+          toSymbol === 'BTC' ? 360 : 60
         );
         if (delivery === 'FAILED' || delivery === 'REFUNDED') {
           throw new Error(
