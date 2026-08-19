@@ -38,7 +38,13 @@ export function AssetPriceChart({ symbol }: { symbol: string }) {
   const [range, setRange] = useState<PriceRange>('1w');
 
   const supported = PRICE_HISTORY_SYMBOLS.includes(symbol);
-  const { prices, isLoading, error } = usePriceHistory(symbol, range, supported);
+  const { prices, isLoading, isValidating, error } = usePriceHistory(symbol, range, supported);
+  // "Unavailable" is a TERMINAL claim — only make it once retries are done.
+  // A cold upstream often fails the first call and succeeds on retry; showing
+  // the error mid-retry told users data was unavailable that arrived seconds
+  // later (observed live 2026-08-18). While retrying, keep the skeleton.
+  const stillLoading = isLoading || (!!error && isValidating);
+  const failed = !!error && !isValidating && prices.length === 0;
 
   const firstPrice = prices.length ? prices[0][1] : 0;
   const lastPrice = prices.length ? prices[prices.length - 1][1] : 0;
@@ -163,13 +169,13 @@ export function AssetPriceChart({ symbol }: { symbol: string }) {
       </Box>
 
       {/* Chart */}
-      {error ? (
+      {failed ? (
         <Box
           sx={{ color: 'rgba(10,10,15,0.4)', fontSize: '14px', py: '48px', textAlign: 'center' }}
         >
           {t('Price data is unavailable right now. Please try again later.')}
         </Box>
-      ) : isLoading ? (
+      ) : stillLoading && prices.length === 0 ? (
         <Skeleton variant="rectangular" height={280} sx={{ borderRadius: '12px' }} />
       ) : (
         <Chart

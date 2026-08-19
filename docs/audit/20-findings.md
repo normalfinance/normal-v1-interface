@@ -1626,3 +1626,19 @@ it was a duplicate wizard entry point. (3) Swap picker follow-up
 tokenBySymbol stays slot-scoped for engine math. Doc 73 gained Part F
 (F1-F6). With this, #32's code work is COMPLETE — remaining: Niko's
 live matrix (doc 73 A-F) → fallout → merge. 233 tests, build clean.
+
+**Chart "unavailable" flash + slow drawer addresses (Niko,
+2026-08-18):** (1) /assets price chart rendered its ERROR state while
+SWR was still RETRYING — a cold upstream price cache fails the first
+call and succeeds on retry, so users read "unavailable" seconds before
+the chart drew. Terminal claims need terminal evidence: the message now
+shows only when error && !isValidating && no data; mid-retry keeps the
+skeleton (same rule family as deriveWalletReadiness's
+checking/unknown). keepPreviousData added so range switches don't
+flash. (2) drawer address rows arrived seconds after the assets:
+useTurnkeyWallet only STARTS fetching when the drawer opens and had no
+persistent seed, while assets paint from the portfolio snapshot. Added
+nf:turnkey-addresses:v1 localStorage cache (keyed by user id; Turnkey
+addresses are public + append-only, safe to paint stale) as SWR
+fallbackData, written on every success. Doc 73 rows F7/F8. 233 tests,
+build clean.

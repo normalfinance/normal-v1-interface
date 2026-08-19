@@ -20,6 +20,33 @@ export type TurnkeyAddresses = Record<AddressField, string | null>;
 // logout/login can't bleed addresses between accounts.
 // ---------------------------------------------------------------------------
 
+// #75 follow-up: last-known addresses per user (localStorage,
+// stale-while-revalidate). Turnkey addresses are PUBLIC and effectively
+// append-only (lazy provisioning adds chains, never changes them), so a
+// cached copy is safe to paint instantly — the drawer's address rows arrived
+// seconds after the (cached) assets because this fetch only starts when the
+// drawer opens and had no seed. Keyed by user id so accounts can't bleed.
+const ADDR_CACHE_KEY = 'nf:turnkey-addresses:v1';
+
+function readAddrCache(userId: string): TurnkeyAddresses | null | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const raw = localStorage.getItem(`${ADDR_CACHE_KEY}:${userId}`);
+    return raw ? (JSON.parse(raw) as TurnkeyAddresses | null) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeAddrCache(userId: string, addresses: TurnkeyAddresses | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`${ADDR_CACHE_KEY}:${userId}`, JSON.stringify(addresses));
+  } catch {
+    /* storage full — non-fatal */
+  }
+}
+
 export function useTurnkeyWallet(enabled = true) {
   const { user } = useSupabaseAuth();
 
@@ -38,9 +65,16 @@ export function useTurnkeyWallet(enabled = true) {
         throw err;
       }
       const d = await res.json();
-      return (d.wallet ?? null) as TurnkeyAddresses | null;
+      const wallet = (d.wallet ?? null) as TurnkeyAddresses | null;
+      if (user) writeAddrCache(user.id, wallet);
+      return wallet;
     },
-    { revalidateOnFocus: false, dedupingInterval: 60_000, keepPreviousData: true }
+    {
+      fallbackData: user ? readAddrCache(user.id) : undefined,
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+    }
   );
 
   return {
