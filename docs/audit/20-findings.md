@@ -1761,3 +1761,16 @@ wallet tag) + Number()-coerced timestamp sort with 0 fallback. RULE:
 merging N sources needs id-dedupe and a total-order comparator — a
 comparator that can return NaN sorts NOTHING reliably. 233 tests,
 build clean.
+
+**Recovery banner defers to the live modal (Niko GO, 2026-08-19 —
+"not duplicate, but must still offer recovery if something goes
+wrong"):** the banner showed the SAME transfer the open modal was
+actively tracking (its 2-min grace timer guessed "abandoned" and
+guessed wrong on ~1h BTC legs — time is the wrong signal). New
+explicit signal `lib/cctp/active-transfer.ts`: the engine claims the
+transfer id at row creation and RELEASES it on error (all three
+stageError sites), on done, and on unmount — the banner hides exactly
+that one id and the row REAPPEARS with its recovery action the moment
+the signal clears. Closed tab = no signal = banner owns recovery, as
+before. One entrance per job, recovery never lost. 233 tests, build
+clean.

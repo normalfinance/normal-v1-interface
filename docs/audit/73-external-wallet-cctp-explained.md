@@ -283,3 +283,16 @@ With Lobstr connected and funded (a few USDC + XLM):
 | 9 | XLM↔USDC, source pill "Lobstr" | Soroswap, Lobstr kit signs both txs (swap + fee) |
 | 9b | XLM↔USDC, source pill "Normal wallet" (chunk 4f) | balance/MAX show the Normal wallet's funds; passkey signs both txs; Lobstr never prompted; with an EMPTY Lobstr the Normal pill is pre-selected (never a 0.00 greeting) |
 | 10 | A single-wallet account (your main flow) | zero visual difference anywhere — no pills |
+
+## Added after live testing (2026-08-17 → 19) — canonical in the .html
+
+The printable HTML version of this doc gained sections 9b + test Parts
+E/F/G covering everything built after the original matrix: Stellar
+swap source pills (4f), USDC-readiness notices + guided QR setup
+(#74), own-wallet send chips + companion-sourced sends (#74b/c), the
+one-data-source cleanup and hybrid display fixes (#75), inline session
+reconnect, the per-chain settlement registry, BTC tracked to true
+delivery, Done gating on the aggregate refetch, activity rows at
+start / statuses / dedupe / ordering, and the recovery banner
+deferring to a live modal (recovery reappears on error). Run the
+matrix from the HTML: Parts A–D + E1–E12 + F1–F11 + G1–G7.

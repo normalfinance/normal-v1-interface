@@ -30,6 +30,7 @@ import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
+import { setActiveCctpTransfer } from '@/lib/cctp/active-transfer';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
@@ -197,6 +198,8 @@ export function useCctpEngine({
   // out: LI.FI USDC_BASE → target (leg 3) quoted directly — CCTP is 1:1/$0, so
   //      the pivot quote IS the swap quote.
   const debouncedAmount = useDebounce(enabled ? amount.toFixed() : '', 600);
+
+  useEffect(() => () => setActiveCctpTransfer(null), []); // tab/modal gone → banner owns recovery
 
   useEffect(() => {
     const value = BigNumber(debouncedAmount || 0);
@@ -418,6 +421,7 @@ export function useCctpEngine({
     if (refreshAggregate) waits.push(refreshAggregate().catch(() => {}));
     await Promise.race([Promise.all(waits), cap]);
     setStage('done');
+    setActiveCctpTransfer(null); // settled — nothing left to recover
     resetInput();
     window.dispatchEvent(new Event('nf:activity-updated'));
   }, [direction, toSymbol, resetInput, getAllTokens, refetchChain, refreshAggregate]);
@@ -489,6 +493,7 @@ export function useCctpEngine({
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
           setStageError(String(e?.message ?? e));
+          setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
         if (!broadcastStarted) {
           // Server re-checks the precondition (CREATED + no tx hashes), so a
@@ -594,6 +599,7 @@ export function useCctpEngine({
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
           setStageError(String(e?.message ?? e));
+          setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
         if (!broadcastStarted) {
           await patch({ markFailed: true }).catch(() => {});
@@ -660,11 +666,15 @@ export function useCctpEngine({
       // #27's row exists NOW — tell the activity feed so it appears the
       // moment the swap starts, not at Done (Niko live test 2026-08-19).
       window.dispatchEvent(new Event('nf:activity-updated'));
+      // This tab now owns the transfer — the recovery banner steps aside
+      // until we clear the signal (done / error / unmount).
+      setActiveCctpTransfer(data.id);
       if (direction === 'in') await runInbound(data.id, quote);
       else await runOutbound(data.id, amountWire);
     } catch (e: any) {
       console.error('[cctp engine] execute failed:', e); // surface stack
       setStageError(String(e?.message ?? e));
+      setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
   }, [
     quote,

@@ -31,6 +31,7 @@ import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { useState, useEffect, useCallback } from 'react';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { getActiveCctpTransfer, ACTIVE_CCTP_TRANSFER_EVENT } from '@/lib/cctp/active-transfer';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -116,6 +117,17 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   const { enqueueSnackbar } = useSnackbar();
   const [transfers, setTransfers] = useState<TransferRow[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // The transfer THIS tab's modal is actively working is hidden here — one
+  // entrance per job. The engine clears the signal on error/done/unmount,
+  // at which point the row reappears with its recovery action (the old
+  // 2-minute grace timer guessed and guessed wrong on ~1h BTC legs).
+  const [activeId, setActiveId] = useState<string | null>(getActiveCctpTransfer());
+  useEffect(() => {
+    const h = () => setActiveId(getActiveCctpTransfer());
+    window.addEventListener(ACTIVE_CCTP_TRANSFER_EVENT, h);
+    return () => window.removeEventListener(ACTIVE_CCTP_TRANSFER_EVENT, h);
+  }, []);
+  const visibleTransfers = transfers.filter((tr) => tr.id !== activeId);
 
   const refresh = useCallback(async () => {
     try {
@@ -312,7 +324,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     [t, enqueueSnackbar, patch, refresh]
   );
 
-  if (!transfers.length) return null;
+  if (!visibleTransfers.length) return null;
   const now = Date.now();
 
   return (
@@ -325,7 +337,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         border: '1px solid rgba(110,139,255,0.25)',
       }}
     >
-      {transfers.map((tr) => {
+      {visibleTransfers.map((tr) => {
         const phase = phaseOf(tr, now);
         const isHalt = phase === 'halt-receive' || phase === 'halt-finish';
         const usd = (Number(tr.amountWire) / 1e6).toFixed(2);

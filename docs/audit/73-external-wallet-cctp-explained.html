@@ -381,11 +381,24 @@
   <tr><td>F4</td><td>Drawer → Assets tab</td><td>"Normal Savings" row sorted by value (Normal tab on hybrid); clicking opens /savings; Total balance = Assets + Savings exactly (no double count)</td></tr>
   <tr><td>F5</td><td>/assets/XLM (or USDC), hybrid</td><td>Big number = BOTH wallets' total; a line underneath reads "Normal wallet 13.25 · Lobstr 2.00"; single-wallet accounts see no split line</td></tr>
   <tr><td>F10</td><td>Let the Lobstr/WalletConnect session expire (e.g. reload the page), then start a swap FROM Lobstr</td><td>The flow does NOT fail: an info toast explains the session expired, the wallet's connect window opens by itself, and after you approve, the SAME step continues — signature prompt and all. Only closing the connect window without approving aborts (persistent snackbar with Reconnect)</td></tr>
-  <tr><td>F11</td><td>Swap USDC → BTC (either source pill), keep the popup open</td><td>The "Delivering BTC" step says "Bitcoin confirmations — usually 10–40 minutes" and STAYS active until true delivery; Done only shows after the wallet refetch confirms the BTC — closing the popup then shows the BTC already in your balance. Past ~60 min still bridging → honest "on its way" note (funds at YOUR addresses, pending ≠ lost)</td></tr>
+  <tr><td>F11</td><td>Swap USDC → BTC (either source pill), keep the popup open</td><td>The "Delivering BTC" step says "Bitcoin confirmations — usually 10–60 minutes" and STAYS active until true delivery; Done only shows after the wallet refetch confirms the BTC — closing the popup then shows the BTC already in your balance. Past ~60 min still bridging → honest "on its way" note (funds at YOUR addresses, pending ≠ lost)</td></tr>
   <tr><td>F9</td><td>/assets page (hybrid)</td><td>Total ≈ your real account value; rows for BOTH wallets ("XLM · Normal wallet", "XLM · Lobstr") plus a "Normal Savings" row that opens /savings on click — never a $2 total for a $52 account</td></tr>
   <tr><td>F7</td><td>Open /assets/XLM on a cold server (first visit in a while)</td><td>Price chart shows a SKELETON while the first fetch retries — the "unavailable" message may only appear after retries are truly exhausted, never seconds before the chart draws</td></tr>
   <tr><td>F8</td><td>Open the drawer → expand "Addresses" (repeat visit)</td><td>All address rows (BTC/ETH/SOL/Stellar/Normal) paint INSTANTLY from cache — no seconds-long gap after the assets appear; first-ever visit on a device still waits once</td></tr>
   <tr><td>F6</td><td>Drawer header</td><td>No ⟳ button — only settings, "+", and close; connecting another wallet still works via "+"</td></tr>
+</table>
+
+<h3>Part G — the live-test fallout round (2026-08-19)</h3>
+<p><strong>What changed, in plain words:</strong> Niko's real BTC swaps exposed a family of "built for the fast chains" assumptions. Delivery ETAs now come from a per-chain <em>settlement registry</em> (BTC 10–60 min, ETH 1–5, SOL/Stellar 1–3) — one place to edit when a chain or bridge changes, no hardcoded copy. BTC swaps now track to TRUE delivery like SOL/ETH (the popup's Delivering step holds until the payout confirms, then waits for the balance refetch before Done). An expired Lobstr/WalletConnect session mid-flow now pauses and resumes the step (reconnect window opens by itself) instead of failing the swap. The Activity table gained: rows the moment a swap starts, correct per-flow statuses, no duplicate rows for hybrid swaps, and a reliable newest-first order. And the recovery banner now steps aside while the popup is actively working a transfer — but reappears instantly with its recovery button if anything goes wrong or the tab dies.</p>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>G1</td><td>Start ANY swap/send; glance at Activity before finishing signatures</td><td>The Pending row is already at the TOP of the table — appears within a second of starting, in every flow and from either wallet</td></tr>
+  <tr><td>G2</td><td>Reject a signature mid-swap; let another complete; get a refund case</td><td>Statuses are truthful per flow: Failed / Done / Refunded rows each distinct; a pending row whose delivered amount is unknown shows "—", never $0</td></tr>
+  <tr><td>G3</td><td>Hybrid cctp swap, then reload Activity</td><td>Exactly ONE row per swap (no Lobstr+Normal duplicates), and fresh rows always sort above old ones</td></tr>
+  <tr><td>G4</td><td>Reload the page (kills the Lobstr session), start a swap from Lobstr</td><td>Info toast + the wallet's connect window opens by itself; approving resumes the SAME step; only closing it without approving aborts</td></tr>
+  <tr><td>G5</td><td>Any swap → wait for Done → close the popup immediately</td><td>The received asset is ALREADY in the visible balances (drawer, swap card, portfolio) — Done waits for the aggregate refetch on every engine, BTC included</td></tr>
+  <tr><td>G6</td><td>During an active swap, look above the swap card; then reject a step</td><td>No recovery banner while the popup is healthy; the moment a step errors (or you reload mid-swap), the banner appears with its one-tap recovery — recovery is never lost, just never duplicated</td></tr>
+  <tr><td>G7</td><td>Open a BTC swap's popup vs an ETH/SOL one</td><td>ETAs differ per chain from the registry ("usually 10–60 minutes" vs "a few minutes") — same code path, different registry entries</td></tr>
 </table>
 
 <h2 id="status">10 · Status &amp; what remains</h2>
@@ -398,7 +411,7 @@
 
 <p class="kv" style="margin-top:40px">
   Branch <code>feat/external-wallet-cctp</code> · Findings register: docs/audit/20-findings.md (#32 chunks) ·
-  Architecture: docs/audit/72 · Surface audit: docs/audit/75 · This document: docs/audit/73 (.md + .html) · Generated 2026-08-16, extended 2026-08-17/18
+  Architecture: docs/audit/72 · Surface audit: docs/audit/75 · This document: docs/audit/73 (.md + .html) · Generated 2026-08-16, extended 2026-08-17/18/19
 </p>
 
 </body>
