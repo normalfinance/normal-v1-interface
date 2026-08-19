@@ -1701,3 +1701,15 @@ register's oldest rule). Completed-row content verified correct from
 the screenshot (USDC→BTC 19.15/$19.15); if more rows misreport after
 settlement, needs Niko's expected-vs-actual per row. 233 tests, build
 clean.
+
+**Settlement registry (Niko GO, 2026-08-19 — "why wasn't BTC
+considered / make adding assets easy"):** chain settlement windows now
+live in the chain REGISTRY (`CHAINS[*].settlement = {minMinutes,
+maxMinutes}`: BTC 10–60, ETH 1–5, SOL/Stellar 1–3). Every delivery ETA
+label (both cctp modal steps) and the pivot-delivery poll budget
+(settlement.maxMinutes × 1.5 margin) derive from it; today's `if
+(BTC)` ternaries are DELETED. Adding a chain or a bridge change = one
+registry entry, nothing else. RULE (memory + register): a value that
+differs by chain goes in the registry on day one — a hardcoded value
+true for the tested chains is a bug waiting for the untested one.
+233 tests, build clean.

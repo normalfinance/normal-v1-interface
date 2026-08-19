@@ -19,6 +19,7 @@
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { fCurrency } from '@/utils/format-number';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -554,7 +555,18 @@ export function useCctpEngine({
           result.fromChainId,
           result.toChainId,
           cancelled,
-          toSymbol === 'BTC' ? 360 : 60
+          // Poll budget derives from the destination chain's settlement
+          // window (registry) + margin — never a hardcoded per-chain number.
+          Math.ceil(
+            ((CHAINS[
+              ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+                toSymbol as CrosschainSymbol
+              ]
+            ]?.settlement.maxMinutes ?? 10) *
+              60 *
+              1.5) /
+              10
+          )
         );
         if (delivery === 'FAILED' || delivery === 'REFUNDED') {
           throw new Error(

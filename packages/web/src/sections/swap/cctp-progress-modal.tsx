@@ -8,6 +8,7 @@
 // during 'bridging' is always safe (and we say so).
 
 import { useTranslate } from '@/locales';
+import { CHAINS } from '@/lib/chains/registry';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -27,6 +28,20 @@ export type CctpStage =
   | 'pivot-swap'
   | 'delivering'
   | 'done';
+
+// Chain-honest ETA text, derived from the registry's settlement window —
+// never hardcoded per chain in copy (2026-08-19 lesson).
+const CHAIN_OF: Record<string, 'bitcoin' | 'ethereum' | 'solana'> = {
+  BTC: 'bitcoin',
+  ETH: 'ethereum',
+  SOL: 'solana',
+};
+function settlementEta(symbol: string): string {
+  const chain = CHAIN_OF[symbol];
+  if (!chain) return 'a few minutes';
+  const { minMinutes, maxMinutes } = CHAINS[chain].settlement;
+  return maxMinutes <= 5 ? 'a few minutes' : `usually ${minMinutes}–${maxMinutes} minutes`;
+}
 
 interface Props {
   open: boolean;
@@ -65,12 +80,7 @@ export function CctpProgressModal({
           {
             id: 'arriving',
             label: t('USDC arriving on Base'),
-            // Honest per-chain ETA (Niko live test 2026-08-19: BTC→USDC took
-            // ~1h — the slow part is Bitcoin confirmations on the SOURCE).
-            sub:
-              fromSymbol === 'BTC'
-                ? t('Bitcoin confirmations — usually 10–60 minutes')
-                : t('Cross-chain delivery — a few minutes'),
+            sub: t('Cross-chain delivery — {{eta}}', { eta: settlementEta(fromSymbol) }),
           },
           {
             id: 'topup',
@@ -126,11 +136,7 @@ export function CctpProgressModal({
           {
             id: 'delivering' as CctpStage,
             label: t('Delivering {{sym}}', { sym: toSymbol }),
-            // Honest per-chain ETA: BTC's payout is a mined Bitcoin tx.
-            sub:
-              toSymbol === 'BTC'
-                ? t('Bitcoin confirmations — usually 10–40 minutes')
-                : t('Cross-chain arrival — usually 1–3 minutes'),
+            sub: t('Cross-chain arrival — {{eta}}', { eta: settlementEta(toSymbol) }),
           },
           {
             id: 'done',
