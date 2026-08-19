@@ -37,6 +37,7 @@ import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import NormalWalletSetupDialog from '@/components/_common/normal-wallet-setup-dialog';
 
+import { useEthGasReserve } from './engines/gas-reserve';
 import { CctpRecoveryBanner } from './cctp-resume-banner';
 import { useLifiEngine } from './engines/use-lifi-engine';
 import { useCctpEngine } from './engines/use-cctp-engine';
@@ -168,13 +169,29 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     BigNumber(fromToken.balance || 0).minus(pendingOutflow),
     0
   );
+  // ETH gas reserve lives INSIDE spendable balance (same pattern as the XLM
+  // reserve below): typed amounts, MAX, display and validation all inherit
+  // it. Before this, a typed amount could pass "amount <= balance" and still
+  // fail on-chain with "insufficient funds for gas" (observed live
+  // 2026-08-19: 0.00499 of 0.00787 ETH + ~0.0039 gas). Sized live; cctp's
+  // ETH leg is a bridge, so it reserves against a larger gas limit.
+  // Gas limits from OBSERVED route reality, not protocol minimums: LI.FI's
+  // bridge deposits (relaydepository, near) ran ~538k gas live on 2026-08-19
+  // — the old 250k assumption under-reserved and MAX still failed on-chain.
+  // Over-reserving only shrinks MAX; under-reserving fails swaps.
+  const ethReserve = useEthGasReserve(
+    fromSymbol === 'ETH',
+    pairTypeOf(fromSymbol, toSymbol) === 'cctp' ? 400_000n : 550_000n
+  );
   const fromBalance =
     fromSymbol === 'XLM'
       ? BigNumber.max(
           spendableXlmForOutflow(fromToken.balance || 0, 1, hasActiveSavings).minus(pendingOutflow),
           0
         )
-      : grossFromBalance;
+      : fromSymbol === 'ETH'
+        ? BigNumber.max(grossFromBalance.minus(ethReserve), 0)
+        : grossFromBalance;
   // XLM held out of this swap (network reserve + savings buffer) — names the
   // amount when an "insufficient" is really the guard, not a missing balance.
   const xlmHeldBack = fromSymbol === 'XLM' ? grossFromBalance.minus(fromBalance) : ZERO;

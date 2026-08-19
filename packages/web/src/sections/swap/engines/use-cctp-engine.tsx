@@ -42,7 +42,6 @@ import Typography from '@mui/material/Typography';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import { groupOf } from './types';
-import { ethGasReserve } from './gas-reserve';
 import { type CctpStage, CctpProgressModal } from '../cctp-progress-modal';
 
 import type { SwapSymbol, SwapEngineResult, CrosschainSymbol } from './types';
@@ -306,7 +305,9 @@ export function useCctpEngine({
     // mempool. SOL: a small static reserve (Solana fees + ATA rent).
     let reserve = 0.01; // SOL
     if (fromSymbol === 'ETH') {
-      reserve = await ethGasReserve(400_000n);
+      // Reserve already inside fromBalance (card holds it back for typed
+      // amounts too) — don't double-subtract.
+      return fromBalance;
     } else if (fromSymbol === 'BTC') {
       try {
         const r = await fetch('https://mempool.space/api/v1/fees/recommended', {

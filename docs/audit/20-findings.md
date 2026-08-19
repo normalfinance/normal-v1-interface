@@ -1774,3 +1774,32 @@ that one id and the row REAPPEARS with its recovery action the moment
 the signal clears. Closed tab = no signal = banner owns recovery, as
 before. One entrance per job, recovery never lost. 233 tests, build
 clean.
+
+**ETH gas reserve for TYPED amounts (branch insufficient-gas, Niko
+live failure 2026-08-19: 0.00499 of 0.00787 ETH + ~0.0039 gas →
+"insufficient funds for gas" RPC dump):** the dynamic-gas-reserve
+guide's MAX half was already shipped (shared ethGasReserve in both
+engines) — the remaining hole was typed amounts validating against a
+spendable balance that still contained gas money. Fix = the #67 XLM
+pattern applied to ETH: `useEthGasReserve` (SWR over the live helper,
+60s refresh, 0.003 fallback) is held back INSIDE the card's
+fromBalance for ETH sources (cctp pairs reserve against the 400k
+bridge limit, lifi 250k), so typed amounts, MAX, display and
+validation inherit one number; both engines' getMaxToken return
+fromBalance for ETH (no double-subtract); `isInsufficientGasError`
+maps the raw node error to a human message if it ever fires anyway.
+SOL/BTC reserves unchanged (guide's scope decision). ETH SENDS: the
+send adapter path not audited this pass — follow-up check recorded.
+233 tests, build clean.
+
+**Gas reserve limit vs route reality (Niko, 2026-08-19, second MAX
+fail):** the reserve fired correctly (balance shown pre-reserved,
+friendly error on failure) but was sized to LI.FI's assumed 250k gas
+while the ACTUAL route deposits (relaydepository, near) ran ~538k live
+— under-reserve → MAX still failed. Limit raised to 550k for non-cctp
+ETH sources (observed max + margin; over-reserve only shrinks MAX,
+under-reserve fails swaps — asymmetric costs favor fat). FOLLOW-UP
+(the true "forever"): once a LI.FI quote arrives it carries the
+route's OWN gasCosts — validate amount + quoted gas ≤ gross and
+give back the over-reserve; recorded for the next pass on this
+branch. 233 tests, build clean.

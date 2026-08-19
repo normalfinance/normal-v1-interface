@@ -25,6 +25,31 @@ const GAS_PRICE_BUFFER_DEN = 10n; // click and the actual signature/broadcast.
  * @param gasLimit expected gas for the source tx. LI.FI same-group swap ≈ 250k;
  *   the CCTP path is a bridge and passes more (400k) for safety headroom.
  */
+import useSWR from 'swr';
+
+/**
+ * Live ETH gas reserve as a hook — the swap card holds this back from
+ * SPENDABLE ETH (like #67 holds the XLM reserve), so typed amounts, MAX,
+ * display and validation all inherit it from one number. Falls back to the
+ * flat 0.003 until the live figure arrives; refreshes every minute.
+ */
+export function useEthGasReserve(enabled: boolean, gasLimit: bigint = 250_000n): number {
+  const { data } = useSWR(
+    enabled ? ['eth-gas-reserve', gasLimit.toString()] : null,
+    () => ethGasReserve(gasLimit),
+    { refreshInterval: 60_000, dedupingInterval: 30_000, revalidateOnFocus: false }
+  );
+  return data ?? 0.003;
+}
+
+/** The raw node error for value+gas > balance, mapped so users never see an
+ *  RPC dump (observed live 2026-08-19). */
+export function isInsufficientGasError(err: unknown): boolean {
+  return /insufficient funds for gas/i.test(
+    String((err as { message?: string })?.message ?? err ?? '')
+  );
+}
+
 export async function ethGasReserve(gasLimit: bigint = 250_000n): Promise<number> {
   try {
     const res = await fetch(ETH_RPC_URL, {

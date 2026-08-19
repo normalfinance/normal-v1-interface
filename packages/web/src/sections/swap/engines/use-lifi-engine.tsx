@@ -20,8 +20,8 @@ import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 
-import { ethGasReserve } from './gas-reserve';
 import { LifiStatusModal } from '../lifi-status-modal';
+import { isInsufficientGasError } from './gas-reserve';
 import { isTerminal, useLifiTracker, registryChainOf } from './lifi-tracker';
 
 import type { LifiTrackedTx } from './lifi-tracker';
@@ -213,9 +213,11 @@ export function useLifiEngine({
   // when gas spikes. Shared with the CCTP engine (gas-reserve.ts) so the two
   // can't drift. Returns the max in *token* units; the shell formats it.
   const getMaxToken = async (): Promise<BigNumber> => {
-    let reserve = from.feeReserve;
-    if (fromSymbol === 'ETH') reserve = await ethGasReserve(); // default 250k (same-group swap)
-    return BigNumber.max(fromBalance.minus(reserve), 0);
+    // ETH's gas reserve now lives INSIDE fromBalance (the card holds it back
+    // so TYPED amounts are gas-safe too, not just MAX) — subtracting again
+    // here would double-reserve.
+    if (fromSymbol === 'ETH') return fromBalance;
+    return BigNumber.max(fromBalance.minus(from.feeReserve), 0);
   };
 
   const handleSetupSuccess = async () => {
@@ -252,7 +254,12 @@ export function useLifiEngine({
       setQuote(null);
     } catch (err: any) {
       console.error('[lifi engine] execute failed:', err); // surface stack
-      enqueueSnackbar(err?.message ?? t('Swap failed'), { variant: 'error' });
+      enqueueSnackbar(
+        isInsufficientGasError(err)
+          ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
+          : (err?.message ?? t('Swap failed')),
+        { variant: 'error' }
+      );
     } finally {
       setExecuting(false);
     }
