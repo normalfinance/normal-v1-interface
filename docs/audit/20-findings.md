@@ -1654,3 +1654,17 @@ drawer/portfolio. This was the fifth surface found on the store AFTER
 the audit table claimed completeness — the table was built by reading
 consumers I knew of, not by grepping tokenState.tokens; the grep is
 now the rule for "done" claims. 233 tests, build clean.
+
+**Inline session-reconnect (Niko, 2026-08-18):** an expired
+Lobstr/WalletConnect session mid-flow ABORTED the operation — red
+failed step in the cctp modal + a "reconnect" snackbar whose button
+only reconnected, leaving the user to redo the swap by hand. Both
+external signing paths (signOrReconnect + the mgi kit-signer) now
+recover INLINE: info toast explaining why a wallet window is appearing
+→ reopen the connect flow → retry the SAME signature once. The
+in-flight step pauses and continues; only a declined/failed reconnect
+falls back to the old snackbar + WalletSessionExpiredError (callers'
+suppression contract unchanged). Session-based wallets = Lobstr/
+WalletConnect (sessions do not survive reloads) — that's WHY the
+error appeared, not a bug in the swap. Doc 73 row F10. 233 tests,
+build clean.

@@ -67,14 +67,30 @@ export function useWalletReconnect() {
         // #54). See lib/wallet-kit-guard.ts.
         return await runWalletKitSigning(() => kitSign(xdr, networkPassphrase));
       } catch (err: any) {
-        if (isSessionBased && isSessionError(err)) {
+        if (!(isSessionBased && isSessionError(err))) throw err;
+        // Inline recovery (Niko, 2026-08-18): an expired session used to
+        // ABORT the whole flow with a "reconnect" snackbar — mid-swap that
+        // meant a red failed step and redoing everything by hand. Instead:
+        // tell the user why a wallet window is about to appear, reopen the
+        // connect flow, and retry the SAME signature once — the in-flight
+        // step pauses and continues instead of failing.
+        enqueueSnackbar(
+          t('Your wallet session expired — reconnect to continue where you left off.'),
+          { variant: 'info', autoHideDuration: 6000 }
+        );
+        try {
+          await connectWallet();
+          return await runWalletKitSigning(() => kitSign(xdr, networkPassphrase));
+        } catch (retryErr: any) {
+          // Reconnect declined/closed, or the fresh session still can't sign:
+          // fall back to the persistent snackbar + typed error (callers
+          // suppress their own error UI for this one).
           showWalletReconnectSnackbar(connectWallet, {
             message: t('Your wallet session has expired.'),
             action: t('Reconnect'),
           });
-          throw new WalletSessionExpiredError();
+          throw isSessionError(retryErr) ? new WalletSessionExpiredError() : retryErr;
         }
-        throw err;
       }
     },
     [kitSign, connectWallet, isSessionBased, t]
