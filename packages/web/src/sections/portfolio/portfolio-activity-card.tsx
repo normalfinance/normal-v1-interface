@@ -167,6 +167,16 @@ function activityToRow(a: Activity): RowData {
           : a.tokenIn.symbol === 'USDC'
             ? fCurrency(a.tokenIn.amount)
             : `${a.tokenOut.amount.toFixed(7)} ${a.tokenOut.symbol}`;
+      // A PENDING swap whose delivered amount is still unknown must not show
+      // a confident $0 (Niko live test 2026-08-19: in-flight BTC→USDC row).
+      if (a.pending && a.tokenOut.symbol === 'USDC' && !(a.tokenOut.amount > 0)) {
+        return {
+          asset: `${a.tokenIn.symbol} → ${a.tokenOut.symbol}`,
+          amount: a.tokenIn.amount.toFixed(7),
+          value: '—',
+          txHash: a.txHash,
+        };
+      }
       return {
         asset: `${a.tokenIn.symbol} → ${a.tokenOut.symbol}`,
         amount: a.tokenIn.amount.toFixed(7),

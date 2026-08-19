@@ -65,7 +65,12 @@ export function CctpProgressModal({
           {
             id: 'arriving',
             label: t('USDC arriving on Base'),
-            sub: t('Cross-chain delivery — a few minutes'),
+            // Honest per-chain ETA (Niko live test 2026-08-19: BTC→USDC took
+            // ~1h — the slow part is Bitcoin confirmations on the SOURCE).
+            sub:
+              fromSymbol === 'BTC'
+                ? t('Bitcoin confirmations — usually 10–60 minutes')
+                : t('Cross-chain delivery — a few minutes'),
           },
           {
             id: 'topup',

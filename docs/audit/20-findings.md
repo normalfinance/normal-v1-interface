@@ -1689,3 +1689,15 @@ before Done — closing the popup shows the BTC already in the wallet.
 Timeout past the cap keeps the honest "on its way" close-out. The
 early-exit branch now fires only for quotes with no chain ids. Doc 73
 F11 rewritten. 233 tests, build clean.
+
+**Inbound BTC ETA + pending $0 (Niko live test, 2026-08-19):**
+(1) inbound BTC→USDC's slow leg is Bitcoin confirmations on the SOURCE
+(~1h observed) but the "USDC arriving on Base" step said "a few
+minutes" unconditionally → now per-chain: BTC → "Bitcoin confirmations
+— usually 10–60 minutes". (2) the pending swap's Activity row showed a
+confident $0 VALUE while the delivered USDC amount was still unknown →
+now shows '—' until the real amount lands (unknown ≠ zero, the
+register's oldest rule). Completed-row content verified correct from
+the screenshot (USDC→BTC 19.15/$19.15); if more rows misreport after
+settlement, needs Niko's expected-vs-actual per row. 233 tests, build
+clean.
