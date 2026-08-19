@@ -45,3 +45,16 @@ right; store-fed surfaces were stale.
 
 Rule (register): a display surface may read exactly ONE source — the
 portfolio aggregate. tokenState is transitional and must not gain consumers.
+
+## Phase 2c — final store retirement (definitive grep, 2026-08-18)
+
+`grep -rl "tokenState" src` (non-test) after all display fixes:
+my-balance-section, bitcoin-receive-modal, btc-tx-status-modal,
+normal-wallet-setup-dialog, offramp-resume-handler, savings-card,
+send-modal (price fallback only), send-review, use-asset-actions,
+searchbar. Mostly action-time/price/identity uses; ALL are kept fresh
+post-transaction by TokenStoreRefresher, so the staleness class is
+mitigated app-wide today. Retiring the store = migrating these ten,
+then deleting tokenState + getAllTokens + the refresher. Do as its own
+chunk with this list as the checklist — do NOT claim done without
+re-running the grep.

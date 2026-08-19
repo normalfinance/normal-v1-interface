@@ -1642,3 +1642,15 @@ nf:turnkey-addresses:v1 localStorage cache (keyed by user id; Turnkey
 addresses are public + append-only, safe to paint stale) as SWR
 fallbackData, written on every success. Doc 73 rows F7/F8. 233 tests,
 build clean.
+
+**/assets list page account-wide (Niko, 2026-08-18):** the standalone
+Assets page still read the legacy slot store — $2.21 total for a $52.85
+account (Lobstr's 2 XLM; companion + savings invisible). Now: slot
+Stellar rows from the aggregate (labeled by owner on hybrid), companion
+rows ("· Normal wallet", __companion_*__ contracts), and a Normal
+Savings row (account-wide value, routes to /savings — __savings__
+special-cased in the row click). Total sums everything and matches the
+drawer/portfolio. This was the fifth surface found on the store AFTER
+the audit table claimed completeness — the table was built by reading
+consumers I knew of, not by grepping tokenState.tokens; the grep is
+now the rule for "done" claims. 233 tests, build clean.
