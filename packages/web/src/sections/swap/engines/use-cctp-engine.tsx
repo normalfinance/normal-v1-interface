@@ -541,7 +541,7 @@ export function useCctpEngine({
         if (toSymbol === 'BTC' || !result.fromChainId || !result.toChainId) {
           await patch({ dstAmount });
           if (toSymbol === 'BTC') {
-            enqueueSnackbar(t('BTC is on its way — delivery takes a few minutes.'), {
+            enqueueSnackbar(t('BTC is on its way — Bitcoin confirmations usually take 10–40 minutes. Track it in Activity; your balance updates the moment it arrives.'), {
               variant: 'info',
             });
           }

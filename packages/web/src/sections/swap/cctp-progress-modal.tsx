@@ -134,7 +134,7 @@ export function CctpProgressModal({
             label: t('Done'),
             sub:
               toSymbol === 'BTC'
-                ? t('{{sym}} on its way to your wallet', { sym: toSymbol })
+                ? t('{{sym}} on its way — Bitcoin usually takes 10–40 minutes', { sym: toSymbol })
                 : t('{{sym}} delivered', { sym: toSymbol }),
           },
         ];

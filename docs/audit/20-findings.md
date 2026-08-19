@@ -1668,3 +1668,13 @@ suppression contract unchanged). Session-based wallets = Lobstr/
 WalletConnect (sessions do not survive reloads) — that's WHY the
 error appeared, not a bug in the swap. Doc 73 row F10. 233 tests,
 build clean.
+
+**BTC delivery expectation (Niko live test, 2026-08-19):** Lobstr→BTC
+completed its Stellar→Base leg, then LI.FI routed via Layerswap whose
+payout is a REAL Bitcoin transaction — 10-40 min is normal (SOL felt
+instant, BTC cannot). Funds were never at risk: every leg lands on the
+user's own addresses (the engine's core invariant), and the #66
+arrival verification refreshes balances when the payout confirms. The
+defect was the EXPECTATION: "delivery takes a few minutes" / done-note
+copy now says "Bitcoin usually takes 10–40 minutes" + points at
+Activity. Doc 73 row F11. 233 tests, build clean.
