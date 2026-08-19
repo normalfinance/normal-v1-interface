@@ -430,10 +430,22 @@ export function ActivityCard({
     if (!isHybrid) return slotFeed.recentActivity;
     const tag = (list: Activity[], wallet: string) =>
       list.map((a) => ({ ...a, walletTag: wallet }) as Activity & { walletTag?: string });
+    // Dedupe by id: a hybrid cctp swap involves BOTH wallets, so both feeds
+    // return the SAME row (observed live 2026-08-19: one swap listed twice).
+    // NaN-safe sort: one row with a missing/string timestamp made the whole
+    // comparator undefined-order, leaving a fresh row below an hour-old one.
+    const ts = (x: Activity) => Number(x.timestamp) || 0;
+    const seen = new Set<string>();
     return [
       ...tag(slotFeed.recentActivity, connectedWalletLabel(persistWallet.walletType)),
       ...tag(companionFeed.recentActivity, 'Normal wallet'),
-    ].sort((a, b) => b.timestamp - a.timestamp);
+    ]
+      .filter((x) => {
+        if (seen.has(x.id)) return false;
+        seen.add(x.id);
+        return true;
+      })
+      .sort((x, y) => ts(y) - ts(x));
   }, [isHybrid, slotFeed.recentActivity, companionFeed.recentActivity, persistWallet.walletType]);
 
   // Re-fetch wallet activity after a deposit or withdrawal completes.

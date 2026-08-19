@@ -1751,3 +1751,13 @@ announces on return — earliest possible. Sends: announceTransaction
 primitive dispatches immediately with a pending row + confirmed flip.
 Savings: own event family, card subscribed. Activity card listens to
 BOTH families. 233 tests, build clean.
+
+**Activity merge: duplicate + mis-sort (Niko live test, 2026-08-19):**
+a hybrid cctp swap involves BOTH wallets, so both merged feeds returned
+the SAME row → listed twice; and the merge comparator was not NaN-safe,
+so one row with a missing/non-numeric timestamp degraded the whole sort
+(fresh 0m rows below a 1h row). Fix: dedupe by id (first feed wins the
+wallet tag) + Number()-coerced timestamp sort with 0 fallback. RULE:
+merging N sources needs id-dedupe and a total-order comparator — a
+comparator that can return NaN sorts NOTHING reliably. 233 tests,
+build clean.
