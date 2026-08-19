@@ -1613,3 +1613,16 @@ wallet pills answer "which wallet pays" after picking. tokenBySymbol
 itself deliberately stays slot-scoped — every engine computation
 (fromBalance, reserve, MAX) depends on per-wallet numbers; only the
 display-facing pickerToken widens. 233 tests, build clean.
+
+**#75 Phase 2b + chunk 5 close (Niko GO, 2026-08-18):** (1) asset
+detail pages account-wide — they read the LEGACY STORE for Stellar
+(the audit table had wrongly marked them aggregate) and showed the
+slot balance only; now: slot balance from the aggregate, big number =
+slot + companion, split line "Normal wallet X · Lobstr Y" when both
+hold some. (2) ⟳ "All wallets" button REMOVED (decision): wallet
+visibility = Assets-tab pills, connecting = "+" — one control per job;
+it was a duplicate wizard entry point. (3) Swap picker follow-up
+(2026-08-18 report): picker rows show account-wide XLM/USDC totals;
+tokenBySymbol stays slot-scoped for engine math. Doc 73 gained Part F
+(F1-F6). With this, #32's code work is COMPLETE — remaining: Niko's
+live matrix (doc 73 A-F) → fallout → merge. 233 tests, build clean.

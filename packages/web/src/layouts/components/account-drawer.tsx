@@ -24,7 +24,6 @@ import { CHAINS, CHAIN_IDS, getChainAddress, availableChains } from '@/lib/chain
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
 import AddOutlined from '@mui/icons-material/AddOutlined';
-import SyncOutlined from '@mui/icons-material/SyncOutlined';
 import CloseOutlined from '@mui/icons-material/CloseOutlined';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import {
@@ -752,23 +751,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 </IconButton>
               </Tooltip>
 
-              <Tooltip title={t('All wallets')}>
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    setWizardInitialStep('linked-accounts');
-                    setShowLoginModal(true);
-                    onClose();
-                  }}
-                  sx={{
-                    color: '#6B6B76',
-                    borderRadius: '8px',
-                    '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
-                  }}
-                >
-                  <SyncOutlined sx={{ fontSize: 20 }} />
-                </IconButton>
-              </Tooltip>
+              {/* #32 chunk 5: the ⟳ "All wallets" button is gone (decision
+                  2026-08-18). Its two jobs are covered better elsewhere:
+                  wallet visibility by the Assets-tab wallet pills, and
+                  connecting another wallet by the "+" button — one control
+                  per job, no duplicate entry point into the wizard. */}
             </Stack>
           )}
 
