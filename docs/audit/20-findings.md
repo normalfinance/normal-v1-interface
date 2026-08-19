@@ -1713,3 +1713,17 @@ registry entry, nothing else. RULE (memory + register): a value that
 differs by chain goes in the registry on day one — a hardcoded value
 true for the tested chains is a bug waiting for the untested one.
 233 tests, build clean.
+
+**"Done waits for refetch" sweep (Niko, 2026-08-19):** two gaps in the
+cctp finish gate: (1) BTC's destination refetch was still
+FIRE-AND-FORGET — the old exemption's leftover, wrong since BTC now
+tracks to true delivery; (2) both directions awaited only the LEGACY
+STORE refresh while displays read the AGGREGATE since #75 — "Done"
+could show against stale visible numbers. Fix: finish() awaits
+Promise.all of [destination-chain refetch (BTC included), inbound
+token-store refresh, AGGREGATE refreshFresh (new refreshAggregate
+prop = useWalletBalances.refreshFresh)] raced against the 15s
+anti-stuck cap. LI.FI engine verified already gated (#62/#66,
+live-tested); Soroswap: Horizon submit is inclusion-synchronous, so
+funds are chain-confirmed at toast time and the refresh follows
+immediately. 233 tests, build clean.

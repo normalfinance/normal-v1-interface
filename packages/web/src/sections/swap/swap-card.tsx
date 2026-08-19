@@ -122,7 +122,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   // transaction like every other surface. Issuer is patched from config (the
   // aggregate mapper is display-oriented and leaves it empty; the 4b funding
   // move sends this token, so it must carry the real issuer).
-  const { companionStellar, assets: aggAssets } = useWalletBalances(true);
+  const { companionStellar, assets: aggAssets, refreshFresh } = useWalletBalances(true);
   const aggStellarToken = useCallback(
     (sym: 'XLM' | 'USDC'): Token | null => {
       const a = aggAssets?.find((x) => x.symbol === sym && x.chain === 'stellar');
@@ -435,6 +435,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     resetInput,
     refetchChain,
     stellarAddressOverride: cctpStellarAddress,
+    refreshAggregate: refreshFresh,
     onNeedsSetup: isExternalWallet ? () => setSetupOpen(true) : undefined,
     fundFromExternal,
   });

@@ -59,6 +59,9 @@ export interface CctpEngineProps {
   resetInput: () => void;
   /** Refresh a target chain's balance right after delivery (outbound). */
   refetchChain?: (chain: 'bitcoin' | 'ethereum' | 'solana') => Promise<void>;
+  /** Awaitable, cache-bypassing refresh of the portfolio aggregate — the
+   *  source every display reads (#75). 'Done' waits on it. */
+  refreshAggregate?: () => Promise<unknown>;
   /**
    * #32 chunk 4a: the Stellar address this swap burns from / delivers to —
    * threaded EXPLICITLY (doc 72 §4h). For an external-wallet user this is
@@ -147,6 +150,7 @@ export function useCctpEngine({
   enabled,
   resetInput,
   refetchChain,
+  refreshAggregate,
   stellarAddressOverride,
   onNeedsSetup,
   fundFromExternal,
@@ -390,34 +394,33 @@ export function useCctpEngine({
   // refetch is AWAITED (capped) before the stage flips; fire-and-forget
   // refreshes raced the modal and lost, so "Done" showed against a stale
   // balance that looked like missing funds.
-  //   out (ETH/SOL): runOutbound has chain-confirmed delivery before calling
-  //     this — await the destination chain's verify-and-retry refetch.
-  //   out (BTC): delivery takes many minutes; the snackbar + activity pending
-  //     badge own that wait, so the refetch stays fire-and-forget (documented
-  //     trade-off: holding the modal open that long would itself look stuck).
-  //   in: USDC lands on Stellar, mint already chain-confirmed — await the
-  //     token-store refresh.
+  //   out: delivery is chain-confirmed before this runs (BTC included since
+  //     2026-08-19 — it tracks to true delivery, so its refetch is AWAITED
+  //     like every other chain; the old fire-and-forget exemption is gone).
+  //   in: USDC lands on Stellar, mint already chain-confirmed.
+  //   BOTH: the portfolio AGGREGATE refresh is awaited too — since #75 the
+  //     drawer/swap displays read the aggregate, so gating only the legacy
+  //     store let "Done" show against stale visible numbers.
   const finish = useCallback(async () => {
     const cap = new Promise<void>((resolve) => {
       setTimeout(resolve, ARRIVAL_CAP_MS);
     });
+    const waits: Promise<unknown>[] = [];
     if (direction === 'out') {
       const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
         toSymbol as CrosschainSymbol
       ];
       getAllTokens(true).catch(() => {}); // source side: USDC left Stellar
-      if (chain === 'bitcoin') {
-        refetchChain?.(chain).catch(() => {});
-      } else if (chain && refetchChain) {
-        await Promise.race([refetchChain(chain).catch(() => {}), cap]);
-      }
+      if (chain && refetchChain) waits.push(refetchChain(chain).catch(() => {}));
     } else {
-      await Promise.race([getAllTokens(true).catch(() => {}), cap]);
+      waits.push(getAllTokens(true).catch(() => {}));
     }
+    if (refreshAggregate) waits.push(refreshAggregate().catch(() => {}));
+    await Promise.race([Promise.all(waits), cap]);
     setStage('done');
     resetInput();
     window.dispatchEvent(new Event('nf:activity-updated'));
-  }, [direction, toSymbol, resetInput, getAllTokens, refetchChain]);
+  }, [direction, toSymbol, resetInput, getAllTokens, refetchChain, refreshAggregate]);
 
   // ---- INBOUND orchestration -----------------------------------------------------
   const runInbound = useCallback(
