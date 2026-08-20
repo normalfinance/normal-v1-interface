@@ -700,6 +700,19 @@ export function useCctpEngine({
       : Math.max(2, Math.round(quote.estimate.executionDuration / 60)) + 2 // Stellar attests in seconds
     : null;
 
+  // Gas + minimum honesty (Niko GO 2026-08-20; mirrors the LI.FI engine).
+  const gasUsd = (
+    (quote as { estimate?: { gasCosts?: { amountUSD?: string }[] } } | null)?.estimate?.gasCosts ??
+    []
+  ).reduce((acc, g) => acc + Number(g?.amountUSD ?? 0), 0);
+  const swapUsdIn = fromPrice.gt(0) ? amount.multipliedBy(fromPrice).toNumber() : 0;
+  const gasShare = swapUsdIn > 0 && gasUsd > 0 ? gasUsd / swapUsdIn : 0;
+  // Inbound: the wire amount the server checks is the USDC reaching Base.
+  const minUsdShort =
+    direction === 'in'
+      ? !!quote && BigNumber(quote.estimate.toAmountMin).dividedBy(1e6).lt(10)
+      : amount.gt(0) && fromPrice.gt(0) && amount.multipliedBy(fromPrice).lt(10);
+
   const button = useMemo(() => {
     if (!enabled) return { label: t('Enter an amount'), action: null, loading: false };
     if (network !== 'mainnet')
@@ -779,6 +792,37 @@ export function useCctpEngine({
     if (quoteError) return { label: t('Try a different amount'), action: null, loading: false };
     if (quoteLoading || !quote)
       return { label: t('Fetching quote…'), action: null, loading: false };
+    // Server enforces the $10 minimum (relayer gas economics) — surface it
+    // BEFORE the click, not as a 400 after (Niko, 2026-08-20: a $5.75 swap
+    // showed a live Swap button, then bounced).
+    if (minUsdShort)
+      return {
+        label: t('Minimum swap is $10'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t(
+              'Each cross-ecosystem swap has fixed bridge costs — under $10 they outweigh the swap.'
+            )}
+          </Typography>
+        ),
+      };
+    // Gas honesty (same %-rule as the LI.FI engine): the inbound leg's quote
+    // carries its own gasCosts — block when gas eats >half the swap.
+    if (gasShare > 0.5)
+      return {
+        label: t('Network fees exceed half this swap — try a larger amount'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t('This route costs ~${{gas}} in network gas regardless of size.', {
+              gas: gasUsd.toFixed(2),
+            })}
+          </Typography>
+        ),
+      };
     // #32 chunk 4b: swapping FROM the external wallet — the CTA names the
     // move before any signature, never a silent transfer.
     if (direction === 'out' && fundFromExternal)
@@ -800,6 +844,9 @@ export function useCctpEngine({
       };
     return { label: t('Swap'), action: handleExecute, loading: false };
   }, [
+    gasShare,
+    gasUsd,
+    minUsdShort,
     enabled,
     network,
     nativeAddress,

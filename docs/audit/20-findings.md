@@ -1815,3 +1815,13 @@ row (amber >20%), an amber warning line at 20–50%, and a hard block
 flat minimum, so it is right on every chain at every gas price and
 needs no per-chain constants. LifiQuote.estimate typed with gasCosts.
 233 tests, build clean.
+
+**CCTP engine min + gas gates (Niko's $5.75 quote, 2026-08-20):** the
+cctp path let a sub-$10 swap quote and show a live Swap button, then
+the SERVER's $10 min would 400 at execute; and the gas-honesty rules
+had gone into the LI.FI engine only. Both now on the cctp button
+ladder pre-click: "Minimum swap is $10" (with the why: fixed bridge
+costs outweigh sub-$10 swaps; inbound checks the USDC-reaching-Base
+wire amount — the same number the server checks) and the >50% gas
+block from the inbound leg's own quote gasCosts. Same %-rule, same
+copy, no per-chain constants. 233 tests, build clean.
