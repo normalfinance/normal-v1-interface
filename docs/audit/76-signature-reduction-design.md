@@ -170,3 +170,56 @@ Build order (each slice testable):
 
 Decisions locked: inline consent (D2), $2k/$10k/90d renew-on-use (D3),
 autopilot-before-contract (D1).
+
+## 9 · Payoff-slice port map (burn-evm read in full, 2026-08-20)
+
+Server port `server/autopilot-burn.ts` = COPY of lib/cctp/burn-evm.ts with
+exactly these changes, nothing else (every invariant ports verbatim —
+forwarder as mintRecipient+destinationCaller, recipient ONLY in hookData,
+G-address regex refusal, MAX_UINT256 hex literal never `**`, allowance
+read-after-write loop, 4-attempt burn retry on allowance revert):
+1. drop 'use client' + getTurnkeyWalletInfo (subOrgId comes from the
+   transfer row's user via prisma, like /api/autopilot/status);
+2. signEvmTxWithTurnkey(unsigned, subOrgId, addr) →
+   signWithAutopilot({ subOrgId, signWith: addr, unsignedTransaction,
+   purpose: 'cctp-inbound-burn' }) — FIRST verify the payload shape
+   against lib/turnkey/evm-signer.ts (0x prefix handling / raw return
+   assembly) and mirror it exactly;
+3. caller = a server route /api/cctp/autopilot/burn (withAuth): loads the
+   transfer row, VERIFIES ownership (row.userId == session user) + state
+   (srcSwapTxHash set, burnTxHash null) + reads Base balance server-side,
+   then burns and patches the row — the same checks the banner's client
+   recover() does.
+Then: outbound pivot port (same pattern over lib/cctp/pivot-swap.ts),
+engine branches on /api/autopilot/status (skip client prompts; poll row),
+inline consent moment, Part J. Slices remain atomic: port+route first,
+engine branch second, consent UI third.
+
+## 10 · Payoff slice SHIPPED (2026-08-20) — Stage 3 code-complete
+
+All three payoff units landed (242 tests, full-src lint, build clean):
+1. **Server ports:** `server/autopilot-burn.ts` + `server/autopilot-pivot.ts`
+   (invariants verbatim; signWithAutopilot mirrors evm-signer's 0x contract).
+   Shared cores extracted, not duplicated: `server/cctp-transfer-gas.ts`
+   (the CAS-locked gas top-up — /api/cctp/gas-topup now calls it too) and
+   `server/lifi-quote.ts` (the quote core — /api/lifi/quote now calls it).
+2. **Routes:** /api/cctp/autopilot/burn + /pivot (withAuth, maxDuration 300):
+   banner-recover() checks + ownership + address cross-check vs the
+   TurnkeyWallet row (case-insensitive), delivery address resolved SERVER-side
+   (policy can't see LI.FI calldata → the route pins it), status flip to
+   BURN_SUBMITTED on the burn patch (else the cron never advances), updateMany
+   guards so a racing banner tap can't clobber, receipt-wait on top-ups.
+3. **Engine branches:** runInbound/runOutbound check /api/autopilot/status
+   (failed check ⇒ prompts, never revocation) then hand the leg to the route;
+   ANY failure falls back to the interactive path — autopilot removes
+   prompts, never blocks. Consent: inline dialog before the first cctp swap
+   (declined ⇒ localStorage nf:autopilot-declined:v1, never nags again);
+   Settings card gained the "Turn on — one passkey" door (and clears the
+   declined flag).
+
+Signature counts now: inbound 1 (was 2–3), outbound 1 (was 2), +1 one-time
+consent ceremony, +1 move for external-wallet sources (accepted).
+
+STILL GATING GO-LIVE (unchanged from §8): user runs generate-autopilot-key +
+3 env vars + autopilot_signatures.sql; verify ALLOWED_CONTRACTS vs
+lib/cctp/config (Circle addr!); v2 ABI-arg hardening; doc 73 Part J live run.

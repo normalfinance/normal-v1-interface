@@ -2001,3 +2001,59 @@ with no consent granted anywhere yet, every user sees "Off" with the
 explainer. REMAINING (payoff, fresh session): server burn/pivot
 execution ports + engine status-branches + inline consent UI + Part J.
 240 tests, build clean.
+
+**#33 Stage 3 payoff 1/3 — server burn port + route (2026-08-20):**
+`server/autopilot-burn.ts` = byte-honest port of lib/cctp/burn-evm.ts
+(every money invariant verbatim: forwarder as mintRecipient AND
+destinationCaller, recipient G-address ONLY in hookData + regex
+refusal, MAX_UINT256 hex literal never `**`, allowance
+read-after-write 15×2s, 4-attempt burn retry) signed via
+signWithAutopilot (0x stripped toward Turnkey, restored on return —
+mirrors evm-signer.ts exactly). `/api/cctp/autopilot/burn` (withAuth)
+re-runs the banner's recover() checks server-side: ownership,
+direction=crosschain_to_stellar, srcSwapTxHash set, burnTxHash null,
+non-terminal status, signer address == the user's TurnkeyWallet row
+(case-insensitive — hex casing differs by writer), live Base USDC
+balance > 0, then burns WHAT ACTUALLY LANDED. Three port-review
+catches before they became bugs: (1) row patch must also flip status
+to BURN_SUBMITTED (PATCH route does; a bare hash write leaves the row
+in CREATED, outside PENDING_STATUSES → cron never advances → bridge
+stalls forever); (2) fresh Base wallets hold 0 ETH → the route runs
+the SAME locked gas top-up as /api/cctp/gas-topup — core extracted to
+`server/cctp-transfer-gas.ts` (CAS lock preserved, both callers
+share it) and the server waits for the top-up RECEIPT instead of the
+banner's blind 6s sleep; (3) hash write guarded with
+updateMany(burnTxHash: null) so a racing banner tap can't be
+clobbered. RULE: porting a client flow to the server means porting
+its whole DEPENDENCY CHAIN (status flips, gas fronting, locks) — not
+just the happy-path function. 241 tests, build clean.
+
+**#33 Stage 3 payoff 2/3 — server pivot port + route (2026-08-20):**
+`server/autopilot-pivot.ts` ports lib/cctp/pivot-swap.ts (quote → approve
+if short → LI.FI transactionRequest, MAX approve, gasLimit hint, receipt
+gates) onto signWithAutopilot; the LI.FI quote core moved to
+`server/lifi-quote.ts` (asset map, 1011 feeless retry, no-route message)
+because a server route cannot fetch itself — /api/lifi/quote is now a thin
+auth/rate-limit shell over the same core (contract identical). The route
+/api/cctp/autopilot/pivot re-runs the banner's 'halt-finish' gates +
+ownership; CUSTODY RULE: the delivery address is resolved from the user's
+own TurnkeyWallet row via the chain registry (chainForSymbol →
+addressField) and NEVER read from the request body — the Turnkey policy
+cannot inspect LI.FI calldata, so this server-side pinning is the custody
+boundary for the pivot leg. maxDuration=300 on both autopilot routes
+(receipt waits outlive default function timeouts — the tx would land but
+the row patch would die). 242 tests, build clean.
+
+**#33 Stage 3 payoff 3/3 — engine branches + inline consent (2026-08-20):**
+runInbound/runOutbound now ask /api/autopilot/status once per run (failed
+check = prompts, NEVER revocation) and hand the mid-flow Base leg to the
+autopilot route; ANY failure → the untouched interactive path (top-up +
+passkey) — autopilot removes prompts, never blocks. The consent moment
+(D2): AutopilotConsentDialog offered ONCE before the first cctp swap signs
+anything; Enable = one ceremony then the swap continues; "Not now" writes
+nf:autopilot-declined:v1 and never nags again; Settings card gained the
+matching "Turn on — one passkey" door (which clears the declined flag) —
+Off with no enable door would violate the everything-visible-is-actionable
+rule. Doc 73 §9f + Part J (J1–J10 incl. the policy negative test and the
+close-tab-mid-arriving resilience test); doc 76 §10 records ship gates.
+242 tests, full-src lint, build clean.

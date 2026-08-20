@@ -83,16 +83,22 @@ export async function signWithAutopilot(params: {
     throw new Error('Autopilot signing is disabled');
   }
   try {
-    const res = await autopilotClient().apiClient().signTransaction({
-      organizationId: subOrgId,
-      signWith,
-      type: 'TRANSACTION_TYPE_ETHEREUM',
-      unsignedTransaction,
-    });
+    const res = await autopilotClient()
+      .apiClient()
+      .signTransaction({
+        organizationId: subOrgId,
+        signWith,
+        type: 'TRANSACTION_TYPE_ETHEREUM',
+        // Turnkey expects the serialized tx WITHOUT the 0x prefix; the
+        // signed result comes back the same way (mirrors evm-signer.ts).
+        unsignedTransaction: unsignedTransaction.startsWith('0x')
+          ? unsignedTransaction.slice(2)
+          : unsignedTransaction,
+      });
     const signed = res?.signedTransaction;
     if (!signed) throw new Error('Turnkey returned no signed transaction');
     await audit({ subOrgId, signWith, purpose, outcome: 'signed' });
-    return signed;
+    return signed.startsWith('0x') ? signed : `0x${signed}`;
   } catch (e: any) {
     await audit({
       subOrgId,

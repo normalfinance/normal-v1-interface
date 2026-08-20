@@ -40,6 +40,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { useSnackbar } from '@/components/template/snackbar';
+import AutopilotConsentDialog from '@/components/_common/autopilot-consent-dialog';
 
 import { groupOf } from './types';
 import { type CctpStage, CctpProgressModal } from '../cctp-progress-modal';
@@ -185,6 +186,11 @@ export function useCctpEngine({
   // move (drives the extra step in the progress modal).
   const [usedFunding, setUsedFunding] = useState(false);
   const cancelled = useRef(false);
+  // #33 Stage 3: the inline consent moment (D2). Offered once per mount, only
+  // when the delegation isn't active and the user hasn't declined before.
+  const [consentOpen, setConsentOpen] = useState(false);
+  const consentResolver = useRef<(() => void) | null>(null);
+  const consentHandled = useRef(false);
 
   const evmAddress = addresses.ETH; // the Base pivot is always the user's own EVM address
   const nativeAddress =
@@ -393,6 +399,80 @@ export function useCctpEngine({
     [t]
   );
 
+  // #33 Stage 3: is the server-side signing delegation live for this user?
+  // A failed check means "no autopilot for this run" (interactive prompts),
+  // NEVER a revocation — the status route 502s on Turnkey trouble by design.
+  const autopilotActive = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/autopilot/status', {
+        headers: await buildAuthHeaders(),
+        credentials: 'include',
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) return false;
+      return (await res.json())?.active === true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // The consent offer itself (D2: at the first cross-chain swap, before any
+  // signature). Resolves when the user chooses either way; "Not now" is
+  // remembered so the dialog never nags — Settings keeps the enable door.
+  const maybeOfferConsent = useCallback(async () => {
+    if (!process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY) return; // feature dark
+    if (consentHandled.current) return; // one offer per mount
+    consentHandled.current = true;
+    try {
+      if (localStorage.getItem('nf:autopilot-declined:v1')) return;
+    } catch {
+      /* storage unavailable → just offer */
+    }
+    if (await autopilotActive()) return; // already granted
+    await new Promise<void>((resolve) => {
+      consentResolver.current = resolve;
+      setConsentOpen(true);
+    });
+  }, [autopilotActive]);
+
+  const handleConsentChoice = useCallback((granted: boolean) => {
+    setConsentOpen(false);
+    if (!granted) {
+      try {
+        localStorage.setItem('nf:autopilot-declined:v1', String(Date.now()));
+      } catch {
+        /* fine — they'll simply be asked again next session */
+      }
+    }
+    consentResolver.current?.();
+    consentResolver.current = null;
+  }, []);
+
+  // Hand a mid-flow EVM leg to the server-side autopilot (gas top-up + sign +
+  // broadcast + row patch all happen there). null = failed / rejected / timed
+  // out → the caller runs the interactive path instead. The server re-checks
+  // everything (ownership, transfer state, addresses, the Turnkey policy) —
+  // this call is a convenience, not a trust boundary.
+  const tryAutopilot = useCallback(
+    async (leg: 'burn' | 'pivot', transferId: string): Promise<any | null> => {
+      try {
+        const res = await fetch(`/api/cctp/autopilot/${leg}`, {
+          method: 'POST',
+          headers: await buildAuthHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({ transferId }),
+          signal: AbortSignal.timeout(300_000),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.success) return null;
+        return data;
+      } catch {
+        return null;
+      }
+    },
+    []
+  );
+
   // #66: 'Done' must mean the wallet ALREADY shows the result — the LI.FI
   // engine's arrival rule (#62) applied here. The delivered side's balance
   // refetch is AWAITED (capped) before the stage flips; fire-and-forget
@@ -524,18 +604,28 @@ export function useCctpEngine({
           await new Promise((res) => setTimeout(res, 10_000));
         }
 
+        // #33 Stage 3: with the delegation active, gas top-up + approve + burn
+        // run SERVER-side — no mid-flow passkey ~20 min after the user clicked
+        // Swap. ANY autopilot failure (no consent, revoked, kill-switch, policy
+        // rejection, timeout) falls through to the interactive path below;
+        // autopilot never blocks a swap, it only removes prompts.
         setStage('topup');
-        await topUp();
+        const autoBurn = (await autopilotActive()) ? await tryAutopilot('burn', transferId) : null;
+        if (autoBurn) {
+          setStage('burn'); // server patched burnTxHash + BURN_SUBMITTED already
+        } else {
+          await topUp();
 
-        setStage('burn');
-        const { burnTxHash } = await burnUsdcOnEvm({
-          network,
-          chain: 'base',
-          evmAddress: evmAddress!,
-          amountWire: arrivedWire,
-          stellarRecipient: stellarAddress!,
-        });
-        await patch({ burnTxHash });
+          setStage('burn');
+          const { burnTxHash } = await burnUsdcOnEvm({
+            network,
+            chain: 'base',
+            evmAddress: evmAddress!,
+            amountWire: arrivedWire,
+            stellarRecipient: stellarAddress!,
+          });
+          await patch({ burnTxHash });
+        }
 
         setStage('bridging');
         await pollStatus('COMPLETED', 15_000);
@@ -564,6 +654,8 @@ export function useCctpEngine({
       network,
       addresses,
       makePatcher,
+      autopilotActive,
+      tryAutopilot,
       finish,
       t,
       fromSymbol,
@@ -594,17 +686,36 @@ export function useCctpEngine({
         setStage('bridging');
         await pollStatus('COMPLETED', 5_000); // Stellar-source attestation ≈ seconds
 
+        // #33 Stage 3: same server-side hand-off as the inbound burn — the
+        // pivot is THE prompt Niko banned ("sign, wait 20–50 min, sign again").
+        // The route resolves the delivery address from the user's own wallet
+        // row and patches dstSwapTxHash itself; any failure falls back to the
+        // interactive top-up + passkey pivot below.
         setStage('topup');
-        await topUp();
+        let result: {
+          txHash: `0x${string}`;
+          toAmountMin: string;
+          fromChainId?: number;
+          toChainId?: number;
+        };
+        const autoPivot = (await autopilotActive())
+          ? await tryAutopilot('pivot', transferId)
+          : null;
+        if (autoPivot) {
+          setStage('pivot-swap');
+          result = autoPivot;
+        } else {
+          await topUp();
 
-        setStage('pivot-swap');
-        const result = await executePivotSwap({
-          evmAddress: evmAddress!,
-          toSymbol: toSymbol as CrosschainSymbol,
-          toAddress: nativeAddress!,
-          amountWire,
-        });
-        await patch({ dstSwapTxHash: result.txHash });
+          setStage('pivot-swap');
+          result = await executePivotSwap({
+            evmAddress: evmAddress!,
+            toSymbol: toSymbol as CrosschainSymbol,
+            toAddress: nativeAddress!,
+            amountWire,
+          });
+          await patch({ dstSwapTxHash: result.txHash });
+        }
         // human delivered amount for the activity feed
         const dstAmount = BigNumber(result.toAmountMin)
           .dividedBy(BigNumber(10).pow(NATIVE_DECIMALS[toSymbol as CrosschainSymbol]))
@@ -678,6 +789,9 @@ export function useCctpEngine({
 
   const handleExecute = useCallback(async () => {
     if (!quote || !evmAddress || !stellarAddress || !nativeAddress) return;
+    // #33: the one-time consent offer runs BEFORE anything opens or signs —
+    // whatever the choice, the swap continues right after.
+    await maybeOfferConsent();
     setStageError(null);
     setModalOpen(true);
     try {
@@ -752,6 +866,7 @@ export function useCctpEngine({
     toSymbol,
     feePercent,
     fundFromExternal,
+    maybeOfferConsent,
     runInbound,
     runOutbound,
     t,
@@ -1018,32 +1133,35 @@ export function useCctpEngine({
     footer: null,
     button,
     modals: (
-      <CctpProgressModal
-        open={modalOpen}
-        direction={direction}
-        stage={stage}
-        error={stageError}
-        fromSymbol={fromSymbol}
-        toSymbol={toSymbol}
-        includeFunding={usedFunding}
-        fundingWalletLabel={fundFromExternal?.label}
-        onTryAgain={
-          stageError
-            ? () => {
-                // Back to a clean, retryable card: the failed RUN is cleared;
-                // the pair, amount and quote in the card are still filled, so
-                // "try again" is one more click on Swap.
-                setStageError(null);
-                setStage(null);
-              }
-            : undefined
-        }
-        onClose={() => {
-          cancelled.current = true;
-          setModalOpen(false);
-          if (stage === 'done') setStage(null);
-        }}
-      />
+      <>
+        <AutopilotConsentDialog open={consentOpen} onChoose={handleConsentChoice} />
+        <CctpProgressModal
+          open={modalOpen}
+          direction={direction}
+          stage={stage}
+          error={stageError}
+          fromSymbol={fromSymbol}
+          toSymbol={toSymbol}
+          includeFunding={usedFunding}
+          fundingWalletLabel={fundFromExternal?.label}
+          onTryAgain={
+            stageError
+              ? () => {
+                  // Back to a clean, retryable card: the failed RUN is cleared;
+                  // the pair, amount and quote in the card are still filled, so
+                  // "try again" is one more click on Swap.
+                  setStageError(null);
+                  setStage(null);
+                }
+              : undefined
+          }
+          onClose={() => {
+            cancelled.current = true;
+            setModalOpen(false);
+            if (stage === 'done') setStage(null);
+          }}
+        />
+      </>
     ),
     getMaxToken,
   };

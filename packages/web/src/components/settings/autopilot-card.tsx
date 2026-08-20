@@ -8,6 +8,7 @@ import useSWR from 'swr';
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
+import { grantAutopilotConsent } from '@/lib/turnkey/autopilot-consent';
 import { revokeAutopilotConsent } from '@/lib/turnkey/autopilot-revoke';
 
 import Box from '@mui/material/Box';
@@ -46,6 +47,29 @@ export default function AutopilotCard() {
       await mutate();
     } catch (e: any) {
       enqueueSnackbar(e?.message ?? t('Could not revoke — try again.'), { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // The enable door for users who picked "Not now" at the swap-time offer —
+  // everything visible must be actionable, so Off comes with a Turn on.
+  const serverPublicKey = process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY;
+  const handleEnable = async () => {
+    if (!serverPublicKey) return;
+    try {
+      setBusy(true);
+      await grantAutopilotConsent(serverPublicKey);
+      // They changed their mind — stop suppressing the swap-time offer too.
+      try {
+        localStorage.removeItem('nf:autopilot-declined:v1');
+      } catch {
+        /* cosmetic */
+      }
+      enqueueSnackbar(t('Automatic swap completion is on.'), { variant: 'success' });
+      await mutate();
+    } catch (e: any) {
+      enqueueSnackbar(e?.message ?? t('Could not enable — try again.'), { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -105,6 +129,25 @@ export default function AutopilotCard() {
           }}
         >
           {busy ? t('Revoking…') : t('Turn off')}
+        </Button>
+      )}
+      {data && !data.active && !error && serverPublicKey && (
+        <Button
+          onClick={busy ? undefined : handleEnable}
+          disabled={busy}
+          sx={{
+            mt: '12px',
+            textTransform: 'none',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: '#0A0A0F',
+            border: '1px solid rgba(10,10,15,0.14)',
+            borderRadius: '10px',
+            px: '14px',
+            '&:hover': { bgcolor: 'rgba(10,10,15,0.04)' },
+          }}
+        >
+          {busy ? t('Confirming…') : t('Turn on — one passkey')}
         </Button>
       )}
     </Box>
