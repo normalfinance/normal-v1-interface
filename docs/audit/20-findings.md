@@ -1990,3 +1990,14 @@ execution (port burn-evm + pivot-swap builds to the server, sign via
 signWithAutopilot, broadcast, patch row), engine branches on status
 (skip client prompts when active), inline consent UI at first cctp
 swap, Settings card, doc 73 Part J. 240 tests, build clean.
+
+**#33 Stage 3 slice 3b — Settings autopilot card (2026-08-20):**
+"Automatic swap completion" card in Settings→Accounts: live status
+from /api/autopilot/status (On/Off/Unknown — a failed check says
+Unknown, never lies either direction), plain-language description of
+the delegation's bounds (own addresses, allowlisted contracts), and a
+one-passkey "Turn off" via revokeAutopilotConsent. Safe to ship dark:
+with no consent granted anywhere yet, every user sees "Off" with the
+explainer. REMAINING (payoff, fresh session): server burn/pivot
+execution ports + engine status-branches + inline consent UI + Part J.
+240 tests, build clean.

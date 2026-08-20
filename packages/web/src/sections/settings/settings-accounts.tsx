@@ -23,6 +23,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { useSnackbar } from '@/components/template/snackbar';
+import AutopilotCard from '@/components/settings/autopilot-card';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import AddUsdcTrustlineButton from '@/components/settings/add-usdc-trustline-button';
 
@@ -445,6 +446,9 @@ export function SettingsAccounts() {
               </Box>
             )}
           </Stack>
+
+          {/* #33: automatic swap completion (autopilot) */}
+          <AutopilotCard />
 
           {/* Trustline buttons */}
           <Stack spacing={1} sx={{ mb: '16px' }}>
