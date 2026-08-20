@@ -1975,3 +1975,18 @@ keypair (public also as NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY for the
 ceremony; private NEVER committed). Remaining slices: engine/cron
 moves (the payoff), Settings revoke, Part J tests. 239 tests, build
 clean.
+
+**#33 Stage 3 slice 3a — status + revoke (2026-08-20):**
+`/api/autopilot/status` (withAuth; 240th test = route-auth conformance
+auto-passed): TRUTH LIVES IN TURNKEY — active iff the "Normal
+Autopilot" user exists on the sub-org, so a revoke from any surface is
+instantly authoritative; kill-switch masks everything; a FAILED check
+returns 502 and engines must treat it as "no autopilot for this run"
+(prompt fallback), never as a revocation. `lib/turnkey/
+autopilot-revoke.ts`: one passkey prompt DELETE_USERS — the API key
+and bound policies die with the user. REMAINING for slice 3 (the
+payoff, next session with fresh context): server-side burn/pivot
+execution (port burn-evm + pivot-swap builds to the server, sign via
+signWithAutopilot, broadcast, patch row), engine branches on status
+(skip client prompts when active), inline consent UI at first cctp
+swap, Settings card, doc 73 Part J. 240 tests, build clean.
