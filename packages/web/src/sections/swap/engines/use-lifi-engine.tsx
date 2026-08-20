@@ -20,8 +20,8 @@ import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 
-import { ethGasReserve } from './gas-reserve';
 import { LifiStatusModal } from '../lifi-status-modal';
+import { isInsufficientGasError } from './gas-reserve';
 import { isTerminal, useLifiTracker, registryChainOf } from './lifi-tracker';
 
 import type { LifiTrackedTx } from './lifi-tracker';
@@ -137,6 +137,16 @@ export function useLifiEngine({
   const amountUsd = fromPrice.gt(0) ? amount.multipliedBy(fromPrice) : null;
   const belowMinimum = amount.gt(0) && amountUsd !== null && amountUsd.lt(MIN_SWAP_USD);
   const insufficient = amount.gt(0) && amount.gt(fromBalance);
+  // Gas honesty (Niko GO 2026-08-20): the quote carries the route's OWN gas
+  // cost — surface it, warn when it eats >20% of the swap, block >50% (at
+  // that point it's a donation to validators, not a swap). Percentage rule,
+  // not a flat minimum: right on every chain at every gas price.
+  const gasUsd = (quote?.estimate?.gasCosts ?? []).reduce(
+    (acc, g) => acc + Number(g?.amountUSD ?? 0),
+    0
+  );
+  const swapUsdIn = fromPrice.gt(0) ? amount.multipliedBy(fromPrice).toNumber() : 0;
+  const gasShare = swapUsdIn > 0 && gasUsd > 0 ? gasUsd / swapUsdIn : 0;
 
   // Debounce the token amount; gated on `enabled` so the inactive engine never
   // fetches. `stale` (not the abort signal) settles the spinner deterministically.
@@ -213,9 +223,11 @@ export function useLifiEngine({
   // when gas spikes. Shared with the CCTP engine (gas-reserve.ts) so the two
   // can't drift. Returns the max in *token* units; the shell formats it.
   const getMaxToken = async (): Promise<BigNumber> => {
-    let reserve = from.feeReserve;
-    if (fromSymbol === 'ETH') reserve = await ethGasReserve(); // default 250k (same-group swap)
-    return BigNumber.max(fromBalance.minus(reserve), 0);
+    // ETH's gas reserve now lives INSIDE fromBalance (the card holds it back
+    // so TYPED amounts are gas-safe too, not just MAX) — subtracting again
+    // here would double-reserve.
+    if (fromSymbol === 'ETH') return fromBalance;
+    return BigNumber.max(fromBalance.minus(from.feeReserve), 0);
   };
 
   const handleSetupSuccess = async () => {
@@ -252,7 +264,12 @@ export function useLifiEngine({
       setQuote(null);
     } catch (err: any) {
       console.error('[lifi engine] execute failed:', err); // surface stack
-      enqueueSnackbar(err?.message ?? t('Swap failed'), { variant: 'error' });
+      enqueueSnackbar(
+        isInsufficientGasError(err)
+          ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
+          : (err?.message ?? t('Swap failed')),
+        { variant: 'error' }
+      );
     } finally {
       setExecuting(false);
     }
@@ -285,6 +302,21 @@ export function useLifiEngine({
         label: t('Insufficient {{symbol}} balance', { symbol: fromSymbol }),
         action: null,
         loading: false,
+      };
+    if (gasShare > 0.5)
+      return {
+        label: t('Network fees exceed half this swap — try a larger amount'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography
+            sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', px: 1 }}
+          >
+            {t('This route costs ~${{gas}} in network gas regardless of size.', {
+              gas: gasUsd.toFixed(2),
+            })}
+          </Typography>
+        ),
       };
     if (belowMinimum)
       return {
@@ -329,6 +361,31 @@ export function useLifiEngine({
               1 {fromSymbol} ≈ {rate.toFixed(6)} {toSymbol}
             </Typography>
           </Box>
+        )}
+        {gasUsd > 0 && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+              {t('Network gas')}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '12px',
+                fontWeight: 600,
+                color: gasShare > 0.2 ? '#B45309' : '#0A0A0F',
+                ...MONO,
+              }}
+            >
+              {`≈ $${gasUsd.toFixed(2)}`}
+              {swapUsdIn > 0 ? ` (${Math.round(gasShare * 100)}%)` : ''}
+            </Typography>
+          </Box>
+        )}
+        {gasShare > 0.2 && gasShare <= 0.5 && (
+          <Typography sx={{ fontSize: '11px', color: '#B45309', lineHeight: 1.5 }}>
+            {t('Network fees eat {{pct}}% of this swap — a larger amount gets a better deal.', {
+              pct: Math.round(gasShare * 100),
+            })}
+          </Typography>
         )}
         {toAmountMin && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

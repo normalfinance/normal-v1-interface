@@ -1774,3 +1774,96 @@ that one id and the row REAPPEARS with its recovery action the moment
 the signal clears. Closed tab = no signal = banner owns recovery, as
 before. One entrance per job, recovery never lost. 233 tests, build
 clean.
+
+**ETH gas reserve for TYPED amounts (branch insufficient-gas, Niko
+live failure 2026-08-19: 0.00499 of 0.00787 ETH + ~0.0039 gas →
+"insufficient funds for gas" RPC dump):** the dynamic-gas-reserve
+guide's MAX half was already shipped (shared ethGasReserve in both
+engines) — the remaining hole was typed amounts validating against a
+spendable balance that still contained gas money. Fix = the #67 XLM
+pattern applied to ETH: `useEthGasReserve` (SWR over the live helper,
+60s refresh, 0.003 fallback) is held back INSIDE the card's
+fromBalance for ETH sources (cctp pairs reserve against the 400k
+bridge limit, lifi 250k), so typed amounts, MAX, display and
+validation inherit one number; both engines' getMaxToken return
+fromBalance for ETH (no double-subtract); `isInsufficientGasError`
+maps the raw node error to a human message if it ever fires anyway.
+SOL/BTC reserves unchanged (guide's scope decision). ETH SENDS: the
+send adapter path not audited this pass — follow-up check recorded.
+233 tests, build clean.
+
+**Gas reserve limit vs route reality (Niko, 2026-08-19, second MAX
+fail):** the reserve fired correctly (balance shown pre-reserved,
+friendly error on failure) but was sized to LI.FI's assumed 250k gas
+while the ACTUAL route deposits (relaydepository, near) ran ~538k live
+— under-reserve → MAX still failed. Limit raised to 550k for non-cctp
+ETH sources (observed max + margin; over-reserve only shrinks MAX,
+under-reserve fails swaps — asymmetric costs favor fat). FOLLOW-UP
+(the true "forever"): once a LI.FI quote arrives it carries the
+route's OWN gasCosts — validate amount + quoted gas ≤ gross and
+give back the over-reserve; recorded for the next pass on this
+branch. 233 tests, build clean.
+
+**Gas honesty + pilot cap removal (Niko, 2026-08-20):** (1) the CCTP
+$50 pilot cap is GONE — it was launch training wheels from the relayer
+spike phase, outlived by production use; CCTP_PILOT_MAX_USD re-enables
+an emergency cap without a deploy; the $10 MIN STAYS (relayer gas
+economics — tiny swaps cost Normal more than they carry). (2) LI.FI
+quotes' own gasCosts now surface: a "Network gas ≈ $X (Y%)" details
+row (amber >20%), an amber warning line at 20–50%, and a hard block
+>50% ("network fees exceed half this swap") — a percentage rule, not a
+flat minimum, so it is right on every chain at every gas price and
+needs no per-chain constants. LifiQuote.estimate typed with gasCosts.
+233 tests, build clean.
+
+**CCTP engine min + gas gates (Niko's $5.75 quote, 2026-08-20):** the
+cctp path let a sub-$10 swap quote and show a live Swap button, then
+the SERVER's $10 min would 400 at execute; and the gas-honesty rules
+had gone into the LI.FI engine only. Both now on the cctp button
+ladder pre-click: "Minimum swap is $10" (with the why: fixed bridge
+costs outweigh sub-$10 swaps; inbound checks the USDC-reaching-Base
+wire amount — the same number the server checks) and the >50% gas
+block from the inbound leg's own quote gasCosts. Same %-rule, same
+copy, no per-chain constants. 233 tests, build clean.
+
+**CCTP gas row (Niko, 2026-08-20 — "i dont see any extra info"):**
+the cctp engine got the blockers ($10 min, >50%) but NOT item 1 of the
+gas-honesty GO — the always-visible line. Added "Network gas ≈ $X (Y%)"
+under the (truthfully-Free) Circle bridge row, amber >20% with the
+warning line at 20–50% — identical rules and copy to the LI.FI engine.
+Lesson repeated from the same day: a rule adopted for "swaps" must land
+in EVERY engine in the same pass — grep the engines, not the memory of
+them. 233 tests, build clean.
+
+**Refund honesty, part 1 of the honest-bridge-endings plan (Niko GO,
+2026-08-20 — his ETH→USDC leg REFUNDED and he learned it from three
+block explorers):** the inbound arrival loop polled ONLY the Base
+balance — a refunded leg meant polling money that would never arrive,
+ending in a "timed out" story while the truth was "refunded". The loop
+now asks LI.FI for the leg's VERDICT every 3rd poll: REFUNDED/PARTIAL
+→ row marked failed, the RETURNED asset's balance refetched (awaited,
+capped) BEFORE the message — "the bridge returned your ETH — it is
+back in your wallet... you can try the swap again"; FAILED/INVALID →
+its own plain story; timeout copy rewritten (no more "resume from the
+banner" as an error). REMAINING (recorded, next chunk on this branch):
+resolveBridgeLeg shared truth fn; banner copy conditional on VERIFIED
+Base balance (it claimed "USDC safe on Base" for an undelivered leg —
+the core dishonesty); amber slow-mode with auto-continue + Check now;
+Try again button (re-quote same pair/amount) in the popup terminal
+card; resume button in the row popup; doc 73 G8-G10. 233 tests, build
+clean.
+
+**Honest-bridge-endings part 2 (Niko GO, 2026-08-20):** (1) "Try
+again" button in the popup's terminal error card — clears the failed
+run; pair/amount/quote stay filled, so retry = one more click; (2) the
+recovery banner claims "safe in your own Base account" ONLY after
+readBaseUsdc actually sees the balance ("heading to your own Base
+account" until then) — the 2026-08-20 refund episode's core lie;
+(3) "Finish this transfer" button in the transaction-row detail popup,
+dispatching nf:cctp-resume to the banner's single recover() handler
+(recoverRef pattern for declaration order) — recovery reachable from
+wherever the user is; banner remains the closed-tab door. Doc 73
+G8-G10. DEFERRED with reason: the amber slow-mode auto-continue —
+partially mitigated (45-min arrival window + refund verdict polling
+now end the wait honestly); full auto-continue UI = follow-up.
+233 tests, build clean.

@@ -42,7 +42,6 @@ import Typography from '@mui/material/Typography';
 import { useSnackbar } from '@/components/template/snackbar';
 
 import { groupOf } from './types';
-import { ethGasReserve } from './gas-reserve';
 import { type CctpStage, CctpProgressModal } from '../cctp-progress-modal';
 
 import type { SwapSymbol, SwapEngineResult, CrosschainSymbol } from './types';
@@ -306,7 +305,9 @@ export function useCctpEngine({
     // mempool. SOL: a small static reserve (Solana fees + ATA rent).
     let reserve = 0.01; // SOL
     if (fromSymbol === 'ETH') {
-      reserve = await ethGasReserve(400_000n);
+      // Reserve already inside fromBalance (card holds it back for typed
+      // amounts too) — don't double-subtract.
+      return fromBalance;
     } else if (fromSymbol === 'BTC') {
       try {
         const r = await fetch('https://mempool.space/api/v1/fees/recommended', {
@@ -452,6 +453,7 @@ export function useCctpEngine({
         setStage('arriving');
         const target = BigInt(lifiQuote.estimate.toAmountMin);
         const started = Date.now();
+        let arrivalPoll = 0;
         for (;;) {
           if (cancelled.current) return;
           let bal = baseline;
@@ -464,8 +466,62 @@ export function useCctpEngine({
             arrivedWire = bal - baseline > target ? target : bal - baseline;
             break;
           }
+          // Refund honesty (live 2026-08-20: a refunded bridge leg polled a
+          // Base balance that would never arrive, then reported a TIMEOUT —
+          // the user pieced the refund together from three explorers). Ask
+          // LI.FI for the leg's VERDICT alongside the balance: a refund is
+          // its own calm ending, marked on the row, with the returned funds
+          // refetched before we say a word.
+          arrivalPoll += 1;
+          if (arrivalPoll % 3 === 0) {
+            let verdict: 'REFUNDED' | 'FAILED' | null = null;
+            try {
+              const r = await fetch(
+                `/api/lifi/status?txHash=${srcTx}&fromChain=${lifiQuote.action.fromChainId}&toChain=${lifiQuote.action.toChainId}`,
+                { headers: await buildAuthHeaders() }
+              );
+              if (r.ok) {
+                const d = await r.json();
+                const st = d?.status?.status as string | undefined;
+                const sub = String(d?.status?.substatus ?? '').toUpperCase();
+                if (st === 'DONE' && (sub === 'REFUNDED' || sub === 'PARTIAL'))
+                  verdict = 'REFUNDED';
+                else if (st === 'FAILED' || st === 'INVALID') verdict = 'FAILED';
+              }
+            } catch {
+              /* transient — next interval */
+            }
+            if (verdict) {
+              await patch({ markFailed: true }).catch(() => {});
+              const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+                fromSymbol as CrosschainSymbol
+              ];
+              if (chain && refetchChain)
+                await Promise.race([
+                  refetchChain(chain).catch(() => {}),
+                  new Promise((r2) => {
+                    setTimeout(r2, ARRIVAL_CAP_MS);
+                  }),
+                ]);
+              throw new Error(
+                verdict === 'REFUNDED'
+                  ? t(
+                      'The bridge could not complete and returned your {{sym}} — it is back in your wallet. Nothing was lost; you can try the swap again.',
+                      { sym: fromSymbol }
+                    )
+                  : t(
+                      'The bridge could not complete this swap. Your {{sym}} stays at your own address — nothing was moved onward.',
+                      { sym: fromSymbol }
+                    )
+              );
+            }
+          }
           if (Date.now() - started > 45 * 60_000)
-            throw new Error(t('Bridge leg timed out — funds will arrive; resume from the banner.'));
+            throw new Error(
+              t(
+                'The bridge is taking unusually long — your funds are safe at your own addresses. Finish or track this transfer from the bar above the swap card.'
+              )
+            );
           await new Promise((res) => setTimeout(res, 10_000));
         }
 
@@ -677,6 +733,8 @@ export function useCctpEngine({
       setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
   }, [
+    fromSymbol,
+    refetchChain,
     quote,
     direction,
     amount,
@@ -698,6 +756,19 @@ export function useCctpEngine({
       ? Math.max(1, Math.round(quote.estimate.executionDuration / 60)) + 20 // + Base finality
       : Math.max(2, Math.round(quote.estimate.executionDuration / 60)) + 2 // Stellar attests in seconds
     : null;
+
+  // Gas + minimum honesty (Niko GO 2026-08-20; mirrors the LI.FI engine).
+  const gasUsd = (
+    (quote as { estimate?: { gasCosts?: { amountUSD?: string }[] } } | null)?.estimate?.gasCosts ??
+    []
+  ).reduce((acc, g) => acc + Number(g?.amountUSD ?? 0), 0);
+  const swapUsdIn = fromPrice.gt(0) ? amount.multipliedBy(fromPrice).toNumber() : 0;
+  const gasShare = swapUsdIn > 0 && gasUsd > 0 ? gasUsd / swapUsdIn : 0;
+  // Inbound: the wire amount the server checks is the USDC reaching Base.
+  const minUsdShort =
+    direction === 'in'
+      ? !!quote && BigNumber(quote.estimate.toAmountMin).dividedBy(1e6).lt(10)
+      : amount.gt(0) && fromPrice.gt(0) && amount.multipliedBy(fromPrice).lt(10);
 
   const button = useMemo(() => {
     if (!enabled) return { label: t('Enter an amount'), action: null, loading: false };
@@ -778,6 +849,37 @@ export function useCctpEngine({
     if (quoteError) return { label: t('Try a different amount'), action: null, loading: false };
     if (quoteLoading || !quote)
       return { label: t('Fetching quote…'), action: null, loading: false };
+    // Server enforces the $10 minimum (relayer gas economics) — surface it
+    // BEFORE the click, not as a 400 after (Niko, 2026-08-20: a $5.75 swap
+    // showed a live Swap button, then bounced).
+    if (minUsdShort)
+      return {
+        label: t('Minimum swap is $10'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t(
+              'Each cross-ecosystem swap has fixed bridge costs — under $10 they outweigh the swap.'
+            )}
+          </Typography>
+        ),
+      };
+    // Gas honesty (same %-rule as the LI.FI engine): the inbound leg's quote
+    // carries its own gasCosts — block when gas eats >half the swap.
+    if (gasShare > 0.5)
+      return {
+        label: t('Network fees exceed half this swap — try a larger amount'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t('This route costs ~${{gas}} in network gas regardless of size.', {
+              gas: gasUsd.toFixed(2),
+            })}
+          </Typography>
+        ),
+      };
     // #32 chunk 4b: swapping FROM the external wallet — the CTA names the
     // move before any signature, never a silent transfer.
     if (direction === 'out' && fundFromExternal)
@@ -799,6 +901,9 @@ export function useCctpEngine({
       };
     return { label: t('Swap'), action: handleExecute, loading: false };
   }, [
+    gasShare,
+    gasUsd,
+    minUsdShort,
     enabled,
     network,
     nativeAddress,
@@ -842,6 +947,33 @@ export function useCctpEngine({
           {t('Free')}
         </Typography>
       </Stack>
+      {/* Gas honesty item 1 (Niko): "Free" bridge next to invisible mainnet
+          gas misled — the leg's REAL gas from the quote, always visible. */}
+      {gasUsd > 0 && (
+        <Stack direction="row" justifyContent="space-between">
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+            {t('Network gas')}
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '12px',
+              fontWeight: 600,
+              color: gasShare > 0.2 ? '#B45309' : '#0A0A0F',
+              ...MONO,
+            }}
+          >
+            {`≈ $${gasUsd.toFixed(2)}`}
+            {gasShare > 0 ? ` (${Math.round(gasShare * 100)}%)` : ''}
+          </Typography>
+        </Stack>
+      )}
+      {gasShare > 0.2 && gasShare <= 0.5 && (
+        <Typography sx={{ fontSize: '11px', color: '#B45309', lineHeight: 1.5 }}>
+          {t('Network fees eat {{pct}}% of this swap — a larger amount gets a better deal.', {
+            pct: Math.round(gasShare * 100),
+          })}
+        </Typography>
+      )}
       {feePercent > 0 && amount.gt(0) && (
         <Stack direction="row" justifyContent="space-between">
           <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
@@ -888,6 +1020,17 @@ export function useCctpEngine({
         toSymbol={toSymbol}
         includeFunding={usedFunding}
         fundingWalletLabel={fundFromExternal?.label}
+        onTryAgain={
+          stageError
+            ? () => {
+                // Back to a clean, retryable card: the failed RUN is cleared;
+                // the pair, amount and quote in the card are still filled, so
+                // "try again" is one more click on Swap.
+                setStageError(null);
+                setStage(null);
+              }
+            : undefined
+        }
         onClose={() => {
           cancelled.current = true;
           setModalOpen(false);

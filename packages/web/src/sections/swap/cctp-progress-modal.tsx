@@ -54,6 +54,9 @@ interface Props {
   includeFunding?: boolean;
   fundingWalletLabel?: string;
   onClose: () => void;
+  /** Honest-bridge-endings (Niko): one tap back to a retryable card after a
+   *  terminal error — clears the failed run; quote + amount stay filled. */
+  onTryAgain?: () => void;
 }
 
 export function CctpProgressModal({
@@ -66,6 +69,7 @@ export function CctpProgressModal({
   includeFunding = false,
   fundingWalletLabel,
   onClose,
+  onTryAgain,
 }: Props) {
   const { t } = useTranslate();
 
@@ -273,6 +277,30 @@ export function CctpProgressModal({
               'Nothing is lost — your funds stay in your own account. Any transfer needing a nudge appears above the swap card with a one-tap recovery.'
             )}
           </Typography>
+          {onTryAgain && (
+            <Box
+              component="button"
+              onClick={onTryAgain}
+              sx={{
+                mt: '10px',
+                appearance: 'none',
+                border: 'none',
+                borderRadius: '10px',
+                px: '16px',
+                py: '9px',
+                width: '100%',
+                fontSize: '13px',
+                fontWeight: 600,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                bgcolor: '#0A0A0F',
+                color: '#fff',
+                '&:hover': { opacity: 0.85 },
+              }}
+            >
+              {t('Try again')}
+            </Box>
+          )}
         </Box>
       )}
 
