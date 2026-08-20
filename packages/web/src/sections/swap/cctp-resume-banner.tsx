@@ -28,8 +28,8 @@ import { buildAuthHeaders } from '@/utils/http';
 import { wireToUsdc } from '@/lib/cctp/decimals';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
-import { useState, useEffect, useCallback } from 'react';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { getActiveCctpTransfer, ACTIVE_CCTP_TRANSFER_EVENT } from '@/lib/cctp/active-transfer';
 
@@ -116,7 +116,13 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   const { user } = useSupabaseAuth();
   const { enqueueSnackbar } = useSnackbar();
   const [transfers, setTransfers] = useState<TransferRow[]>([]);
+  const transfersRef = useRef<TransferRow[]>([]);
+  const recoverRef = useRef<((tr: TransferRow, ph: Phase) => void) | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // "Safe in your Base account" is only said once we've SEEN the balance —
+  // an undelivered (later refunded) leg was described as safely arrived
+  // (Niko, 2026-08-20). Unverified rows say "heading to" instead.
+  const [verifiedIds, setVerifiedIds] = useState<Set<string>>(new Set());
   // The transfer THIS tab's modal is actively working is hidden here — one
   // entrance per job. The engine clears the signal on error/done/unmount,
   // at which point the row reappears with its recovery action (the old
@@ -143,6 +149,27 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         (tr: TransferRow) => phaseOf(tr, now) !== 'hidden'
       );
       setTransfers(shown);
+      transfersRef.current = shown;
+      // Verify halted rows' actual Base balance (parallel, best-effort):
+      // message honesty only — the receive handler re-checks at click.
+      Promise.all(
+        shown
+          .filter((tr) => {
+            const ph = phaseOf(tr, now);
+            return ph === 'halt-receive' || ph === 'halt-finish';
+          })
+          .map(async (tr) => {
+            try {
+              const addr = phaseOf(tr, now) === 'halt-receive' ? tr.srcAddress : tr.destAddress;
+              const bal = await readBaseUsdc(tr.network as NetworkType, addr);
+              return bal > 0n ? tr.id : null;
+            } catch {
+              return null;
+            }
+          })
+      ).then((ids) => {
+        setVerifiedIds(new Set(ids.filter((x): x is string => !!x)));
+      });
       // Poke any 'auto' (post-burn) transfer so its status advances between cron ticks.
       const auto = shown.find((tr) => phaseOf(tr, now) === 'auto');
       if (auto) {
@@ -166,9 +193,24 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     const onActivity = () => {
       refresh();
     };
+    // The transaction-row popup's "Finish this transfer" dispatches here —
+    // recovery reachable from wherever the user already is; ONE handler.
+    const onResume = (e: Event) => {
+      const id2 = (e as CustomEvent<{ id?: string }>).detail?.id;
+      if (!id2) return;
+      const tr = transfersRef.current.find((x) => x.id === id2);
+      if (tr) {
+        const ph = phaseOf(tr, Date.now());
+        // recoverRef: `recover` is declared below this effect; the ref keeps
+        // the listener stable without a TDZ/order problem.
+        if (ph === 'halt-receive' || ph === 'halt-finish') recoverRef.current?.(tr, ph);
+      }
+    };
     window.addEventListener('nf:activity-updated', onActivity);
+    window.addEventListener('nf:cctp-resume', onResume);
     return () => {
       clearInterval(id);
+      window.removeEventListener('nf:cctp-resume', onResume);
       window.removeEventListener('nf:activity-updated', onActivity);
     };
   }, [user, refresh]);
@@ -252,6 +294,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     },
     [t, addresses, enqueueSnackbar, patch, refresh]
   );
+  recoverRef.current = recover;
 
   // OUTBOUND escape hatch: when the pivot to the target asset has no route, bring
   // the minted USDC back to Stellar via a fresh CCTP bridge (Base → Stellar), then
@@ -366,13 +409,20 @@ export function CctpRecoveryBanner({ addresses }: Props) {
               </Typography>
               <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.5)' }}>
                 {phase === 'halt-receive'
-                  ? t(
-                      'Your USDC is safe in your own Base account — finish delivering it to Stellar'
-                    )
+                  ? verifiedIds.has(tr.id)
+                    ? t(
+                        'Your USDC is safe in your own Base account — finish delivering it to Stellar'
+                      )
+                    : t(
+                        'USDC heading to your own Base account via the bridge — finish once it arrives'
+                      )
                   : phase === 'halt-finish'
-                    ? t('Your USDC is safe in your own Base account — finish the swap to {{sym}}', {
-                        sym: tr.dstAsset,
-                      })
+                    ? verifiedIds.has(tr.id)
+                      ? t(
+                          'Your USDC is safe in your own Base account — finish the swap to {{sym}}',
+                          { sym: tr.dstAsset }
+                        )
+                      : t('USDC heading to your own Base account — finish once it arrives')
                     : t('Completing automatically — no action needed')}
               </Typography>
             </Box>

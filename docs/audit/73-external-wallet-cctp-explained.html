@@ -398,6 +398,9 @@
   <tr><td>G4</td><td>Reload the page (kills the Lobstr session), start a swap from Lobstr</td><td>Info toast + the wallet's connect window opens by itself; approving resumes the SAME step; only closing it without approving aborts</td></tr>
   <tr><td>G5</td><td>Any swap → wait for Done → close the popup immediately</td><td>The received asset is ALREADY in the visible balances (drawer, swap card, portfolio) — Done waits for the aggregate refetch on every engine, BTC included</td></tr>
   <tr><td>G6</td><td>During an active swap, look above the swap card; then reject a step</td><td>No recovery banner while the popup is healthy; the moment a step errors (or you reload mid-swap), the banner appears with its one-tap recovery — recovery is never lost, just never duplicated</td></tr>
+  <tr><td>G8</td><td>A bridge leg that REFUNDS (or force one: reject nothing, just pick an amount the bridge refuses)</td><td>Within ~30s of the refund the popup tells the calm story — "the bridge returned your ETH — it is back in your wallet" — the Activity row flips to Failed, your returned balance is ALREADY visible, and a "Try again" button puts you one click from retrying. No block explorers needed</td></tr>
+  <tr><td>G9</td><td>Recovery banner wording before/after delivery</td><td>"USDC heading to your own Base account" while unverified; "safe in your own Base account" ONLY once the balance is actually seen on Base — the banner never claims a location it hasn't checked</td></tr>
+  <tr><td>G10</td><td>Open a halted swap's row in Activity (any page)</td><td>The detail popup has a "Finish this transfer" button — same one-tap recovery as the banner, reachable from wherever you are</td></tr>
   <tr><td>G7</td><td>Open a BTC swap's popup vs an ETH/SOL one</td><td>ETAs differ per chain from the registry ("usually 10–60 minutes" vs "a few minutes") — same code path, different registry entries</td></tr>
 </table>
 

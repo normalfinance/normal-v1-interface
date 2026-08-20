@@ -1020,6 +1020,17 @@ export function useCctpEngine({
         toSymbol={toSymbol}
         includeFunding={usedFunding}
         fundingWalletLabel={fundFromExternal?.label}
+        onTryAgain={
+          stageError
+            ? () => {
+                // Back to a clean, retryable card: the failed RUN is cleared;
+                // the pair, amount and quote in the card are still filled, so
+                // "try again" is one more click on Swap.
+                setStageError(null);
+                setStage(null);
+              }
+            : undefined
+        }
         onClose={() => {
           cancelled.current = true;
           setModalOpen(false);

@@ -1852,3 +1852,18 @@ the core dishonesty); amber slow-mode with auto-continue + Check now;
 Try again button (re-quote same pair/amount) in the popup terminal
 card; resume button in the row popup; doc 73 G8-G10. 233 tests, build
 clean.
+
+**Honest-bridge-endings part 2 (Niko GO, 2026-08-20):** (1) "Try
+again" button in the popup's terminal error card — clears the failed
+run; pair/amount/quote stay filled, so retry = one more click; (2) the
+recovery banner claims "safe in your own Base account" ONLY after
+readBaseUsdc actually sees the balance ("heading to your own Base
+account" until then) — the 2026-08-20 refund episode's core lie;
+(3) "Finish this transfer" button in the transaction-row detail popup,
+dispatching nf:cctp-resume to the banner's single recover() handler
+(recoverRef pattern for declaration order) — recovery reachable from
+wherever the user is; banner remains the closed-tab door. Doc 73
+G8-G10. DEFERRED with reason: the amber slow-mode auto-continue —
+partially mitigated (45-min arrival window + refund verdict polling
+now end the wait honestly); full auto-continue UI = follow-up.
+233 tests, build clean.

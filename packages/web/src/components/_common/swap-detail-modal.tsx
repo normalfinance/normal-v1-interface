@@ -410,6 +410,46 @@ export function SwapDetailModal({
               </Typography>
             </Box>
           )}
+          {/* Honest-bridge-endings (Niko): a resumable transfer is finishable
+              from HERE too — recovery reachable from wherever you already
+              are. The swap page's banner owns the actual handler; this
+              dispatches to it (and gets you there if you're elsewhere). */}
+          {((transfer.direction === 'crosschain_to_stellar' &&
+            !!transfer.srcSwapTxHash &&
+            !transfer.burnTxHash &&
+            transfer.status !== 'COMPLETED') ||
+            (transfer.direction === 'stellar_to_crosschain' &&
+              (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
+              !transfer.dstSwapTxHash)) && (
+            <Box
+              component="button"
+              onClick={() => {
+                onClose();
+                window.dispatchEvent(
+                  new CustomEvent('nf:cctp-resume', { detail: { id: transferId } })
+                );
+                if (!window.location.pathname.startsWith('/swap')) window.location.assign('/swap');
+              }}
+              sx={{
+                mt: '12px',
+                appearance: 'none',
+                border: 'none',
+                borderRadius: '10px',
+                px: '16px',
+                py: '10px',
+                width: '100%',
+                fontSize: '13px',
+                fontWeight: 600,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                bgcolor: '#0A0A0F',
+                color: '#fff',
+                '&:hover': { opacity: 0.85 },
+              }}
+            >
+              {t('Finish this transfer')}
+            </Box>
+          )}
         </>
       )}
     </Dialog>
