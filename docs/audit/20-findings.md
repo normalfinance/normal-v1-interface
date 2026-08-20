@@ -1923,3 +1923,23 @@ freeze, no-fabrication); (4) `useSavingsHistory` hook — SWR +
 localStorage seed + keepPreviousData; (5) chart rewired, dead APY
 builder deleted, apy prop dropped. 238 tests, full-src lint clean,
 build clean.
+
+**#33 Stage 1 implemented (feat/signature-reduction work on
+feat/savings-chart's successor branch, 2026-08-20):** Soroswap swaps →
+ONE passkey signature, flag-gated. Server: quote route passes
+feeBps (NORMAL_SWAP_FEE_BPS, default 50) + referralId
+(getFeesDepositAddress) when SOROSWAP_EMBEDDED_FEE=1 and the client
+sent gross_amount; responses carry embedded_fee {feeBps, feeAmount}.
+NEW /api/swap/submit-single (withAuth; conformance test passed
+automatically): wallet-of-record = the TX'S OWN SOURCE (never a client
+field), SwapLog written 'pending' BEFORE broadcast (#27 preserved),
+settled confirmed/failed by outcome; no fee tx exists — the 0.5% rides
+inside the swap. Client: use-swap sends gross_amount alongside the
+legacy net amount (flag OFF = byte-identical legacy path); embedded
+quotes display the API's own feeAmount; executeSwap embedded branch =
+build → ONE sign → submit-single. Engine footer says "One signature —
+the Normal fee is included" only when actually embedded. LIVE TEST
+REQUIRED (Niko): set SOROSWAP_EMBEDDED_FEE=1, one XLM→USDC swap —
+assert ONE prompt, fee visible in the SAME tx on stellar.expert, and
+CHECK THE FEE WALLET for our actual share of the 50 bps (the split
+question). 239 tests, full-src lint clean, build clean.

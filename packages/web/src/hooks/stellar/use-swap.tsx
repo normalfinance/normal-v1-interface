@@ -106,6 +106,9 @@ export function useSwap(targetAddress?: string): UseSwapReturn {
             token_in_address: tokenIn,
             token_out_address: tokenOut,
             amount: amountInStroops,
+            // #33: full amount for the embedded-fee path — the server skims
+            // the fee inside the quote when SOROSWAP_EMBEDDED_FEE is on.
+            gross_amount: Math.floor(parsedAmount * 10_000_000).toString(),
             mode,
             // No sender here — quote is just for display
           }),
@@ -123,6 +126,12 @@ export function useSwap(targetAddress?: string): UseSwapReturn {
         const amountOut = (parseInt(data.amount_out, 10) / 10_000_000).toFixed(7);
         const minAmountOut = (parseInt(data.min_amount_out || '0', 10) / 10_000_000).toFixed(7);
 
+        // Embedded fee: the API already skimmed our bps inside the quote —
+        // display ITS fee figure; nothing is subtracted client-side.
+        const embedded = !!data.embedded_fee;
+        const embeddedFeeTokens = embedded
+          ? (parseInt(data.embedded_fee.feeAmount || '0', 10) / 10_000_000).toFixed(7)
+          : null;
         const newQuote: SwapQuote = {
           path: data.path || [],
           tokenIn,
@@ -132,8 +141,9 @@ export function useSwap(targetAddress?: string): UseSwapReturn {
           estimatedAmountOut: amountOut,
           minAmountOut,
           priceImpact: 0,
-          fee: feeAmount.toFixed(7),
+          fee: embedded ? (embeddedFeeTokens ?? '0') : feeAmount.toFixed(7),
           xdr: data.xdr || '',
+          embedded,
         };
 
         setQuote(newQuote);
@@ -192,6 +202,61 @@ export function useSwap(targetAddress?: string): UseSwapReturn {
           if (!signed) throw new Error('Transaction signing failed — no signed XDR returned');
           return signed;
         };
+
+        // #33 Stage 1 — embedded fee: ONE build, ONE signature, ONE tx.
+        // Record-before-broadcast lives inside /api/swap/submit-single.
+        if (swapQuote.embedded) {
+          const buildRes = await fetch('/api/swap/quote', {
+            method: 'POST',
+            headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token_in_address: swapQuote.tokenIn,
+              token_out_address: swapQuote.tokenOut,
+              amount: Math.floor(parseFloat(swapQuote.amountIn) * 10_000_000).toString(),
+              gross_amount: Math.floor(parseFloat(swapQuote.amountIn) * 10_000_000).toString(),
+              sender: walletAddress,
+            }),
+          });
+          const buildData = await buildRes.json();
+          if (!buildData.success || !buildData.xdr)
+            throw new Error(buildData.error || 'Failed to build swap transaction');
+          const signedSwap = await signOnly(buildData.xdr);
+          const submitRes = await fetch('/api/swap/submit-single', {
+            method: 'POST',
+            headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              signedXdr: signedSwap,
+              record: {
+                tokenInAddress: swapQuote.tokenIn,
+                tokenOutAddress: swapQuote.tokenOut,
+                tokenInSymbol: display?.tokenInSymbol,
+                tokenOutSymbol: display?.tokenOutSymbol,
+                amountIn: swapQuote.amountIn,
+                amountOut: swapQuote.amountOut,
+                feeAmount: swapQuote.fee,
+              },
+            }),
+          });
+          const submitData = await submitRes.json();
+          if (!submitData.success || !submitData.hash)
+            throw new Error(submitData.error || 'Swap submission failed');
+          const url1 = createStellarExpertUrl('tx', submitData.hash);
+          enqueueSnackbar(
+            <Box component="span">
+              {t('Swap successful!')}{' '}
+              <Button
+                size="small"
+                onClick={() => window.open(url1, '_blank', 'noopener,noreferrer')}
+                sx={{ textTransform: 'none', minWidth: 'auto', p: 0, textDecoration: 'underline' }}
+              >
+                {t('View More')}
+              </Button>
+            </Box>,
+            { variant: 'success', persist: false, autoHideDuration: 7500 }
+          );
+          setQuote(null);
+          return submitData.hash;
+        }
 
         // Resolve the fee asset from the swap quote's tokenIn contract address
         const xlmAddress = config.XLM_ADDRESS;

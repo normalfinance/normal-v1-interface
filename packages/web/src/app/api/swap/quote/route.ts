@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { quoteRateLimiter } from '@/server/rateLimiter';
+import { getFeesDepositAddress } from '@/lib/build-fee-payment';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 
 const DEFAULT_SOROSWAP_API_BASE_URL = 'https://api.soroswap.finance';
@@ -26,7 +27,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { token_in_address, token_out_address, amount, mode = 'strict-send', sender } = body;
+    const {
+      token_in_address,
+      token_out_address,
+      amount,
+      mode = 'strict-send',
+      sender,
+      gross_amount,
+    } = body;
+    // #33 Stage 1: embedded fee — Soroswap skims our 0.5% inside the SAME
+    // transaction (feeBps at quote, referralId at build) → ONE signature.
+    // Flag-gated; off = today's fee-pair path, byte-identical.
+    const embeddedFee =
+      process.env.SOROSWAP_EMBEDDED_FEE === '1' && typeof gross_amount === 'string';
+    const feeBps = Number(process.env.NORMAL_SWAP_FEE_BPS ?? 50);
 
     if (!token_in_address || !token_out_address || !amount) {
       return NextResponse.json(
@@ -71,10 +85,11 @@ export async function POST(request: NextRequest) {
     const quotePayload = {
       assetIn: resolveAddress(token_in_address),
       assetOut: resolveAddress(token_out_address),
-      amount,
+      amount: embeddedFee ? gross_amount : amount,
       tradeType,
       protocols: DEFAULT_PROTOCOLS,
       slippageBps: DEFAULT_SLIPPAGE_BPS,
+      ...(embeddedFee ? { feeBps } : {}),
     };
 
     const quoteUrl = `${apiBaseUrl}/quote?network=${network}`;
@@ -132,6 +147,9 @@ export async function POST(request: NextRequest) {
         amount_out: amountOut,
         min_amount_out: minAmountOut,
         xdr: '',
+        ...(embeddedFee
+          ? { embedded_fee: { feeBps, feeAmount: String(quote.platformFee?.feeAmount ?? '') } }
+          : {}),
       });
     }
 
@@ -143,7 +161,11 @@ export async function POST(request: NextRequest) {
     }
 
     const buildUrl = `${apiBaseUrl}/quote/build?network=${network}`;
-    const buildPayload = { quote, from: sender };
+    const buildPayload = {
+      quote,
+      from: sender,
+      ...(embeddedFee ? { referralId: getFeesDepositAddress() } : {}),
+    };
 
     const buildResponse = await fetch(buildUrl, {
       method: 'POST',
@@ -180,6 +202,9 @@ export async function POST(request: NextRequest) {
       amount_out: amountOut,
       min_amount_out: minAmountOut,
       xdr,
+      ...(embeddedFee
+        ? { embedded_fee: { feeBps, feeAmount: String(quote.platformFee?.feeAmount ?? '') } }
+        : {}),
     });
   } catch (error) {
     console.error('Swap quote error:', error);

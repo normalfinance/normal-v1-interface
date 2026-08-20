@@ -228,7 +228,9 @@ export function useSoroswapEngine({
           </Typography>
         </Stack>
         <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.5 }}>
-          {t("You'll sign two transactions: the Normal fee and your swap.")}
+          {quote?.embedded
+            ? t('One signature — the Normal fee is included in the swap transaction.')
+            : t("You'll sign two transactions: the Normal fee and your swap.")}
         </Typography>
       </Stack>
     ) : null;
