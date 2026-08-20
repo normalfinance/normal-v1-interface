@@ -47,6 +47,9 @@ export interface LifiQuote {
     toAmount: string;
     toAmountMin: string;
     executionDuration: number;
+    /** Per-route gas costs from LI.FI — the swap card's gas-honesty line,
+     *  20% warning and 50% block read amountUSD (Niko GO 2026-08-20). */
+    gasCosts?: { amountUSD?: string }[];
   };
   transactionRequest: LifiTransactionRequest;
 }

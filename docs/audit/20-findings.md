@@ -1803,3 +1803,15 @@ under-reserve fails swaps — asymmetric costs favor fat). FOLLOW-UP
 route's OWN gasCosts — validate amount + quoted gas ≤ gross and
 give back the over-reserve; recorded for the next pass on this
 branch. 233 tests, build clean.
+
+**Gas honesty + pilot cap removal (Niko, 2026-08-20):** (1) the CCTP
+$50 pilot cap is GONE — it was launch training wheels from the relayer
+spike phase, outlived by production use; CCTP_PILOT_MAX_USD re-enables
+an emergency cap without a deploy; the $10 MIN STAYS (relayer gas
+economics — tiny swaps cost Normal more than they carry). (2) LI.FI
+quotes' own gasCosts now surface: a "Network gas ≈ $X (Y%)" details
+row (amber >20%), an amber warning line at 20–50%, and a hard block
+>50% ("network fees exceed half this swap") — a percentage rule, not a
+flat minimum, so it is right on every chain at every gas price and
+needs no per-chain constants. LifiQuote.estimate typed with gasCosts.
+233 tests, build clean.

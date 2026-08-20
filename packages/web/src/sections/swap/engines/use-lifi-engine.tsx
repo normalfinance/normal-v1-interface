@@ -137,6 +137,16 @@ export function useLifiEngine({
   const amountUsd = fromPrice.gt(0) ? amount.multipliedBy(fromPrice) : null;
   const belowMinimum = amount.gt(0) && amountUsd !== null && amountUsd.lt(MIN_SWAP_USD);
   const insufficient = amount.gt(0) && amount.gt(fromBalance);
+  // Gas honesty (Niko GO 2026-08-20): the quote carries the route's OWN gas
+  // cost — surface it, warn when it eats >20% of the swap, block >50% (at
+  // that point it's a donation to validators, not a swap). Percentage rule,
+  // not a flat minimum: right on every chain at every gas price.
+  const gasUsd = (quote?.estimate?.gasCosts ?? []).reduce(
+    (acc, g) => acc + Number(g?.amountUSD ?? 0),
+    0
+  );
+  const swapUsdIn = fromPrice.gt(0) ? amount.multipliedBy(fromPrice).toNumber() : 0;
+  const gasShare = swapUsdIn > 0 && gasUsd > 0 ? gasUsd / swapUsdIn : 0;
 
   // Debounce the token amount; gated on `enabled` so the inactive engine never
   // fetches. `stale` (not the abort signal) settles the spinner deterministically.
@@ -293,6 +303,21 @@ export function useLifiEngine({
         action: null,
         loading: false,
       };
+    if (gasShare > 0.5)
+      return {
+        label: t('Network fees exceed half this swap — try a larger amount'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography
+            sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', px: 1 }}
+          >
+            {t('This route costs ~${{gas}} in network gas regardless of size.', {
+              gas: gasUsd.toFixed(2),
+            })}
+          </Typography>
+        ),
+      };
     if (belowMinimum)
       return {
         label: t('Minimum swap is ${{min}}', { min: MIN_SWAP_USD }),
@@ -336,6 +361,31 @@ export function useLifiEngine({
               1 {fromSymbol} ≈ {rate.toFixed(6)} {toSymbol}
             </Typography>
           </Box>
+        )}
+        {gasUsd > 0 && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+              {t('Network gas')}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '12px',
+                fontWeight: 600,
+                color: gasShare > 0.2 ? '#B45309' : '#0A0A0F',
+                ...MONO,
+              }}
+            >
+              {`≈ $${gasUsd.toFixed(2)}`}
+              {swapUsdIn > 0 ? ` (${Math.round(gasShare * 100)}%)` : ''}
+            </Typography>
+          </Box>
+        )}
+        {gasShare > 0.2 && gasShare <= 0.5 && (
+          <Typography sx={{ fontSize: '11px', color: '#B45309', lineHeight: 1.5 }}>
+            {t('Network fees eat {{pct}}% of this swap — a larger amount gets a better deal.', {
+              pct: Math.round(gasShare * 100),
+            })}
+          </Typography>
         )}
         {toAmountMin && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

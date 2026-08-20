@@ -60,11 +60,13 @@ export const POST = withAuth(async (req: Request, { user }) => {
     if (amount < MIN_WIRE) {
       return NextResponse.json({ error: 'Minimum swap is $10' }, { status: 400 });
     }
-    if (network === 'mainnet') {
-      const capUsd = Number(process.env.CCTP_PILOT_MAX_USD ?? 50);
-      if (amount > BigInt(Math.round(capUsd * 1_000_000))) {
+    // Pilot cap removed (Niko, 2026-08-20): the relayer is production-proven.
+    // CCTP_PILOT_MAX_USD re-enables a cap in an emergency without a deploy.
+    if (network === 'mainnet' && process.env.CCTP_PILOT_MAX_USD) {
+      const capUsd = Number(process.env.CCTP_PILOT_MAX_USD);
+      if (capUsd > 0 && amount > BigInt(Math.round(capUsd * 1_000_000))) {
         return NextResponse.json(
-          { error: `During the pilot, swaps are capped at $${capUsd}` },
+          { error: `Swaps are temporarily capped at $${capUsd}` },
           { status: 400 }
         );
       }
