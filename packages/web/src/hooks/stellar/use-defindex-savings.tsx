@@ -382,6 +382,10 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           // correct figure and stuck). Bump BEFORE announcing.
           bumpSavingsReadEpoch(walletAddress);
           window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
+          // A deposit/withdraw also MOVES WALLET USDC — announce on the
+          // balance channel too, or the aggregate waits out its 30s poll
+          // (gap created by the token-store retirement, caught 2026-08-20).
+          window.dispatchEvent(new Event('nf:activity-updated'));
         }
 
         // Cancel any pending post-operation refreshes from a previous operation
@@ -602,6 +606,10 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           // correct figure and stuck). Bump BEFORE announcing.
           bumpSavingsReadEpoch(walletAddress);
           window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
+          // A deposit/withdraw also MOVES WALLET USDC — announce on the
+          // balance channel too, or the aggregate waits out its 30s poll
+          // (gap created by the token-store retirement, caught 2026-08-20).
+          window.dispatchEvent(new Event('nf:activity-updated'));
         }
 
         refreshTimeoutsRef.current.forEach(clearTimeout);

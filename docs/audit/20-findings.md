@@ -1891,3 +1891,16 @@ web src = 0 non-test hits. Store definition left in
 @normalfinance/state (zero callers) — deletion deferred to a dedicated
 change beside zustand persist versioning, with the reason recorded.
 Junior explainer written into doc 75. 233 tests, build clean.
+
+**Savings announce gap (pre-merge verification, 2026-08-20):** Niko
+asked "will all assets update after swaps/sends?" — traced every flow
+to its refresh trigger instead of asserting. Found ONE gap, created by
+the retirement itself: savings deposit/withdraw dispatched only
+POSITION_SYNC_EVENT; the deleted store-refresh had been what updated
+wallet USDC, so the aggregate would have waited out its 30s poll. Both
+primitive sites now also dispatch nf:activity-updated. Full chain
+verified: sends (announceTransaction) ✓, soroswap ✓, cctp (creation +
+finish, Done AWAITS aggregate) ✓, lifi (broadcast + tracker + arrival
+gate) ✓, savings ✓ (fixed), on/offramp modals dispatch ✓; aggregate
+also has 30s poll + focus revalidation as the safety net under
+everything. 233 tests, build clean.
