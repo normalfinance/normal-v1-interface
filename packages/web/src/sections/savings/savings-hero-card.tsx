@@ -326,7 +326,6 @@ export function SavingsHeroCard({
         walletAddress={walletAddress}
         currentEarnings={earnings}
         currentBalance={currentValue}
-        apy={apy}
       />
     </Box>
   );

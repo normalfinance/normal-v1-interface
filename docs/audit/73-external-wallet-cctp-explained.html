@@ -312,6 +312,18 @@
   <tr><td>H3</td><td>Explore page refresh button</td><td>Says "Assets refresh automatically" — it no longer pokes a dead store</td></tr>
 </table>
 
+<h2 id="chart" class="pagebreak">9e · The real savings chart (feat/savings-chart, 2026-08-20)</h2>
+<p><strong>What was wrong:</strong> the earnings chart was an ESTIMATE — it took your current earnings and drew a smooth APY-shaped curve backwards, from a capped list of recent activity. A chart users can catch being wrong costs more trust than no chart.</p>
+<p><strong>What it is now:</strong> your wallet's REAL deposit/withdraw history (the same authoritative DeFindex source our totals reconcile against — full history, server-cached) drives the curve. The math has no APY assumption at all: your TRUE total earnings (a number we know exactly) are spread over time in proportion to the balance you ACTUALLY held at each moment. Deposit more → the curve provably climbs faster from that day; withdraw everything → it goes flat. Exact at both ends: $0 at your first deposit, your true earnings today. The only approximation left is the in-between attribution — the fair split absent per-day vault prices.</p>
+<p><strong>Honesty rules carried over:</strong> a failed history fetch keeps your cached curve (never a fabricated flat $0); unplottable events are dropped, not guessed; the curve paints instantly from localStorage and refreshes behind. A nice catch along the way: our route-auth guard test flagged the new endpoint as public before any human review did — it's now allowlisted with its reason, like its siblings.</p>
+<h3>Part I — how to test</h3>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>I1</td><td>/savings chart, wallet with deposits</td><td>Curve starts at $0 on your FIRST deposit date, ends at exactly your Current Earnings figure; slope visibly changes at deposit/withdraw dates</td></tr>
+  <tr><td>I2</td><td>Deposit, wait ~1 min, reload</td><td>The new deposit appears as a slope change; totals still match the hero stats exactly</td></tr>
+  <tr><td>I3</td><td>Kill the network, reload /savings</td><td>The chart still draws (cached curve) — never a flat $0 claiming you earned nothing</td></tr>
+</table>
+
 <h2 id="testing" class="pagebreak">9 · How to test — the full matrix</h2>
 <div class="box warn">
   <div class="label">Setup needed once</div>
