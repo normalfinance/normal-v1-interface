@@ -57,18 +57,18 @@ export default function AutopilotConsentDialog({
       PaperProps={{ sx: { borderRadius: '20px', maxWidth: 420, p: '24px' } }}
     >
       <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', mb: '10px' }}>
-        {t('Finish swaps automatically?')}
+        {t('Finish future swaps automatically?')}
       </Typography>
       <Typography sx={{ fontSize: '13.5px', color: 'rgba(10,10,15,0.6)', lineHeight: 1.6 }}>
         {t(
-          'Cross-chain swaps have a completion step after the bridge — up to ~50 minutes after you start. Enable this and Normal finishes that step for you, so you sign once and walk away.'
+          'That swap needed a signature after the bridge wait. Enable this and next time Normal finishes that step for you — you sign once at the start and walk away.'
         )}
       </Typography>
       <Typography
         sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', lineHeight: 1.6, mt: '10px' }}
       >
         {t(
-          'Your wallet itself enforces the limits: only swaps you started, only to your own addresses, only the allowlisted bridge contracts. Turn it off anytime in Settings.'
+          'Your wallet itself enforces the limits: only swaps you started, only to your own addresses, only the allowlisted bridge contracts. Turn it off anytime in Settings. Enabling takes up to two quick passkey confirmations.'
         )}
       </Typography>
       <Stack direction="row" spacing={1.25} sx={{ mt: '18px' }}>
@@ -103,7 +103,7 @@ export default function AutopilotConsentDialog({
             '&:hover': { bgcolor: '#0A0A0F', opacity: 0.85 },
           }}
         >
-          {busy ? t('Confirming…') : t('Enable — one passkey')}
+          {busy ? t('Confirming…') : t('Enable')}
         </Button>
       </Stack>
     </Dialog>

@@ -147,7 +147,7 @@ export default function AutopilotCard() {
             '&:hover': { bgcolor: 'rgba(10,10,15,0.04)' },
           }}
         >
-          {busy ? t('Confirming…') : t('Turn on — one passkey')}
+          {busy ? t('Confirming…') : t('Turn on')}
         </Button>
       )}
     </Box>

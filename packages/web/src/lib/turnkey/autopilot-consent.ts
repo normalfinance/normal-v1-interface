@@ -55,13 +55,32 @@ export interface ConsentResult {
 
 /**
  * Runs the ceremony. `serverPublicKey` is NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY —
- * the P-256 public half of the server-held signing key. Two stamped
- * activities ride one WebAuthn session (a single passkey prompt in
- * practice: the stamper reuses the fresh assertion window).
+ * the P-256 public half of the server-held signing key. Each stamped
+ * activity is its own WebAuthn prompt — up to TWO confirmations (user +
+ * policy), ONE when the delegate user already exists.
+ *
+ * IDEMPOTENT (live incident 2026-08-21): a half-run ceremony leaves the
+ * user created without its policy, and re-creating the user fails with
+ * "credential public keys must be unique". So we first ask the server
+ * (parent org can read sub-org users) for an existing delegate and REUSE
+ * it — retries and repairs converge instead of erroring.
  */
 export async function grantAutopilotConsent(serverPublicKey: string): Promise<ConsentResult> {
   const info = await getTurnkeyWalletInfo();
   if (!info?.subOrgId) throw new Error('No Normal wallet to grant autopilot on');
+
+  let existingUserId: string | null = null;
+  try {
+    const { buildAuthHeaders } = await import('@/utils/http');
+    const res = await fetch('/api/autopilot/status', {
+      headers: await buildAuthHeaders(),
+      credentials: 'include',
+    });
+    if (res.ok) existingUserId = (await res.json())?.autopilotUserId ?? null;
+  } catch {
+    /* status unreachable → attempt a fresh create below (worst case: the
+       duplicate-credential error, same as before this fix) */
+  }
 
   const rpId =
     typeof window !== 'undefined'
@@ -74,24 +93,33 @@ export async function grantAutopilotConsent(serverPublicKey: string): Promise<Co
     new WebauthnStamper({ rpId })
   );
 
-  // 1. The delegated user, credentialed with the SERVER'S public key.
-  const userActivity = await client.createApiOnlyUsers({
-    type: 'ACTIVITY_TYPE_CREATE_API_ONLY_USERS',
-    timestampMs: String(Date.now()),
-    organizationId: info.subOrgId,
-    parameters: {
-      apiOnlyUsers: [
-        {
-          userName: AUTOPILOT_USER_NAME,
-          apiKeys: [{ apiKeyName: 'normal-autopilot-key', publicKey: serverPublicKey }],
-          userTags: [],
-        },
-      ],
-    },
-  });
-  const autopilotUserId =
-    userActivity?.activity?.result?.createApiOnlyUsersResult?.userIds?.[0] ?? '';
-  if (!autopilotUserId) throw new Error('Turnkey did not create the autopilot user');
+  // 1. The delegated user, credentialed with the SERVER'S public key —
+  //    skipped entirely when a prior (possibly half-run) ceremony already
+  //    created it.
+  let autopilotUserId = existingUserId ?? '';
+  if (!autopilotUserId) {
+    const userActivity = await client.createApiOnlyUsers({
+      type: 'ACTIVITY_TYPE_CREATE_API_ONLY_USERS',
+      timestampMs: String(Date.now()),
+      organizationId: info.subOrgId,
+      parameters: {
+        apiOnlyUsers: [
+          {
+            userName: AUTOPILOT_USER_NAME,
+            apiKeys: [{ apiKeyName: 'normal-autopilot-key', publicKey: serverPublicKey }],
+            userTags: [],
+          },
+        ],
+      },
+    });
+    // Tolerant parsing: the result key differs across API versions — the
+    // 2026-08-21 incident's first tap CREATED the user but our single-key
+    // lookup read empty and threw, which is how the half-state was born.
+    const result: any = userActivity?.activity?.result ?? {};
+    autopilotUserId =
+      result.createApiOnlyUsersResult?.userIds?.[0] ?? result.createUsersResult?.userIds?.[0] ?? '';
+    if (!autopilotUserId) throw new Error('Turnkey did not create the autopilot user');
+  }
 
   // 2. The narrow policy binding that user to the allowlisted signing.
   const policyActivity = await client.createPolicy({

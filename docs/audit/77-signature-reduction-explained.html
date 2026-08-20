@@ -191,8 +191,9 @@
 <table>
   <tr><th>#</th><th>Test</th><th>Expect</th></tr>
   <tr><td>J0</td><td>Before anything: any normal swap (the fallback path IS the old path)</td><td>Exactly yesterday's behavior — same prompts, same stages. Any difference = refactor bug, stop and report</td></tr>
-  <tr><td>J4</td><td>First cctp swap → consent dialog → <strong>"Not now"</strong></td><td>Swap continues with the old prompts; dialog never reappears; Settings → Accounts shows Off with "Turn on — one passkey"</td></tr>
-  <tr><td>J1</td><td>Settings → "Turn on — one passkey" (or Enable in the dialog on a fresh browser)</td><td>ONE passkey ceremony; Settings flips to On; card explains the bounds</td></tr>
+  <tr><td>J1b</td><td>Half-ceremony repair (the 2026-08-21 incident state: delegate user exists, no policy)</td><td>Settings reads OFF (not a false On — status requires user AND policy); Turn on completes with ONE confirmation (existing user reused, only the policy is created)</td></tr>
+  <tr><td>J4</td><td>Complete a cctp swap → consent dialog appears AFTER Done → <strong>"Not now"</strong></td><td>The swap was never interrupted (offer comes after, 2026-08-21 change); dialog never reappears; Settings → Accounts shows Off with a Turn on button</td></tr>
+  <tr><td>J1</td><td>Settings → "Turn on" (or Enable in the post-swap dialog)</td><td>Up to TWO passkey confirmations (user + policy); ONE if a delegate already exists from a prior half-attempt — the ceremony is idempotent and repairs itself; Settings flips to On</td></tr>
   <tr><td>J2</td><td>Small ETH → USDC (inbound), autopilot ON</td><td>ONE signature at the start; the burn stage completes with NO further prompt; popup reaches Done; USDC visible on Stellar</td></tr>
   <tr><td>J3</td><td>Small USDC → ETH or SOL (outbound), autopilot ON</td><td>ONE passkey (the Stellar burn); the pivot runs unprompted after the mint; delivery tracking unchanged</td></tr>
   <tr><td>J5</td><td>Settings → Turn off, then swap again</td><td>Mid-flow prompts are back (fallback), no errors; Turn on restores 1-signature swaps</td></tr>

@@ -416,9 +416,11 @@ export function useCctpEngine({
     }
   }, []);
 
-  // The consent offer itself (D2: at the first cross-chain swap, before any
-  // signature). Resolves when the user chooses either way; "Not now" is
-  // remembered so the dialog never nags — Settings keeps the enable door.
+  // The consent offer itself — fired AFTER a completed cctp swap (D2 was
+  // "inline at the first swap"; live use moved it post-swap: a pre-swap
+  // dialog interrupted the flow, Niko 2026-08-21). Resolves when the user
+  // chooses either way; "Not now" is remembered so the dialog never nags —
+  // Settings keeps the enable door.
   const maybeOfferConsent = useCallback(async () => {
     if (!process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY) return; // feature dark
     if (consentHandled.current) return; // one offer per mount
@@ -504,7 +506,12 @@ export function useCctpEngine({
     setActiveCctpTransfer(null); // settled — nothing left to recover
     resetInput();
     window.dispatchEvent(new Event('nf:activity-updated'));
-  }, [direction, toSymbol, resetInput, refetchChain, refreshAggregate]);
+    // #33 consent moment, AFTER the swap (Niko 2026-08-21: the pre-swap
+    // dialog interrupted a Lobstr-funded swap — the swap must just run).
+    // The user has just lived the multi-signature flow; the offer is for
+    // NEXT time, blocks nothing, and is skipped forever on "Not now".
+    void maybeOfferConsent();
+  }, [direction, toSymbol, resetInput, refetchChain, refreshAggregate, maybeOfferConsent]);
 
   // ---- INBOUND orchestration -----------------------------------------------------
   const runInbound = useCallback(
@@ -789,9 +796,6 @@ export function useCctpEngine({
 
   const handleExecute = useCallback(async () => {
     if (!quote || !evmAddress || !stellarAddress || !nativeAddress) return;
-    // #33: the one-time consent offer runs BEFORE anything opens or signs —
-    // whatever the choice, the swap continues right after.
-    await maybeOfferConsent();
     setStageError(null);
     setModalOpen(true);
     try {
@@ -866,7 +870,6 @@ export function useCctpEngine({
     toSymbol,
     feePercent,
     fundFromExternal,
-    maybeOfferConsent,
     runInbound,
     runOutbound,
     t,

@@ -2087,3 +2087,24 @@ the fee-pair path: two signatures, fee intact, swap completes. The flag
 is now safe to leave ON: when Soroswap fixes their endpoint, 1-signature
 lights up by itself. RULE: a feature flag's failure mode must be the
 un-flagged behavior, not an error. 242 tests, build clean.
+
+**#33 consent live incident — 3 fixes (2026-08-21):** Niko's first real
+consent attempt (mid Lobstr-funded USDC→SOL swap) failed with Turnkey
+"user credential public keys must be unique" after TWO biometrics.
+Anatomy: tap 1 CREATED the delegate user but our result parsing read
+only createApiOnlyUsersResult (empty on this API version) and threw;
+the retry then hit the duplicate-credential wall — a half-state (user,
+no policy) that Settings read as "On" with no repair door. Fixes:
+(1) CEREMONY IDEMPOTENT — grant asks /api/autopilot/status for an
+existing delegate and REUSES it (repairs converge; 1 confirmation
+instead of 2), result parsing tolerant of both result keys;
+(2) STATUS TRUTH = user AND policy (getPolicies) — half-states read
+Off and keep the Turn on door; (3) PLACEMENT — the consent dialog no
+longer interposes before a swap (it interrupted the funding flow);
+it now fires AFTER a completed cctp swap's Done (never blocks, offer
+is for next time). Copy de-overpromised: "up to two quick passkey
+confirmations", buttons "Enable"/"Turn on". RULES: any ceremony a user
+can retry MUST be idempotent; "active" must mean the WHOLE grant
+(user+policy), not its first artifact; never interpose optional
+consent inside a money flow. Doc 77 J1/J1b/J4 updated. 242 tests,
+build clean.

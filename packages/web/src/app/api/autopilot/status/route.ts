@@ -26,9 +26,24 @@ export const GET = withAuth(async (_req: NextRequest, { user }) => {
     }
     const { users } = await turnkey.apiClient().getUsers({ organizationId: row.subOrgId });
     const delegate = users.find((u) => u.userName === 'Normal Autopilot');
+    // Active = user AND policy. A half-run ceremony (live incident 2026-08-21:
+    // user created, policy step never reached) must read as INACTIVE so the
+    // Turn on door stays available and the grant flow can finish the job —
+    // user-exists alone showed "On" with no policy and no way to repair.
+    let hasPolicy = false;
+    if (delegate) {
+      const { policies } = await turnkey.apiClient().getPolicies({ organizationId: row.subOrgId });
+      hasPolicy = policies.some(
+        (p) =>
+          p.policyName === 'normal-autopilot-base-legs' ||
+          (p.consensus ?? '').includes(delegate.userId)
+      );
+    }
     return NextResponse.json({
       success: true,
-      active: !!delegate,
+      active: !!delegate && hasPolicy,
+      // Always returned when the user exists — the grant flow REUSES it
+      // (idempotent ceremony) and the revoke flow deletes it.
       autopilotUserId: delegate?.userId ?? null,
       subOrgId: row.subOrgId,
     });
