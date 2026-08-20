@@ -1959,3 +1959,19 @@ Circle address especially), (2) server keypair generation + env
 hardening: ABI-arg constraints (mintRecipient == user's forwarder).
 Next slices: server signer w/ kill-switch + audit log → engine/cron
 moves → Settings revoke → doc 73 Part J. Tests/build clean.
+
+**#33 Stage 3 slice 2 — autopilot server signer (2026-08-20):**
+`server/autopilot-signer.ts` — signs Base legs as the delegated user
+via the DEDICATED autopilot keypair (never the parent-org admin key;
+its authority = the per-user consent policy, so a leak can only finish
+users' own swaps). Three safety layers: AUTOPILOT_DISABLED=1
+kill-switch (refuses before any call), Turnkey policy enforcement in
+their signer, and a best-effort audit INSERT into autopilot_signatures
+(raw SQL; additive migration at docs/audit/sql/
+autopilot_signatures.sql for Niko to run — a missing table never
+blocks a swap). Callers must fall back to the interactive passkey path
+on ANY throw. scripts/generate-autopilot-key.mjs produces the env
+keypair (public also as NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY for the
+ceremony; private NEVER committed). Remaining slices: engine/cron
+moves (the payoff), Settings revoke, Part J tests. 239 tests, build
+clean.
