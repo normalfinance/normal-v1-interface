@@ -11,12 +11,12 @@ import { useUserActivity } from '@/hooks';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, logger } from '@normalfinance/utils';
 import { usePortfolio } from '@/hooks/use-portfolio';
+import { usePersistStore } from '@normalfinance/state';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getLinkedWallets } from '@/services/linked-wallets';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
-import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
@@ -66,7 +66,6 @@ function WalletConnected({
   addresses: ChainAddresses | null | undefined;
 }) {
   const { wallet: persistWallet } = usePersistStore();
-  const network = useNetworkStore((s) => s.network);
 
   const { recentActivity } = useUserActivity(address, addresses);
   const bitcoinAddress = getChainAddress(addresses, 'bitcoin');

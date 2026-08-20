@@ -6,9 +6,9 @@ import { BigNumber } from 'bignumber.js';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
+import { usePersistStore } from '@normalfinance/state';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { assetDisplay, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
@@ -90,7 +90,6 @@ export default function PortfolioView() {
   // checking, so we don't flash the picker at an existing user.
   const { hasWallet: hasTurnkeyWallet } = useTurnkeyWallet(!!user);
 
-  const { setGlobalIsLoading } = useAppStore();
   const { wallet } = usePersistStore();
 
   const hasAnyWallet = !!wallet.address || hasTurnkeyWallet === true;

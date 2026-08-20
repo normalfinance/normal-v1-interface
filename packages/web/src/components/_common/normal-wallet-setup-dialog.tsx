@@ -21,7 +21,6 @@ import type { Token } from '@normalfinance/types';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useStellarConfig } from '@/hooks';
-import { usePersistStore } from '@normalfinance/state';
 import { linkWallet } from '@/services/linked-wallets';
 import { useState, useEffect, useCallback } from 'react';
 import { useStellarTokens } from '@/hooks/use-stellar-tokens';
@@ -67,7 +66,6 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
   const config = useStellarConfig();
   const { user } = useSupabaseAuth();
   const { send: stellarSend } = useSendToken();
-  const {} = usePersistStore();
   const tokens = useStellarTokens();
 
   const [companionAddress, setCompanionAddress] = useState<string | null>(null);

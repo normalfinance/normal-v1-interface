@@ -558,7 +558,17 @@ export function useCctpEngine({
         }
       }
     },
-    [evmAddress, stellarAddress, network, addresses, makePatcher, finish, t]
+    [
+      evmAddress,
+      stellarAddress,
+      network,
+      addresses,
+      makePatcher,
+      finish,
+      t,
+      fromSymbol,
+      refetchChain,
+    ]
   );
 
   // ---- OUTBOUND orchestration -----------------------------------------------------
@@ -732,8 +742,6 @@ export function useCctpEngine({
       setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
   }, [
-    fromSymbol,
-    refetchChain,
     quote,
     direction,
     amount,
