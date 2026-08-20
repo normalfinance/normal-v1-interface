@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
 import { CoinbaseOfframpModal } from './coinbase-offramp-modal';
@@ -28,7 +29,8 @@ const VALID_CHAINS = new Set(['bitcoin', 'ethereum', 'solana', 'stellar']);
 
 export function OfframpResumeHandler() {
   const router = useRouter();
-  const { wallet, tokenState } = usePersistStore();
+  const { wallet } = usePersistStore();
+  const stellarTokens = useStellarTokens();
 
   // Latched from the URL so it survives the marker cleanup below.
   const [resume, setResume] = useState<{ chain: TurnkeyChain; sym: string } | null>(null);
@@ -59,7 +61,7 @@ export function OfframpResumeHandler() {
   let token: Token | null = null;
   if (chain === 'stellar' && STELLAR_SYMBOLS.has(sym)) {
     address = wallet.address ?? null;
-    token = tokenState.tokens.find((tk) => tk.symbol.toUpperCase() === sym) ?? null;
+    token = stellarTokens.find((tk) => tk.symbol.toUpperCase() === sym) ?? null;
   } else if (chain === 'bitcoin') {
     address = btc.bitcoinAddress;
     token = btc.btcToken;

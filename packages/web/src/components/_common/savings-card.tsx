@@ -7,6 +7,7 @@ import { useStellarConfig } from '@/hooks';
 import { useRouter } from 'next/navigation';
 import { chainOfActivityEvent } from '@/lib/tx-events';
 import { usePersistStore } from '@normalfinance/state';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
@@ -51,7 +52,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const { t } = useTranslate();
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
-  const { tokenState, wallet, getAllTokens } = usePersistStore();
+  const { wallet, getAllTokens } = usePersistStore();
+  const stellarTokens = useStellarTokens();
   const config = useStellarConfig();
   const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
 
@@ -103,7 +105,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   // the connected wallet's token store otherwise.
   const rawDepositBalance = savingsTargetAddress
     ? Number(companionStellar?.assets.find((a) => a.symbol === 'USDC')?.balance ?? 0).toFixed(7)
-    : getTokenBalance(getSavingsDepositToken(tokenState.tokens, config));
+    : getTokenBalance(getSavingsDepositToken(stellarTokens, config));
   const rawDepositBalanceNum = parseFloat(rawDepositBalance);
 
   // `spentOnDeposits` optimistically subtracts what the user just deposited, so

@@ -5,8 +5,8 @@ import type { CardProps } from '@mui/material/Card';
 
 import { useMemo } from 'react';
 import { BigNumber } from 'bignumber.js';
-import { usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 
 import Card from '@mui/material/Card';
 import Grid2 from '@mui/material/Grid2';
@@ -26,9 +26,7 @@ interface MyBalanceSectionProps extends CardProps {
 }
 
 export function MyBalanceSection({ sx, savingsValue = 0, ...other }: MyBalanceSectionProps) {
-  const {
-    tokenState: { tokens },
-  } = usePersistStore();
+  const tokens = useStellarTokens();
 
   // Filter tokens with positive balance
   const holdingsWithBalance = useMemo(

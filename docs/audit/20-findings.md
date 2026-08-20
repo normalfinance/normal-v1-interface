@@ -1867,3 +1867,16 @@ G8-G10. DEFERRED with reason: the amber slow-mode auto-continue —
 partially mitigated (45-min arrival window + refund verdict polling
 now end the wait honestly); full auto-continue UI = follow-up.
 233 tests, build clean.
+
+**Token-store retirement, Phase A (branch retire-token-store,
+2026-08-20):** grep found ELEVEN tokenState readers (the doc-75 table
+said ten — grep is the rule). One adapter replaced them all:
+`useStellarTokens()` serves the store's exact Token[] shape (slot
+XLM/USDC, issuer patched from config for send/trustline flows) from
+the AGGREGATE — always fresh, one source. All 11 readers migrated
+(one-line each); `grep tokenState src` = ZERO non-test hits. Stale
+balance data is now UNREACHABLE by construction. Phase B queued (same
+branch, next commit): remove the 13 now-redundant getAllTokens refresh
+calls, delete TokenStoreRefresher, then delete tokenState/getAllTokens
+from @normalfinance/state — mechanical, safe only now that readers are
+zero; verify with the same grep. 233 tests, build clean.

@@ -4,8 +4,8 @@ import useSWR from 'swr';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { fCurrency } from '@/utils/format-number';
-import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 
 import {
   Box,
@@ -63,7 +63,7 @@ export function BtcTxStatusModal({
   const [txConfirmed, setTxConfirmed] = useState(false);
   const wasConfirmedRef = useRef(false);
 
-  const tokens = usePersistStore((s) => s.tokenState.tokens);
+  const tokens = useStellarTokens();
   const btcPrice = BigNumber(tokens.find((tok) => tok.symbol === 'BTC')?.price ?? 0);
 
   const { data: txData } = useSWR<MempoolTx>(

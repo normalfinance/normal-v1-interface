@@ -15,6 +15,7 @@ import { useUsdPrice } from '@/hooks/use-price-history';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
 import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
@@ -124,10 +125,8 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const { enqueueSnackbar } = useSnackbar();
   const { user } = useSupabaseAuth();
 
-  const {
-    wallet,
-    tokenState: { tokens },
-  } = usePersistStore();
+  const { wallet } = usePersistStore();
+  const tokens = useStellarTokens();
 
   const upperSymbol = symbol.toUpperCase();
   const native = NATIVE_CHAINS[upperSymbol];
