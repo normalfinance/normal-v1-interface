@@ -24,6 +24,8 @@ const PUBLIC_ROUTES: Record<string, string> = {
   'swap/quote': 'prices shown before a wallet is connected (decision); IP rate-limited',
   'prices/history': 'public market data; rate-limited',
   'savings/user-position': 'address-keyed on-chain read; rate-limited (Block C #2 scoping pending)',
+  'savings/earnings-history':
+    'address-keyed append-only vault history; same exposure class as user-position (Block C #2)',
   'savings/vault-info': 'single shared vault read; cached + rate-limited',
   'wallet/activity': 'Block C finding #2 — scoping decision pending with the team',
   'mgi/info': 'static SEP anchor info, cached 300s, no user data',

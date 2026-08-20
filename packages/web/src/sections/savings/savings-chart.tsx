@@ -1,16 +1,14 @@
 'use client';
 
-import type { SavingsDepositActivity, SavingsWithdrawActivity } from '@/types/activity';
-
 import { useMemo, useState } from 'react';
-import { useUserActivity } from '@/hooks/stellar/use-user-activity';
+import { useSavingsHistory } from '@/hooks/use-savings-history';
+import { buildRealEarningsHistory } from '@/lib/savings/earnings-history';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 
 type TimeFilter = '1W' | '1M' | '3M' | '6M' | '1Y' | '5Y' | 'ALL';
-type SavingsActivity = SavingsDepositActivity | SavingsWithdrawActivity;
 
 const MONO = '"Geist Mono", ui-monospace, monospace';
 const TIME_FILTERS: TimeFilter[] = ['1W', '1M', '3M', '6M', '1Y', '5Y', 'ALL'];
@@ -24,7 +22,6 @@ const WINDOW_MS: Record<TimeFilter, number | null> = {
   ALL: null,
 };
 
-const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
 const CHART_W = 800;
 const CHART_H = 220;
 const NUM_POINTS = 80;
@@ -74,51 +71,6 @@ interface ChartPoint {
   v: number;
 }
 
-function buildEarningsHistory(
-  activity: SavingsActivity[],
-  anchorEarnings: number,
-  apy: number,
-  now: number
-): ChartPoint[] {
-  const sorted = [...activity].sort((a, b) => a.timestamp - b.timestamp);
-  if (sorted.length === 0) return [];
-
-  const firstT = sorted[0].timestamp;
-  if (now <= firstT) return [];
-
-  const r = apy / 100;
-  const step = (now - firstT) / (NUM_POINTS - 1);
-
-  const points: ChartPoint[] = Array.from({ length: NUM_POINTS }, (_, i) => {
-    const T = firstT + i * step;
-    let balance = 0;
-    let earnings = 0;
-    let prevT = firstT;
-
-    for (const event of sorted) {
-      if (event.timestamp > T) break;
-      const dt = (event.timestamp - prevT) / YEAR_MS;
-      earnings += balance > 0 ? balance * (Math.exp(r * dt) - 1) : 0;
-      const amount = parseFloat(event.amount);
-      if (event.type === 'Savings Deposit') balance += amount;
-      else balance = Math.max(0, balance - amount);
-      prevT = event.timestamp;
-    }
-
-    const dt = (T - prevT) / YEAR_MS;
-    earnings += balance > 0 ? balance * (Math.exp(r * dt) - 1) : 0;
-    return { t: T, v: Math.max(0, earnings) };
-  });
-
-  const lastEstimate = points[points.length - 1].v;
-  if (lastEstimate > 0 && anchorEarnings >= 0) {
-    const scale = anchorEarnings / lastEstimate;
-    return points.map((p) => ({ t: p.t, v: p.v * scale }));
-  }
-  points[points.length - 1].v = anchorEarnings;
-  return points;
-}
-
 function filterByWindow(points: ChartPoint[], filter: TimeFilter, now: number): ChartPoint[] {
   const windowMs = WINDOW_MS[filter];
   if (!windowMs || points.length === 0) return points;
@@ -151,26 +103,19 @@ interface SavingsChartProps {
   walletAddress?: string;
   currentEarnings: number;
   currentBalance?: number;
-  apy?: number | null;
 }
 
-export function SavingsChart({ walletAddress, currentEarnings, apy }: SavingsChartProps) {
+export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartProps) {
   const [filter, setFilter] = useState<TimeFilter>('1W');
-  const { recentActivity, isLoading } = useUserActivity(walletAddress);
+  // #53: REAL history — the DeFindex events this wallet actually produced
+  // (authoritative, full, cached), not horizon-parsed recent activity.
+  const { events, isLoading } = useSavingsHistory(walletAddress);
 
   const now = useMemo(() => Date.now(), []);
 
-  const savingsActivity = useMemo(
-    () =>
-      recentActivity.filter(
-        (a): a is SavingsActivity => a.type === 'Savings Deposit' || a.type === 'Savings Withdraw'
-      ),
-    [recentActivity]
-  );
-
   const allPoints = useMemo(
-    () => buildEarningsHistory(savingsActivity, currentEarnings, apy ?? 7, now),
-    [savingsActivity, currentEarnings, apy, now]
+    () => buildRealEarningsHistory(events, currentEarnings, now, NUM_POINTS),
+    [events, currentEarnings, now]
   );
 
   const chartPoints = useMemo(

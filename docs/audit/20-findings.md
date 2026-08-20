@@ -1904,3 +1904,22 @@ finish, Done AWAITS aggregate) ✓, lifi (broadcast + tracker + arrival
 gate) ✓, savings ✓ (fixed), on/offramp modals dispatch ✓; aggregate
 also has 30s poll + focus revalidation as the safety net under
 everything. 233 tests, build clean.
+
+**#53 savings chart — real data (branch feat/savings-chart,
+2026-08-20):** the chart was an APY-shaped estimate scaled to current
+earnings, fed from horizon-parsed recent activity (capped, lossy).
+Now: (1) shared `server/defindex-events.ts` (fetchAllVaultEvents +
+normalizeVaultEvents — unplottable events DROPPED, never fabricated);
+(2) `/api/savings/earnings-history` — full paginated history, Redis
+600s (append-only data), 502 on upstream failure so clients keep their
+cached curve (no fabricated flat $0); allowlisted in the
+route-auth-conformance guard WITH reason (address-keyed, same class as
+user-position — the guard test caught the route being public, exactly
+its job); (3) `buildRealEarningsHistory` — NO APY anywhere: the
+wallet's TRUE total earnings distributed by REAL balance×time weights
+from REAL events; exact at both ends ($0 at first deposit, true figure
+now); 4 contract tests (linear ramp, slope doubling, withdraw-all
+freeze, no-fabrication); (4) `useSavingsHistory` hook — SWR +
+localStorage seed + keepPreviousData; (5) chart rewired, dead APY
+builder deleted, apy prop dropped. 238 tests, full-src lint clean,
+build clean.
