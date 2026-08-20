@@ -453,6 +453,7 @@ export function useCctpEngine({
         setStage('arriving');
         const target = BigInt(lifiQuote.estimate.toAmountMin);
         const started = Date.now();
+        let arrivalPoll = 0;
         for (;;) {
           if (cancelled.current) return;
           let bal = baseline;
@@ -465,8 +466,62 @@ export function useCctpEngine({
             arrivedWire = bal - baseline > target ? target : bal - baseline;
             break;
           }
+          // Refund honesty (live 2026-08-20: a refunded bridge leg polled a
+          // Base balance that would never arrive, then reported a TIMEOUT —
+          // the user pieced the refund together from three explorers). Ask
+          // LI.FI for the leg's VERDICT alongside the balance: a refund is
+          // its own calm ending, marked on the row, with the returned funds
+          // refetched before we say a word.
+          arrivalPoll += 1;
+          if (arrivalPoll % 3 === 0) {
+            let verdict: 'REFUNDED' | 'FAILED' | null = null;
+            try {
+              const r = await fetch(
+                `/api/lifi/status?txHash=${srcTx}&fromChain=${lifiQuote.action.fromChainId}&toChain=${lifiQuote.action.toChainId}`,
+                { headers: await buildAuthHeaders() }
+              );
+              if (r.ok) {
+                const d = await r.json();
+                const st = d?.status?.status as string | undefined;
+                const sub = String(d?.status?.substatus ?? '').toUpperCase();
+                if (st === 'DONE' && (sub === 'REFUNDED' || sub === 'PARTIAL'))
+                  verdict = 'REFUNDED';
+                else if (st === 'FAILED' || st === 'INVALID') verdict = 'FAILED';
+              }
+            } catch {
+              /* transient — next interval */
+            }
+            if (verdict) {
+              await patch({ markFailed: true }).catch(() => {});
+              const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+                fromSymbol as CrosschainSymbol
+              ];
+              if (chain && refetchChain)
+                await Promise.race([
+                  refetchChain(chain).catch(() => {}),
+                  new Promise((r2) => {
+                    setTimeout(r2, ARRIVAL_CAP_MS);
+                  }),
+                ]);
+              throw new Error(
+                verdict === 'REFUNDED'
+                  ? t(
+                      'The bridge could not complete and returned your {{sym}} — it is back in your wallet. Nothing was lost; you can try the swap again.',
+                      { sym: fromSymbol }
+                    )
+                  : t(
+                      'The bridge could not complete this swap. Your {{sym}} stays at your own address — nothing was moved onward.',
+                      { sym: fromSymbol }
+                    )
+              );
+            }
+          }
           if (Date.now() - started > 45 * 60_000)
-            throw new Error(t('Bridge leg timed out — funds will arrive; resume from the banner.'));
+            throw new Error(
+              t(
+                'The bridge is taking unusually long — your funds are safe at your own addresses. Finish or track this transfer from the bar above the swap card.'
+              )
+            );
           await new Promise((res) => setTimeout(res, 10_000));
         }
 
@@ -678,6 +733,8 @@ export function useCctpEngine({
       setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
   }, [
+    fromSymbol,
+    refetchChain,
     quote,
     direction,
     amount,

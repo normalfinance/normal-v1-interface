@@ -1834,3 +1834,21 @@ warning line at 20–50% — identical rules and copy to the LI.FI engine.
 Lesson repeated from the same day: a rule adopted for "swaps" must land
 in EVERY engine in the same pass — grep the engines, not the memory of
 them. 233 tests, build clean.
+
+**Refund honesty, part 1 of the honest-bridge-endings plan (Niko GO,
+2026-08-20 — his ETH→USDC leg REFUNDED and he learned it from three
+block explorers):** the inbound arrival loop polled ONLY the Base
+balance — a refunded leg meant polling money that would never arrive,
+ending in a "timed out" story while the truth was "refunded". The loop
+now asks LI.FI for the leg's VERDICT every 3rd poll: REFUNDED/PARTIAL
+→ row marked failed, the RETURNED asset's balance refetched (awaited,
+capped) BEFORE the message — "the bridge returned your ETH — it is
+back in your wallet... you can try the swap again"; FAILED/INVALID →
+its own plain story; timeout copy rewritten (no more "resume from the
+banner" as an error). REMAINING (recorded, next chunk on this branch):
+resolveBridgeLeg shared truth fn; banner copy conditional on VERIFIED
+Base balance (it claimed "USDC safe on Base" for an undelivered leg —
+the core dishonesty); amber slow-mode with auto-continue + Check now;
+Try again button (re-quote same pair/amount) in the popup terminal
+card; resume button in the row popup; doc 73 G8-G10. 233 tests, build
+clean.
