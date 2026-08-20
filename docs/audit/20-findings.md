@@ -2057,3 +2057,16 @@ Off with no enable door would violate the everything-visible-is-actionable
 rule. Doc 73 §9f + Part J (J1–J10 incl. the policy negative test and the
 close-tab-mid-arriving resilience test); doc 76 §10 records ship gates.
 242 tests, full-src lint, build clean.
+
+**#33 ship-gate closure — allowlist + D3 caps (2026-08-20):** the consent
+policy's USDC/TokenMessenger addresses now come FROM lib/cctp/config
+(single source; they're the live-proven constants the burns hit), and the
+LI.FI diamond was verified against li.quest/v1/chains (chain 8453
+diamondAddress matches). D3 caps live in signWithAutopilot: $2k/leg,
+$10k/rolling-day, 90d idle expiry (env-overridable), armed by amountUsd
+on burn/pivot signatures only; audit gains amountUsd (additive SQL
+autopilot_signatures_amount.sql) with a legacy-shape INSERT fallback so
+auditing never silently stops mid-migration. Cap refusal = interactive
+fallback (over-cap swaps still complete with a prompt). Idle clock
+starts at first use — grant-date tracking is v2, with the ABI-arg policy
+hardening (gated on one live ceremony). 242 tests, build clean.

@@ -92,6 +92,8 @@ export async function autopilotPivotSwap(params: {
       signWith: params.evmAddress,
       unsignedTransaction: unsigned,
       purpose: `cctp-outbound-${label}`,
+      // USDC wire ≈ USD; caps armed on the pivot itself, not the approve.
+      amountUsd: label === 'pivot' ? Number(params.amountWire) / 1e6 : undefined,
     })) as `0x${string}`;
     const hash = await client.sendRawTransaction({ serializedTransaction: raw });
     const receipt = await client.waitForTransactionReceipt({ hash });

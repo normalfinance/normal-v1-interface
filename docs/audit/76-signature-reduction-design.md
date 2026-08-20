@@ -223,3 +223,31 @@ consent ceremony, +1 move for external-wallet sources (accepted).
 STILL GATING GO-LIVE (unchanged from §8): user runs generate-autopilot-key +
 3 env vars + autopilot_signatures.sql; verify ALLOWED_CONTRACTS vs
 lib/cctp/config (Circle addr!); v2 ABI-arg hardening; doc 73 Part J live run.
+
+## 11 · Ship-gate closure round (2026-08-20, post-env setup)
+
+- **Allowlist verified + single-sourced:** autopilot-consent.ts now imports
+  usdc + tokenMessengerV2 from lib/cctp/config (the same constants the
+  burn code sends to — the live-proven addresses). LI.FI diamond verified
+  against LI.FI's own deployment data (GET li.quest/v1/chains → chain 8453
+  diamondAddress == 0x1231DEB6…4EaE, checked 2026-08-20). Policy mismatch
+  failure mode = refused signature → interactive fallback, never a wrong
+  signature.
+- **D3 caps IMPLEMENTED in the signer** (one chokepoint, env-overridable:
+  AUTOPILOT_MAX_TX_USD 2000 / AUTOPILOT_MAX_DAILY_USD 10000 /
+  AUTOPILOT_IDLE_EXPIRY_DAYS 90): armed via amountUsd on the amount-bearing
+  signature of each leg (burn / pivot; approves excluded — they move no
+  funds alone). Daily sum + idle expiry read the audit table's NEW amountUsd
+  column (docs/audit/sql/autopilot_signatures_amount.sql — additive, Niko
+  runs). Resilience: audit INSERT falls back to the legacy shape until the
+  column exists; failed sum reads 0 (per-tx cap + policy still bound every
+  signature). Over-cap swap = prompt fallback, swap still completes.
+  KNOWN GAP (documented): idle clock starts at FIRST USE (no grant-date
+  row); exact grant-date tracking = v2.
+- **REMAINING before real enablement:** v2 ABI-arg policy hardening
+  (mintRecipient == own forwarder, approve spender ∈ allowlist, per-tx cap
+  IN the policy) — needs Turnkey smart-contract-interface upload, built
+  only after ONE live ceremony proves the v1 shape (blind-building risks
+  bricking the ceremony). Then doc 73 Part J live run. NOTHING live-tested
+  yet — v1 policy (chain 8453 + value==0 + 3 contracts) is the consent
+  users would grant today.

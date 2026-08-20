@@ -14,14 +14,24 @@
 // Revocation (Settings) deletes the user; the policy dies with it.
 // ---------------------------------------------------------------------------
 
+import { EVM_USDC, EVM_CCTP } from '@/lib/cctp/config';
+
 import { getTurnkeyWalletInfo } from './wallet-info';
 
 const BASE_CHAIN_ID = '8453';
 
-/** Contracts the autopilot may talk to on Base (mainnet). */
+/** Contracts the autopilot may talk to on Base (mainnet). The USDC and
+ *  Circle addresses are the SAME constants the burn code sends to (single
+ *  source — a config change updates the policy for future consents). The
+ *  LI.FI diamond has no other in-repo consumer (the pivot's target comes
+ *  dynamically from each quote); verified against LI.FI's own deployment
+ *  data (GET li.quest/v1/chains → chain 8453 diamondAddress, 2026-08-20).
+ *  If LI.FI ever routes via a different contract, the policy REFUSES that
+ *  signature and the engine falls back to the interactive prompt — the
+ *  failure mode is a prompt, never a wrong signature. */
 const ALLOWED_CONTRACTS = {
-  usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-  circleTokenMessengerV2: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+  usdc: EVM_USDC.base.mainnet,
+  circleTokenMessengerV2: EVM_CCTP.mainnet.tokenMessengerV2,
   lifiDiamond: '0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE',
 } as const;
 

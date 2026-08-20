@@ -84,6 +84,10 @@ export async function autopilotBurnUsdc(params: AutopilotBurnParams): Promise<{
   const tokenMessenger = EVM_CCTP[params.network].tokenMessengerV2;
   const from = params.evmAddress as `0x${string}`;
 
+  // USDC wire units are 6dp and ≈ USD — this arms the signer's D3 caps on
+  // the burn signature (the approve moves no funds by itself).
+  const legUsd = Number(params.amountWire) / 1e6;
+
   const signAndSend = async (
     to: `0x${string}`,
     data: `0x${string}`,
@@ -109,6 +113,7 @@ export async function autopilotBurnUsdc(params: AutopilotBurnParams): Promise<{
       signWith: params.evmAddress,
       unsignedTransaction: unsigned,
       purpose: `cctp-inbound-${label}`,
+      amountUsd: label === 'depositForBurnWithHook' ? legUsd : undefined,
     })) as `0x${string}`;
     const hash = await client.sendRawTransaction({ serializedTransaction: raw });
     const receipt = await client.waitForTransactionReceipt({ hash });
