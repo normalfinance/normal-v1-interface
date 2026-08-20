@@ -388,6 +388,21 @@
   <tr><td>F6</td><td>Drawer header</td><td>No ⟳ button — only settings, "+", and close; connecting another wallet still works via "+"</td></tr>
 </table>
 
+<h2 id="gas" class="pagebreak">9c · The gas &amp; honest-endings branch (insufficient-gas, 2026-08-20)</h2>
+
+<h3>Why swaps failed with "insufficient funds for gas"</h3>
+<p>On Ethereum, every transaction pays gas ON TOP of the amount you send. Our card checked "amount ≤ balance" but never "amount + gas ≤ balance" — so an amount could look fine and still be physically impossible. And gas for our bridge routes is BIG: the deposit contracts run ~538,000 gas (~$4–12), not the 21,000 of a simple transfer.</p>
+<p><strong>The fix, one idea:</strong> the gas money is now held back INSIDE your spendable ETH — the same trick that made XLM safe (the reserve lives in the balance, so typing, MAX, display and validation all agree automatically). The reserve is computed LIVE (current gas price × the route's real gas limit), refreshed every minute. A flat number is wrong whenever gas moves; a live number never goes stale.</p>
+
+<h3>Honest costs: the 20% / 50% rules</h3>
+<p>Bridge gas is a fixed cost — $10 of gas is nothing on a $500 swap and everything on a $15 one. So instead of a flat minimum: the quote's OWN gas cost is always shown ("Network gas ≈ $9.80 (12%)"); above 20% it turns amber with a warning; above 50% the swap is blocked — at that point it's a donation to validators. Percentages self-adjust to every chain and every gas price, so there are no per-chain constants to go stale. The old $50 pilot cap on cross-ecosystem swaps is REMOVED (the relayer earned its trust); the $10 minimum stays — it protects OUR relayer economics — and now shows on the button BEFORE you click, not as a server error after.</p>
+
+<h3>When a bridge refunds: the truth, fast</h3>
+<p>A bridge can fail and send your money back. Before: the app polled for USDC that would never arrive, said "timed out", and you learned the truth from block explorers. Now the app asks the bridge for its VERDICT while it waits: a refund becomes its own calm ending within ~30 seconds — row marked Failed, your returned ETH refetched and visible FIRST, then the message "the bridge returned your ETH — it is back in your wallet", with a <strong>Try again</strong> button (your pair and amount are still filled — retry is one click).</p>
+
+<h3>Three doors to recovery, one honesty rule</h3>
+<p>A halted transfer can now be finished from the swap popup (Try again), from its Activity row's detail popup ("Finish this transfer"), or from the banner above the swap card (the closed-tab door) — all three call the SAME handler. And the banner only says your USDC is "safe in your own Base account" after it has actually SEEN the balance there; until then it honestly says "heading to". Rule of the whole branch: never claim what you haven't verified, and never make the user hunt for the fix.</p>
+
 <h3>Part G — the live-test fallout round (2026-08-19)</h3>
 <p><strong>What changed, in plain words:</strong> Niko's real BTC swaps exposed a family of "built for the fast chains" assumptions. Delivery ETAs now come from a per-chain <em>settlement registry</em> (BTC 10–60 min, ETH 1–5, SOL/Stellar 1–3) — one place to edit when a chain or bridge changes, no hardcoded copy. BTC swaps now track to TRUE delivery like SOL/ETH (the popup's Delivering step holds until the payout confirms, then waits for the balance refetch before Done). An expired Lobstr/WalletConnect session mid-flow now pauses and resumes the step (reconnect window opens by itself) instead of failing the swap. The Activity table gained: rows the moment a swap starts, correct per-flow statuses, no duplicate rows for hybrid swaps, and a reliable newest-first order. And the recovery banner now steps aside while the popup is actively working a transfer — but reappears instantly with its recovery button if anything goes wrong or the tab dies.</p>
 <table>
