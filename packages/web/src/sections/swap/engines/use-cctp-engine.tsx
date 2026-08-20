@@ -890,6 +890,33 @@ export function useCctpEngine({
           {t('Free')}
         </Typography>
       </Stack>
+      {/* Gas honesty item 1 (Niko): "Free" bridge next to invisible mainnet
+          gas misled — the leg's REAL gas from the quote, always visible. */}
+      {gasUsd > 0 && (
+        <Stack direction="row" justifyContent="space-between">
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+            {t('Network gas')}
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '12px',
+              fontWeight: 600,
+              color: gasShare > 0.2 ? '#B45309' : '#0A0A0F',
+              ...MONO,
+            }}
+          >
+            {`≈ $${gasUsd.toFixed(2)}`}
+            {gasShare > 0 ? ` (${Math.round(gasShare * 100)}%)` : ''}
+          </Typography>
+        </Stack>
+      )}
+      {gasShare > 0.2 && gasShare <= 0.5 && (
+        <Typography sx={{ fontSize: '11px', color: '#B45309', lineHeight: 1.5 }}>
+          {t('Network fees eat {{pct}}% of this swap — a larger amount gets a better deal.', {
+            pct: Math.round(gasShare * 100),
+          })}
+        </Typography>
+      )}
       {feePercent > 0 && amount.gt(0) && (
         <Stack direction="row" justifyContent="space-between">
           <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>

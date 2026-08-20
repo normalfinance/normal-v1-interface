@@ -1825,3 +1825,12 @@ costs outweigh sub-$10 swaps; inbound checks the USDC-reaching-Base
 wire amount — the same number the server checks) and the >50% gas
 block from the inbound leg's own quote gasCosts. Same %-rule, same
 copy, no per-chain constants. 233 tests, build clean.
+
+**CCTP gas row (Niko, 2026-08-20 — "i dont see any extra info"):**
+the cctp engine got the blockers ($10 min, >50%) but NOT item 1 of the
+gas-honesty GO — the always-visible line. Added "Network gas ≈ $X (Y%)"
+under the (truthfully-Free) Circle bridge row, amber >20% with the
+warning line at 20–50% — identical rules and copy to the LI.FI engine.
+Lesson repeated from the same day: a rule adopted for "swaps" must land
+in EVERY engine in the same pass — grep the engines, not the memory of
+them. 233 tests, build clean.
