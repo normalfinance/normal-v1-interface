@@ -2070,3 +2070,20 @@ auditing never silently stops mid-migration. Cap refusal = interactive
 fallback (over-cap swaps still complete with a prompt). Idle clock
 starts at first use — grant-date tracking is v2, with the ABI-arg policy
 hardening (gated on one live ceremony). 242 tests, build clean.
+
+**#33 Stage 1 flag hardening — degrade, never die (2026-08-20):** Niko
+re-hit the Soroswap fee-build 400 live — SOROSWAP_EMBEDDED_FEE=1 was
+still in his .env from the Stage-1 spike, and the flag's failure mode
+was a dead swap (our route mirrored upstream's 400). A leftover env var
+must never be able to break swaps. Now: /api/swap/quote wraps the
+embedded path in a 10-min circuit breaker — an embedded QUOTE failure
+retries the legacy shape in-place; an embedded BUILD failure trips the
+breaker and returns {embedded_unavailable} 409; subsequent quotes go
+straight to the honest 2-signature shape. use-swap's embedded branch
+takes the 1-signature path ONLY when the response provably carries
+embedded_fee — on the degrade signal (or any feeless success, e.g. a
+tripped-breaker GROSS build, discarded unsigned) it falls through to
+the fee-pair path: two signatures, fee intact, swap completes. The flag
+is now safe to leave ON: when Soroswap fixes their endpoint, 1-signature
+lights up by itself. RULE: a feature flag's failure mode must be the
+un-flagged behavior, not an error. 242 tests, build clean.
