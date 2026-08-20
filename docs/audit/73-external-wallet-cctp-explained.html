@@ -289,6 +289,29 @@
   <li><strong>The database schema.</strong> No migration was needed — the tables already modeled coexistence.</li>
 </ul>
 
+<h2 id="onesource" class="pagebreak">9d · Retiring the token store (branch retire-token-store, 2026-08-20)</h2>
+
+<h3>What we were fixing</h3>
+<p>The app had TWO systems answering the same question — "how much XLM/USDC do I have?": the portfolio <strong>aggregate</strong> (server-side, covers both wallets, refreshes after every transaction, keeps a snapshot for instant paint) and the old <strong>token store</strong> (browser-side, one wallet only, refreshed only when certain pages loaded). Two answerers means they eventually disagree — and every "my balance is stale / empty / wrong" bug of the past week was exactly that: a screen reading the store while the truth lived in the aggregate. A freshly activated wallet showing as empty in Send, the swap picker showing old numbers, the drawer total missing a wallet — one disease, many symptoms.</p>
+
+<h3>Why "refresh it more often" was not the fix</h3>
+<p>We tried that first (a background refresher that poked the store after every transaction). It shrinks the stale window but the disease remains: any NEW screen can still be wired to the wrong source by accident. The only permanent cure is for the wrong source to have <strong>zero readers</strong> — then stale data isn't rare, it's unreachable.</p>
+
+<h3>How we did it — two commits, on purpose</h3>
+<p><strong>Commit A — move the readers.</strong> All eleven files that read the store wanted the same thing: the connected wallet's Stellar tokens. So one adapter, <code>useStellarTokens()</code>, serves that exact shape from the aggregate (with the USDC issuer patched in so sends and trustlines still build real assets) — and every migration became a one-line swap. The finish line is provable, not asserted: <code>grep tokenState</code> over the app → zero hits.</p>
+<p><strong>Commit B — remove the machinery.</strong> Only after readers hit zero was it safe to delete the thirteen now-pointless refresh calls, the background refresher, and the store-driven loading flags (the drawer's skeleton now follows the aggregate's own loading state). Two commits so any regression is unambiguous: A broke a reader, or B broke a caller — never "somewhere in between".</p>
+
+<h3>The rule this enforces forever</h3>
+<p>One question, one answerer. A future screen that needs Stellar tokens has exactly one import that works — the easy path IS the correct path. (The store's empty definition still sits in the shared state package with zero callers; deleting it is a tiny separate change beside the persistence versioning, done with care rather than as a tail-end edit.)</p>
+
+<h3>How to test (Part H)</h3>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>H1</td><td>Compare balances across drawer, swap card, savings card, send picker, search bar, /assets</td><td>All identical, all update within ~10s of any transaction — no reload needed anywhere</td></tr>
+  <tr><td>H2</td><td>Whole-app smoke: send, soroswap swap, cctp swap, savings deposit</td><td>Everything behaves exactly as before — this refactor changes SOURCES, never behavior; any difference is a bug, report it</td></tr>
+  <tr><td>H3</td><td>Explore page refresh button</td><td>Says "Assets refresh automatically" — it no longer pokes a dead store</td></tr>
+</table>
+
 <h2 id="testing" class="pagebreak">9 · How to test — the full matrix</h2>
 <div class="box warn">
   <div class="label">Setup needed once</div>
@@ -429,7 +452,7 @@
 
 <p class="kv" style="margin-top:40px">
   Branch <code>feat/external-wallet-cctp</code> · Findings register: docs/audit/20-findings.md (#32 chunks) ·
-  Architecture: docs/audit/72 · Surface audit: docs/audit/75 · This document: docs/audit/73 (.md + .html) · Generated 2026-08-16, extended 2026-08-17/18/19
+  Architecture: docs/audit/72 · Surface audit: docs/audit/75 · This document: docs/audit/73 (.md + .html) · Generated 2026-08-16, extended 2026-08-17–20
 </p>
 
 </body>

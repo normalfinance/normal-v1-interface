@@ -6,7 +6,6 @@ import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
-import { usePersistStore } from '@normalfinance/state';
 import { useState, useEffect, useCallback } from 'react';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { fetchSolBalance, fetchEthBalance } from '@/hooks/use-chain-portfolio';
@@ -136,7 +135,6 @@ export function CoinbaseOfframpModal({
   const { send: sendStellar } = useSendToken();
   // Stellar (USDC/XLM) balances live in the token store, which the chain-portfolio
   // refresh event doesn't cover — refresh it directly after a Stellar off-ramp.
-  const getAllTokens = usePersistStore((s) => s.getAllTokens);
   const [stage, setStage] = useState<Stage>('searching');
   const [txn, setTxn] = useState<PendingTxn | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -278,7 +276,7 @@ export function CoinbaseOfframpModal({
       markFill(txn.transactionId, hash);
       // No dispatch here: useSendToken announces the send itself now
       // (pending row + refresh) — a second event would double-fetch.
-      getAllTokens(true).catch(() => {}); // refresh USDC/XLM balance in the store
+      // Balances refresh via the aggregate on the activity event.
       setStage('confirming');
       pollSettle(txn.transactionId);
       return;

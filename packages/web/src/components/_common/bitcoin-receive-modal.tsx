@@ -5,7 +5,7 @@ import { BigNumber } from 'bignumber.js';
 import { cdn } from '@normalfinance/utils';
 import { fCurrency } from '@/utils/format-number';
 import { useMemo, useState, useEffect } from 'react';
-import { usePersistStore } from '@normalfinance/state';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useBtcAddressWatch } from '@/hooks/use-btc-address-watch';
 
 import Box from '@mui/material/Box';
@@ -42,7 +42,7 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
   const [copied, setCopied] = useState(false);
   const [copiedTxid, setCopiedTxid] = useState(false);
 
-  const tokens = usePersistStore((s) => s.tokenState.tokens);
+  const tokens = useStellarTokens();
   const btcPrice = useMemo(
     () => BigNumber(tokens.find((t) => t.symbol === 'BTC')?.price ?? 0),
     [tokens]

@@ -7,8 +7,8 @@ import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import React, { useMemo, useState } from 'react';
 import { fCurrency } from '@/utils/format-number';
-import { usePersistStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 
 import { LoadingButton } from '@mui/lab';
 import {
@@ -77,7 +77,7 @@ const SendReview: React.FC<SendReviewProps> = ({
   const isSol = sendToken.contract === '__sol__';
   const isNative = isBtc || isEth || isSol;
 
-  const tokens = usePersistStore((s) => s.tokenState.tokens);
+  const tokens = useStellarTokens();
   const xlmPrice = BigNumber(tokens.find((tok) => tok.symbol === 'XLM')?.price ?? 0);
   const stellarFeeFiat = BigNumber(STELLAR_NETWORK_FEE_XLM).multipliedBy(xlmPrice);
 

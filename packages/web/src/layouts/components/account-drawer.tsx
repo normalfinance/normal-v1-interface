@@ -11,6 +11,7 @@ import { useUserActivity } from '@/hooks';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, logger } from '@normalfinance/utils';
 import { usePortfolio } from '@/hooks/use-portfolio';
+import { usePersistStore } from '@normalfinance/state';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getLinkedWallets } from '@/services/linked-wallets';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
@@ -18,7 +19,6 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import { CHAINS, CHAIN_IDS, getChainAddress, availableChains } from '@/lib/chains/registry';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
@@ -46,7 +46,6 @@ import CopyIconButton from '@/components/copy-icon-button';
 import { Scrollbar } from '@/components/template/scrollbar';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
-import TokenStoreRefresher from '@/components/_common/token-store-refresher';
 import WalletSelectionModal from '@/components/_common/wallet-selection-modal';
 import NormalWalletSetupDialog from '@/components/_common/normal-wallet-setup-dialog';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
@@ -66,11 +65,7 @@ function WalletConnected({
   drawerOpen: boolean;
   addresses: ChainAddresses | null | undefined;
 }) {
-  const { setGlobalIsLoading } = useAppStore();
-
-  const { wallet: persistWallet, getAllTokens } = usePersistStore();
-  const network = useNetworkStore((s) => s.network);
-  const [tokensFetching, setTokensFetching] = useState(true);
+  const { wallet: persistWallet } = usePersistStore();
 
   const { recentActivity } = useUserActivity(address, addresses);
   const bitcoinAddress = getChainAddress(addresses, 'bitcoin');
@@ -85,30 +80,6 @@ function WalletConnected({
   useEffect(() => {
     savingsRef.current = savings;
   });
-
-  // Effect hook to fetch all tokens when the component mounts, address changes, or network toggles
-  useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
-      if (!address) return;
-
-      setTokensFetching(true);
-      setGlobalIsLoading(true);
-      try {
-        await getAllTokens(true);
-      } catch (e) {
-        logger.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-        setTokensFetching(false);
-      }
-    };
-
-    const timer = setTimeout(() => {
-      refreshTokens();
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [address, getAllTokens, network, setGlobalIsLoading]);
 
   // Refresh savings when the drawer opens.
   useEffect(() => {
@@ -302,7 +273,7 @@ function WalletConnected({
         balance={assetsBalance.toNumber()}
         savingsValue={savingsValue}
         savingsFetching={savingsFetching && !savingsLoaded}
-        tokensFetching={tokensFetching}
+        tokensFetching={walletBalances.isLoading}
         percentageChange={0}
         tokens={allTokens}
         sections={walletSections ?? undefined}
@@ -618,9 +589,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
       {/* #74 P5: one-time "this wallet can't hold USDC" toast right after an
           external wallet is first seen. Renders nothing itself. */}
       {session && <PostConnectReadinessToast />}
-      {/* #75: keeps the legacy token store in step with the activity events
-          every flow already announces (transitional — see doc 75 Phase 2). */}
-      {session && <TokenStoreRefresher />}
       {session ? (
         <AccountButton
           data-testid="account-button"

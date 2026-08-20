@@ -39,7 +39,7 @@ export default function AssetsView() {
   const router = useRouter();
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
   // #75: account-wide view — Stellar rows from the AGGREGATE (slot), plus
   // the companion Normal wallet's rows and the Savings row. This page read
   // the legacy slot store and showed $2.21 for a $52 account (observed live
@@ -53,7 +53,6 @@ export default function AssetsView() {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
@@ -61,8 +60,7 @@ export default function AssetsView() {
       }
     };
     refreshTokens();
-    // getAllTokens/setGlobalIsLoading are store actions with stable identity.
-  }, [wallet.address, getAllTokens, setGlobalIsLoading]);
+  }, [wallet.address, setGlobalIsLoading]);
 
   const { btcToken } = useBtcPortfolio(true);
   const { ethToken } = useEthPortfolio(true);

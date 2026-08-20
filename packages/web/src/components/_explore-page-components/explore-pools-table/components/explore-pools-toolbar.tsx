@@ -2,10 +2,8 @@ import type { IPairTableFilters } from '@/types/pairTable';
 import type { UseSetStateReturn } from 'minimal-shared/hooks';
 
 import { useCallback } from 'react';
-import { logger } from '@/middleware';
 import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
-import { usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
@@ -26,8 +24,6 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
 
   const { enqueueSnackbar } = useSnackbar();
 
-  const { getAllTokens } = usePersistStore();
-
   const { state: currentFilters, setState: updateFilters } = filters;
 
   const handleFilterName = useCallback(
@@ -39,15 +35,9 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
   );
 
   const onRefresh = async () => {
-    enqueueSnackbar('Refreshing assets', { variant: 'info' });
-
-    try {
-      await getAllTokens(true);
-    } catch (error) {
-      logger.error('Asset refresh error:', error);
-    } finally {
-      // setCreatingTrustline(false);
-    }
+    // Balances refresh continuously via the portfolio aggregate now — the
+    // button just acknowledges (the old store refresh is retired, doc 75).
+    enqueueSnackbar('Assets refresh automatically', { variant: 'info' });
   };
 
   return (

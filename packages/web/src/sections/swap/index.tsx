@@ -35,7 +35,7 @@ export default function SwapView() {
 
   const { user } = useSupabaseAuth();
   const { setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
   const { bitcoinAddress } = useBtcPortfolio(true);
   const { ethereumAddress } = useEthPortfolio(true);
   const { solanaAddress } = useSolPortfolio(true);
@@ -54,7 +54,6 @@ export default function SwapView() {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
@@ -62,7 +61,7 @@ export default function SwapView() {
       }
     };
     refreshTokens();
-  }, [wallet.address, getAllTokens, setGlobalIsLoading]);
+  }, [wallet.address, setGlobalIsLoading]);
 
   if (!mounted || walletChecking) {
     return (

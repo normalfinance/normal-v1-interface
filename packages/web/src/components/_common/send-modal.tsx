@@ -12,6 +12,7 @@ import { fCurrency } from '@/utils/format-number';
 import { usePendingOutflow } from '@/lib/spendable';
 import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { buildOwnWalletCandidates } from '@/lib/stellar/own-wallets';
@@ -64,7 +65,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
 
   const persist = usePersistStore();
   const config = useStellarConfig();
-  const tokens = persist.tokenState.tokens;
+  const tokens = useStellarTokens(open);
 
   const { send: stellarSend } = useSendToken();
   const { btcToken, bitcoinAddress } = useBtcPortfolio(open);

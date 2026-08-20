@@ -3,13 +3,12 @@
 import type { PortfolioAsset } from '@/types/portfolio';
 
 import { BigNumber } from 'bignumber.js';
-import { logger } from '@normalfinance/utils';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
+import { usePersistStore } from '@normalfinance/state';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { assetDisplay, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
@@ -91,8 +90,7 @@ export default function PortfolioView() {
   // checking, so we don't flash the picker at an existing user.
   const { hasWallet: hasTurnkeyWallet } = useTurnkeyWallet(!!user);
 
-  const { setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
 
   const hasAnyWallet = !!wallet.address || hasTurnkeyWallet === true;
   // Still resolving whether an authed user has a wallet — keep the skeleton so we
@@ -213,24 +211,6 @@ export default function PortfolioView() {
       { label: connectedWalletLabel(wallet.walletType), data: external },
     ];
   }, [holdingsData, walletBalances.companionStellar, wallet.walletType]);
-
-  // Nothing on this page reads the token store any more, but the swap card and
-  // the account drawer still do — so we keep refreshing it here and simply
-  // stop blocking this page's rendering on it. Retiring the store entirely is
-  // the remaining half of the duplicate-data-path cleanup (#7/#12).
-  useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
-      try {
-        setGlobalIsLoading(true);
-        await getAllTokens();
-      } catch (e) {
-        logger.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
-    };
-    refreshTokens();
-  }, [wallet.address, getAllTokens, setGlobalIsLoading]);
 
   if (!mounted || walletChecking) {
     return <PortfolioSkeleton />;

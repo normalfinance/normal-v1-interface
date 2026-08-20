@@ -105,7 +105,7 @@ function enqueueSuccessWithStellarExpert(
 export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsReturn {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
   const config = useStellarConfig();
 
   const { publicKey: stellarPublicKey } = useStellarWalletsKit();
@@ -382,6 +382,10 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           // correct figure and stuck). Bump BEFORE announcing.
           bumpSavingsReadEpoch(walletAddress);
           window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
+          // A deposit/withdraw also MOVES WALLET USDC — announce on the
+          // balance channel too, or the aggregate waits out its 30s poll
+          // (gap created by the token-store retirement, caught 2026-08-20).
+          window.dispatchEvent(new Event('nf:activity-updated'));
         }
 
         // Cancel any pending post-operation refreshes from a previous operation
@@ -391,7 +395,6 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         refreshTimeoutsRef.current = [];
 
         // Refresh token balances so wallet USDC reflects the deposit immediately.
-        getAllTokens().catch(() => {});
 
         await refreshVaultInfo();
         refreshTimeoutsRef.current = [
@@ -430,7 +433,6 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
       targetAddress,
       enqueueSnackbar,
       t,
-      getAllTokens,
       refreshVaultInfo,
       refreshUserPosition,
     ]
@@ -604,13 +606,16 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           // correct figure and stuck). Bump BEFORE announcing.
           bumpSavingsReadEpoch(walletAddress);
           window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
+          // A deposit/withdraw also MOVES WALLET USDC — announce on the
+          // balance channel too, or the aggregate waits out its 30s poll
+          // (gap created by the token-store retirement, caught 2026-08-20).
+          window.dispatchEvent(new Event('nf:activity-updated'));
         }
 
         refreshTimeoutsRef.current.forEach(clearTimeout);
         refreshTimeoutsRef.current = [];
 
         // Refresh token balances so wallet USDC reflects the withdrawal immediately.
-        getAllTokens().catch(() => {});
 
         await refreshVaultInfo();
         refreshTimeoutsRef.current = [
@@ -650,7 +655,6 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
       targetAddress,
       enqueueSnackbar,
       t,
-      getAllTokens,
       refreshVaultInfo,
       refreshUserPosition,
     ]

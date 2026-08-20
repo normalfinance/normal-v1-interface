@@ -1867,3 +1867,40 @@ G8-G10. DEFERRED with reason: the amber slow-mode auto-continue —
 partially mitigated (45-min arrival window + refund verdict polling
 now end the wait honestly); full auto-continue UI = follow-up.
 233 tests, build clean.
+
+**Token-store retirement, Phase A (branch retire-token-store,
+2026-08-20):** grep found ELEVEN tokenState readers (the doc-75 table
+said ten — grep is the rule). One adapter replaced them all:
+`useStellarTokens()` serves the store's exact Token[] shape (slot
+XLM/USDC, issuer patched from config for send/trustline flows) from
+the AGGREGATE — always fresh, one source. All 11 readers migrated
+(one-line each); `grep tokenState src` = ZERO non-test hits. Stale
+balance data is now UNREACHABLE by construction. Phase B queued (same
+branch, next commit): remove the 13 now-redundant getAllTokens refresh
+calls, delete TokenStoreRefresher, then delete tokenState/getAllTokens
+from @normalfinance/state — mechanical, safe only now that readers are
+zero; verify with the same grep. 233 tests, build clean.
+
+**Token-store retirement Phase B (2026-08-20):** all 13 getAllTokens
+callers removed (engines' post-swap refreshes ride the activity event
++ aggregate they already triggered; page-mount refresh effects deleted
+outright; drawer tokensFetching now = walletBalances.isLoading; the
+explore-toolbar refresh button acknowledges instead of poking a dead
+store), TokenStoreRefresher DELETED. grep tokenState|getAllTokens in
+web src = 0 non-test hits. Store definition left in
+@normalfinance/state (zero callers) — deletion deferred to a dedicated
+change beside zustand persist versioning, with the reason recorded.
+Junior explainer written into doc 75. 233 tests, build clean.
+
+**Savings announce gap (pre-merge verification, 2026-08-20):** Niko
+asked "will all assets update after swaps/sends?" — traced every flow
+to its refresh trigger instead of asserting. Found ONE gap, created by
+the retirement itself: savings deposit/withdraw dispatched only
+POSITION_SYNC_EVENT; the deleted store-refresh had been what updated
+wallet USDC, so the aggregate would have waited out its 30s poll. Both
+primitive sites now also dispatch nf:activity-updated. Full chain
+verified: sends (announceTransaction) ✓, soroswap ✓, cctp (creation +
+finish, Done AWAITS aggregate) ✓, lifi (broadcast + tracker + arrival
+gate) ✓, savings ✓ (fixed), on/offramp modals dispatch ✓; aggregate
+also has 30s poll + focus revalidation as the safety net under
+everything. 233 tests, build clean.

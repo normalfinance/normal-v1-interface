@@ -8,6 +8,7 @@ import { BigNumber } from 'bignumber.js';
 import { ModalType } from '@normalfinance/types';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { assetDisplay } from '@/lib/portfolio/display';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
@@ -95,6 +96,7 @@ export function useAssetActions(): {
   const isAuthed = !!user;
   const portfolio = usePortfolio(isAuthed);
   const persist = usePersistStore();
+  const stellarTokens = useStellarTokens();
   const { setModalView } = useAppStore();
   const { addresses, refetch: refetchAddresses } = useTurnkeyWallet(isAuthed);
 
@@ -119,9 +121,7 @@ export function useAssetActions(): {
   // synthesized from portfolio data for the native chains.
   const pickerTokens: Token[] = SUPPORTED.map((m) => {
     const stored =
-      m.blockchain === 'stellar'
-        ? persist.tokenState.tokens.find((tk) => tk.symbol === m.symbol)
-        : undefined;
+      m.blockchain === 'stellar' ? stellarTokens.find((tk) => tk.symbol === m.symbol) : undefined;
     if (stored) return stored;
     const a = portfolio.getAsset(m.symbol);
     return {
