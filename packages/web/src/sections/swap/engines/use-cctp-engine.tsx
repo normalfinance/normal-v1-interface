@@ -157,7 +157,7 @@ export function useCctpEngine({
 }: CctpEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
   const network = useNetworkStore((s) => s.network);
 
   // 'in': crosschain → stellar; 'out': USDC(stellar) → crosschain.
@@ -414,10 +414,9 @@ export function useCctpEngine({
       const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
         toSymbol as CrosschainSymbol
       ];
-      getAllTokens(true).catch(() => {}); // source side: USDC left Stellar
       if (chain && refetchChain) waits.push(refetchChain(chain).catch(() => {}));
     } else {
-      waits.push(getAllTokens(true).catch(() => {}));
+      // Stellar-side freshness rides refreshAggregate below (one source).
     }
     if (refreshAggregate) waits.push(refreshAggregate().catch(() => {}));
     await Promise.race([Promise.all(waits), cap]);
@@ -425,7 +424,7 @@ export function useCctpEngine({
     setActiveCctpTransfer(null); // settled — nothing left to recover
     resetInput();
     window.dispatchEvent(new Event('nf:activity-updated'));
-  }, [direction, toSymbol, resetInput, getAllTokens, refetchChain, refreshAggregate]);
+  }, [direction, toSymbol, resetInput, refetchChain, refreshAggregate]);
 
   // ---- INBOUND orchestration -----------------------------------------------------
   const runInbound = useCallback(

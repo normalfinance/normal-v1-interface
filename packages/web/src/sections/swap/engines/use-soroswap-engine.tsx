@@ -57,7 +57,7 @@ export function useSoroswapEngine({
 }: SoroswapEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
   const config = useStellarConfig();
 
   const ADDRESS: Record<StellarSymbol, string> = {
@@ -119,11 +119,10 @@ export function useSoroswapEngine({
     // Stellar balances live in the persist store and DON'T auto-refresh on the
     // activity event, so pull them explicitly. A second pass a few seconds later
     // catches Horizon read-replica lag right after the ledger closes.
-    getAllTokens(true).catch(() => {});
-    setTimeout(() => getAllTokens(true).catch(() => {}), 4000);
+    // Balances refresh via the aggregate on the activity event below.
     // Refresh the activity feed so the swap appears without a manual reload.
     window.dispatchEvent(new Event('nf:activity-updated'));
-  }, [quote, executeSwap, fromSymbol, toSymbol, resetInput, getAllTokens]);
+  }, [quote, executeSwap, fromSymbol, toSymbol, resetInput]);
 
   const handleAddTrustline = useCallback(async () => {
     const usdcIssuer = config.USDC_ISSUER;

@@ -1880,3 +1880,14 @@ branch, next commit): remove the 13 now-redundant getAllTokens refresh
 calls, delete TokenStoreRefresher, then delete tokenState/getAllTokens
 from @normalfinance/state — mechanical, safe only now that readers are
 zero; verify with the same grep. 233 tests, build clean.
+
+**Token-store retirement Phase B (2026-08-20):** all 13 getAllTokens
+callers removed (engines' post-swap refreshes ride the activity event
++ aggregate they already triggered; page-mount refresh effects deleted
+outright; drawer tokensFetching now = walletBalances.isLoading; the
+explore-toolbar refresh button acknowledges instead of poking a dead
+store), TokenStoreRefresher DELETED. grep tokenState|getAllTokens in
+web src = 0 non-test hits. Store definition left in
+@normalfinance/state (zero callers) — deletion deferred to a dedicated
+change beside zustand persist versioning, with the reason recorded.
+Junior explainer written into doc 75. 233 tests, build clean.

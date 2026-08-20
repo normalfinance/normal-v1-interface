@@ -32,7 +32,7 @@ export default function SavingsView() {
   const { user } = useSupabaseAuth();
   const [walletSetupOpen, setWalletSetupOpen] = useState(false);
   const { setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
 
   const { vaultInfo, userPosition, fetching, positionFetching } = useDefindexSavings();
   // #32: account-wide savings display — the hero must include the companion
@@ -87,7 +87,6 @@ export default function SavingsView() {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllTokens(true);
       } catch (e) {
         logger.error(e);
       } finally {
@@ -97,7 +96,7 @@ export default function SavingsView() {
 
     const timer = setTimeout(refreshTokens, 100);
     return () => clearTimeout(timer);
-  }, [wallet.address, getAllTokens, setGlobalIsLoading]);
+  }, [wallet.address, setGlobalIsLoading]);
 
   if (!mounted || (!firstPaintDone && heroLoading)) {
     return (

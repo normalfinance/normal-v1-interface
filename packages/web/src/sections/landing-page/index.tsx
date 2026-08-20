@@ -51,14 +51,13 @@ export const tokens: TokenMeta[] = [
 
 export default function LandingPage() {
   const { setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
 
   // Effect hook to fetch all pools and tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
@@ -66,8 +65,7 @@ export default function LandingPage() {
       }
     };
     refreshTokens();
-    // getAllTokens/setGlobalIsLoading are store actions with stable identity.
-  }, [wallet.address, getAllTokens, setGlobalIsLoading]);
+  }, [wallet.address, setGlobalIsLoading]);
 
   return (
     <>

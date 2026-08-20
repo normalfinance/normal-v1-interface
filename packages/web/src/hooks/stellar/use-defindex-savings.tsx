@@ -105,7 +105,7 @@ function enqueueSuccessWithStellarExpert(
 export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsReturn {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
-  const { wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
   const config = useStellarConfig();
 
   const { publicKey: stellarPublicKey } = useStellarWalletsKit();
@@ -391,7 +391,6 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         refreshTimeoutsRef.current = [];
 
         // Refresh token balances so wallet USDC reflects the deposit immediately.
-        getAllTokens().catch(() => {});
 
         await refreshVaultInfo();
         refreshTimeoutsRef.current = [
@@ -430,7 +429,6 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
       targetAddress,
       enqueueSnackbar,
       t,
-      getAllTokens,
       refreshVaultInfo,
       refreshUserPosition,
     ]
@@ -610,7 +608,6 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         refreshTimeoutsRef.current = [];
 
         // Refresh token balances so wallet USDC reflects the withdrawal immediately.
-        getAllTokens().catch(() => {});
 
         await refreshVaultInfo();
         refreshTimeoutsRef.current = [
@@ -650,7 +647,6 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
       targetAddress,
       enqueueSnackbar,
       t,
-      getAllTokens,
       refreshVaultInfo,
       refreshUserPosition,
     ]
