@@ -111,3 +111,62 @@ use-swap drops the fee-pair for soroswap when the flag is on (record still
 BEFORE submit — the #27 property moves into the single-tx submit path);
 definitive live test = one XLM→USDC swap from a funded wallet asserting ONE
 passkey prompt and the fee arriving on-chain in the same transaction.
+
+## 7 · Stage 1 implementation + upstream blocker (2026-08-20)
+
+Implemented flag-gated (SOROSWAP_EMBEDDED_FEE=1): quote passes feeBps +
+referralId, new /api/swap/submit-single preserves #27 + tx-source
+ownership, client single-sign path, honest footer. LIVE RESULT: quote
+correct (0.5% skimmed, platformFee returned) but **/quote/build with
+referralId fails 400 "simulation incorrect — Error(Object,
+UnexpectedSize)"** on BOTH platforms (router + aggregator), both a funded
+and an unfunded from-account. CONTROL: identical build WITHOUT fee → OK.
+Verdict: upstream Soroswap fee-build defect (or undocumented referral
+enrollment). OUR CODE IS COMPLETE AND CORRECT; flag stays OFF (legacy
+fee-pair path active, unchanged). The moment Soroswap fixes it, flipping
+the env delivers 1-signature swaps with zero further code.
+
+**Repro for Soroswap support:** POST /quote (mainnet, XLM→USDC,
+amount 50000000, protocols ["soroswap"], feeBps 50) → returns platformFee
+{feeBps:50, feeAmount:"250000"} ✓. POST /quote/build {quote, from:<funded
+G-address>, referralId:<funded G-address>} → 400 simulation incorrect,
+diagnostics show Error(Object, UnexpectedSize) ×3. Same build without
+feeBps/referralId succeeds.
+
+**Order unchanged:** proceed to Stage 3 (Turnkey policy autopilot) now;
+Stage 1 lights up whenever upstream fixes; Stage 2 contract spec in
+parallel (and note: if Soroswap's fee path stays broken long, the router
+contract ALSO solves swaps — the fallback was designed in).
+
+## 8 · Stage 3 blueprint (policy language VERIFIED 2026-08-20)
+
+Turnkey policy engine confirmed sufficient (docs.turnkey.com policies):
+`eth.tx.to` / `chain_id` / `value` with comparison operators; with uploaded
+ABIs also `function_name` + `contract_call_args` — so the policy can require
+e.g. depositForBurn's mintRecipient == the user's own forwarder and
+ERC20.transfer/approve spender ∈ {Circle, LI.FI}. Enforcement lives in the
+SIGNER, not in our server's good behavior.
+
+Build order (each slice testable):
+1. **Consent ceremony** (inline at first cctp swap, per D2): one
+   passkey-stamped activity batch on the user's sub-org — create delegated
+   API user "Normal Autopilot" + API key (server-held) + POLICY: EFFECT_ALLOW
+   sign-transaction where chain_id==8453 AND to ∈ {USDC, TokenMessengerV2,
+   LI.FI diamond} AND (ABI-parsed) recipients == user's own
+   addresses/forwarder AND value==0, consensus = autopilot user only.
+   Caps per D3: $2k/tx (contract_call_args amount), renewal 90d.
+2. **Server signer** `server/autopilot-signer.ts`: signs EVM txs with the
+   delegated key via Turnkey SDK; refuses if flag AUTOPILOT_DISABLED=1
+   (kill-switch); logs every signed tx (audit trail table).
+3. **Engine/relayer changes**: inbound approve+burn and outbound pivot move
+   into the server cron path (the post-burn machinery already server-side);
+   client engines drop those signing steps — modal stages become watch-only
+   after the ONE upfront signature.
+4. **Settings**: "Automatic swap completion" card — status, grant date,
+   revoke (delete API key), renew.
+5. Doc 73 Part J tests: 1-prompt outbound, 1-prompt inbound, revoke →
+   mid-flow falls back to manual signing prompts, kill-switch env, policy
+   rejects an out-of-policy tx (negative test with a manual call).
+
+Decisions locked: inline consent (D2), $2k/$10k/90d renew-on-use (D3),
+autopilot-before-contract (D1).

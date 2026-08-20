@@ -1943,3 +1943,19 @@ REQUIRED (Niko): set SOROSWAP_EMBEDDED_FEE=1, one XLM→USDC swap —
 assert ONE prompt, fee visible in the SAME tx on stellar.expert, and
 CHECK THE FEE WALLET for our actual share of the 50 bps (the split
 question). 239 tests, full-src lint clean, build clean.
+
+**#33 Stage 3 slice 1 — consent ceremony lib (2026-08-20):**
+`lib/turnkey/autopilot-consent.ts` — grantAutopilotConsent(): one
+passkey session, two stamped activities on the USER'S sub-org:
+CREATE_API_ONLY_USERS ("Normal Autopilot", credential = the SERVER'S
+P-256 public key — one env keypair serves all consenting users, private
+half never leaves the server) + CREATE_POLICY_V3 (EFFECT_ALLOW, consensus
+= autopilot user only, condition = chain_id 8453 && value==0 && to ∈
+{USDC, Circle TokenMessengerV2, LI.FI diamond}). Enforcement in
+Turnkey's signer. NOT YET WIRED to UI — before it ships:
+(1) VERIFY ALLOWED_CONTRACTS against lib/cctp's live constants (the
+Circle address especially), (2) server keypair generation + env
+(NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY / AUTOPILOT_PRIVATE_KEY), (3) v2
+hardening: ABI-arg constraints (mintRecipient == user's forwarder).
+Next slices: server signer w/ kill-switch + audit log → engine/cron
+moves → Settings revoke → doc 73 Part J. Tests/build clean.
