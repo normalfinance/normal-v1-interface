@@ -567,7 +567,10 @@ export function HeroPortfolioCard() {
               else startAction(a.key as AssetActionKey);
             }}
             sx={{
-              gridColumn: idx < 3 ? 'span 2' : 'span 3',
+              // All five buttons the SAME size (Niko): 6-col grid, every
+              // button spans 2; the bottom pair starts at columns 2 and 4,
+              // so the second row is centered instead of stretched.
+              gridColumn: idx < 3 ? 'span 2' : idx === 3 ? '2 / span 2' : '4 / span 2',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
