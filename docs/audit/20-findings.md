@@ -2145,3 +2145,13 @@ post-Done backstop and Settings doors all remain. RULE: any
 generated DSL expression (policy conditions included) gets validated
 against the real parser in a spike BEFORE it ships in a user-facing
 ceremony. 242 tests, build clean.
+
+**Asset pickers sorted by USD value (2026-08-21):** Niko's ask off the
+first working 1-signature swap: highest value at top, "same in all
+asset pickers". One edit was enough BECAUSE the pickers share a single
+component — PickToken serves swap-card, send-modal, withdraw-card and
+use-asset-actions. "Your assets" and search results now sort by
+price×balance descending (NaN-safe: missing price/balance sorts as $0;
+stable sort keeps the curated order for $0 ties); "All assets" (all
+zero balance) keeps the curated order, where a value sort would be
+meaningless. 242 tests, build clean.
