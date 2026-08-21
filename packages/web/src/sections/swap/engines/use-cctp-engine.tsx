@@ -40,6 +40,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { useSnackbar } from '@/components/template/snackbar';
+import GasShortfallDialog from '@/components/_common/gas-shortfall-dialog';
 import AutopilotConsentDialog from '@/components/_common/autopilot-consent-dialog';
 
 import { groupOf } from './types';
@@ -83,6 +84,9 @@ export interface CctpEngineProps {
    * modal both announce the move — never a silent transfer.
    */
   fundFromExternal?: { label: string; execute: (amountUsdc: string) => Promise<boolean> };
+  /** Dynamic gas (2026-08-21): writes the affordable amount back into the
+   *  card when a gas spike beats the reserve on the ETH source leg. */
+  onAmountAdjusted?: (amountEth: string) => void;
 }
 
 const NATIVE_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
@@ -156,6 +160,7 @@ export function useCctpEngine({
   stellarAddressOverride,
   onNeedsSetup,
   fundFromExternal,
+  onAmountAdjusted,
 }: CctpEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
@@ -192,6 +197,9 @@ export function useCctpEngine({
   const [consentOpen, setConsentOpen] = useState(false);
   const consentResolver = useRef<(() => void) | null>(null);
   const consentHandled = useRef(false);
+  // Gas spike between quote and the ETH source leg → choice dialog, never an
+  // error (fires pre-sign; the transfer row closes as failed-before-broadcast).
+  const [shortfall, setShortfall] = useState<{ tried: string; affordable: string } | null>(null);
   // Live autopilot state for the progress modal's copy + in-wait Enable
   // offer. null = not checked yet; refreshed when a run starts and flipped
   // by a successful grant. The RUN itself re-checks live at the branch —
@@ -649,6 +657,18 @@ export function useCctpEngine({
         await patch({ dstAmount });
         await finish();
       } catch (e: any) {
+        const { GasShortfallError, maxAffordableEth } = await import('@/lib/lifi/gas-shortfall');
+        if (e instanceof GasShortfallError && !broadcastStarted) {
+          // Pre-sign shortfall: close the progress modal, close the row
+          // honestly (nothing moved), and offer the affordable amount.
+          setModalOpen(false);
+          setStage(null);
+          setActiveCctpTransfer(null);
+          setShortfall({ tried: amount.toFixed(), affordable: maxAffordableEth(e) });
+          await patch({ markFailed: true }).catch(() => {});
+          window.dispatchEvent(new Event('nf:activity-updated'));
+          return;
+        }
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
           setStageError(
@@ -671,6 +691,7 @@ export function useCctpEngine({
       stellarAddress,
       network,
       addresses,
+      amount,
       makePatcher,
       autopilotActive,
       tryAutopilot,
@@ -1168,6 +1189,21 @@ export function useCctpEngine({
     modals: (
       <>
         <AutopilotConsentDialog open={consentOpen} onChoose={handleConsentChoice} />
+        {shortfall && (
+          <GasShortfallDialog
+            open
+            triedAmountEth={shortfall.tried}
+            affordableEth={shortfall.affordable}
+            onUseAffordable={() => {
+              onAmountAdjusted?.(shortfall.affordable);
+              setShortfall(null);
+              enqueueSnackbar(t('Amount updated — review the fresh quote and press Swap.'), {
+                variant: 'info',
+              });
+            }}
+            onCancel={() => setShortfall(null)}
+          />
+        )}
         <CctpProgressModal
           open={modalOpen}
           direction={direction}

@@ -2215,3 +2215,24 @@ never at risk (viem refuses pre-broadcast; row marked Failed
 honestly). RULE: reserve sizing follows the SOURCE-LEG contract, not
 the pair's label — and every engine that can hit an error class needs
 the same mapping (grep engines, again). 242 tests, build clean.
+
+**Dynamic gas — shortfall becomes a choice, never an error (2026-08-21,
+Niko GO):** gas is a live market price, so ANY reserve can be beaten by
+a spike between quote and send; "never fail" is delivered as "never
+dead-end". Three layers: (1) the live reserve (existing, 550k fix);
+(2) NEW lib/lifi/gas-shortfall.ts — the node's admission rule
+(balance ≥ value + gas×price) computed LOCALLY in executeEvm BEFORE
+the passkey ceremony; a miss raises structured GasShortfallError with
+the affordable amount (rounded DOWN so the suggestion always fits),
+6 jest tests incl. the live incident's exact numbers; (3) NEW
+GasShortfallDialog (both engines, card passes onAmountAdjusted =
+setAmountIn): "Network fee just went up — use 0.00853 ETH" → one tap
+writes the affordable amount into the card, the quote refreshes, the
+user confirms the UPDATED numbers with a normal Swap press. Two locked
+decisions: never silently shrink the amount (the receive figure
+changed — the user must see it), and never auto-sign after async
+re-quoting (WebAuthn user-activation would fail NotAllowedError on
+some browsers — the design reason, not just caution). cctp inbound
+closes its row failed-before-broadcast before offering the dialog.
+Balance-read failure skips the check (the node still enforces; this
+layer is UX, not custody). 248 tests, build clean.

@@ -404,6 +404,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     // checks and burn LI.FI quota on quotes the gate below can never execute.
     enabled: pairType === 'crosschain' && !needsNormalWallet,
     resetInput,
+    // Dynamic gas: a spike-time shortfall writes the affordable ETH back in.
+    onAmountAdjusted: setAmountIn,
     refetchChain,
   });
   // #32 chunk 4c: selecting external delivery adds the missing USDC
@@ -476,6 +478,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     fromPrice: pairType === 'cctp' ? fromPrice : ZERO,
     enabled: pairType === 'cctp' && !needsNormalWallet,
     resetInput,
+    onAmountAdjusted: setAmountIn,
     refetchChain,
     stellarAddressOverride: cctpStellarAddress,
     refreshAggregate: refreshFresh,
