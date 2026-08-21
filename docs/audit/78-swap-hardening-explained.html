@@ -81,7 +81,8 @@
   <div class="label">The theme of this document</div>
   Doc 77 described the autopilot as built. This document is what happened when a real user
   (Niko) actually used it — seven distinct failures in two days, each caught live, each fixed
-  at the ROOT rather than patched. Confirmed working by live test at the end: 1-signature
+  at the ROOT rather than patched — followed by a systematic ALL-SCENARIOS sweep (§9) that
+  found and fixed twelve more before anything shipped. Confirmed working by live test at the end: 1-signature
   cross-chain swaps, the Soroswap progress popup, and fee collection verified against the
   database. Read this to understand not just what changed, but the recurring shapes of bug
   we now guard against.
@@ -97,8 +98,9 @@
   <a href="#dynamic">6 · Dynamic gas: a spike becomes a choice</a><br/>
   <a href="#sort">7 · Small: pickers sort by value</a><br/>
   <a href="#fees">8 · "Are our fees failing?" — no, verified</a><br/>
-  <a href="#tests">9 · How to test — Part K</a><br/>
-  <a href="#left">10 · What remains (not code)</a><br/>
+  <a href="#sweep">9 · The all-scenarios sweep — 12 findings, 12 fixes</a><br/>
+  <a href="#tests">10 · How to test — Part K</a><br/>
+  <a href="#left">11 · What remains (not code)</a><br/>
 </div>
 
 <h2 id="flag">1 · A leftover flag broke swaps — flags must degrade</h2>
@@ -150,7 +152,33 @@
 <h2 id="fees">8 · "Are our fees failing?" — no, verified</h2>
 <p>Asked live, answered from the database, not from confidence: every Stellar swap row carries its fee amount and a <em>confirmed on-chain fee transaction</em> — including the swaps made during this round. The Soroswap degrade changes only the <em>packaging</em> of the fee (own transaction = the second signature), never whether it's charged; LI.FI swaps collect the fee via the integrator mechanism inside the swap. <strong>The second signature IS the fee payment — two signatures means the fee definitely happened.</strong></p>
 
-<h2 id="tests" class="pagebreak">9 · How to test — Part K</h2>
+<h2 id="sweep" class="pagebreak">9 · The all-scenarios sweep — 12 findings, 12 fixes</h2>
+<p>After two gaps surfaced one live-test at a time, Niko ordered a systematic audit: <em>"think of all possible scenarios and double check them all."</em> Three parallel code-tracing passes walked the full matrix — wallet states × pair types × directions × missing-asset states × failure combinations — plus a dedicated security pass over the new server-side signing. Twelve gaps were confirmed; <strong>all twelve are fixed</strong> (gated: 248 tests, lint, typecheck, production build); three further low-risk items were deliberately deferred with written reasons (§11), not dropped.</p>
+
+<table>
+  <tr><th>#</th><th>Finding</th><th>Severity</th><th>Fix</th></tr>
+  <tr><td>S1</td><td><strong>Session-only fund redirection.</strong> Transfer rows carry client-supplied addresses; the autopilot burn trusted the row&#39;s recipient — the Turnkey policy cannot see inside hookData, so a stolen login session (no passkey) could aim an in-flight burn at an attacker&#39;s Stellar address.</td><td class="no">SECURITY</td><td>Burn route refuses any recipient not owned by the user (Turnkey wallet or linked wallet); refusal degrades to the passkey path</td></tr>
+  <tr><td>S2</td><td><strong>Relayer drain.</strong> Gas top-ups paid dust to whatever ETH address a (fake) row claimed.</td><td class="no">SECURITY</td><td>Top-up target pinned to the row-owner&#39;s own Turnkey ETH address</td></tr>
+  <tr><td>S3</td><td><strong>Chain-first users had no path to Stellar.</strong> A BTC/ETH/SOL-first signup has no Stellar slot: the cctp pair showed a dead "Set up Stellar wallet first" button, and the DEFAULT /swap view (XLM→USDC) told them to "activate" an account that does not exist.</td><td class="no">DEAD-END</td><td>Both engines now open the one-passkey Stellar setup, which correctly adopts into the empty slot</td></tr>
+  <tr><td>S4</td><td><strong>Drawer Send was a silent no-op</strong> for the same users (the modal only mounted when a Stellar address existed).</td><td class="no">DEAD-END</td><td>Gate removed — the modal handles an empty Stellar list fine</td></tr>
+  <tr><td>S5</td><td><strong>Chain setup looped.</strong> The setup dialog refreshed balances but never ADDRESSES — after creating a SOL wallet the button still said "Set up SOL wallet" until a reload.</td><td>LOOP</td><td>refetchChain refreshes addresses first, then balances</td></tr>
+  <tr><td>S6</td><td><strong>Refunded swaps sat "pending" forever.</strong> The refund flow&#39;s row-close was (rightly) refused once the source hash existed — no legitimate terminal path existed.</td><td>HONESTY</td><td>New server op re-verifies the refund against LI.FI itself before retiring the row — never trusts the client&#39;s claim</td></tr>
+  <tr><td>S7</td><td><strong>Retry moved the money twice.</strong> Move-from-Lobstr succeeded, burn rejected, Try again performed a SECOND kit-signed move of the same amount.</td><td>MONEY-UX</td><td>The funding step probes the companion first and skips a covered move (with an explaining toast)</td></tr>
+  <tr><td>S8</td><td>Gas-shortfall write-back in USD display mode wrote an ETH amount into a field interpreted as dollars — the recovery broke.</td><td>UX</td><td>Write-back flips the field to token mode first</td></tr>
+  <tr><td>S9</td><td>Inbound Done left the SOURCE chain&#39;s balance (the BTC/ETH/SOL just spent) stale until the next background poll.</td><td>UX</td><td>finish() refetches the source chain too</td></tr>
+  <tr><td>S10</td><td>A degraded Soroswap run claimed "One signature" on its FIRST prompt (the degrade was already known).</td><td>HONESTY</td><td>The degrade fires its own signal; copy is truthful from the first prompt</td></tr>
+  <tr><td>S11</td><td>Deliver-to-external trustline edge routed into the companion dialog, which cannot fix an external wallet&#39;s trustline (loop).</td><td>UX</td><td>Generic honest copy instead; the deliver pill keeps the kit-signed inline add</td></tr>
+  <tr><td>S12</td><td>A lagging status read could flip a just-granted autopilot back to "off" in the modal copy.</td><td>UX</td><td>Optimistic display is never downgraded mid-run (signing still re-checks live)</td></tr>
+</table>
+
+<div class="box">
+  <div class="label">The rules this sweep added to the register</div>
+  1 · Any server route that moves or sends value must pin its addresses to DB-verified ownership — row contents are untrusted client input.&nbsp;
+  2 · A capability added to one engine is a requirement on every engine.&nbsp;
+  3 · A setup dialog&#39;s success must refresh the exact store its gate reads.
+</div>
+
+<h2 id="tests" class="pagebreak">10 · How to test — Part K</h2>
 <table>
   <tr><th>#</th><th>Test</th><th>Expect</th><th>Status</th></tr>
   <tr><td>K1</td><td>Stellar swap (either direction) with the flag ON</td><td>Progress popup with 5 steps; two signatures (until Soroswap fixes upstream); Done only after balances visibly updated — open the drawer immediately: assets already correct</td><td class="ok">PASSED live 2026-08-21</td></tr>
@@ -162,13 +190,19 @@
   <tr><td>K7</td><td>Swap during the bridge wait, autopilot OFF → tap "Enable auto-finish" in the popup</td><td>Ceremony runs mid-wait; THIS swap's burn/pivot then completes without a prompt</td><td class="no">not yet run</td></tr>
   <tr><td>K8</td><td>Any asset picker</td><td>"Your assets" ordered by USD value, highest first</td><td class="ok">PASSED live 2026-08-21</td></tr>
   <tr><td>K9</td><td>SELECT * FROM autopilot_signatures after K3/K4</td><td>One row per server-signed tx with purpose + amountUsd; refused-* rows on any cap/kill-switch test</td><td class="no">not yet run</td></tr>
+  <tr><td>K10</td><td>Fresh account → onboard via BTC (or ETH/SOL) → /swap default view, then a cctp pair</td><td>Both show "Set up Stellar wallet" with a WORKING one-passkey setup; after it, swaps run; no dead buttons anywhere</td><td class="no">not yet run</td></tr>
+  <tr><td>K11</td><td>Same chain-first account → drawer → Send</td><td>The send modal OPENS (was a silent no-op) and lists the chain asset</td><td class="no">not yet run</td></tr>
+  <tr><td>K12</td><td>Outbound from Lobstr → approve the move → REJECT the burn → Try again</td><td>No second Lobstr move — a toast says the Normal wallet already holds the USDC and the swap proceeds passkey-only</td><td class="no">not yet run</td></tr>
+  <tr><td>K13</td><td>An inbound leg that refunds (bridge refuses the amount)</td><td>The Activity row flips to Failed within ~30s of the verdict (server re-verifies against LI.FI) — never a forever-pending row</td><td class="no">not yet run</td></tr>
+  <tr><td>K14</td><td>Security negative (dev): POST /api/cctp/autopilot/burn for a row whose destAddress is a foreign G-address</td><td>409 "Recipient is not one of your wallets" — the server never signs; audit stays clean</td><td class="no">not yet run</td></tr>
 </table>
 
-<h2 id="left">10 · What remains — none of it is code on this branch</h2>
+<h2 id="left">11 · What remains — none of it is code on this branch</h2>
 <ul>
   <li><strong>Live tests:</strong> K4, K5, K7, K9 above, plus doc 77's negative tests (J5–J7, J9, J11) and the broader doc 73 matrix pass before merge.</li>
   <li><strong>Send the PaltaLabs message</strong> (via Justin + a GitHub issue): the Soroswap fee-build repro + the DeFindex entry-fee question. One conversation, both products — they build both.</li>
   <li><strong>Decide the savings fee model:</strong> option A (drop the 0.5% deposit fee, monetize via DeFindex's native yield share → 1-signature savings almost immediately) vs option B (keep the upfront fee, build the Stage 2 router contract). A revenue decision, not an engineering one.</li>
+  <li><strong>Deferred from the sweep, with reasons:</strong> the /assets/XLM–USDC Stellar-setup loop (its fix touches the login-recognition code — post-merge, registered); cctp source legs outside the pending-outflow ledger (documented #62 trade-off; multi-tab MAX edge); quote staleness across a long consent ceremony (once-ever event; a revert closes the row honestly).</li>
   <li><strong>Queued engineering:</strong> autopilot v2 policy hardening (ABI-argument checks — gated on the now-proven ceremony), Stage 2 router contract on GO, Phase 5 load testing.</li>
 </ul>
 
