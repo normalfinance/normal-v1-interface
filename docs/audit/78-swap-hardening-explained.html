@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Live-Fire Round — Swap Hardening, Explained &amp; How to Test It</title>
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --muted: #5a5a66;
+    --line: #e6e6ea;
+    --soft: #f6f6f8;
+    --green: #0a6649;
+    --amber: #7a4a00;
+    --red: #991b1b;
+    --blue: #1d4ed8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    max-width: 860px;
+    padding: 48px 32px 96px;
+    font: 15px/1.65 "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: #fff;
+  }
+  h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 34px; }
+  h2 {
+    font-size: 21px; letter-spacing: -0.01em;
+    margin: 44px 0 12px; padding-top: 18px;
+    border-top: 2px solid var(--ink);
+  }
+  h3 { font-size: 16.5px; margin: 26px 0 8px; }
+  p, li { color: #23232b; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 5px 0; }
+  strong { color: var(--ink); }
+  code {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px; background: var(--soft);
+    padding: 1px 6px; border-radius: 5px;
+  }
+  table {
+    border-collapse: collapse; width: 100%;
+    margin: 14px 0 20px; font-size: 13.5px;
+  }
+  th, td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .box {
+    border: 1px solid var(--line); border-left: 4px solid var(--ink);
+    background: var(--soft); border-radius: 8px;
+    padding: 14px 18px; margin: 18px 0;
+  }
+  .box.warn { border-left-color: #d97706; }
+  .box.good { border-left-color: #1ab37d; }
+  .box .label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px;
+  }
+  .kv { color: var(--muted); font-size: 13px; }
+  .ok { color: var(--green); font-weight: 700; }
+  .no { color: var(--red); font-weight: 700; }
+  .toc { columns: 2; gap: 32px; font-size: 14px; }
+  .toc a { color: var(--blue); text-decoration: none; }
+  @media print {
+    body { padding: 0 8px; font-size: 12.5px; }
+    h2 { break-after: avoid; page-break-after: avoid; }
+    h3 { break-after: avoid; }
+    table, .box { break-inside: avoid; page-break-inside: avoid; }
+    .pagebreak { break-before: page; page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<h1>The Live-Fire Round</h1>
+<p class="subtitle">Everything the first real days of #33 testing broke, and how each break became a structural fix · branch <code>feat/external-wallet-cctp</code> · 2026-08-21 · companion to docs 73 &amp; 77</p>
+
+<div class="box good">
+  <div class="label">The theme of this document</div>
+  Doc 77 described the autopilot as built. This document is what happened when a real user
+  (Niko) actually used it — seven distinct failures in two days, each caught live, each fixed
+  at the ROOT rather than patched. Confirmed working by live test at the end: 1-signature
+  cross-chain swaps, the Soroswap progress popup, and fee collection verified against the
+  database. Read this to understand not just what changed, but the recurring shapes of bug
+  we now guard against.
+</div>
+
+<h2 id="toc">Contents</h2>
+<div class="toc">
+  <a href="#flag">1 · A leftover flag broke swaps — flags must degrade</a><br/>
+  <a href="#consent">2 · The consent saga: three bugs, one broken ceremony</a><br/>
+  <a href="#placement">3 · Where the consent offer finally lives</a><br/>
+  <a href="#modal">4 · Stellar swaps: progress popup + true Done</a><br/>
+  <a href="#gas">5 · The gas reserve that lied about "headroom"</a><br/>
+  <a href="#dynamic">6 · Dynamic gas: a spike becomes a choice</a><br/>
+  <a href="#sort">7 · Small: pickers sort by value</a><br/>
+  <a href="#fees">8 · "Are our fees failing?" — no, verified</a><br/>
+  <a href="#tests">9 · How to test — Part K</a><br/>
+  <a href="#left">10 · What remains (not code)</a><br/>
+</div>
+
+<h2 id="flag">1 · A leftover flag broke swaps — flags must degrade</h2>
+<p><strong>What happened:</strong> <code>SOROSWAP_EMBEDDED_FEE=1</code> was still in the dev .env from an earlier spike. Its code path calls Soroswap's fee-build endpoint — broken upstream — so every Stellar swap died with a 400.</p>
+<p><strong>The structural fix:</strong> the flag can no longer fail a swap, only change how many signatures it takes. The quote route wraps the embedded path in a <strong>10-minute circuit breaker</strong>: an embedded failure retries the legacy shape in place, and the client's one-signature path runs ONLY when the response provably carries our fee — otherwise it falls through to the proven two-signature flow, fee intact. <strong>Cause-effect: Soroswap fixes their endpoint → 1-signature swaps switch on by themselves. Until then → 2 signatures, everything works.</strong></p>
+<p class="kv">Rule recorded: a feature flag's failure mode must be the un-flagged behavior, never an error.</p>
+
+<h2 id="consent">2 · The consent saga: three bugs, one broken ceremony</h2>
+<p>Enabling the autopilot failed live twice, differently. The post-mortem found a chain of three defects that compounded:</p>
+<ol>
+  <li><strong>The policy never could be created.</strong> Our policy condition used <code>[list].contains(eth.tx.to)</code> — but Turnkey's <code>.contains()</code> only accepts a literal, never a field. The correct form is <code>eth.tx.to in [list]</code>. Every ceremony was doomed at step 2 from day one. The fix was <em>validated against Turnkey's live parser</em> before asking for another tap (a test policy created and deleted on our parent org).</li>
+  <li><strong>The ceremony wasn't idempotent.</strong> Step 1 (create the delegate user) succeeded, but our result parsing missed the userId key and threw; the retry then hit "credential public keys must be unique". Now the grant asks the server for an existing delegate and REUSES it — retries converge, and a repair takes one confirmation instead of erroring.</li>
+  <li><strong>"On" lied.</strong> Status counted only the delegate user, so the half-state (user without policy) showed On with no repair door. Active now means user AND policy exist.</li>
+</ol>
+<p class="kv">Rules recorded: any ceremony a user can retry MUST be idempotent; "active" must mean the whole grant, not its first artifact; generated DSL (policy conditions) is parser-validated in a spike before shipping in a user-facing ceremony.</p>
+
+<h2 id="placement">3 · Where the consent offer finally lives</h2>
+<p>The offer moved twice during live testing; the final shape has <strong>four doors, none blocking</strong>:</p>
+<ul>
+  <li><strong>At swap start</strong> (the main moment): "Finish future swaps automatically?" — Enable or Not now, then the swap proceeds either way. "Not now" is remembered forever.</li>
+  <li><strong>During the bridge wait</strong>: while a swap sits at "arriving/bridging" with autopilot off, the popup shows an inline "Enable auto-finish" box — enabling mid-wait completes <em>the swap that's already running</em>, because the engine re-checks status right before the signing step.</li>
+  <li><strong>Settings → Accounts</strong>: Turn on / Turn off, honest On/Off/Unknown status.</li>
+  <li><strong>After Done</strong> (backstop): offers once if somehow never offered before.</li>
+</ul>
+<p>The step copy is autopilot-aware: with the delegation on, the bridge step reads <em>"Automatic — no signature needed"</em> and the header says <em>"One signing step"</em>; the "1–2 signatures" text only appears when it's actually true. The dialog copy stopped overpromising ("up to two quick passkey confirmations" — the ceremony is two stamped activities).</p>
+
+<h2 id="modal" class="pagebreak">4 · Stellar swaps: progress popup + true Done</h2>
+<p>Stellar (XLM↔USDC) swaps were the last flow with no status popup and a fire-and-forget ending — Done showed, then the drawer needed 2–3 seconds to catch up. Now they narrate themselves in the same visual language as cross-chain swaps: <em>Preparing → Approve (with honest per-path signature copy that follows a mid-run degrade) → Submitting → Updating balances → Done</em>, with a stellar.expert link at the end and error + Try again in the popup.</p>
+<p><strong>The "Updating balances" step is the interesting one.</strong> One awaited refresh was not enough: fired right after the ledger closes, it can read Horizon's lagging replicas and "freshly" cache the PRE-swap balances. The gate now snapshots your to-asset's account total, refreshes, and if the number didn't move, waits past the server's 5-second cache floor and pulls once more — <strong>Done means every surface already shows the result</strong>, at the cost of up to ~6 extra visible seconds in the laggy case.</p>
+<p class="kv">Rule recorded (10th instance of this disease): an awaited refresh is only half the gate — Done requires the number to have VISIBLY CHANGED, or one bounded retry past the cache floor.</p>
+
+<h2 id="gas">5 · The gas reserve that lied about "headroom"</h2>
+<p><strong>What happened:</strong> ETH → USDC failed pre-broadcast: balance 0.009063 ETH, transaction wanted 0.009094. The reserve held back 0.0005 ETH; the route needed 0.000531 — short by ~7 cents. Root cause: cross-ecosystem pairs reserved gas for <strong>400k</strong> gas while plain ETH swaps reserved <strong>550k</strong> — but both start with the IDENTICAL LI.FI deposit contract (~538k observed live; it's visible in the failing transaction's own calldata). The code comment claimed "larger headroom for the bridge" while the number was smaller.</p>
+<p><strong>Fix:</strong> one 550k reserve for every pair that spends ETH — reserve sizing follows the <em>source-leg contract</em>, not the pair's label. Also: the popup used to show the raw RPC dump for this error; the calm message ("Not enough ETH left to pay the network fee…") existed but was wired into only one engine — now both.</p>
+<p class="kv">Funds were never at risk: the node refuses this class of transaction BEFORE broadcast; the activity row closed as Failed honestly.</p>
+
+<h2 id="dynamic">6 · Dynamic gas: a spike becomes a choice</h2>
+<p>Even a correct reserve is a prediction — gas is a live market price and can spike between your quote and your click. The requirement (Niko): <strong>this must never dead-end in an error.</strong> Three layers now:</p>
+<ol>
+  <li><strong>The live reserve</strong> keeps ~99% of swaps away from the edge (§5).</li>
+  <li><strong>A local affordability check BEFORE the passkey ceremony</strong>: the app runs the node's own admission rule (balance ≥ amount + gas × current price) itself. A miss raises a structured signal carrying the exact amount that IS affordable — and since nothing has been signed yet, aborting is free.</li>
+  <li><strong>The choice dialog:</strong> "Network fee just went up — you can swap up to 0.00853 ETH at the current fee. Nothing was signed or sent." One tap writes the affordable amount into the card, the quote refreshes, and the user confirms the UPDATED numbers with a normal Swap press.</li>
+</ol>
+<p>Two deliberate decisions, worth a junior's attention: the amount is <strong>never silently shrunk</strong> (a smaller input changes what you receive — signing a swap you never saw quoted breaks the honesty rules), and the adjusted swap is <strong>never auto-signed</strong> (passkey prompts need fresh user interaction in browsers; an auto-triggered ceremony after async re-quoting fails with NotAllowedError on some of them — the design is forced by WebAuthn, not just caution). The math has 6 unit tests pinned to the live incident's exact wei values.</p>
+
+<h2 id="sort">7 · Small: pickers sort by value</h2>
+<p>Every asset picker (swap, send, withdraw, asset actions — all one shared component) now lists "Your assets" and search results by USD value, highest first. The zero-balance "All assets" list keeps its curated order, where a value sort would be meaningless.</p>
+
+<h2 id="fees">8 · "Are our fees failing?" — no, verified</h2>
+<p>Asked live, answered from the database, not from confidence: every Stellar swap row carries its fee amount and a <em>confirmed on-chain fee transaction</em> — including the swaps made during this round. The Soroswap degrade changes only the <em>packaging</em> of the fee (own transaction = the second signature), never whether it's charged; LI.FI swaps collect the fee via the integrator mechanism inside the swap. <strong>The second signature IS the fee payment — two signatures means the fee definitely happened.</strong></p>
+
+<h2 id="tests" class="pagebreak">9 · How to test — Part K</h2>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th><th>Status</th></tr>
+  <tr><td>K1</td><td>Stellar swap (either direction) with the flag ON</td><td>Progress popup with 5 steps; two signatures (until Soroswap fixes upstream); Done only after balances visibly updated — open the drawer immediately: assets already correct</td><td class="ok">PASSED live 2026-08-21</td></tr>
+  <tr><td>K2</td><td>Enable autopilot (Settings → Turn on, or the swap-start dialog)</td><td>1–2 confirmations; Settings shows On; audit/policy exist on Turnkey</td><td class="ok">PASSED live 2026-08-21</td></tr>
+  <tr><td>K3</td><td>Inbound cctp swap with autopilot ON (ETH/SOL → USDC)</td><td>ONE signature; bridge step says "Automatic — no signature needed"; completes unprompted</td><td class="ok">PASSED live 2026-08-21</td></tr>
+  <tr><td>K4</td><td>Outbound cctp swap with autopilot ON (USDC → SOL/ETH)</td><td>ONE passkey (the Stellar burn); the pivot runs unprompted; audit table gains a cctp-outbound-pivot row</td><td class="no">not yet run</td></tr>
+  <tr><td>K5</td><td>ETH → USDC after the 550k reserve fix</td><td>MAX offers slightly less ETH than before, and the offered amount actually goes through</td><td class="no">not yet run</td></tr>
+  <tr><td>K6</td><td>Gas-spike drill (hard to force live; code-tested): shortfall at execute</td><td>No error dump — the "Network fee just went up" dialog offers the affordable amount; one tap + Swap completes; Cancel leaves everything untouched</td><td class="kv">unit-tested (6 tests)</td></tr>
+  <tr><td>K7</td><td>Swap during the bridge wait, autopilot OFF → tap "Enable auto-finish" in the popup</td><td>Ceremony runs mid-wait; THIS swap's burn/pivot then completes without a prompt</td><td class="no">not yet run</td></tr>
+  <tr><td>K8</td><td>Any asset picker</td><td>"Your assets" ordered by USD value, highest first</td><td class="ok">PASSED live 2026-08-21</td></tr>
+  <tr><td>K9</td><td>SELECT * FROM autopilot_signatures after K3/K4</td><td>One row per server-signed tx with purpose + amountUsd; refused-* rows on any cap/kill-switch test</td><td class="no">not yet run</td></tr>
+</table>
+
+<h2 id="left">10 · What remains — none of it is code on this branch</h2>
+<ul>
+  <li><strong>Live tests:</strong> K4, K5, K7, K9 above, plus doc 77's negative tests (J5–J7, J9, J11) and the broader doc 73 matrix pass before merge.</li>
+  <li><strong>Send the PaltaLabs message</strong> (via Justin + a GitHub issue): the Soroswap fee-build repro + the DeFindex entry-fee question. One conversation, both products — they build both.</li>
+  <li><strong>Decide the savings fee model:</strong> option A (drop the 0.5% deposit fee, monetize via DeFindex's native yield share → 1-signature savings almost immediately) vs option B (keep the upfront fee, build the Stage 2 router contract). A revenue decision, not an engineering one.</li>
+  <li><strong>Queued engineering:</strong> autopilot v2 policy hardening (ABI-argument checks — gated on the now-proven ceremony), Stage 2 router contract on GO, Phase 5 load testing.</li>
+</ul>
+
+<p class="kv" style="margin-top:40px">
+  Branch <code>feat/external-wallet-cctp</code> · Autopilot design &amp; decisions: docs/audit/76 · Autopilot explainer: docs/audit/77 ·
+  Branch story: docs/audit/73 · Findings register: docs/audit/20-findings.md · This document: docs/audit/78 · Generated 2026-08-21
+</p>
+
+</body>
+</html>
