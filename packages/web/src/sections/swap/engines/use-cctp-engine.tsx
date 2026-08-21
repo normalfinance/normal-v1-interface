@@ -175,7 +175,9 @@ export function useCctpEngine({
   // ("Set up SOL wallet first", action: null). Same fix as the lifi engine:
   // one passkey in ChainSetupDialog creates the missing chain account
   // in-place, then the original swap resumes.
-  const [setupChain, setSetupChain] = useState<'bitcoin' | 'ethereum' | 'solana' | null>(null);
+  const [setupChain, setSetupChain] = useState<
+    'bitcoin' | 'ethereum' | 'solana' | 'stellar' | null
+  >(null);
 
   // 'in': crosschain → stellar; 'out': USDC(stellar) → crosschain.
   const direction: 'in' | 'out' = groupOf(fromSymbol) === 'stellar' ? 'out' : 'in';
@@ -523,7 +525,13 @@ export function useCctpEngine({
       ];
       if (chain && refetchChain) waits.push(refetchChain(chain).catch(() => {}));
     } else {
-      // Stellar-side freshness rides refreshAggregate below (one source).
+      // Stellar-side freshness rides refreshAggregate below (one source);
+      // the SOURCE chain (BTC/ETH/SOL just spent) refreshes too so its
+      // balance isn't stale at Done (sweep 2026-08-21).
+      const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+        fromSymbol as CrosschainSymbol
+      ];
+      if (chain && refetchChain) waits.push(refetchChain(chain).catch(() => {}));
     }
     if (refreshAggregate) waits.push(refreshAggregate().catch(() => {}));
     await Promise.race([Promise.all(waits), cap]);
@@ -536,7 +544,15 @@ export function useCctpEngine({
     // The user has just lived the multi-signature flow; the offer is for
     // NEXT time, blocks nothing, and is skipped forever on "Not now".
     void maybeOfferConsent();
-  }, [direction, toSymbol, resetInput, refetchChain, refreshAggregate, maybeOfferConsent]);
+  }, [
+    direction,
+    toSymbol,
+    fromSymbol,
+    resetInput,
+    refetchChain,
+    refreshAggregate,
+    maybeOfferConsent,
+  ]);
 
   // ---- INBOUND orchestration -----------------------------------------------------
   const runInbound = useCallback(
@@ -603,7 +619,11 @@ export function useCctpEngine({
               /* transient — next interval */
             }
             if (verdict) {
-              await patch({ markFailed: true }).catch(() => {});
+              // srcSwapTxHash is already on the row, so plain markFailed is
+              // (rightly) refused — this op has the SERVER re-verify the
+              // refund against LI.FI before retiring the row (sweep 2026-08-21:
+              // without it the row sat "pending" forever).
+              await patch({ markSourceRefunded: true }).catch(() => {});
               const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
                 fromSymbol as CrosschainSymbol
               ];
@@ -851,8 +871,10 @@ export function useCctpEngine({
     // Display-truth refresh for the modal (copy + in-wait Enable offer);
     // never blocks the run — the signing branch re-checks live.
     void autopilotActive()
-      .then(setAutopilotOn)
-      .catch(() => setAutopilotOn(false));
+      // A just-granted delegation can lag the status read — never downgrade
+      // an optimistic true mid-run (display only; signing re-checks live).
+      .then((v) => setAutopilotOn((prev) => (prev === true ? true : v)))
+      .catch(() => setAutopilotOn((prev) => (prev === true ? true : false)));
     try {
       // #32 chunk 4b: source = external wallet → move the USDC to the Normal
       // wallet FIRST (kit-signed; execute resolves only once the funds are
@@ -1004,9 +1026,28 @@ export function useCctpEngine({
     if (missingStellar)
       return onNeedsSetup
         ? { label: t('Set up your Normal wallet'), action: onNeedsSetup, loading: false }
-        : { label: t('Set up Stellar wallet first'), action: null, loading: false };
+        : {
+            // Sweep 2026-08-21: a BTC/ETH/SOL-first Turnkey user has NO
+            // Stellar slot — this was a dead button. ChainSetupDialog's
+            // stellar branch derives the account on the EXISTING wallet and
+            // adopts it into the empty slot (guarded by shouldAdoptIntoSlot).
+            label: t('Set up Stellar wallet'),
+            action: user ? () => setSetupChain('stellar') : null,
+            loading: false,
+            helper: (
+              <Typography
+                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}
+              >
+                {t('One passkey adds Stellar to your wallet — the swap continues right after.')}
+              </Typography>
+            ),
+          };
     if (needsTrustline)
-      return onNeedsSetup
+      // The companion dialog can only fix the COMPANION — when the probed
+      // address is the connected external wallet (deliver-to-external), fall
+      // through to the generic copy instead of a dialog that loops (sweep
+      // 2026-08-21; the deliver pill itself offers the kit-signed add).
+      return onNeedsSetup && stellarAddress !== wallet.address
         ? { label: t('Add USDC to your Normal wallet'), action: onNeedsSetup, loading: false }
         : {
             label: t('Add USDC Trustline first'),
@@ -1098,6 +1139,8 @@ export function useCctpEngine({
     gasShare,
     gasUsd,
     minUsdShort,
+    stellarAddress,
+    wallet.address,
     enabled,
     network,
     nativeAddress,
@@ -1216,7 +1259,10 @@ export function useCctpEngine({
             userId={user.id}
             userEmail={user.email}
             onSuccess={async () => {
-              if (refetchChain) await refetchChain(setupChain);
+              // stellar → the slot adoption updates the persist store and the
+              // aggregate carries balances; chain wallets refresh their hook.
+              if (setupChain === 'stellar') await refreshAggregate?.().catch(() => {});
+              else if (refetchChain) await refetchChain(setupChain);
               setSetupChain(null);
             }}
           />

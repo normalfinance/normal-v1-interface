@@ -59,6 +59,45 @@ export const PATCH = withAuth(async (req, { user, params }) => {
     if (!transfer!.errorDetail)
       data.errorDetail = 'Refunded — USDC returned to your Stellar account';
   }
+  // Source-leg refund/failure (scenario sweep 2026-08-21): an inbound LI.FI
+  // leg that terminally refunded/failed leaves a row with srcSwapTxHash set
+  // and NO bridge leg — the generic markFailed guard below rightly refuses
+  // it, so the refund-honesty flow could never retire its row and it sat
+  // "pending" forever. This op re-VERIFIES the claim against LI.FI's status
+  // API server-side (never trusts the client's verdict) before retiring.
+  if (
+    body.markSourceRefunded &&
+    transfer!.status === 'CREATED' &&
+    transfer!.srcSwapTxHash &&
+    !transfer!.burnTxHash
+  ) {
+    try {
+      const res = await fetch(
+        `https://li.quest/v1/status?txHash=${encodeURIComponent(transfer!.srcSwapTxHash)}`,
+        {
+          cache: 'no-store',
+          signal: AbortSignal.timeout(15_000),
+          headers: process.env.LIFI_API_KEY ? { 'x-lifi-api-key': process.env.LIFI_API_KEY } : {},
+        }
+      );
+      if (res.ok) {
+        const d = await res.json();
+        const st = d?.status as string | undefined;
+        const sub = String(d?.substatus ?? '').toUpperCase();
+        const terminal =
+          st === 'FAILED' ||
+          st === 'INVALID' ||
+          (st === 'DONE' && (sub === 'REFUNDED' || sub === 'PARTIAL'));
+        if (terminal) {
+          data.status = 'FAILED';
+          if (!transfer!.errorDetail)
+            data.errorDetail = 'Source swap refunded or failed — nothing was bridged';
+        }
+      }
+    } catch {
+      /* verification unavailable — leave the row pending; the client retries */
+    }
+  }
   // Retire a transfer that never left the gate (signature declined, build
   // error): allowed ONLY while the row is CREATED with no tx hash on either
   // side — i.e. provably no money moved. Once any hash exists the recovery

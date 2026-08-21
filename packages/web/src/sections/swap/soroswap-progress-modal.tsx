@@ -82,6 +82,7 @@ export function SoroswapProgressModal({
     submit: 'submit',
     refetch: 'refetch',
     done: 'done',
+    degraded: 'build', // not a real step — the engine consumes it before here
   };
   const activeId = stage ? stageToStep[stage] : null;
   const activeIdx = activeId ? steps.findIndex((s) => s.id === activeId) : -1;

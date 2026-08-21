@@ -45,7 +45,16 @@ interface UseSwapReturn {
 
 /** Execution milestones for the progress modal ('refetch'/'done' are added
  *  by the engine after the hash — the hook's job ends at submission). */
-export type SoroswapStage = 'build' | 'sign-swap' | 'sign-fee' | 'submit' | 'refetch' | 'done';
+export type SoroswapStage =
+  | 'build'
+  | 'sign-swap'
+  | 'sign-fee'
+  | 'submit'
+  | 'refetch'
+  | 'done'
+  // Not a step: fired the moment the embedded build DEGRADES to the fee-pair
+  // (sweep 2026-08-21: the first prompt used to still claim "one signature").
+  | 'degraded';
 
 /**
  * #32 chunk 4f: `targetAddress` retargets the whole swap — build, both
@@ -240,6 +249,7 @@ export function useSwap(
           if (!buildData.success && !buildData.embedded_unavailable)
             throw new Error(buildData.error || 'Failed to build swap transaction');
           const oneSignature = !!buildData.success && !!buildData.xdr && !!buildData.embedded_fee;
+          if (!oneSignature) onStage?.('degraded');
           if (oneSignature) {
             onStage?.('sign-swap');
             const signedSwap = await signOnly(buildData.xdr);

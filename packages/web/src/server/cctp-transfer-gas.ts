@@ -44,6 +44,18 @@ export async function ensureTransferGas(transferId: string): Promise<EnsureTrans
   if (!/^0x[a-fA-F0-9]{40}$/.test(evmTarget))
     return { outcome: 'invalid', reason: 'transfer has no EVM leg' };
 
+  // OWNERSHIP PIN (scenario sweep 2026-08-21): the row's addresses are
+  // client-supplied at creation — without this check, fake rows could milk
+  // the relayer float into an arbitrary 0x address, one dust top-up per row.
+  // Every legitimate flow's EVM leg is the user's own Turnkey ETH address
+  // (the engine sets both directions from addresses.ETH), so pin to it.
+  const owner = await prisma.turnkeyWallet.findFirst({
+    where: { supabaseUid: transfer.userId },
+    select: { ethereumAddress: true },
+  });
+  if (!owner?.ethereumAddress || owner.ethereumAddress.toLowerCase() !== evmTarget.toLowerCase())
+    return { outcome: 'invalid', reason: 'top-up target is not the owner wallet' };
+
   // Re-entrant lock: reject only a genuinely in-flight top-up (a fresh
   // 'pending'); reclaim a stale one (a crashed request >60s ago). The CAS on
   // the PRIOR value lets a retry re-fund while concurrent calls can't double-send.

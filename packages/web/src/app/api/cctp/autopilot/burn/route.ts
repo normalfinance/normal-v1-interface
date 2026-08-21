@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/with-auth';
 import { wireToUsdc } from '@/lib/cctp/decimals';
+import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { autopilotBurnUsdc } from '@/server/autopilot-burn';
 import { autopilotEnabled } from '@/server/autopilot-signer';
 import { ensureTransferGas } from '@/server/cctp-transfer-gas';
@@ -53,6 +54,22 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       wallet.ethereumAddress.toLowerCase() !== tr.srcAddress.toLowerCase()
     ) {
       return NextResponse.json({ success: false, error: 'Wallet mismatch' }, { status: 409 });
+    }
+
+    // CUSTODY PIN (scenario sweep 2026-08-21): the burn's hookData recipient
+    // comes from the row, and the row's destAddress is CLIENT-supplied at
+    // creation with no ownership check. The Turnkey policy cannot see inside
+    // hookData — so the server must refuse recipients the user doesn't own
+    // (their Turnkey Stellar wallet or a linked wallet). Without this, a
+    // stolen SESSION could create a row pointing at an attacker G-address
+    // and have the autopilot burn in-flight USDC to it — the first
+    // session-only money path in the app. Refusal falls back to the
+    // interactive burn, which requires the passkey.
+    if (!(await userOwnsWallet(user.id, tr.destAddress))) {
+      return NextResponse.json(
+        { success: false, error: 'Recipient is not one of your wallets' },
+        { status: 409 }
+      );
     }
 
     // Burn whatever actually landed (mirrors the banner's recover()).

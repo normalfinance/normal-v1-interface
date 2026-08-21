@@ -339,6 +339,15 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     async (chain: TurnkeyChain) => {
       const hook = chain === 'bitcoin' ? btc : chain === 'ethereum' ? eth : sol;
       const symbol = chain === 'bitcoin' ? 'BTC' : chain === 'ethereum' ? 'ETH' : 'SOL';
+      // Addresses FIRST (sweep 2026-08-21): a just-created chain account
+      // lives in the turnkey-wallet SWR, not the balance aggregate — without
+      // this the setup dialogs looped ("Set up X wallet" forever) because
+      // only balances refreshed. Harmless on arrival refetches (cheap read).
+      try {
+        await hook.refetch();
+      } catch {
+        /* transient — balances below still refresh */
+      }
       const before = balancesRef.current[symbol as SwapSymbol]?.balance;
       const fresh = await hook.refetchBalance();
       const after = fresh?.find((a) => a.symbol === symbol)?.balance;
@@ -374,6 +383,12 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   }, [refreshFresh]);
 
   const resetInput = useCallback(() => setAmountIn(''), []);
+  // Dynamic-gas write-back is a TOKEN amount — flip fiat mode off so the
+  // field can't reinterpret 0.0085 ETH as $0.0085 (sweep 2026-08-21).
+  const handleAmountAdjusted = useCallback((v: string) => {
+    setIsFiatMode(false);
+    setAmountIn(v);
+  }, []);
 
   // All engines are always mounted (React hook rules); only the active one is
   // fed the live amount, so the others never fetch a quote.
@@ -405,7 +420,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     enabled: pairType === 'crosschain' && !needsNormalWallet,
     resetInput,
     // Dynamic gas: a spike-time shortfall writes the affordable ETH back in.
-    onAmountAdjusted: setAmountIn,
+    onAmountAdjusted: handleAmountAdjusted,
     refetchChain,
   });
   // #32 chunk 4c: selecting external delivery adds the missing USDC
@@ -437,6 +452,24 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         ? {
             label: connectedWalletLabel(wallet.walletType),
             execute: async (amountUsdc: string) => {
+              // Idempotency (sweep 2026-08-21): a retry after a rejected burn
+              // must not move the USDC a SECOND time — if the companion
+              // already holds enough (the previous attempt's move landed),
+              // skip straight to the swap.
+              try {
+                const pre = await probeCompanion(companionStellar.address, config);
+                if (BigNumber(pre.usdcBalance).gte(amountUsdc)) {
+                  enqueueSnackbar(
+                    t(
+                      'Your Normal wallet already holds enough USDC — continuing without a second move.'
+                    ),
+                    { variant: 'info' }
+                  );
+                  return true;
+                }
+              } catch {
+                /* probe hiccup — proceed with the move as before */
+              }
               const hash = await stellarSend({
                 destination: companionStellar.address,
                 token: tokenBySymbol.USDC,
@@ -465,6 +498,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
       wallet.walletType,
       tokenBySymbol,
       stellarSend,
+      enqueueSnackbar,
+      t,
       config,
     ]
   );
@@ -478,7 +513,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     fromPrice: pairType === 'cctp' ? fromPrice : ZERO,
     enabled: pairType === 'cctp' && !needsNormalWallet,
     resetInput,
-    onAmountAdjusted: setAmountIn,
+    onAmountAdjusted: handleAmountAdjusted,
     refetchChain,
     stellarAddressOverride: cctpStellarAddress,
     refreshAggregate: refreshFresh,

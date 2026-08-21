@@ -2252,3 +2252,45 @@ onSuccess refetches the owning chain hook and the swap continues.
 RULE (3rd occurrence): a capability added to one engine is a
 requirement on EVERY engine — grep the engines before closing. 248
 tests, build clean.
+
+**FULL SCENARIO SWEEP (2026-08-21, Niko: "think of all possible
+scenarios and double check them all"):** systematic matrix (wallet
+states × pair types × directions × missing-asset states × failure
+combos), traced by 3 parallel code scouts + a security pass. 12
+confirmed gaps, all fixed same day, ranked:
+- SECURITY: the autopilot burn made stolen-SESSION fund redirection
+  possible (row addresses are client-supplied; policy can't see
+  hookData) → burn route now requires userOwnsWallet(destAddress);
+  gas top-ups pinned to the owner's turnkey ETH address (relayer-drain
+  via fake rows closed).
+- DEAD-ENDS (BTC/ETH/SOL-first Turnkey user, NO stellar slot — the
+  mirror of the external-user gap): cctp "Set up Stellar wallet first"
+  action:null → now opens ChainSetupDialog('stellar') which adopts
+  into the empty slot; soroswap DEFAULT VIEW showed "Activate account"
+  with no account → same stellar setup gate; drawer Send was a SILENT
+  NO-OP (ModalProvider gated the modal on wallet.address) → gate
+  removed.
+- LOOPS/LIES: ChainSetupDialog onSuccess refreshed only BALANCES —
+  the new address never reached the engines, so setup looped →
+  refetchChain now refreshes addresses first; refund-verdict rows
+  could never retire (markFailed rightly refuses once srcSwapTxHash
+  exists) → new server-VERIFIED markSourceRefunded PATCH op (re-checks
+  LI.FI status server-side); deliver-to-external trustline gap routed
+  to the companion dialog which can't fix it → generic copy instead.
+- MONEY-UX: retry after move-succeeded-burn-rejected MOVED THE USDC
+  A SECOND TIME → fundFromExternal now probes the companion first and
+  skips a covered move; shortfall write-back in fiat mode wrote ETH as
+  USD → flips to token mode; inbound Done now also refetches the
+  SOURCE chain; degraded soroswap runs tell the truth from the FIRST
+  prompt ('degraded' stage event); optimistic autopilot display no
+  longer downgraded by a lagging status read.
+DEFERRED (registered, not fixed): /assets/XLM/USDC stellar-setup loop
+via the wizard (touches login-matrix code — post-merge); cctp source
+legs still outside the pending-outflow ledger (documented #62
+exclusion; BTC multi-tab MAX edge); no quote expiry across a long
+consent ceremony (once-ever event; row closes honestly on revert).
+RULES: every server route that moves or sends value must pin its
+addresses to DB-owned wallets — client-supplied rows are untrusted;
+"one engine got it" is a bug in the other engine; a setup dialog's
+success must refresh the EXACT store its gate reads. 248 tests, build
+clean.
