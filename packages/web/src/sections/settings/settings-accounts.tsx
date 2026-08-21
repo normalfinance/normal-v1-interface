@@ -6,7 +6,8 @@ import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
-import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
+import { getTurnkeyWalletInfo, type TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 
 import Box from '@mui/material/Box';
@@ -47,6 +48,9 @@ export function SettingsAccounts() {
   // labeled and cannot be unlinked (it holds the user's funds; the server
   // refuses too, this just keeps the button honest).
   const [turnkeyStellar, setTurnkeyStellar] = useState<string | null>(null);
+  // Niko 2026-08-21: the Normal wallet card lists EVERY chain address it
+  // holds, labeled by chain — not just the Stellar one.
+  const [turnkeyInfo, setTurnkeyInfo] = useState<TurnkeyWalletInfo | null>(null);
 
   const loadWallets = async () => {
     try {
@@ -63,7 +67,10 @@ export function SettingsAccounts() {
   useEffect(() => {
     loadWallets();
     getTurnkeyWalletInfo()
-      .then((info) => setTurnkeyStellar(info?.stellarAddress ?? null))
+      .then((info) => {
+        setTurnkeyStellar(info?.stellarAddress ?? null);
+        setTurnkeyInfo(info);
+      })
       .catch(() => {});
     // Mount-only load; loadWallets is recreated per render — listing it would refire
     // the fetch on every render. eslint-disable documents the intent.
@@ -400,32 +407,70 @@ export function SettingsAccounts() {
 
           {/* Details */}
           <Stack spacing={0} sx={{ mb: '16px' }}>
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                py: '10px',
-                borderBottom: '1px solid rgba(10,10,15,0.06)',
-              }}
-            >
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-                {t('Account ID')}
-              </Typography>
-              <Stack direction="row" spacing={0.5} alignItems="center">
-                <Typography
+            {wallet.walletAddress === turnkeyStellar && turnkeyInfo ? (
+              // The Normal wallet holds one address per chain — list them all,
+              // each labeled by its chain (registry-driven: a new chain shows
+              // up here automatically).
+              CHAIN_IDS.filter((id) => !!turnkeyInfo[CHAINS[id].addressField]).map((id) => (
+                <Box
+                  key={id}
                   sx={{
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    color: '#0A0A0F',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    py: '10px',
+                    borderBottom: '1px solid rgba(10,10,15,0.06)',
                   }}
                 >
-                  {format.fTruncate(wallet.walletAddress, 20)}
+                  <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                    {t('{{chain}} address', { chain: CHAINS[id].name })}
+                  </Typography>
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Typography
+                      sx={{
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: '#0A0A0F',
+                        fontFamily: '"Geist Mono", "Courier New", monospace',
+                      }}
+                    >
+                      {format.fTruncate(turnkeyInfo[CHAINS[id].addressField]!, 20)}
+                    </Typography>
+                    <CopyIconButton
+                      value={turnkeyInfo[CHAINS[id].addressField]!}
+                      alert={t('Address copied')}
+                    />
+                  </Stack>
+                </Box>
+              ))
+            ) : (
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: '10px',
+                  borderBottom: '1px solid rgba(10,10,15,0.06)',
+                }}
+              >
+                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                  {t('Account ID')}
                 </Typography>
-                <CopyIconButton value={wallet.walletAddress} alert={t('ID copied')} />
-              </Stack>
-            </Box>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <Typography
+                    sx={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: '#0A0A0F',
+                      fontFamily: '"Geist Mono", "Courier New", monospace',
+                    }}
+                  >
+                    {format.fTruncate(wallet.walletAddress, 20)}
+                  </Typography>
+                  <CopyIconButton value={wallet.walletAddress} alert={t('ID copied')} />
+                </Stack>
+              </Box>
+            )}
 
             {wallet.lastUsedAt && (
               <Box

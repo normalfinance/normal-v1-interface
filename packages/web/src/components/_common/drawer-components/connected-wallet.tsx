@@ -19,6 +19,7 @@ import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 
 import { Iconify } from '@/components/template/iconify';
 
@@ -89,6 +90,12 @@ export default function ConnectedWallet({
       label: t('Sell'),
       icon: <Iconify icon="ic:round-remove" width={16} />,
       onClick: () => startAction('sell'),
+    },
+    {
+      // Same MUI glyph as the navbar's Swap entry (Niko 2026-08-21).
+      label: t('Swap'),
+      icon: <SwapVertOutlined sx={{ fontSize: 16 }} />,
+      onClick: () => router.push(paths.swap),
     },
     {
       label: t('Send'),

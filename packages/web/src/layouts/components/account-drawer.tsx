@@ -358,12 +358,18 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const chainRows = CHAIN_IDS.flatMap((id) => {
     const chain = CHAINS[id];
     // Stellar shows the *connected* wallet, which may be an imported one
-    // rather than the Turnkey address (see finding #40).
+    // rather than the Turnkey address (see finding #40). When that wallet is
+    // EXTERNAL, name it by its real wallet (Lobstr, Freighter…), not the
+    // chain (Niko 2026-08-21).
     const addr = id === 'stellar' ? connectedAddress : getChainAddress(turnkeyAddresses, id);
     if (!addr) return [];
-    return [
-      { id: id as string, name: chain.name as string, color: chain.brandColor as string, addr },
-    ];
+    const slotIsExternal =
+      persist.wallet.walletType != null && persist.wallet.walletType !== 'normal-wallet';
+    const name =
+      id === 'stellar' && slotIsExternal
+        ? connectedWalletLabel(persist.wallet.walletType)
+        : (chain.name as string);
+    return [{ id: id as string, name, color: chain.brandColor as string, addr }];
   });
   // #32 chunk 2: with an external wallet connected, the companion Normal
   // wallet's Stellar address gets its own labeled row — previously invisible
@@ -372,7 +378,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   if (companionStellarAddr && connectedAddress && companionStellarAddr !== connectedAddress) {
     chainRows.push({
       id: 'stellar-normal',
-      name: 'Normal',
+      name: 'Normal wallet',
       color: CHAINS.stellar.brandColor as string,
       addr: companionStellarAddr,
     });

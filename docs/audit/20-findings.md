@@ -2294,3 +2294,22 @@ addresses to DB-owned wallets — client-supplied rows are untrusted;
 "one engine got it" is a bug in the other engine; a setup dialog's
 success must refresh the EXACT store its gate reads. 248 tests, build
 clean.
+
+**UI polish batch — one asset one row, Swap everywhere, real wallet
+names (2026-08-21, Niko):** (1) hero portfolio card: hybrid accounts
+now show ONE row per asset — the two Stellar wallets' XLM/USDC are
+combined into a total with a per-wallet subtitle ("Normal wallet 23.64
+· Lobstr 19.78" — real wallet names, never "External"); chain assets
+name their wallet in the subtitle; single-wallet accounts unchanged.
+(2) Swap button (the navbar's exact SwapVertOutlined glyph, routes to
+/swap) added to all three action groups: hero card, account drawer,
+/portfolio Holdings (grid 4→5). (3) Drawer address rows: the slot
+Stellar row is named by the actual wallet (Lobstr/Freighter/…) when
+external; the companion row says "Normal wallet", not "Normal".
+(4) Wallet names initiate AT CONNECT: ensureWalletLinked now passes
+connectedWalletLabel(walletType) on fresh links AND backfills unnamed
+existing rows on reconnect — but NEVER overwrites a name the user
+typed in Settings ("Unnamed Account" rows self-heal on next load).
+(5) Settings→Accounts Normal wallet card lists EVERY chain address it
+holds, labeled by chain (registry-driven — a new chain appears
+automatically). 248 tests, build clean.

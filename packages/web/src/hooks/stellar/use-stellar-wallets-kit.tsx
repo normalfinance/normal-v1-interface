@@ -1,10 +1,16 @@
 import { logger } from '@normalfinance/utils';
 import { useRef, useEffect, useCallback } from 'react';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
-import { linkWallet, isWalletLinked, updateLastUsed } from '@/services/linked-wallets';
 import { WALLET_CONNECT_ID } from '@creit.tech/stellar-wallets-kit/modules/walletconnect.module';
+import {
+  linkWallet,
+  updateLastUsed,
+  getLinkedWallets,
+  updateWalletName,
+} from '@/services/linked-wallets';
 
 // Wallets that use WalletConnect sessions — sessions do not survive page reloads.
 // Signing after a page reload will fail until the user reconnects.
@@ -27,7 +33,10 @@ const linkEnsured = new Set<string>();
  *
  * Never throws: a failure here must not break a working wallet connection.
  */
-async function ensureWalletLinked(address: string | null | undefined): Promise<void> {
+async function ensureWalletLinked(
+  address: string | null | undefined,
+  walletName?: string
+): Promise<void> {
   if (!address || linkEnsured.has(address)) return;
   linkEnsured.add(address);
 
@@ -36,11 +45,17 @@ async function ensureWalletLinked(address: string | null | undefined): Promise<v
     // quota even for an address that is already linked (that route's
     // early-return is commented out), so linking unconditionally would burn
     // the allowance a genuine new wallet needs.
-    if (await isWalletLinked(address)) {
+    const wallets = await getLinkedWallets();
+    const existing = wallets.find((w) => w.walletAddress === address);
+    if (existing) {
       updateLastUsed(address).catch(() => {});
+      // Backfill the display name ONLY when the row has none — a custom name
+      // the user typed in Settings is never overwritten by a reconnect
+      // (Niko 2026-08-21: rows showed "Unnamed Account" for known wallets).
+      if (walletName && !existing.walletName) updateWalletName(address, walletName).catch(() => {});
       return;
     }
-    await linkWallet(address);
+    await linkWallet(address, walletName);
   } catch (error) {
     // Clear the guard so a later mount can retry — otherwise one failed
     // lookup (expired session, rate limit) would strand the user unlinked for
@@ -136,7 +151,7 @@ export const useStellarWalletsKit = () => {
             // `linked_wallets` row and would stay unable to log transactions
             // until they happened to reconnect. Guarded to once per session,
             // and it never blocks the restore.
-            void ensureWalletLinked(storedAddress);
+            void ensureWalletLinked(storedAddress, connectedWalletLabel(storedWalletType));
           } else {
             await new Promise((resolve) => setTimeout(resolve, 500));
             const result = await walletKitStore.kit.getAddress();
@@ -144,7 +159,7 @@ export const useStellarWalletsKit = () => {
               walletKitStore.setPublicKey(result.address);
               walletKitStore.setConnected(true);
               await persistStore.connectWallet(result.address, storedWalletType);
-              void ensureWalletLinked(result.address);
+              void ensureWalletLinked(result.address, connectedWalletLabel(storedWalletType));
             }
           }
         } catch (restoreError) {
@@ -191,7 +206,10 @@ export const useStellarWalletsKit = () => {
     // Read the address from getState(): the zustand value captured in this
     // closure is from the render before the connect, so it is still stale.
     // Null means the user closed the picker without choosing.
-    await ensureWalletLinked(useStellarWalletKitStore.getState().publicKey);
+    await ensureWalletLinked(
+      useStellarWalletKitStore.getState().publicKey,
+      connectedWalletLabel(persistStore.wallet.walletType)
+    );
   }, [walletKitStore, persistStore]);
 
   const signTransaction = useCallback(
