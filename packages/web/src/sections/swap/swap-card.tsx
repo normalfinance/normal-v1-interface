@@ -365,6 +365,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     // #32 chunk 4f: Normal-wallet source — build + sign from the companion.
     stellarAddressOverride: pairType === 'stellar' ? stellarSwapAddress : null,
     onNeedsSetup: isExternalWallet ? () => setSetupOpen(true) : undefined,
+    // Progress modal's Done waits on this (#62/#66 — same gate as cctp).
+    refreshAggregate: refreshFresh,
   });
   const lifi = useLifiEngine({
     fromSymbol: (pairType === 'crosschain' ? fromSymbol : 'ETH') as CrosschainSymbol,

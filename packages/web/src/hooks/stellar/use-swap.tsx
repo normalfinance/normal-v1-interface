@@ -43,6 +43,10 @@ interface UseSwapReturn {
 
 // ----------------------------------------------------------------------
 
+/** Execution milestones for the progress modal ('refetch'/'done' are added
+ *  by the engine after the hash — the hook's job ends at submission). */
+export type SoroswapStage = 'build' | 'sign-swap' | 'sign-fee' | 'submit' | 'refetch' | 'done';
+
 /**
  * #32 chunk 4f: `targetAddress` retargets the whole swap — build, both
  * signatures, fee caller — to that wallet (the hybrid case: external wallet in
@@ -50,8 +54,16 @@ interface UseSwapReturn {
  * `useDefindexSavings(targetAddress)`: the override is EXPLICIT, never a
  * silent fallback, and the universal signer routes by the tx's source account
  * (Turnkey-managed target → passkey prompt).
+ *
+ * `opts.onStage` (the Stellar-swap progress modal): fired at each execution
+ * milestone. When provided, the success SNACKBAR is suppressed — the modal
+ * owns the ending, including the explorer link. Error snackbars remain.
  */
-export function useSwap(targetAddress?: string): UseSwapReturn {
+export function useSwap(
+  targetAddress?: string,
+  opts?: { onStage?: (stage: SoroswapStage) => void }
+): UseSwapReturn {
+  const onStage = opts?.onStage;
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
@@ -210,6 +222,7 @@ export function useSwap(targetAddress?: string): UseSwapReturn {
         // server signals embedded_unavailable (upstream fee-build defect,
         // doc 76 §7) — or returns any shape without the fee — we fall
         // through to the fee-pair path below: two signatures, fee intact.
+        onStage?.('build');
         if (swapQuote.embedded) {
           const buildRes = await fetch('/api/swap/quote', {
             method: 'POST',
@@ -228,7 +241,9 @@ export function useSwap(targetAddress?: string): UseSwapReturn {
             throw new Error(buildData.error || 'Failed to build swap transaction');
           const oneSignature = !!buildData.success && !!buildData.xdr && !!buildData.embedded_fee;
           if (oneSignature) {
+            onStage?.('sign-swap');
             const signedSwap = await signOnly(buildData.xdr);
+            onStage?.('submit');
             const submitRes = await fetch('/api/swap/submit-single', {
               method: 'POST',
               headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
@@ -248,25 +263,27 @@ export function useSwap(targetAddress?: string): UseSwapReturn {
             const submitData = await submitRes.json();
             if (!submitData.success || !submitData.hash)
               throw new Error(submitData.error || 'Swap submission failed');
-            const url1 = createStellarExpertUrl('tx', submitData.hash);
-            enqueueSnackbar(
-              <Box component="span">
-                {t('Swap successful!')}{' '}
-                <Button
-                  size="small"
-                  onClick={() => window.open(url1, '_blank', 'noopener,noreferrer')}
-                  sx={{
-                    textTransform: 'none',
-                    minWidth: 'auto',
-                    p: 0,
-                    textDecoration: 'underline',
-                  }}
-                >
-                  {t('View More')}
-                </Button>
-              </Box>,
-              { variant: 'success', persist: false, autoHideDuration: 7500 }
-            );
+            if (!onStage) {
+              const url1 = createStellarExpertUrl('tx', submitData.hash);
+              enqueueSnackbar(
+                <Box component="span">
+                  {t('Swap successful!')}{' '}
+                  <Button
+                    size="small"
+                    onClick={() => window.open(url1, '_blank', 'noopener,noreferrer')}
+                    sx={{
+                      textTransform: 'none',
+                      minWidth: 'auto',
+                      p: 0,
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    {t('View More')}
+                  </Button>
+                </Box>,
+                { variant: 'success', persist: false, autoHideDuration: 7500 }
+              );
+            }
             setQuote(null);
             return submitData.hash;
           }
@@ -345,12 +362,15 @@ export function useSwap(targetAddress?: string): UseSwapReturn {
 
         // 3. Collect BOTH signatures before anything is submitted — rejecting
         // either prompt aborts the whole swap with nothing charged.
+        onStage?.('sign-swap');
         const signedSwapXdr = await signOnly(quoteData.xdr);
+        onStage?.('sign-fee');
         const signedFeeXdr = await signOnly(feeData.xdr);
 
         // 4. Server submits the pair: it records the swap BEFORE broadcasting
         // (#27 — no client-side logging anymore), then swap first, fee
         // escrowed + collected after it (cron sweeper as backstop).
+        onStage?.('submit');
         const pair = await submitFeePair({
           signedServiceXdr: signedSwapXdr,
           signedFeeXdr,
@@ -367,34 +387,35 @@ export function useSwap(targetAddress?: string): UseSwapReturn {
           config,
         });
 
-        const stellarExpertUrl = createStellarExpertUrl('tx', pair.serviceHash);
-
-        enqueueSnackbar(
-          <Box component="span">
-            {t('Swap successful!')}{' '}
-            <Button
-              size="small"
-              onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
-              sx={{
-                textTransform: 'none',
-                minWidth: 'auto',
-                p: 0,
-                textDecoration: 'underline',
-                '&:hover': {
+        if (!onStage) {
+          const stellarExpertUrl = createStellarExpertUrl('tx', pair.serviceHash);
+          enqueueSnackbar(
+            <Box component="span">
+              {t('Swap successful!')}{' '}
+              <Button
+                size="small"
+                onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
+                sx={{
+                  textTransform: 'none',
+                  minWidth: 'auto',
+                  p: 0,
                   textDecoration: 'underline',
-                  backgroundColor: 'transparent',
-                },
-              }}
-            >
-              {t('View More')}
-            </Button>
-          </Box>,
-          {
-            variant: 'success',
-            persist: false,
-            autoHideDuration: 7500,
-          }
-        );
+                  '&:hover': {
+                    textDecoration: 'underline',
+                    backgroundColor: 'transparent',
+                  },
+                }}
+              >
+                {t('View More')}
+              </Button>
+            </Box>,
+            {
+              variant: 'success',
+              persist: false,
+              autoHideDuration: 7500,
+            }
+          );
+        }
         setQuote(null);
         return pair.serviceHash;
       } catch (err: any) {
@@ -419,6 +440,7 @@ export function useSwap(targetAddress?: string): UseSwapReturn {
       signOrReconnect,
       overrideActive,
       targetAddress,
+      onStage,
       enqueueSnackbar,
       t,
     ]

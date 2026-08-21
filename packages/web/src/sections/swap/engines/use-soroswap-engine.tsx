@@ -5,16 +5,18 @@ import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { useDebounce } from '@/hooks/use-debounce';
-import { useSwap } from '@/hooks/stellar/use-swap';
 import { usePersistStore } from '@normalfinance/state';
-import React, { useMemo, useEffect, useCallback } from 'react';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import { useSwap, type SoroswapStage } from '@/hooks/stellar/use-swap';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { useSnackbar } from '@/components/template/snackbar';
+
+import { SoroswapProgressModal } from '../soroswap-progress-modal';
 
 import type { StellarSymbol, SwapEngineResult } from './types';
 
@@ -42,6 +44,10 @@ export interface SoroswapEngineProps {
    *  guided setup dialog — the kit-signed inline fixes below only work for
    *  the CONNECTED wallet, which can sign its own changeTrust. */
   onNeedsSetup?: () => void;
+  /** Awaitable, cache-bypassing refresh of the portfolio aggregate — 'Done'
+   *  in the progress modal waits on it (#62/#66: Done must mean the wallet
+   *  already shows the result), capped so a hiccup can't stick the modal. */
+  refreshAggregate?: () => Promise<unknown>;
 }
 
 export function useSoroswapEngine({
@@ -54,6 +60,7 @@ export function useSoroswapEngine({
   resetInput,
   stellarAddressOverride,
   onNeedsSetup,
+  refreshAggregate,
 }: SoroswapEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
@@ -65,10 +72,16 @@ export function useSoroswapEngine({
     USDC: config.USDC_ADDRESS,
   };
 
+  // Progress modal (Niko 2026-08-21: Stellar swaps were the last flow with
+  // no status popup and no refetch-gated Done). The hook drives
+  // build/sign/submit; the engine adds 'refetch' + 'done' after the hash.
+  const [swapStage, setSwapStage] = useState<SoroswapStage | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [doneHash, setDoneHash] = useState<string | null>(null);
+
   const overrideActive = !!stellarAddressOverride;
-  const { quote, quoteLoading, loading, error, getQuote, executeSwap, clearQuote } = useSwap(
-    stellarAddressOverride ?? undefined
-  );
+  const { quote, quoteLoading, loading, error, setError, getQuote, executeSwap, clearQuote } =
+    useSwap(stellarAddressOverride ?? undefined, { onStage: setSwapStage });
   // Preflights probe the wallet the swap will actually run from.
   const {
     isLoading: isCheckingAccount,
@@ -109,20 +122,36 @@ export function useSoroswapEngine({
   // again here would double-count it.
   const getMaxToken = async (): Promise<BigNumber> => fromBalance;
 
+  // Embedded flag captured at swap time — executeSwap clears the quote on
+  // success, but the modal's signature copy must survive to Done.
+  const [wasEmbedded, setWasEmbedded] = useState(false);
+
   const handleSwap = useCallback(async () => {
     if (!quote) return;
-    // executeSwap surfaces its own success / error toast and returns '' on
-    // failure, so only refresh when a hash actually came back.
+    setError(null);
+    setDoneHash(null);
+    setWasEmbedded(!!quote.embedded);
+    setSwapStage('build');
+    setModalOpen(true);
+    // '' on failure — the hook set `error`, which the modal shows with Try
+    // again (its snackbar also fired; the modal is the primary surface).
     const hash = await executeSwap(quote, { tokenInSymbol: fromSymbol, tokenOutSymbol: toSymbol });
     if (!hash) return;
-    resetInput();
-    // Stellar balances live in the persist store and DON'T auto-refresh on the
-    // activity event, so pull them explicitly. A second pass a few seconds later
-    // catches Horizon read-replica lag right after the ledger closes.
-    // Balances refresh via the aggregate on the activity event below.
-    // Refresh the activity feed so the swap appears without a manual reload.
+    // Feed row appears immediately; BALANCES are gated below — 'Done' only
+    // shows after the awaited aggregate refresh (#62/#66), capped at 15s so
+    // a refresh hiccup can never make a successful swap look stuck.
     window.dispatchEvent(new Event('nf:activity-updated'));
-  }, [quote, executeSwap, fromSymbol, toSymbol, resetInput]);
+    setSwapStage('refetch');
+    await Promise.race([
+      refreshAggregate?.().catch(() => {}),
+      new Promise((r) => {
+        setTimeout(r, 15_000);
+      }),
+    ]);
+    setDoneHash(hash);
+    setSwapStage('done');
+    resetInput();
+  }, [quote, executeSwap, fromSymbol, toSymbol, resetInput, refreshAggregate, setError]);
 
   const handleAddTrustline = useCallback(async () => {
     const usdcIssuer = config.USDC_ISSUER;
@@ -242,7 +271,32 @@ export function useSoroswapEngine({
     details,
     footer: null,
     button,
-    modals: null,
+    modals: (
+      <SoroswapProgressModal
+        open={modalOpen}
+        stage={swapStage}
+        error={modalOpen ? error : null}
+        fromSymbol={fromSymbol}
+        toSymbol={toSymbol}
+        embedded={wasEmbedded}
+        txHash={doneHash}
+        onTryAgain={
+          error
+            ? () => {
+                // Back to a clean, retryable card — quote + amount stay filled.
+                setModalOpen(false);
+                setSwapStage(null);
+                setError(null);
+              }
+            : undefined
+        }
+        onClose={() => {
+          setModalOpen(false);
+          setSwapStage(null);
+          if (error) setError(null);
+        }}
+      />
+    ),
     getMaxToken,
   };
 }

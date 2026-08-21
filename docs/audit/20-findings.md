@@ -2155,3 +2155,19 @@ price×balance descending (NaN-safe: missing price/balance sorts as $0;
 stable sort keeps the curated order for $0 ties); "All assets" (all
 zero balance) keeps the curated order, where a value sort would be
 meaningless. 242 tests, build clean.
+
+**Soroswap progress modal + refetch-gated Done (2026-08-21):** Stellar
+swaps were the last flow with no status popup and a fire-and-forget
+ending (Niko: "we have to wait few seconds for assets to appear").
+Now: useSwap accepts opts.onStage and fires build/sign-swap/sign-fee/
+submit milestones (success snackbar suppressed when a modal owns the
+ending; error snackbars stay); new SoroswapProgressModal (same visual
+language as the cctp modal) with honest signature copy — "One
+signature — fee included" on embedded runs, "Two signatures: the swap,
+then the Normal fee" on fee-pair runs, and the sub flips to "Now the
+Normal fee" at the second prompt; the engine adds 'refetch' → 'done':
+Done shows ONLY after the awaited aggregate refresh (#62/#66 rule,
+15s cap so a refresh hiccup can't stick a successful swap), with a
+stellar.expert link at Done and error + Try again in-modal. swap-card
+passes refreshFresh. Every swap flow in the app now narrates itself
+and gates Done on visible balances. 242 tests, build clean.
