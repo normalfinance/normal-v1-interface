@@ -2236,3 +2236,19 @@ some browsers — the design reason, not just caution). cctp inbound
 closes its row failed-before-broadcast before offering the dialog.
 Balance-read failure skips the check (the node still enforces; this
 layer is UX, not custody). 248 tests, build clean.
+
+**Fresh-account cctp trace — dead chain-setup gates fixed (2026-08-21):**
+Niko's staging plan (new account, Lobstr only, straight to USDC→SOL)
+traced through the code BEFORE he ran it. The flow holds until the last
+mile: the guided dialog creates ONLY the Stellar companion (lazy
+provisioning), and the cctp engine's gates for the missing ETH (Base
+pivot) and SOL (delivery) addresses were DEAD buttons — "Set up SOL
+wallet first" with action:null, and the ETH one pointing users at the
+Receive menu by prose. The lifi engine solved this in the multichain
+work (ChainSetupDialog: one passkey creates the chain account in-place,
+invalidateTurnkeyWalletInfo propagates the address); the cctp engine
+never got it. Now wired identically: both gates open ChainSetupDialog,
+onSuccess refetches the owning chain hook and the swap continues.
+RULE (3rd occurrence): a capability added to one engine is a
+requirement on EVERY engine — grep the engines before closing. 248
+tests, build clean.

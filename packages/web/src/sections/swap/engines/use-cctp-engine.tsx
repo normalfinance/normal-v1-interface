@@ -31,6 +31,7 @@ import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
 import { setActiveCctpTransfer } from '@/lib/cctp/active-transfer';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
@@ -41,6 +42,7 @@ import Typography from '@mui/material/Typography';
 
 import { useSnackbar } from '@/components/template/snackbar';
 import GasShortfallDialog from '@/components/_common/gas-shortfall-dialog';
+import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import AutopilotConsentDialog from '@/components/_common/autopilot-consent-dialog';
 
 import { groupOf } from './types';
@@ -165,7 +167,15 @@ export function useCctpEngine({
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
+  const { user } = useSupabaseAuth();
   const network = useNetworkStore((s) => s.network);
+  // Fresh-account path (Niko scenario trace 2026-08-21): after the guided
+  // STELLAR setup, the ETH (Base pivot) and BTC/SOL (source/delivery)
+  // addresses may still not exist — the gates below used to be DEAD buttons
+  // ("Set up SOL wallet first", action: null). Same fix as the lifi engine:
+  // one passkey in ChainSetupDialog creates the missing chain account
+  // in-place, then the original swap resumes.
+  const [setupChain, setSetupChain] = useState<'bitcoin' | 'ethereum' | 'solana' | null>(null);
 
   // 'in': crosschain → stellar; 'out': USDC(stellar) → crosschain.
   const direction: 'in' | 'out' = groupOf(fromSymbol) === 'stellar' ? 'out' : 'in';
@@ -959,23 +969,31 @@ export function useCctpEngine({
           </Typography>
         ),
       };
-    if (!nativeAddress)
+    if (!nativeAddress) {
+      const sym = (direction === 'in' ? fromSymbol : toSymbol) as CrosschainSymbol;
+      const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[sym];
       return {
-        label: t('Set up {{sym}} wallet first', {
-          sym: direction === 'in' ? fromSymbol : toSymbol,
-        }),
-        action: null,
+        label: t('Set up {{sym}} wallet', { sym }),
+        action: user ? () => setSetupChain(chain) : null,
         loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t('One passkey creates your {{sym}} address — the swap continues right after.', {
+              sym,
+            })}
+          </Typography>
+        ),
       };
+    }
     if (!evmAddress)
       return {
-        label: t('Set up Ethereum wallet first'),
-        action: null,
+        label: t('Set up Ethereum wallet'),
+        action: user ? () => setSetupChain('ethereum') : null,
         loading: false,
         helper: (
           <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
             {t(
-              'The route travels via your own Base address — create your Ethereum wallet from the Receive menu once.'
+              'The route travels via your own Base address — one passkey creates it, then the swap continues.'
             )}
           </Typography>
         ),
@@ -1087,6 +1105,7 @@ export function useCctpEngine({
     missingStellar,
     needsTrustline,
     lowFeeXlm,
+    user,
     onNeedsSetup,
     fundFromExternal,
     amount,
@@ -1189,6 +1208,19 @@ export function useCctpEngine({
     modals: (
       <>
         <AutopilotConsentDialog open={consentOpen} onChoose={handleConsentChoice} />
+        {user && setupChain && (
+          <ChainSetupDialog
+            open
+            onClose={() => setSetupChain(null)}
+            chain={setupChain}
+            userId={user.id}
+            userEmail={user.email}
+            onSuccess={async () => {
+              if (refetchChain) await refetchChain(setupChain);
+              setSetupChain(null);
+            }}
+          />
+        )}
         {shortfall && (
           <GasShortfallDialog
             open
