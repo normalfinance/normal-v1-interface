@@ -2171,3 +2171,17 @@ Done shows ONLY after the awaited aggregate refresh (#62/#66 rule,
 stellar.expert link at Done and error + Try again in-modal. swap-card
 passes refreshFresh. Every swap flow in the app now narrates itself
 and gates Done on visible balances. 242 tests, build clean.
+
+**Soroswap Done-gate verify-and-retry (2026-08-21, round 2):** Niko
+retested: modal said Done, drawer still needed 2-3s. Root cause: the
+gate awaited ONE aggregate refresh — which can race Horizon's read
+replicas right after the ledger closes, "freshly" caching the PRE-swap
+balances (the exact #66 arrival race, previously fixed for chains in
+swap-card's refetchChain but not applied here). Fix mirrors it: the
+swap-card's refetchStellarAfterSwap snapshots the to-asset's account
+TOTAL (slot + companion share the symbol), refreshes, and if the total
+did not move waits 5.6s (past the server's 5s refresh floor) and pulls
+once more; the engine's 15s cap still bounds the whole gate. RULE
+(now 10th instance): an awaited refresh is only half the #62 gate —
+Done requires the refresh to have VISIBLY CHANGED the number, or one
+bounded retry past the cache floor. 242 tests, build clean.

@@ -350,6 +350,30 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     },
     [btc, eth, sol]
   );
+  // Same verify-and-retry for STELLAR swaps (Niko live 2026-08-21: the
+  // modal said Done but the drawer needed 2-3s — the gate's single refresh
+  // had raced Horizon's read replicas, caching a pre-swap answer). The
+  // to-asset's account TOTAL (slot + companion rows share the symbol) must
+  // move before Done counts; unchanged → wait past the server's 5s refresh
+  // floor and pull once more. Refs keep the callback stable and un-stale.
+  const aggAssetsRef = useRef(aggAssets);
+  aggAssetsRef.current = aggAssets;
+  const stellarToSymbolRef = useRef(toSymbol);
+  stellarToSymbolRef.current = toSymbol;
+  const refetchStellarAfterSwap = useCallback(async () => {
+    const sym = stellarToSymbolRef.current;
+    const total = (assets: { symbol: string; balance: string | null }[] | null | undefined) =>
+      (assets ?? [])
+        .filter((a) => a.symbol === sym)
+        .reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+    const before = total(aggAssetsRef.current);
+    const fresh = await refreshFresh();
+    if (fresh && total(fresh) === before) {
+      await new Promise((resolve) => setTimeout(resolve, 5_600)); // past the 5s server floor
+      await refreshFresh();
+    }
+  }, [refreshFresh]);
+
   const resetInput = useCallback(() => setAmountIn(''), []);
 
   // All engines are always mounted (React hook rules); only the active one is
@@ -365,8 +389,9 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     // #32 chunk 4f: Normal-wallet source — build + sign from the companion.
     stellarAddressOverride: pairType === 'stellar' ? stellarSwapAddress : null,
     onNeedsSetup: isExternalWallet ? () => setSetupOpen(true) : undefined,
-    // Progress modal's Done waits on this (#62/#66 — same gate as cctp).
-    refreshAggregate: refreshFresh,
+    // Progress modal's Done waits on this (#62/#66 — same gate as cctp),
+    // verify-and-retry included: Done only after the to-asset visibly moved.
+    refreshAggregate: refetchStellarAfterSwap,
   });
   const lifi = useLifiEngine({
     fromSymbol: (pairType === 'crosschain' ? fromSymbol : 'ETH') as CrosschainSymbol,
