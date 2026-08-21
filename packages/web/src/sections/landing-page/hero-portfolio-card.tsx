@@ -549,9 +549,11 @@ export function HeroPortfolioCard() {
         )}
       </Stack>
 
-      {/* actions */}
-      <Stack direction="row" spacing={1} sx={{ mt: 2.5 }}>
-        {ACTIONS.map((a) => (
+      {/* actions — two fixed rows (Niko: five in one row is too much here):
+          Buy/Sell/Swap on top, Send/Receive wider below. 6-column grid,
+          top buttons span 2, bottom span 3. */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 1, mt: 2.5 }}>
+        {ACTIONS.map((a, idx) => (
           <Box
             key={a.key}
             role="button"
@@ -565,7 +567,7 @@ export function HeroPortfolioCard() {
               else startAction(a.key as AssetActionKey);
             }}
             sx={{
-              flex: 1,
+              gridColumn: idx < 3 ? 'span 2' : 'span 3',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -609,7 +611,7 @@ export function HeroPortfolioCard() {
             </Typography>
           </Box>
         ))}
-      </Stack>
+      </Box>
     </Box>
   );
 }

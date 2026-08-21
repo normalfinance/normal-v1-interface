@@ -94,7 +94,15 @@ export function HoldingsCard({ holdingsData, sections, totalBalance, loading }: 
         </Box>
 
         {/* Action buttons */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+        {/* auto-fit: one row on desktop, wraps by CONTAINER width as the
+            card narrows — no viewport breakpoints to go stale. */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(88px, 1fr))',
+            gap: '6px',
+          }}
+        >
           {ACTIONS.map((btn) => (
             <Box
               key={btn.key}

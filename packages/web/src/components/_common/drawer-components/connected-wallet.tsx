@@ -211,11 +211,13 @@ export default function ConnectedWallet({
           )}
         </Stack>
 
-        {/* Action buttons — Buy / Sell / Send / Receive */}
+        {/* Action buttons — Buy / Sell / Swap / Send / Receive. auto-fit:
+            the row wraps by CONTAINER width, so five buttons never cramp
+            (Niko 2026-08-21 responsiveness pass). */}
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))',
             gap: '6px',
             mt: '12px',
             mx: '8px',

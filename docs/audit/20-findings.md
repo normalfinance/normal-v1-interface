@@ -2313,3 +2313,11 @@ typed in Settings ("Unnamed Account" rows self-heal on next load).
 (5) Settings→Accounts Normal wallet card lists EVERY chain address it
 holds, labeled by chain (registry-driven — a new chain appears
 automatically). 248 tests, build clean.
+
+**Action-group responsiveness (2026-08-21, Niko):** hero card's five
+buttons → TWO fixed rows (Buy/Sell/Swap spanning 2 cols each on a
+6-col grid; Send/Receive wider at 3 each — the card is always narrow,
+so no breakpoint). Drawer + /portfolio Holdings groups → CSS
+auto-fit grids (minmax 72px/88px): one row when the CONTAINER fits,
+wrapping the moment it doesn't — container-driven, so no viewport
+breakpoints to go stale when layouts change. 248 tests, build clean.
