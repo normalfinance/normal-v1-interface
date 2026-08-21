@@ -2185,3 +2185,14 @@ once more; the engine's 15s cap still bounds the whole gate. RULE
 (now 10th instance): an awaited refresh is only half the #62 gate —
 Done requires the refresh to have VISIBLY CHANGED the number, or one
 bounded retry past the cache floor. 242 tests, build clean.
+
+**Soroswap modal copy follows the degrade (2026-08-21):** the embedded
+quote promises 1 signature, the upstream fee-build defect degrades the
+run to the fee-pair mid-flight — and the modal kept claiming "One
+signature" after two prompts. The engine now flips its embedded flag
+the moment the 'sign-fee' stage fires, so the step copy reads "Two
+signatures: the swap, then the Normal fee" for the rest of the run.
+The 2-signature reality itself is UPSTREAM (doc 76 §7) — flag stays
+on (auto-recovers when they fix), repro ready to send via Justin;
+Stage 2 router contract is the Soroswap-independent path. 242 tests,
+build clean.

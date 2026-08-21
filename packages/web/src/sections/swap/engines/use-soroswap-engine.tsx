@@ -79,9 +79,20 @@ export function useSoroswapEngine({
   const [modalOpen, setModalOpen] = useState(false);
   const [doneHash, setDoneHash] = useState<string | null>(null);
 
+  // Embedded flag captured at swap time; flipped OFF the moment a fee
+  // signature stage arrives — the server degrade (upstream fee-build defect)
+  // turns a promised 1-signature run into a fee-pair run mid-flight, and the
+  // modal's copy must follow the truth, not the quote's promise (Niko live
+  // 2026-08-21: step said "One signature", run took two).
+  const [wasEmbedded, setWasEmbedded] = useState(false);
+  const handleStage = useCallback((s: SoroswapStage) => {
+    setSwapStage(s);
+    if (s === 'sign-fee') setWasEmbedded(false);
+  }, []);
+
   const overrideActive = !!stellarAddressOverride;
   const { quote, quoteLoading, loading, error, setError, getQuote, executeSwap, clearQuote } =
-    useSwap(stellarAddressOverride ?? undefined, { onStage: setSwapStage });
+    useSwap(stellarAddressOverride ?? undefined, { onStage: handleStage });
   // Preflights probe the wallet the swap will actually run from.
   const {
     isLoading: isCheckingAccount,
@@ -121,10 +132,6 @@ export function useSoroswapEngine({
   // the fromBalance the swap card passes in — subtracting an ad-hoc 1 XLM
   // again here would double-count it.
   const getMaxToken = async (): Promise<BigNumber> => fromBalance;
-
-  // Embedded flag captured at swap time — executeSwap clears the quote on
-  // success, but the modal's signature copy must survive to Done.
-  const [wasEmbedded, setWasEmbedded] = useState(false);
 
   const handleSwap = useCallback(async () => {
     if (!quote) return;
