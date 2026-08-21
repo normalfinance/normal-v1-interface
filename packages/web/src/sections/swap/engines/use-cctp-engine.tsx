@@ -43,6 +43,7 @@ import { useSnackbar } from '@/components/template/snackbar';
 import AutopilotConsentDialog from '@/components/_common/autopilot-consent-dialog';
 
 import { groupOf } from './types';
+import { isInsufficientGasError } from './gas-reserve';
 import { type CctpStage, CctpProgressModal } from '../cctp-progress-modal';
 
 import type { SwapSymbol, SwapEngineResult, CrosschainSymbol } from './types';
@@ -650,7 +651,11 @@ export function useCctpEngine({
       } catch (e: any) {
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
-          setStageError(String(e?.message ?? e));
+          setStageError(
+            isInsufficientGasError(e)
+              ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
+              : String(e?.message ?? e)
+          );
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
         if (!broadcastStarted) {
@@ -787,7 +792,11 @@ export function useCctpEngine({
       } catch (e: any) {
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
-          setStageError(String(e?.message ?? e));
+          setStageError(
+            isInsufficientGasError(e)
+              ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
+              : String(e?.message ?? e)
+          );
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
         if (!broadcastStarted) {
@@ -871,7 +880,11 @@ export function useCctpEngine({
       else await runOutbound(data.id, amountWire);
     } catch (e: any) {
       console.error('[cctp engine] execute failed:', e); // surface stack
-      setStageError(String(e?.message ?? e));
+      setStageError(
+        isInsufficientGasError(e)
+          ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
+          : String(e?.message ?? e)
+      );
       setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
   }, [

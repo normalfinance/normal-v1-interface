@@ -2196,3 +2196,22 @@ The 2-signature reality itself is UPSTREAM (doc 76 §7) — flag stays
 on (auto-recovers when they fix), repro ready to send via Justin;
 Stage 2 router contract is the Soroswap-independent path. 242 tests,
 build clean.
+
+**ETH gas reserve: cctp-from-ETH under-reserved (2026-08-21):** Niko's
+ETH→USDC failed pre-broadcast: "insufficient funds for gas * price +
+value: have 0.009063 want 0.009094" — reserve held 0.0005 ETH, the
+route wanted 0.000531. Root cause: swap-card reserved 400k gas for
+cctp pairs vs 550k for lifi pairs — but a cctp swap FROM ETH starts
+with the IDENTICAL LI.FI mainnet deposit (relaydepository, visible in
+the failing tx calldata) that measured ~538k and set the 550k figure.
+The "bridge headroom" comment claimed larger while the code reserved
+smaller. Fix: ONE 550k limit for every pair spending ETH — the
+source-leg contract is the same regardless of what happens after.
+Also: the modal showed the RAW RPC dump (URL + request body) — the
+isInsufficientGasError mapping existed only in the lifi engine; now
+applied at all three cctp stage-error sites ("Not enough ETH left to
+pay the network fee — try a slightly smaller amount."). Funds were
+never at risk (viem refuses pre-broadcast; row marked Failed
+honestly). RULE: reserve sizing follows the SOURCE-LEG contract, not
+the pair's label — and every engine that can hit an error class needs
+the same mapping (grep engines, again). 242 tests, build clean.

@@ -173,16 +173,15 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   // reserve below): typed amounts, MAX, display and validation all inherit
   // it. Before this, a typed amount could pass "amount <= balance" and still
   // fail on-chain with "insufficient funds for gas" (observed live
-  // 2026-08-19: 0.00499 of 0.00787 ETH + ~0.0039 gas). Sized live; cctp's
-  // ETH leg is a bridge, so it reserves against a larger gas limit.
+  // 2026-08-19: 0.00499 of 0.00787 ETH + ~0.0039 gas). Sized live.
   // Gas limits from OBSERVED route reality, not protocol minimums: LI.FI's
   // bridge deposits (relaydepository, near) ran ~538k gas live on 2026-08-19
   // — the old 250k assumption under-reserved and MAX still failed on-chain.
-  // Over-reserving only shrinks MAX; under-reserving fails swaps.
-  const ethReserve = useEthGasReserve(
-    fromSymbol === 'ETH',
-    pairTypeOf(fromSymbol, toSymbol) === 'cctp' ? 400_000n : 550_000n
-  );
+  // ONE limit for every pair spending ETH: a cctp swap FROM ETH starts with
+  // the SAME LI.FI mainnet deposit as a lifi pair (its 400k "bridge headroom"
+  // was actually SMALLER and failed live 2026-08-21: reserve 0.0005, route
+  // wanted 0.000531). Over-reserving only shrinks MAX; under-reserving fails.
+  const ethReserve = useEthGasReserve(fromSymbol === 'ETH', 550_000n);
   const fromBalance =
     fromSymbol === 'XLM'
       ? BigNumber.max(
