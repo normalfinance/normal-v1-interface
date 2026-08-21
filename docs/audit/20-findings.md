@@ -2108,3 +2108,21 @@ can retry MUST be idempotent; "active" must mean the WHOLE grant
 (user+policy), not its first artifact; never interpose optional
 consent inside a money flow. Doc 77 J1/J1b/J4 updated. 242 tests,
 build clean.
+
+**#33 in-wait Enable + honest step copy (2026-08-21):** Niko's SOL→USDC
+live test showed the burn step still labeled "Approve in your wallet ·
+1–2 signatures" — correct for HIS state (Turnkey verified: delegate
+user present, POLICIES STILL ZERO — the enable click never completed;
+audit table empty = server never asked to sign), but it exposed two
+gaps: (1) after moving consent post-Done there was NO enable door
+during the swap — exactly when a 20–60 min wait makes it matter, and
+enabling mid-wait DOES help the running swap (the engine re-checks
+status live at the signing branch); (2) the step copy was static —
+claimed a signature even when autopilot would remove it. Now: the
+progress modal takes autopilot state (display-truth, refreshed at run
+start, flipped by a successful grant); burn/pivot step subs read
+"Automatic — no signature needed" when ON; header says "One signing
+step" when ON; and while OFF, a dismissable-by-ignoring inline box
+during the pre-signature stages offers "Enable auto-finish" → opens
+the same consent ceremony (idempotent, so his half-state completes
+with ONE confirmation). 242 tests, build clean.

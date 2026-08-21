@@ -191,6 +191,11 @@ export function useCctpEngine({
   const [consentOpen, setConsentOpen] = useState(false);
   const consentResolver = useRef<(() => void) | null>(null);
   const consentHandled = useRef(false);
+  // Live autopilot state for the progress modal's copy + in-wait Enable
+  // offer. null = not checked yet; refreshed when a run starts and flipped
+  // by a successful grant. The RUN itself re-checks live at the branch —
+  // this state is display truth, not signing truth.
+  const [autopilotOn, setAutopilotOn] = useState<boolean | null>(null);
 
   const evmAddress = addresses.ETH; // the Base pivot is always the user's own EVM address
   const nativeAddress =
@@ -439,6 +444,7 @@ export function useCctpEngine({
 
   const handleConsentChoice = useCallback((granted: boolean) => {
     setConsentOpen(false);
+    if (granted) setAutopilotOn(true);
     if (!granted) {
       try {
         localStorage.setItem('nf:autopilot-declined:v1', String(Date.now()));
@@ -798,6 +804,11 @@ export function useCctpEngine({
     if (!quote || !evmAddress || !stellarAddress || !nativeAddress) return;
     setStageError(null);
     setModalOpen(true);
+    // Display-truth refresh for the modal (copy + in-wait Enable offer);
+    // never blocks the run — the signing branch re-checks live.
+    void autopilotActive()
+      .then(setAutopilotOn)
+      .catch(() => setAutopilotOn(false));
     try {
       // #32 chunk 4b: source = external wallet → move the USDC to the Normal
       // wallet FIRST (kit-signed; execute resolves only once the funds are
@@ -870,6 +881,7 @@ export function useCctpEngine({
     toSymbol,
     feePercent,
     fundFromExternal,
+    autopilotActive,
     runInbound,
     runOutbound,
     t,
@@ -1147,6 +1159,10 @@ export function useCctpEngine({
           toSymbol={toSymbol}
           includeFunding={usedFunding}
           fundingWalletLabel={fundFromExternal?.label}
+          autopilot={autopilotOn}
+          onEnableAutopilot={
+            process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY ? () => setConsentOpen(true) : undefined
+          }
           onTryAgain={
             stageError
               ? () => {

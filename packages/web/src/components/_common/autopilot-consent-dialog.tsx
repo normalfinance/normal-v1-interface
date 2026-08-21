@@ -61,7 +61,7 @@ export default function AutopilotConsentDialog({
       </Typography>
       <Typography sx={{ fontSize: '13.5px', color: 'rgba(10,10,15,0.6)', lineHeight: 1.6 }}>
         {t(
-          'That swap needed a signature after the bridge wait. Enable this and next time Normal finishes that step for you — you sign once at the start and walk away.'
+          'Cross-chain swaps normally need one more signature after the bridge wait. Enable this and Normal finishes that step for you — including a swap that is running right now. You sign once at the start and walk away.'
         )}
       </Typography>
       <Typography
