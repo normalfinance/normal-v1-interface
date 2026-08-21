@@ -25,6 +25,7 @@ import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { useSnackbar } from '@/components/template/snackbar';
 import AutopilotCard from '@/components/settings/autopilot-card';
+import WalletExportDialog from '@/components/_common/wallet-export-dialog';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import AddUsdcTrustlineButton from '@/components/settings/add-usdc-trustline-button';
 
@@ -44,6 +45,7 @@ export function SettingsAccounts() {
   const [isUnlinking, setIsUnlinking] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   // #32 chunk 2: the Turnkey (Normal) wallet's Stellar address — its card is
   // labeled and cannot be unlinked (it holds the user's funds; the server
   // refuses too, this just keeps the button honest).
@@ -495,6 +497,46 @@ export function SettingsAccounts() {
           {/* #33: automatic swap completion (autopilot) */}
           <AutopilotCard />
 
+          {/* Recovery-phrase export (doc 79) — Normal wallet only; external
+              wallets keep their keys in their own app, nothing to export. */}
+          {wallet.walletAddress === turnkeyStellar && (
+            <Box
+              component="button"
+              onClick={() => setExportOpen(true)}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                mb: '16px',
+                px: '14px',
+                py: '11px',
+                borderRadius: '12px',
+                border: '1px solid rgba(10,10,15,0.12)',
+                bgcolor: 'transparent',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                textAlign: 'left',
+                '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' },
+              }}
+            >
+              <Iconify icon="solar:key-bold" width={18} sx={{ color: '#0A0A0F' }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F' }}>
+                  {t('Export recovery phrase')}
+                </Typography>
+                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                  {t('Back up your wallet — restores in any standard wallet app')}
+                </Typography>
+              </Box>
+              <Iconify
+                icon="eva:chevron-right-fill"
+                width={18}
+                sx={{ color: 'rgba(10,10,15,0.35)' }}
+              />
+            </Box>
+          )}
+
           {/* Trustline buttons */}
           <Stack spacing={1} sx={{ mb: '16px' }}>
             <AddUsdcTrustlineButton
@@ -673,6 +715,8 @@ export function SettingsAccounts() {
         onSuccess={handleImportSuccess}
         showLinkedWallets={false}
       />
+
+      <WalletExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
     </Stack>
   );
 }

@@ -7,6 +7,7 @@ import { buildAuthHeaders } from '@/utils/http';
 import { pickAddresses, getChainAddress } from '@/lib/chains/registry';
 
 import { createPasskeyRegistration } from './passkey';
+import { markWalletNeedsBackup } from './wallet-backup';
 import { getTurnkeyWalletInfo, invalidateTurnkeyWalletInfo } from './wallet-info';
 import { XLM_ACCOUNT, SOLANA_ACCOUNT, BITCOIN_ACCOUNT, ETHEREUM_ACCOUNT } from './account-specs';
 
@@ -148,6 +149,8 @@ export async function ensureChainAccount(
     }
     const data = await res.json();
     invalidateTurnkeyWalletInfo();
+    // A brand-new seed was just created → the user must back it up (doc 79).
+    markWalletNeedsBackup(existing.subOrgId);
     return {
       ...pickAddresses(data.wallet),
     };
@@ -167,6 +170,13 @@ export async function ensureChainAccount(
   }
   const data = await res.json();
   invalidateTurnkeyWalletInfo();
+  // A brand-new seed was just created → the user must back it up (doc 79).
+  // subOrgId comes back on the wallet payload; fall back to a re-read if absent.
+  if (data.wallet?.subOrgId) markWalletNeedsBackup(data.wallet.subOrgId);
+  else
+    getTurnkeyWalletInfo()
+      .then((i) => i?.subOrgId && markWalletNeedsBackup(i.subOrgId))
+      .catch(() => {});
 
   return {
     bitcoinAddress: data.wallet?.bitcoinAddress ?? null,

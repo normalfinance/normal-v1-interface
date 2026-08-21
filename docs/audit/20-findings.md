@@ -2321,3 +2321,29 @@ so no breakpoint). Drawer + /portfolio Holdings groups → CSS
 auto-fit grids (minmax 72px/88px): one row when the CONTAINER fits,
 wrapping the moment it doesn't — container-driven, so no viewport
 breakpoints to go stale when layouts change. 248 tests, build clean.
+
+**Wallet recovery-phrase export (doc 79, GO'd 2026-08-21):** users can
+now back up their Turnkey wallet's BIP-39 recovery phrase — verified
+that Turnkey's EXPORT_WALLET returns the real mnemonic via the
+export.turnkey.com iframe (plaintext NEVER enters our origin: enclave
+→ HPKE → iframe's own key; our DOM/network see only the encrypted
+bundle), passkey-authorized only (deny-by-default — our server key AND
+the autopilot delegate provably cannot export). All 4 derivation paths
+are ecosystem standards, so the phrase restores in MetaMask/Phantom/
+Freighter/Sparrow — the "safe if Normal disappears" guarantee.
+WalletExportDialog (warnings in every phase, iframe reveal, no plaintext
+in our state); two doors: (1) Settings→Accounts Normal-wallet card
+"Export recovery phrase"; (2) MANDATORY at creation (D2) via a SINGLE
+global WalletBackupGate in the layout — markWalletNeedsBackup() set at
+the two create branches in ensureChainAccount (new seed only, NOT
+chain-adds to an existing seed), device-local marker + event so the
+gate fires mid-flow, resumable (marker persists → killed tab
+re-prompts), once-per-wallet (backed-up marker), legacy wallets never
+force-gated. Backup is a device-local UX nudge, NEVER a server gate on
+the user's own funds. D3: phrase-only (restores every chain). New
+package @turnkey/iframe-stamper. Zero server routes/schema/env. NEW
+RULE: no delegate policy may ever include export activities (autopilot
+v2 check). SHIP GATES (doc 79 §6, Niko live): confirm export enabled on
+our Turnkey org + iframe embeds on localhost/staging/prod; round-trip
+test (export → import into Freighter+MetaMask → same addresses). Part L
+tests L1-L6 in doc 79. 248 tests, build clean.

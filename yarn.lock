@@ -4609,6 +4609,7 @@ __metadata:
     "@testing-library/react": ^14.2.0
     "@turnkey/crypto": ^2.10.0
     "@turnkey/http": ^4.1.0
+    "@turnkey/iframe-stamper": ^2.11.1
     "@turnkey/sdk-server": ^6.1.0
     "@turnkey/webauthn-stamper": ^0.6.0
     "@types/autosuggest-highlight": ^3.2.3
@@ -6979,6 +6980,13 @@ __metadata:
     "@turnkey/webauthn-stamper": 0.6.0
     cross-fetch: ^3.1.5
   checksum: e86f3567f55dfbe5748748c31b5e389b6d4f4c2d79e08d2eb290f57bb0bdaa294c62fa05101a7761c8fd1c7514bc5a0f51b1aac0105fc0c7f5f2c7d412ac2255
+  languageName: node
+  linkType: hard
+
+"@turnkey/iframe-stamper@npm:^2.11.1":
+  version: 2.11.1
+  resolution: "@turnkey/iframe-stamper@npm:2.11.1"
+  checksum: b35967a8646803e1581e931557f08d59251ee3e3f6c4e63e70a204f79e363dbff6554d19ebf2cd5b4816fd684d1b30b1efdf9cdfa919244ad8cd2c1b4b7a8ca1
   languageName: node
   linkType: hard
 
