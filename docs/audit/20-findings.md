@@ -2126,3 +2126,22 @@ step" when ON; and while OFF, a dismissable-by-ignoring inline box
 during the pre-signature stages offers "Enable auto-finish" → opens
 the same consent ceremony (idempotent, so his half-state completes
 with ONE confirmation). 242 tests, build clean.
+
+**#33 policy syntax — the REAL Turn on blocker (2026-08-21):** Niko's
+Turn on failed with Turnkey "invalid policy condition: Unrecognized
+token eth.tx" — my condition used `[list].contains(eth.tx.to)`, but
+Turnkey's `.contains()` takes a LITERAL argument, never a field; the
+correct membership form is `eth.tx.to in [list]` (docs.turnkey.com
+policy language). Fixed and VALIDATED AGAINST THE LIVE PARSER before
+asking for another tap: a test policy with the exact production
+condition was created and immediately deleted on the parent org —
+parse OK. This also retro-explains the incident chain: the ceremony
+could NEVER have completed (step 2 always 400'd); the duplicate-
+credential error was the retry tripping over step 1's success.
+Consent placement: restored to SWAP START per Niko's explicit call
+("it should pop up when swapping") — the earlier post-swap move was
+reacting to the broken ceremony, not the placement; in-wait box,
+post-Done backstop and Settings doors all remain. RULE: any
+generated DSL expression (policy conditions included) gets validated
+against the real parser in a spike BEFORE it ships in a user-facing
+ceremony. 242 tests, build clean.

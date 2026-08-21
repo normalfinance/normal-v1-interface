@@ -421,11 +421,11 @@ export function useCctpEngine({
     }
   }, []);
 
-  // The consent offer itself — fired AFTER a completed cctp swap (D2 was
-  // "inline at the first swap"; live use moved it post-swap: a pre-swap
-  // dialog interrupted the flow, Niko 2026-08-21). Resolves when the user
-  // chooses either way; "Not now" is remembered so the dialog never nags —
-  // Settings keeps the enable door.
+  // The consent offer itself — at swap start (Niko's final call 2026-08-21;
+  // the earlier post-swap move was reacting to the ceremony BREAKING, not
+  // the placement). Also fired as a no-op backstop after Done. Resolves when
+  // the user chooses either way; "Not now" is remembered so the dialog never
+  // nags — Settings and the in-wait modal box keep the enable doors.
   const maybeOfferConsent = useCallback(async () => {
     if (!process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY) return; // feature dark
     if (consentHandled.current) return; // one offer per mount
@@ -802,6 +802,10 @@ export function useCctpEngine({
 
   const handleExecute = useCallback(async () => {
     if (!quote || !evmAddress || !stellarAddress || !nativeAddress) return;
+    // #33 consent moment AT SWAP START (Niko 2026-08-21: "it should pop up
+    // for user to enable one signature when swapping"). Safe now that the
+    // ceremony is idempotent; "Not now" is remembered and never re-asks.
+    await maybeOfferConsent();
     setStageError(null);
     setModalOpen(true);
     // Display-truth refresh for the modal (copy + in-wait Enable offer);
@@ -882,6 +886,7 @@ export function useCctpEngine({
     feePercent,
     fundFromExternal,
     autopilotActive,
+    maybeOfferConsent,
     runInbound,
     runOutbound,
     t,

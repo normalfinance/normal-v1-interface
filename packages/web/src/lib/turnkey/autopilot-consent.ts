@@ -40,12 +40,16 @@ export const AUTOPILOT_USER_NAME = 'Normal Autopilot';
 /** The condition string enforced by Turnkey's policy engine. v1 constrains
  *  chain + destination contracts + zero native value; ABI-argument
  *  constraints (recipient == own forwarder) are the documented follow-up
- *  hardening (doc 76 §8). */
+ *  hardening (doc 76 §8).
+ *  Membership uses the `in` operator — `.contains()` takes a LITERAL, not a
+ *  field, and fails to parse (live incident 2026-08-21: "Unrecognized token
+ *  eth.tx"). This exact string was validated against Turnkey's live parser
+ *  (test policy created + deleted on the parent org, 2026-08-21). */
 export function autopilotPolicyCondition(): string {
   const list = Object.values(ALLOWED_CONTRACTS)
     .map((a) => `'${a.toLowerCase()}'`)
     .join(', ');
-  return `eth.tx.chain_id == ${BASE_CHAIN_ID} && eth.tx.value == 0 && [${list}].contains(eth.tx.to)`;
+  return `eth.tx.chain_id == ${BASE_CHAIN_ID} && eth.tx.value == 0 && eth.tx.to in [${list}]`;
 }
 
 export interface ConsentResult {
