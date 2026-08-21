@@ -19,9 +19,11 @@
 // ---------------------------------------------------------------------------
 
 import { useTranslate } from '@/locales';
-import { useRef, useState, useCallback } from 'react';
-import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { format } from '@normalfinance/utils';
+import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { runWebauthnCeremony } from '@/lib/turnkey/webauthn-guard';
+import { getTurnkeyWalletInfo, type TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -56,7 +58,20 @@ export default function WalletExportDialog({
   const [phase, setPhase] = useState<Phase>('warn');
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  // The addresses this ONE phrase restores — shown so the user can SEE it's
+  // their whole wallet, not one chain (Niko 2026-08-21: "I don't even know
+  // which wallet it is for?"). One HD seed derives all four.
+  const [info, setInfo] = useState<TurnkeyWalletInfo | null>(null);
   const stamperRef = useRef<{ clear: () => void } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    getTurnkeyWalletInfo()
+      .then(setInfo)
+      .catch(() => {});
+  }, [open]);
+
+  const coveredChains = CHAIN_IDS.filter((id) => !!info?.[CHAINS[id].addressField]);
 
   const teardown = useCallback(() => {
     // Removing the iframe wipes its decrypted phrase from the DOM entirely.
@@ -83,10 +98,11 @@ export default function WalletExportDialog({
     setError(null);
     setPhase('revealing');
     try {
-      const info = await getTurnkeyWalletInfo();
-      if (!info?.subOrgId || !info.walletId) {
+      const wallet = await getTurnkeyWalletInfo();
+      if (!wallet?.subOrgId || !wallet.walletId) {
         throw new Error(t('No Normal wallet found to export.'));
       }
+      setInfo(wallet);
 
       const container = document.getElementById(IFRAME_CONTAINER_ID);
       if (!container) throw new Error(t('Export view is not ready — try again.'));
@@ -118,8 +134,8 @@ export default function WalletExportDialog({
         client.exportWallet({
           type: 'ACTIVITY_TYPE_EXPORT_WALLET',
           timestampMs: String(Date.now()),
-          organizationId: info.subOrgId,
-          parameters: { walletId: info.walletId, targetPublicKey },
+          organizationId: wallet.subOrgId,
+          parameters: { walletId: wallet.walletId, targetPublicKey },
         })
       );
       const bundle = activity?.activity?.result?.exportWalletResult?.exportBundle;
@@ -127,7 +143,7 @@ export default function WalletExportDialog({
 
       // 3) Inject the encrypted bundle; the iframe decrypts + renders the
       //    phrase in its own origin. We never see the plaintext.
-      await stamper.injectWalletExportBundle(bundle, info.subOrgId);
+      await stamper.injectWalletExportBundle(bundle, wallet.subOrgId);
       setPhase('revealed');
     } catch (e: any) {
       teardown();
@@ -183,7 +199,49 @@ export default function WalletExportDialog({
         </Typography>
         <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.55 }}>
           {t(
-            'Write it on paper and store it offline. Never type it into any website or share it — Normal will never ask you for it. This phrase restores your Bitcoin, Ethereum, Solana and Stellar in wallets like MetaMask, Phantom or Freighter, even if Normal is unavailable.'
+            'Write it on paper and store it offline. Never type it into any website or share it — Normal will never ask you for it.'
+          )}
+        </Typography>
+      </Box>
+
+      {/* The key clarification: this ONE phrase is the WHOLE wallet. Show the
+          exact addresses it restores so the user connects phrase → wallet. */}
+      <Box
+        sx={{
+          px: '14px',
+          py: '12px',
+          borderRadius: '12px',
+          bgcolor: 'rgba(10,10,15,0.03)',
+          border: '1px solid rgba(10,10,15,0.08)',
+          mb: '16px',
+        }}
+      >
+        <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: '#0A0A0F', mb: '6px' }}>
+          {t('One phrase — your whole wallet. It restores all of these:')}
+        </Typography>
+        <Stack spacing={0.5}>
+          {coveredChains.map((id) => (
+            <Stack key={id} direction="row" justifyContent="space-between" alignItems="center">
+              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.55)' }}>
+                {CHAINS[id].name}
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: '11.5px',
+                  color: 'rgba(10,10,15,0.7)',
+                  fontFamily: '"Geist Mono", "Courier New", monospace',
+                }}
+              >
+                {format.fTruncate(info![CHAINS[id].addressField]!, 14)}
+              </Typography>
+            </Stack>
+          ))}
+        </Stack>
+        <Typography
+          sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '8px', lineHeight: 1.5 }}
+        >
+          {t(
+            'Enter these words in MetaMask (Ethereum), Phantom (Solana), Freighter (Stellar) or Sparrow (Bitcoin) and the same addresses come back — even if Normal is unavailable.'
           )}
         </Typography>
       </Box>

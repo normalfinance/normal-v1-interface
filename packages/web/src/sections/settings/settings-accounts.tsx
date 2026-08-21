@@ -526,7 +526,7 @@ export function SettingsAccounts() {
                   {t('Export recovery phrase')}
                 </Typography>
                 <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-                  {t('Back up your wallet — restores in any standard wallet app')}
+                  {t('One phrase backs up all four addresses above — restores in any wallet app')}
                 </Typography>
               </Box>
               <Iconify
