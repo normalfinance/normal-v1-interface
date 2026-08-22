@@ -58,7 +58,18 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     const bitcoinAddress = derived.bitcoin;
     const stellarAddress = derived.stellar;
 
-    if (!stellarAddress && !bitcoinAddress) {
+    // `chain` arrives from the request body as a plain string — narrow it
+    // through the registry before using it as a key.
+    const requestedChain = chain && isChainId(chain) ? chain : null;
+
+    // This guard belongs to the IMPORT case only: a mnemonic import must land
+    // on a wallet we recognise. A LAZY CHAIN ADD must NOT be held to it —
+    // a wallet legitimately holds only SOL (or only ETH) when the user
+    // onboarded on that asset, and rejecting the sync there would strand the
+    // account Turnkey had just created, exactly the dead end fixed in
+    // addWalletAccounts. The lazy branch below has the right check: does the
+    // REQUESTED chain's address exist.
+    if (!requestedChain && !stellarAddress && !bitcoinAddress) {
       return NextResponse.json(
         { error: 'Imported wallet has no recognizable accounts' },
         { status: 422 }
@@ -93,9 +104,6 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     ) as Record<ChainId, AddressField>;
 
     const data: Record<string, string> = { walletId };
-    // `chain` arrives from the request body as a plain string — narrow it
-    // through the registry before using it as a key.
-    const requestedChain = chain && isChainId(chain) ? chain : null;
     if (requestedChain) {
       const addr = derived[requestedChain];
       if (!addr) {

@@ -3010,3 +3010,50 @@ NOTED, NOT CHANGED (needs a product call):
    in one prompt would halve it — distinct from the lazy-provisioning rule,
    which forbids creating chains the user has not asked for.
 279 tests, build clean.
+
+**"Turnkey error 6: path already exists" — the gate could never be satisfied
+(2026-08-22, fixed):** after setting up SOL, "Set up Ethereum wallet" failed
+on every click. Live proof from Turnkey — the account was already there:
+    wallet 5638012b "Normal Wallet"
+      XLM      m/44'/148'/0'       GD6VNX3Y…
+      SOLANA   m/44'/501'/0'/0'    6D5Zhb1t…
+      ETHEREUM m/44'/60'/0'/0/0    0x31d889B66d98A4c2bB5875De8504eD4f10461C62
+…while our DB row had no ethereumAddress. addWalletAccounts calls
+createWalletAccounts and THEN posts to /api/turnkey/import, which is what
+re-reads the wallet from Turnkey and writes the addresses to our row. Because
+the create threw, the sync never ran — so the address Turnkey already held
+could never reach us, the gate kept demanding it, and every retry threw the
+same error. A permanent dead end, not a transient failure.
+Cause of the split: an earlier attempt created the account at Turnkey and
+died before syncing. The same shape as the orphaned passkey and the swap
+idempotency incident — THE EXPENSIVE STEP SUCCEEDED, THE RECORD DID NOT, AND
+THE RETRY TRIED TO REDO THE STEP INSTEAD OF ADOPTING WHAT EXISTED.
+FIX: isPathAlreadyExistsError (lib/turnkey/turnkey-error-codes.ts); on that
+error addWalletAccounts falls through to the sync instead of throwing. The
+operation is "ensure the account exists", not "create it". 4 tests, including
+that it does NOT swallow error 16 / rate limits / NotAllowedError — adopting
+an address after one of those would be inventing a success.
+RULE (third sighting today): make the RETRY converge on the desired state,
+never on repeating the action. 282 tests, build clean.
+
+**Confirming the error-6 fix covers EVERY chain — it did not, until this
+(2026-08-22):** the create side is a single choke point (addWalletAccounts,
+reached for all four chains via CHAIN_SPECS), so the already-exists
+fall-through covers BTC/ETH/SOL/XLM alike. But the SYNC it falls through to
+had an import-era guard:
+    if (!stellarAddress && !bitcoinAddress) → 422 "no recognizable accounts"
+A wallet that legitimately holds only SOL (asset-first onboarding on Solana)
+adding ETH derives neither stellar nor bitcoin, so the sync rejected it — the
+account Turnkey had just created could never reach our row, and the retry
+looped on the same 422. The SAME dead end, one layer down, reachable by a
+real onboarding path. The guard is now scoped to genuine imports; the lazy
+branch keeps its own correct check ("Wallet has no {chain} account").
+RESIDUAL GAP (named, not fixed): the FIRST-timer path has no equivalent
+convergence — if createSubOrganization succeeds and the DB write fails there
+is no row to key on, so a retry creates a SECOND sub-org. The user still ends
+up with a working wallet (the credential is registered to both, and
+/api/turnkey/credentials pins the one on our row), but the first sub-org is
+abandoned. Bounded and non-blocking; worth an idempotency key if it is ever
+seen in the wild.
+RULE: verifying a fix "covers all chains" means walking the whole path the
+retry takes, not just the call that threw.
