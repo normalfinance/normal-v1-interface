@@ -2913,3 +2913,28 @@ label. Cheaper than an experiment, and it removes a failure that would only
 ever fire during recovery — i.e. when the user is already stuck.
 Runbook: docs/audit/sql/reprovision_wallet.sql (SELECT → DELETE → verify,
 keyed on subOrgId so a typo matches nothing).
+
+**"Weekly limit reached. Try again in 4 hours." — three bugs in one toast
+(2026-08-22):**
+1. THE LIMIT IS CHECKED AFTER THE EXPENSIVE HALF. normal-wallet-setup-dialog
+   ran ensureChainAccount() — WebAuthn ceremony + createSubOrganization —
+   and only then called linkWallet(), which is what the limiter guards. So a
+   user who is over the limit still mints a passkey and a Turnkey sub-org,
+   then reads an error that sounds like nothing worked. Verified live: the
+   sub-org WAS created (7574bec5…, GD6VNX3Y…, 19:59:36) while the toast
+   implied failure. Fixed: the dialog now calls checkWalletLinkLimit()
+   BEFORE the ceremony; a null/failed answer never blocks (the link call
+   still checks authoritatively).
+2. THE MESSAGE WAS FICTION. services/linked-wallets.ts hardcoded "Weekly
+   limit reached" while faucet-rate-limiter enforces slidingWindow(3, '1 d')
+   — 3 per rolling DAY. "Weekly limit … try again in 4 hours" contradicts
+   itself in six words. The client now uses the server's own wording and
+   appends only the wait.
+3. "TRY AGAIN TOMORROW" was wrong for a ROLLING window: a slot frees 24h
+   after the oldest use, often within hours. Server text now states the rule
+   and lets the client render the real wait.
+NOTE: the limiter is per-user (prefix faucet-wallet, key = supabase uid) and
+its purpose is abuse of wallet CREATION; linking a wallet the user just
+created legitimately consumes a slot, so heavy testing exhausts it in a day.
+Clearing a stuck counter = delete the single Upstash key
+faucet-wallet:<uid>:<window>. 275 tests, build clean.

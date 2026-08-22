@@ -68,7 +68,10 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
         });
         return NextResponse.json(
           {
-            error: 'You can only create 3 wallets per day. Try again tomorrow.',
+            // "Try again tomorrow" is wrong for a ROLLING window — a slot
+            // frees 24h after the oldest use, often within hours. The client
+            // appends the real wait from `reset`.
+            error: 'You can only add 3 wallets per day.',
             reset: rateLimitResult.reset,
           },
           { status: 429 }

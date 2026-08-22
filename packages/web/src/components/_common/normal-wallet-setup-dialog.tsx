@@ -22,7 +22,6 @@ import QRCode from 'qrcode';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useStellarConfig } from '@/hooks';
-import { linkWallet } from '@/services/linked-wallets';
 import { useState, useEffect, useCallback } from 'react';
 import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
@@ -31,6 +30,11 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyTurnkeyError } from '@/lib/turnkey/passkey-stamper';
 import { getXlmToken, getSwapUsdcToken } from '@/utils/token-selectors';
 import { getTurnkeyWalletInfo, invalidateTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import {
+  linkWallet,
+  checkWalletLinkLimit,
+  describeRateLimitReset,
+} from '@/services/linked-wallets';
 import {
   probeCompanion,
   type SetupStep,
@@ -154,6 +158,22 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
     try {
       if (step === 'create') {
         if (!user) throw new Error(t('You must be signed in.'));
+        // Ask about the daily wallet limit BEFORE the passkey ceremony.
+        // Creating the passkey and the Turnkey sub-org are the expensive,
+        // irreversible half; discovering the limit afterwards (live
+        // 2026-08-22) left a real passkey saved on the device, a real
+        // sub-org created, and an error that read like nothing had worked.
+        // A null answer means "could not tell" — never block on that, the
+        // link call re-checks authoritatively anyway.
+        const limit = await checkWalletLinkLimit();
+        if (limit && !limit.allowed) {
+          const wait = limit.reset ? describeRateLimitReset(limit.reset) : null;
+          throw new Error(
+            wait
+              ? t('You can only add 3 wallets per day. Try again in {{wait}}.', { wait })
+              : t('You can only add 3 wallets per day.')
+          );
+        }
         const result = await ensureChainAccount('stellar', user.id, user.email);
         if (!result.stellarAddress) throw new Error(t('Wallet creation returned no address'));
         await linkWallet(result.stellarAddress);
