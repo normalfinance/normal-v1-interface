@@ -33,6 +33,33 @@ function formatRateLimitReset(resetTimestamp: number): string {
   return parts.length > 0 ? parts.join(', ') : 'less than an hour';
 }
 
+/** Remaining wallet-link allowance for this user, WITHOUT consuming one.
+ *  Returns null when the answer can't be obtained — callers must treat that
+ *  as "allowed", since the authoritative check still runs server-side on the
+ *  link itself and a broken check must never block wallet creation. */
+export async function checkWalletLinkLimit(): Promise<{
+  allowed: boolean;
+  remaining: number;
+  reset: number;
+} | null> {
+  try {
+    const headers = await buildAuthHeaders();
+    const response = await fetch('/api/wallets/check-limit', { headers, credentials: 'include' });
+    if (!response.ok) return null;
+    const data = await safeJson(response);
+    if (typeof data?.remaining !== 'number') return null;
+    return { allowed: data.allowed !== false, remaining: data.remaining, reset: data.reset ?? 0 };
+  } catch {
+    return null;
+  }
+}
+
+/** Human wait time until the limit frees a slot. Exported for the callers
+ *  that pre-check, so one formatter serves both paths. */
+export function describeRateLimitReset(reset: number): string {
+  return formatRateLimitReset(reset);
+}
+
 export interface LinkedWallet {
   id: string;
   walletAddress: string;
@@ -69,9 +96,14 @@ export async function linkWallet(
     if (!response.ok) {
       const error = await safeJson(response);
       // If rate limited, include remaining time in error message
-      if (response.status === 429 && error.reset) {
-        const remaining = formatRateLimitReset(error.reset);
-        throw new Error(`Weekly limit reached. Try again in ${remaining}.`);
+      if (response.status === 429) {
+        // The server enforces 3 per rolling DAY (faucet-rate-limiter:
+        // slidingWindow(3, '1 d')). Saying "Weekly limit reached. Try again
+        // in 4 hours." — as this did — is both wrong and self-contradicting,
+        // so take the server's own wording and add only the wait.
+        const wait = error.reset ? formatRateLimitReset(error.reset) : null;
+        const base = error.error || 'You can only add 3 wallets per day.';
+        throw new Error(wait ? `${base} Try again in ${wait}.` : base);
       }
       throw new Error(error.error || 'Failed to link wallet');
     }
