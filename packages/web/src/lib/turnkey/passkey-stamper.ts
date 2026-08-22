@@ -12,6 +12,18 @@
 // Restricting the prompt to this account's credentials makes the mistake
 // impossible; the mapper below covers what is left.
 
+// The rpId a passkey is REGISTERED under must be byte-identical to the rpId it
+// is later ASKED for — the browser will not return a credential registered
+// under a different one. So creation (passkey.ts) and signing both resolve it
+// HERE. `||` not `??`: an env var defined-but-blank is the common deploy
+// mistake, and `??` would hand WebAuthn an empty rpId instead of falling back.
+// The fallback is the current hostname, which is already 'localhost' in dev.
+export function resolveRpId(): string {
+  const configured = process.env.NEXT_PUBLIC_TURNKEY_RP_ID;
+  if (configured) return configured;
+  return typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+}
+
 const CACHE_TTL_MS = 60_000;
 let cached: { ids: string[]; at: number } | null = null;
 
@@ -35,10 +47,16 @@ async function fetchCredentialIds(): Promise<string[]> {
     });
     const data = await res.json();
     const ids: string[] = Array.isArray(data?.credentialIds) ? data.credentialIds : [];
+    if (!ids.length) {
+      console.warn('[passkey] no credentials returned — prompt NOT restricted to this account');
+    }
     cached = { ids, at: Date.now() };
     return ids;
-  } catch {
-    // No restriction — the prompt behaves exactly as it did before.
+  } catch (e) {
+    // Fail-open by design (a lookup must never block signing) — but SAY so.
+    // Without this, a 500ing or not-yet-deployed route is indistinguishable
+    // from the original bug: same unrestricted prompt, same failure.
+    console.warn('[passkey] credential lookup failed — prompt NOT restricted to this account', e);
     return [];
   }
 }
@@ -59,10 +77,7 @@ export function invalidatePasskeyCredentials(): void {
  * lookup failure can never block signing.
  */
 export async function createPasskeyStamper() {
-  const rpId =
-    typeof window !== 'undefined'
-      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
-      : 'localhost';
+  const rpId = resolveRpId();
   const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const ids = await fetchCredentialIds();
   lastPromptWasRestricted = ids.length > 0;

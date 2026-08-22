@@ -2752,3 +2752,27 @@ quorum) — a chicken-and-egg that wants Turnkey's email-auth recovery.
 RULE: when a user disputes a diagnosis, query the system of record
 before defending the theory — the provider's own data settled this in
 one call. 262 tests, build clean.
+
+**Two ways the passkey fix could fail SILENTLY (found while answering
+"can I just delete it in Turnkey?", 2026-08-22):**
+1. rpId divergence. Creation used `NEXT_PUBLIC_TURNKEY_RP_ID || 'localhost'`
+   while signing used `?? window.location.hostname`. A credential is only
+   returned for the rpId it was REGISTERED under, so a blank-but-defined env
+   var (the classic deploy mistake) would register under 'localhost' and ask
+   under '' — unusable wallet, no error that says why. Both now call one
+   exported resolveRpId(): `||` semantics, hostname fallback (already
+   'localhost' in dev). Same empty-string trap as the icon bug.
+2. Silent fail-open. /api/turnkey/credentials returns [] on ANY failure so a
+   lookup can never block signing — correct, but it made an undeployed or
+   500ing route indistinguishable from the original bug (same unrestricted
+   prompt, same CREDENTIAL_NOT_FOUND). It now console.warns when the list is
+   empty or the fetch throws, so "the fix did nothing" is visible.
+
+**Do NOT "start over" on this account.** Its Stellar address is ACTIVATED and
+holds 5.8737496 XLM, and prod/staging/localhost share one Supabase project —
+so turnkey_wallets.supabaseUid is the ONLY mapping to that sub-org. POST
+/api/turnkey/wallet is idempotent (returns the existing row, never mints a
+second sub-org), so deleting the row is the only way to get a fresh passkey —
+and it would strand those funds permanently, because reaching them needs the
+sub-org id we just deleted. Fallback for testing is a NEW signup email, which
+leaves the row intact for recovery from the device that holds the credential.
