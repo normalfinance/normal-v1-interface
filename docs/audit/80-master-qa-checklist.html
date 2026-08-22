@@ -102,6 +102,11 @@
     <li><strong>Autopilot</strong> (1-signature): only active if the three <code>AUTOPILOT_*</code> env
       vars + both SQL migrations are present on staging. If not, autopilot rows should FALL BACK to
       normal prompts — that fallback is itself a valid pass.</li>
+    <li><strong>Automated coverage:</strong> 291 unit tests run in CI (<code>yarn test</code>).
+      They pin the pure decisions behind section 9 — passkey error mapping and transports, the
+      pending-registration rules, the "path already exists" predicate, token identity, the
+      autopilot gate and the backup no-nag rule. They cannot exercise a real passkey prompt, a
+      real Turnkey account or a real bridge — which is exactly what the rows below are for.</li>
     <li><strong>Out of scope on staging:</strong> the "Deposit cash" (bank/card) on-ramp is
       production-only and is not tested here. Cross-chain swaps route through LI.FI, which has
       <em>no testnet liquidity</em> — so cross-chain + CCTP rows are run on <strong>mainnet</strong>
@@ -119,6 +124,7 @@
   <a href="#s6">6 · Failure, refund &amp; recovery</a><br/>
   <a href="#s7">7 · Balances, activity &amp; displays</a><br/>
   <a href="#s8">8 · Gas &amp; honest limits (ETH source)</a><br/>
+  <a href="#s9">9 · Passkey, provisioning &amp; retry regressions (Aug 2026)</a><br/>
 </div>
 
 <h2 id="s1" class="pagebreak">1 · Wallet creation &amp; first-run backup</h2>
@@ -144,6 +150,12 @@ seed forces a mandatory recovery-phrase backup before the flow continues.</p>
   <tr><td class="chk">☐</td><td class="id">W16</td><td>Settings → Import Account → import an existing Normal wallet</td><td>Imports and links; addresses appear</td><td><span class="tag pend">not yet run</span></td></tr>
 </table>
 
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">W17</td><td>Before ever saving the phrase, add a second chain (e.g. <strong>BTC</strong>) from a swap gate</td><td>The recovery-phrase dialog appears again — the new address depends on the seed you never saved. It does NOT pretend BTC has its own phrase</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W18</td><td>Save the phrase, then add another chain (e.g. <strong>SOL</strong>)</td><td>NOT asked again — one seed, one phrase, no nagging</td><td><span class="tag pend">not yet run</span></td></tr>
+</table>
+
 <h2 id="s2">2 · Recovery-phrase export (Settings)</h2>
 <table>
   <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
@@ -166,6 +178,12 @@ seed forces a mandatory recovery-phrase backup before the flow continues.</p>
   <tr><td class="chk">☐</td><td class="id">S6</td><td>Hybrid: XLM ↔ USDC, source pill <strong>Normal wallet</strong></td><td>Balance/MAX show the Normal wallet's funds; passkey signs both; Lobstr never prompted; with an empty Lobstr the Normal pill is pre-selected — never a 0.00 greeting</td><td><span class="tag pend">not yet run</span></td></tr>
   <tr><td class="chk">☐</td><td class="id">S7</td><td>Swap to USDC on a wallet without the USDC trustline</td><td>Blocked before signing with an inline "add trustline" path — never an on-chain failure after signing</td><td><span class="tag pend">not yet run</span></td></tr>
   <tr><td class="chk">☐</td><td class="id">S8</td><td>Asset picker (any)</td><td>"Your assets" sorted by USD value, highest first</td><td><span class="tag pass">verified live</span></td></tr>
+</table>
+
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">S9</td><td>Normal-wallet-only account whose Stellar address exists but was never funded → open /swap</td><td>CTA reads <strong>"Add XLM to activate"</strong> and opens Receive (address + QR). It must NOT say "Set up Stellar wallet" — that re-derived the same address and re-armed the gate forever</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">S10</td><td>Same account, XLM → USDC (Soroswap)</td><td>The activation gate is <em>clickable</em> and opens Receive — not an inert button telling you to fund an address it never shows</td><td><span class="tag pend">not yet run</span></td></tr>
 </table>
 
 <h2 id="s4">4 · Cross-chain swaps (BTC/ETH/SOL ↔ USDC/XLM · mainnet)</h2>
@@ -195,6 +213,13 @@ seed forces a mandatory recovery-phrase backup before the flow continues.</p>
   <tr><td class="chk">☐</td><td class="id">A6</td><td>During a bridge wait with autopilot OFF, tap "Enable auto-finish" in the popup</td><td>Ceremony runs mid-wait; THIS swap's next step then completes without a prompt</td><td><span class="tag pend">not yet run</span></td></tr>
   <tr><td class="chk">☐</td><td class="id">A7</td><td>Revoke mid-flow: start an inbound swap, Turn off in a second tab before the burn</td><td>Engine falls back to the interactive burn — the swap still completes, nothing strands</td><td><span class="tag pend">not yet run</span></td></tr>
   <tr><td class="chk">☐</td><td class="id">A8</td><td>After A3/A4: <code>SELECT * FROM autopilot_signatures ORDER BY "createdAt" DESC</code></td><td>One row per server-signed tx (purpose cctp-inbound-* / cctp-outbound-*, amountUsd set)</td><td><span class="tag pend">not yet run</span></td></tr>
+</table>
+
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">A9</td><td>Enable autopilot in the popup that appears when the swap starts</td><td><strong>This</strong> swap’s Base legs are automatic — the "Swapping USDC to SOL" step needs no signature. Not merely the next swap</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">A10</td><td>Decline at the start, then Enable from the box inside the progress modal during the bridge wait</td><td>The same run finishes automatically, exactly as that box promises ("this swap finishes by itself")</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">A11</td><td>Revoke autopilot in Settings, then run a swap in the same session</td><td>Falls back to normal prompts — a stale grant must only ever cost a refused request, never a wrong signature</td><td><span class="tag pend">not yet run</span></td></tr>
 </table>
 
 <h2 id="s6">6 · Failure, refund &amp; recovery</h2>
@@ -235,6 +260,26 @@ seed forces a mandatory recovery-phrase backup before the flow continues.</p>
   <tr><td class="chk">☐</td><td class="id">G1</td><td>ETH → USDC, press MAX</td><td>MAX offers slightly less than the full balance (live gas reserve); the offered amount actually goes through — no "insufficient funds for gas" after signing</td><td><span class="tag pend">not yet run</span></td></tr>
   <tr><td class="chk">☐</td><td class="id">G2</td><td>ETH swap where the quote's gas is a large share of the amount</td><td>Always-visible "Network gas ≈ $X (Y%)" line; amber warning above ~20%; blocked above ~50%</td><td><span class="tag pend">not yet run</span></td></tr>
   <tr><td class="chk">☐</td><td class="id">G3</td><td>Gas-spike shortfall (hard to force; if it happens)</td><td>NO error dump — a "Network fee just went up" dialog offers the affordable amount; one tap writes it into the card + refreshes the quote; Cancel leaves everything untouched</td><td><span class="tag pend">not yet run</span></td></tr>
+</table>
+
+<h2 id="s9" class="pagebreak">9 · Passkey, provisioning &amp; retry regressions (Aug 2026)</h2>
+<p>Every row here is a bug that reached staging on 22–23 Aug 2026 and is now fixed. They share
+one shape: <em>the expensive step succeeded, the record did not, and the retry repeated the step
+instead of adopting what already existed</em>. Re-run this section after any change to wallet
+creation, chain provisioning or the passkey prompt.</p>
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">P1</td><td>On a device holding more than one passkey for the site, do any signing action (e.g. add the USDC trustline)</td><td>The prompt offers <strong>only this account’s</strong> passkey. Never "Turnkey error 16 / credential ID could not be found"</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">P2</td><td>Sign in on a device that does NOT hold your passkey and try to sign</td><td>Plain language naming where the passkey lives — never a raw Turnkey dump. DevTools console shows <code>[passkey]</code> with <em>expected</em> vs <em>presented</em> credential ids</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">P3</td><td>Start wallet creation, approve the biometric, kill the network before it finishes, then reconnect and retry</td><td>NO second passkey is created — check the browser/Google passkey list: still ONE for this site. The stranded attestation is reused</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">P4</td><td>Re-provision: delete that user’s <code>turnkey_wallets</code> row, then create a wallet again on the same account</td><td>Succeeds. The sub-org name carries a timestamp suffix, so the unchanged uid cannot collide with the abandoned sub-org</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">P5</td><td>Add 3 wallets in a day, then start wallet setup again</td><td>The limit message appears <strong>before</strong> any biometric prompt and reads "You can only add 3 wallets per day. Try again in Xh" — never "Weekly limit reached", never after a passkey was already created</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">P6</td><td>Same, but through a swap’s "Set up Stellar wallet" dialog</td><td>Identical pre-flight — both doors behave the same. (Non-Stellar chains consume no slot and are unaffected)</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">P7</td><td>Force the split state: null a chain column (e.g. <code>ethereumAddress</code>) while Turnkey still holds that account, then use the "Set up Ethereum wallet" gate</td><td>It completes and syncs the existing address. NOT "Turnkey error 6: path already exists", which repeated forever because the sync that fixes it sat after the throw</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">P8</td><td>Account whose Turnkey wallet holds ONLY Solana (asset-first onboarding on SOL) → add ETH via a swap gate</td><td>Syncs fine. NOT "Imported wallet has no recognizable accounts" — that guard belongs to mnemonic import only</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">P9</td><td>Complete a chain setup on a throttled connection (DevTools → Slow 3G) so the balance refresh is slow or fails</td><td>The "Set up … wallet" dialog <strong>closes</strong> once the wallet is created — it must not sit open over a wallet that already exists</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">P10</td><td>Hybrid setup dialog → step 4 "Move the USDC you want to swap"</td><td>Your connected wallet’s USDC is found. If it genuinely holds none, the message says so — never "not loaded yet, try again in a moment", which could never come true</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">P11</td><td>Full hybrid path end to end: connect Lobstr only → swap USDC → SOL</td><td>Companion setup → activate (the QR auto-detects the XLM within seconds) → trustline → move USDC → "Set up SOL wallet" → "Set up Ethereum wallet" → swap. No step repeats itself and no gate contradicts the banner above it</td><td><span class="tag pend">not yet run</span></td></tr>
 </table>
 
 <h2 id="done" class="pagebreak">Sign-off</h2>
