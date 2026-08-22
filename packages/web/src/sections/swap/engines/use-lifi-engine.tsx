@@ -237,8 +237,18 @@ export function useLifiEngine({
   };
 
   const handleSetupSuccess = async () => {
-    if (setupChain) await refetchChain(setupChain);
-    setSetupChain(null);
+    // The account EXISTS by the time this runs — the dialog reported success.
+    // Closing must therefore not depend on the refresh succeeding: an
+    // unguarded await left the "Set up Bitcoin wallet" dialog on screen after
+    // the wallet was created, so the user could not tell it had worked (live
+    // 2026-08-22). Refresh is best-effort; the close is not.
+    try {
+      if (setupChain) await refetchChain(setupChain);
+    } catch {
+      /* stale read only — the next render re-fetches */
+    } finally {
+      setSetupChain(null);
+    }
   };
 
   // Gas spike between quote and send → the structured shortfall becomes a

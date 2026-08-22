@@ -125,7 +125,15 @@ export async function ensureChainAccount(
 
   // Existing wallet missing this chain → derive on the same seed
   if (existing?.walletId) {
-    return addWalletAccounts(existing.subOrgId, existing.walletId, spec, chain);
+    const added = await addWalletAccounts(existing.subOrgId, existing.walletId, spec, chain);
+    // The new chain shares the wallet's seed, so there is no NEW phrase to
+    // save — but a user who has never confirmed they saved the existing one
+    // has just created another address that depends on it. Ask again here:
+    // markWalletNeedsBackup is a no-op once the phrase is confirmed, so
+    // anyone already backed up is never nagged (Niko 2026-08-22: "I did not
+    // get the passphrase" when adding BTC and ETH).
+    markWalletNeedsBackup(existing.subOrgId);
+    return added;
   }
 
   // Sub-org without a wallet (e.g. abandoned import) → create the wallet,

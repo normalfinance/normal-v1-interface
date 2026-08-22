@@ -1334,9 +1334,17 @@ export function useCctpEngine({
             onSuccess={async () => {
               // stellar → the slot adoption updates the persist store and the
               // aggregate carries balances; chain wallets refresh their hook.
-              if (setupChain === 'stellar') await refreshAggregate?.().catch(() => {});
-              else if (refetchChain) await refetchChain(setupChain);
-              setSetupChain(null);
+              // The close is in `finally`: the account already exists, so a
+              // failed refresh must not leave the dialog stuck open over a
+              // wallet that was created successfully (live 2026-08-22).
+              try {
+                if (setupChain === 'stellar') await refreshAggregate?.().catch(() => {});
+                else if (refetchChain) await refetchChain(setupChain);
+              } catch {
+                /* stale read only — the next render re-fetches */
+              } finally {
+                setSetupChain(null);
+              }
             }}
           />
         )}
