@@ -15,6 +15,7 @@
 // ---------------------------------------------------------------------------
 
 import { EVM_USDC, EVM_CCTP } from '@/lib/cctp/config';
+import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 
 import { getTurnkeyWalletInfo } from './wallet-info';
 
@@ -86,15 +87,10 @@ export async function grantAutopilotConsent(serverPublicKey: string): Promise<Co
        duplicate-credential error, same as before this fix) */
   }
 
-  const rpId =
-    typeof window !== 'undefined'
-      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
-      : 'localhost';
-  const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const { TurnkeyClient } = await import('@turnkey/http');
   const client = new TurnkeyClient(
     { baseUrl: 'https://api.turnkey.com' },
-    new WebauthnStamper({ rpId })
+    await createPasskeyStamper()
   );
 
   // 1. The delegated user, credentialed with the SERVER'S public key —

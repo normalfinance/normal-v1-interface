@@ -5,20 +5,17 @@
 // bound to it die with it. Authoritative instantly (status reads Turnkey,
 // not our DB). Mirror of the consent ceremony's stamping pattern.
 
+import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
+
 import { getTurnkeyWalletInfo } from './wallet-info';
 
 export async function revokeAutopilotConsent(autopilotUserId: string): Promise<void> {
   const info = await getTurnkeyWalletInfo();
   if (!info?.subOrgId) throw new Error('No Normal wallet');
-  const rpId =
-    typeof window !== 'undefined'
-      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
-      : 'localhost';
-  const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const { TurnkeyClient } = await import('@turnkey/http');
   const client = new TurnkeyClient(
     { baseUrl: 'https://api.turnkey.com' },
-    new WebauthnStamper({ rpId })
+    await createPasskeyStamper()
   );
   const activity = await client.deleteUsers({
     type: 'ACTIVITY_TYPE_DELETE_USERS',

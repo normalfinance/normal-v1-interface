@@ -4,6 +4,7 @@ import type { v1WalletAccountParams } from '@turnkey/sdk-types';
 import type { ChainId, ChainAddresses } from '@/lib/chains/registry';
 
 import { buildAuthHeaders } from '@/utils/http';
+import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 import { pickAddresses, getChainAddress } from '@/lib/chains/registry';
 
 import { createPasskeyRegistration } from './passkey';
@@ -27,16 +28,10 @@ export async function addWalletAccounts(
   accounts: v1WalletAccountParams[],
   chain?: TurnkeyChain
 ): Promise<ChainAddresses> {
-  const rpId =
-    typeof window !== 'undefined'
-      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
-      : 'localhost';
-
-  const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const { TurnkeyClient } = await import('@turnkey/http');
   const client = new TurnkeyClient(
     { baseUrl: 'https://api.turnkey.com' },
-    new WebauthnStamper({ rpId })
+    await createPasskeyStamper()
   );
 
   // Passkey prompt — derive the new account(s) on the existing seed
@@ -117,15 +112,10 @@ export async function ensureChainAccount(
   // Sub-org without a wallet (e.g. abandoned import) → create the wallet,
   // passkey-stamped, then sync addresses via the server
   if (existing) {
-    const rpId =
-      typeof window !== 'undefined'
-        ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
-        : 'localhost';
-    const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
     const { TurnkeyClient } = await import('@turnkey/http');
     const client = new TurnkeyClient(
       { baseUrl: 'https://api.turnkey.com' },
-      new WebauthnStamper({ rpId })
+      await createPasskeyStamper()
     );
 
     const activity = await client.createWallet({

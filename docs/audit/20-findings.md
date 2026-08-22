@@ -2696,3 +2696,29 @@ card, explore row, swap card) switched from `??` to `||`. RULE (2nd
 occurrence): for a fallback whose empty value is a STRING, `??` is the
 wrong operator — an empty string is a missing value, not a present one.
 257 tests, build clean.
+
+**"Turnkey error 16: CREDENTIAL_NOT_FOUND" — fixed at the prompt, not
+the message (staging 2026-08-22):** adding the trustline failed AFTER
+the biometric with a raw dump naming an organizationId and credentialId.
+Cause: every ceremony built `new WebauthnStamper({ rpId })` with NO
+allowCredentials, so the browser offered EVERY passkey on the device —
+on a test device with several accounts, picking one that belongs to a
+different sub-org fails deep inside Turnkey. The user did nothing wrong;
+the picker let them pick something that could not work.
+DYNAMIC FIX (the error is now unreachable, not merely explained): new
+`/api/turnkey/credentials` (withAuth) returns the credential ids
+registered to THIS user's sub-org, and a shared
+`createPasskeyStamper()` passes them as allowCredentials — the browser
+only offers the right passkey. Cached 60s, and a failed lookup falls
+back to an unrestricted prompt so a lookup problem can never block
+signing. Rewired ALL 10 ceremony sites (stellar + evm signers,
+add-account, import-mnemonic, autopilot consent/revoke, LI.FI execute,
+the three send adapters, wallet export); the now-dead rpId/import
+leftovers were stripped so no call site can drift back. SECOND HALF:
+`friendlyTurnkeyError()` maps what remains — wrong passkey, dismissed/
+timed-out prompt, already-registered, unsupported device, domain
+mismatch, rate limit — and passes anything unknown through UNCHANGED so
+nothing is hidden from support; wired into the setup + export dialogs,
+4 unit tests. RULE: when a user-visible error blames the user for a
+choice the UI offered, fix the OFFER — constrain the input — before
+improving the wording. 262 tests, build clean.

@@ -24,6 +24,7 @@ import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { runWebauthnCeremony } from '@/lib/turnkey/webauthn-guard';
 import { getTurnkeyWalletInfo, type TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { createPasskeyStamper, friendlyTurnkeyError } from '@/lib/turnkey/passkey-stamper';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -147,15 +148,10 @@ export default function WalletExportDialog({
 
       // 2) Ask Turnkey to export, encrypted to the iframe's key, authorized
       //    by the user's PASSKEY (guarded like every ceremony, #51/#63).
-      const rpId =
-        typeof window !== 'undefined'
-          ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
-          : 'localhost';
-      const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
       const { TurnkeyClient } = await import('@turnkey/http');
       const client = new TurnkeyClient(
         { baseUrl: 'https://api.turnkey.com' },
-        new WebauthnStamper({ rpId })
+        await createPasskeyStamper()
       );
       const activity = await runWebauthnCeremony(() =>
         client.exportWallet({
@@ -174,7 +170,7 @@ export default function WalletExportDialog({
       setPhase('revealed');
     } catch (e: any) {
       teardown();
-      setError(String(e?.message ?? e));
+      setError(friendlyTurnkeyError(e));
       setPhase('error');
     }
   }, [t, teardown]);

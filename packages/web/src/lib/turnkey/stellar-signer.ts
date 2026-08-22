@@ -1,6 +1,7 @@
 'use client';
 
 import { constants } from '@normalfinance/utils';
+import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 import { xdr, Keypair, TransactionBuilder } from '@stellar/stellar-sdk';
 
 import { runWebauthnCeremony } from './webauthn-guard';
@@ -24,15 +25,9 @@ export async function signStellarXdrWithTurnkey(
   const tx = TransactionBuilder.fromXDR(xdrString, passphrase);
   const payload = tx.hash().toString('hex');
 
-  const rpId =
-    typeof window !== 'undefined'
-      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
-      : 'localhost';
-
-  const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const { TurnkeyClient } = await import('@turnkey/http');
 
-  const stamper = new WebauthnStamper({ rpId });
+  const stamper = await createPasskeyStamper();
   const client = new TurnkeyClient({ baseUrl: 'https://api.turnkey.com' }, stamper);
 
   // Serialized + fast-fail-retried: savings signs two transactions

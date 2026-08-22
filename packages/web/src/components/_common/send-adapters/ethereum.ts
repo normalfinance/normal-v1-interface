@@ -8,6 +8,7 @@ import { getChain } from '@/lib/chains/registry';
 import { announceTransaction } from '@/lib/tx-events';
 import { ETH_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 
 import type { SendParams, SendAdapter } from './index';
 
@@ -131,15 +132,10 @@ export function createEthereumAdapter(
         });
 
         // Sign with Turnkey via the user's passkey (WebAuthn prompt)
-        const rpId =
-          typeof window !== 'undefined'
-            ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
-            : 'localhost';
-        const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
         const { TurnkeyClient } = await import('@turnkey/http');
         const turnkeyClient = new TurnkeyClient(
           { baseUrl: 'https://api.turnkey.com' },
-          new WebauthnStamper({ rpId })
+          await createPasskeyStamper()
         );
 
         // Guarded ceremony (#51 coverage completed 2026-08-14): queued +
