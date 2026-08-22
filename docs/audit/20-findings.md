@@ -2628,3 +2628,22 @@ with a comment, so the stale value cannot be reached again. RULES:
 never from the enclosing render's values; (2) a "fix this" step must be
 gated on a probe that says it is broken, never on the action that
 preceded it. 257 tests, build clean.
+
+**Swap CTA contradicted the page banner (staging 2026-08-22):** with a
+Lobstr-only account the page showed "Normal wallet is not active on
+Stellar yet — send it at least 1 XLM" while the primary button said
+"Set up SOL wallet", so the flow never reached the Stellar activation
+Niko was being told about. Cause: the cctp button gates were ordered
+chain-addresses-first (!nativeAddress → !evmAddress → missingStellar →
+needsTrustline → lowFeeXlm), so a missing SOL address outranked an
+unactivated Stellar wallet. Reordered to Stellar-side first. Reasoning
+recorded in the code: activation is the SLOW, money-dependent step
+(~1 XLM must arrive from outside, minutes), while the chain addresses
+are instant one-passkey formalities — asking for the long pole first
+starts the wait earlier AND keeps the CTA agreeing with the banner.
+(missingStellar already covers "exists but not activated" via
+accountExists, so the CTA now opens the guided dialog with the QR added
+earlier today.) RULE: when several gates can block an action, order
+them by TIME-TO-RESOLVE, not by code convenience — and never let a
+secondary gate contradict a warning the same screen is showing.
+257 tests, build clean.

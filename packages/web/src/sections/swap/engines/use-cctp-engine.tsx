@@ -999,38 +999,14 @@ export function useCctpEngine({
           </Typography>
         ),
       };
-    if (!nativeAddress) {
-      const sym = (direction === 'in' ? fromSymbol : toSymbol) as CrosschainSymbol;
-      const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[sym];
-      return {
-        label: t('Set up {{sym}} wallet', { sym }),
-        action: user ? () => setSetupChain(chain) : null,
-        loading: false,
-        helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
-            {t('One passkey creates your {{sym}} address — the swap continues right after.', {
-              sym,
-            })}
-          </Typography>
-        ),
-      };
-    }
-    if (!evmAddress)
-      return {
-        label: t('Set up Ethereum wallet'),
-        action: user ? () => setSetupChain('ethereum') : null,
-        loading: false,
-        helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
-            {t(
-              'The route travels via your own Base address — one passkey creates it, then the swap continues.'
-            )}
-          </Typography>
-        ),
-      };
-    // #32 chunk 4a: for external-wallet users every Stellar-side preflight
-    // failure routes into the guided setup dialog, which derives the exact
-    // step to resume at (create / activate / trustline / top-up).
+    // ORDER MATTERS (Niko staging 2026-08-22: the page banner said "Normal
+    // wallet is not active" while this button said "Set up SOL wallet" — two
+    // competing instructions, and the swap never reached the Stellar step).
+    // Stellar-side setup comes FIRST because it is the slow, money-dependent
+    // one: activation needs ~1 XLM to arrive from outside and can take
+    // minutes. The chain addresses below are instant one-passkey formalities,
+    // so they are asked for last — the user starts the long pole earliest and
+    // the CTA always agrees with the banner.
     if (missingStellar)
       return onNeedsSetup
         ? { label: t('Set up your Normal wallet'), action: onNeedsSetup, loading: false }
@@ -1085,6 +1061,38 @@ export function useCctpEngine({
           </Typography>
         ),
       };
+    if (!nativeAddress) {
+      const sym = (direction === 'in' ? fromSymbol : toSymbol) as CrosschainSymbol;
+      const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[sym];
+      return {
+        label: t('Set up {{sym}} wallet', { sym }),
+        action: user ? () => setSetupChain(chain) : null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t('One passkey creates your {{sym}} address — the swap continues right after.', {
+              sym,
+            })}
+          </Typography>
+        ),
+      };
+    }
+    if (!evmAddress)
+      return {
+        label: t('Set up Ethereum wallet'),
+        action: user ? () => setSetupChain('ethereum') : null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t(
+              'The route travels via your own Base address — one passkey creates it, then the swap continues.'
+            )}
+          </Typography>
+        ),
+      };
+    // #32 chunk 4a: for external-wallet users every Stellar-side preflight
+    // failure routes into the guided setup dialog, which derives the exact
+    // step to resume at (create / activate / trustline / top-up).
     if (amount.lte(0)) return { label: t('Enter an amount'), action: null, loading: false };
     if (insufficient) return { label: t('Insufficient balance'), action: null, loading: false };
     if (stage && stage !== 'done')
