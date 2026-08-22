@@ -8,7 +8,6 @@ import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
 import { supabase } from '@/lib/createSupabaseClient';
-import { usePersistStore } from '@normalfinance/state';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
@@ -20,6 +19,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { importMnemonicIntoTurnkey } from '@/lib/turnkey/import-mnemonic';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { shouldAdoptIntoSlot, shouldReattachExternalOnLogin } from '@/lib/wallet-slot';
 import { getTurnkeyWalletInfo, isTurnkeyStellarAddress } from '@/lib/turnkey/wallet-info';
 import { linkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
@@ -29,15 +29,6 @@ import {
   removeStoredNormalWalletKey,
 } from '@/hooks/stellar/use-normal-wallet';
 import {
-  logger,
-  format,
-  isTestnet,
-  validateMnemonic,
-  normalizeMnemonic,
-  validatePrivateKey,
-  createCoinbasePayOnrampURL,
-} from '@normalfinance/utils';
-import {
   verifyOtp,
   signInWithOtp,
   resetPassword,
@@ -46,6 +37,16 @@ import {
   signUpWithPassword,
   resendConfirmationEmail,
 } from '@/services/auth';
+import {
+  logger,
+  format,
+  isTestnet,
+  validateMnemonic,
+  normalizeMnemonic,
+  fetchAccountStrict,
+  validatePrivateKey,
+  createCoinbasePayOnrampURL,
+} from '@normalfinance/utils';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -171,8 +172,9 @@ export default function OnboardingWizard({
 
   const { importWalletFromMnemonic, importWalletFromPrivateKey, connectWalletWithoutKeypair } =
     useNormalWallet();
-  const { connectWallet: connectStellarWallet, publicKey: stellarPublicKey } =
-    useStellarWalletsKit();
+  // publicKey is deliberately NOT destructured: the connect handler must read
+  // it from getState() after connecting, never from this (pre-connect) render.
+  const { connectWallet: connectStellarWallet } = useStellarWalletsKit();
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
 
   // ── Navigation ───────────────────────────────────────────────────────────
@@ -808,13 +810,41 @@ export default function OnboardingWizard({
   const handleConnectStellarWallet = async () => {
     try {
       await connectStellarWallet();
-      const addr = persist.wallet.address || stellarPublicKey;
+      // Read the address from getState(): the values captured in this closure
+      // are from the render BEFORE the connect, so on a fresh signup they are
+      // still EMPTY (staging 2026-08-22: the activation step appeared with no
+      // QR code, because the QR is keyed on this address). Same trap the kit
+      // hook documents for its own connect path.
+      const addr =
+        usePersistStore.getState().wallet.address ||
+        useStellarWalletKitStore.getState().publicKey ||
+        '';
       if (addr) setWizardWalletAddress(addr);
+
       if (step === 'linked-accounts') {
         enqueueSnackbar(t('Wallet connected!'), { variant: 'success' });
         handleClose();
-      } else {
+        return;
+      }
+
+      // Only send the user to "fund with XLM" when the wallet ACTUALLY needs
+      // activating. This used to be unconditional, so an already-funded
+      // wallet (the normal case when someone connects Lobstr) was told to
+      // activate itself. A failed probe asserts nothing (#74 rule): treat it
+      // as fine and let the readiness notices raise a real problem later.
+      let needsActivation = false;
+      if (addr) {
+        try {
+          needsActivation = !(await fetchAccountStrict(addr, config));
+        } catch {
+          needsActivation = false;
+        }
+      }
+      if (needsActivation) {
         setStep('fund-xlm');
+      } else {
+        enqueueSnackbar(t('Wallet connected!'), { variant: 'success' });
+        handleClose();
       }
     } catch (err: any) {
       logger.error('[OnboardingWizard] Stellar connect failed:', err);
