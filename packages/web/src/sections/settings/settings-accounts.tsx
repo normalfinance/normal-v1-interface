@@ -5,10 +5,11 @@ import type { LinkedWallet } from '@/services/linked-wallets';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useState, useEffect } from 'react';
-import { format } from '@normalfinance/utils';
+import { format, logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
 import { forgetExternalWallet } from '@/lib/wallet-reconnect-memo';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { getTurnkeyWalletInfo, type TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 import { forgetWalletLink, useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
@@ -40,6 +41,7 @@ export function SettingsAccounts() {
   const config = useStellarConfig();
   const persist = usePersistStore();
   const { disconnectWallet: kitDisconnect } = useStellarWalletsKit();
+  const { connectWalletWithoutKeypair } = useNormalWallet();
   const [wallets, setWallets] = useState<LinkedWallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingWallet, setEditingWallet] = useState<string | null>(null);
@@ -135,6 +137,22 @@ export function SettingsAccounts() {
           /* the kit may already be disconnected — the slot clear below is what matters */
         }
         persist.disconnectWallet();
+        // Fall back to the Normal wallet (live 2026-08-22: disconnecting the
+        // external wallet left NO Stellar wallet connected, so savings — which
+        // live on the Normal wallet — read $0.00, and swaps/sends had no
+        // wallet either). The self-heal cannot do this for us: an empty slot
+        // whose breadcrumb names an external wallet means "disconnected by
+        // choice" (invariants I2/I7), so it deliberately stays out. Here the
+        // intent is explicit, so the fallback is explicit too.
+        if (turnkeyStellar) {
+          try {
+            await connectWalletWithoutKeypair(turnkeyStellar);
+          } catch (e) {
+            // Leave the slot empty rather than guess; the drawer still offers
+            // wallet setup/connect.
+            logger.warn('[SETTINGS] Could not fall back to the Normal wallet:', e);
+          }
+        }
       }
       enqueueSnackbar(t('Account unlinked successfully'), { variant: 'success' });
       setUnlinkDialogOpen(false);

@@ -2535,3 +2535,26 @@ linkedAddresses)` in lib/wallet-slot.ts beside the other slot
 invariants, with 4 tests (I9): re-attach when owned, refuse a foreign
 memo (shared browser), no memo ⇒ untouched Turnkey connect (I8), no
 linked wallets ⇒ refuse. 257 tests, build clean.
+
+**Disconnecting the external wallet left NO wallet at all (2026-08-22):**
+Niko disconnected Lobstr in Settings and savings dropped to $0.00.
+Traced, not guessed: my unlink fix clears the slot, and with the slot
+empty use-savings-position disables BOTH queries — the connected-wallet
+position (line 214 needs `address`) and the companion lookup (line 237
+needs `isExternalSlot`, now false) — so savings = 0 + 0. The self-heal
+could not rescue it BY DESIGN: an empty slot whose breadcrumb names an
+external wallet means "disconnected by choice" (invariants I2/I7), so
+it stays out. The missing piece was an explicit end state: disconnecting
+an EXTERNAL wallet should leave the user on their NORMAL wallet, not on
+nothing (savings, swaps and sends all need a Stellar wallet). FIX: the
+Settings unlink now falls back to the Turnkey wallet via
+connectWalletWithoutKeypair when one exists — which also rewrites the
+breadcrumb to 'normal-wallet', so the state is self-consistent
+afterwards. Deliberately NOT done: loosening shouldRestoreTurnkeyStellar
+so the self-heal covers this case. It would fix pre-existing broken
+states automatically but changes a locked invariant with tests (I2/I7)
+and could re-open finding #42 for users who disconnected before the
+memo existed — that is Niko's call, not a silent change made mid-fix.
+Recovery for anyone already stuck (empty slot, no memo): log out and in
+— handleAfterAuth finds no external memo and connects the Turnkey
+wallet. 257 tests, build clean.
