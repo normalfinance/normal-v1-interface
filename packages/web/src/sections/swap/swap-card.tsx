@@ -382,7 +382,14 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     }
   }, [refreshFresh]);
 
-  const resetInput = useCallback(() => setAmountIn(''), []);
+  // Records a COMPLETED external→companion move for the amount currently
+  // being swapped, so a retry after a rejected burn doesn't move twice.
+  // In-memory only, and cleared the moment a swap completes (resetInput).
+  const movedForAmount = useRef<string | null>(null);
+  const resetInput = useCallback(() => {
+    movedForAmount.current = null;
+    setAmountIn('');
+  }, []);
   // Dynamic-gas write-back is a TOKEN amount — flip fiat mode off so the
   // field can't reinterpret 0.0085 ETH as $0.0085 (sweep 2026-08-21).
   const handleAmountAdjusted = useCallback((v: string) => {
@@ -452,23 +459,23 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         ? {
             label: connectedWalletLabel(wallet.walletType),
             execute: async (amountUsdc: string) => {
-              // Idempotency (sweep 2026-08-21): a retry after a rejected burn
-              // must not move the USDC a SECOND time — if the companion
-              // already holds enough (the previous attempt's move landed),
-              // skip straight to the swap.
-              try {
-                const pre = await probeCompanion(companionStellar.address, config);
-                if (BigNumber(pre.usdcBalance).gte(amountUsdc)) {
-                  enqueueSnackbar(
-                    t(
-                      'Your Normal wallet already holds enough USDC — continuing without a second move.'
-                    ),
-                    { variant: 'info' }
-                  );
-                  return true;
-                }
-              } catch {
-                /* probe hiccup — proceed with the move as before */
+              // Idempotency, take 2 (LIVE INCIDENT 2026-08-22): the first
+              // version skipped the move whenever the companion HELD ENOUGH
+              // USDC — which is true on almost every fresh swap, so it spent
+              // the Normal wallet's money while the user had picked Lobstr.
+              // A BALANCE can never prove a move happened. Only a move we
+              // actually performed in THIS attempt can, so the record is an
+              // in-memory ref: it cannot survive a reload and go stale (a
+              // stale marker would re-create the very bug it guards against).
+              // Cleared on success via resetInput.
+              if (movedForAmount.current === amountUsdc) {
+                enqueueSnackbar(
+                  t(
+                    'Your USDC was already moved for this swap — continuing without a second move.'
+                  ),
+                  { variant: 'info' }
+                );
+                return true;
               }
               const hash = await stellarSend({
                 destination: companionStellar.address,
@@ -479,7 +486,11 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               for (let i = 0; i < 10; i += 1) {
                 try {
                   const probe = await probeCompanion(companionStellar.address, config);
-                  if (BigNumber(probe.usdcBalance).gte(amountUsdc)) return true;
+                  if (BigNumber(probe.usdcBalance).gte(amountUsdc)) {
+                    // Verified visible on the companion — a retry may skip it.
+                    movedForAmount.current = amountUsdc;
+                    return true;
+                  }
                 } catch {
                   /* transient Horizon hiccup — retry */
                 }

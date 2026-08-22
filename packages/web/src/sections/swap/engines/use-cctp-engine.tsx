@@ -918,7 +918,15 @@ export function useCctpEngine({
           // inbound it's the (EVM) source, outbound the (EVM) destination.
           srcAddress: direction === 'in' ? evmAddress : stellarAddress,
           destAddress: direction === 'in' ? stellarAddress : evmAddress,
-          quoteJson: { feePercent, lifiTool: quote?.tool ?? null },
+          quoteJson: {
+            feePercent,
+            lifiTool: quote?.tool ?? null,
+            // Which wallet actually PAID (live incident 2026-08-22: the
+            // activity row said "Lobstr" for a swap funded by the Normal
+            // wallet, because rows were tagged by feed, not by source).
+            // Inbound always spends the Normal wallet's chain address.
+            fundedFrom: direction === 'out' && fundFromExternal ? 'external' : 'normal',
+          },
         }),
       });
       const data = await res.json();

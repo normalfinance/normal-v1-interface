@@ -428,17 +428,30 @@ export function ActivityCard({
   }, [slotFeed.mutate, isHybrid, companionFeed.mutate]); // eslint-disable-line react-hooks/exhaustive-deps
   const recentActivity = useMemo(() => {
     if (!isHybrid) return slotFeed.recentActivity;
-    const tag = (list: Activity[], wallet: string) =>
-      list.map((a) => ({ ...a, walletTag: wallet }) as Activity & { walletTag?: string });
     // Dedupe by id: a hybrid cctp swap involves BOTH wallets, so both feeds
     // return the SAME row (observed live 2026-08-19: one swap listed twice).
     // NaN-safe sort: one row with a missing/string timestamp made the whole
     // comparator undefined-order, leaving a fresh row below an hour-old one.
     const ts = (x: Activity) => Number(x.timestamp) || 0;
     const seen = new Set<string>();
+    // A cctp row appears in BOTH feeds, so the feed can't say whose money it
+    // was — it used to inherit the slot wallet's name and claimed "Lobstr"
+    // for swaps the Normal wallet paid for (live incident 2026-08-22). When
+    // the row states its funding source, that wins over the feed.
+    const bySource = (a: Activity, fallback: string) => {
+      const funded = (a as Activity & { fundedFrom?: string }).fundedFrom;
+      if (!funded) return fallback;
+      return funded === 'external'
+        ? connectedWalletLabel(persistWallet.walletType)
+        : 'Normal wallet';
+    };
+    const tagBySource = (list: Activity[], fallback: string) =>
+      list.map(
+        (a) => ({ ...a, walletTag: bySource(a, fallback) }) as Activity & { walletTag?: string }
+      );
     return [
-      ...tag(slotFeed.recentActivity, connectedWalletLabel(persistWallet.walletType)),
-      ...tag(companionFeed.recentActivity, 'Normal wallet'),
+      ...tagBySource(slotFeed.recentActivity, connectedWalletLabel(persistWallet.walletType)),
+      ...tagBySource(companionFeed.recentActivity, 'Normal wallet'),
     ]
       .filter((x) => {
         if (seen.has(x.id)) return false;

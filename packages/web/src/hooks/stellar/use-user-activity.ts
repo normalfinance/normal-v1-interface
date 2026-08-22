@@ -143,6 +143,7 @@ interface CctpTransferRow {
   mintTxHash: string | null;
   srcSwapTxHash: string | null;
   dstSwapTxHash: string | null;
+  quoteJson: string | null;
   createdAt: string;
 }
 
@@ -156,10 +157,19 @@ function mapCctpTransfer(tr: CctpTransferRow): Extract<Activity, { type: 'Swap' 
   const succeeded = outbound
     ? tr.status === 'COMPLETED' && !!tr.dstSwapTxHash
     : tr.status === 'COMPLETED';
+  // Funding source, for the activity row's wallet tag (2026-08-22).
+  let fundedFrom: 'external' | 'normal' | undefined;
+  try {
+    const q = tr.quoteJson ? JSON.parse(tr.quoteJson) : null;
+    if (q?.fundedFrom === 'external' || q?.fundedFrom === 'normal') fundedFrom = q.fundedFrom;
+  } catch {
+    /* legacy/unparseable quote blob → no claim about the source */
+  }
   return {
     id: `cctp:${tr.id}`,
     timestamp: Date.parse(tr.createdAt),
     type: 'Swap',
+    fundedFrom,
     txHash: tr.burnTxHash ?? null,
     tokenIn: {
       address: `cctp:${tr.srcAsset}`,

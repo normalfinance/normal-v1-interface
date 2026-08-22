@@ -2347,3 +2347,32 @@ v2 check). SHIP GATES (doc 79 §6, Niko live): confirm export enabled on
 our Turnkey org + iframe embeds on localhost/staging/prod; round-trip
 test (export → import into Freighter+MetaMask → same addresses). Part L
 tests L1-L6 in doc 79. 248 tests, build clean.
+
+**WRONG WALLET SPENT — self-inflicted, fixed same day (2026-08-22):**
+Niko picked Lobstr as the source for USDC→SOL; the USDC left his NORMAL
+wallet instead. PROVEN on-chain: burn d5204fe1… source_account =
+GA5GD6PTY…FZG7F (Normal wallet), not GCY3ZSMRE… (Lobstr). CAUSE: MY
+sweep fix S7 (2026-08-21), added to stop a retry moving funds twice.
+It skipped the external→companion move whenever "the companion already
+holds enough USDC" — reasoning that a prior attempt's move must have
+landed. But A BALANCE CANNOT PROVE AN ACTION HAPPENED: on a fresh swap
+the companion legitimately held 23.64 USDC ≥ the 19.78 requested, so
+the Lobstr move was skipped on EVERY such swap and the Normal wallet
+paid. The snackbar Niko saw ("already holds enough USDC") was that
+guard; no Lobstr popup appeared because no Lobstr tx was ever built.
+FIX: the guard now keys on a MOVE WE PERFORMED — an in-memory ref set
+only after a move is verified visible on the companion, cleared on
+success via resetInput. Deliberately NOT persisted: a stale marker
+would re-create this exact bug, and moving again (user-approved,
+visible) is strictly safer than silently spending the wrong wallet.
+SECOND BUG (it masked the first): hybrid activity rows were tagged by
+which FEED returned them — cctp rows appear in both, slot won, so
+every hybrid cctp swap claimed "Lobstr" regardless of who paid. Now
+the engine records fundedFrom on the transfer (quoteJson) and the feed
+tags cctp rows by the REAL source, falling back to the old behavior on
+legacy rows. RULES: (1) an idempotency guard must key on the ACTION,
+never on its side effects; (2) any code that can change WHICH WALLET
+PAYS is a money path and gets money-path scrutiny, even when it ships
+as a UX nicety; (3) a row that names a wallet must derive it from the
+transaction, never from context. Funds not lost (SOL delivered; wrong
+pocket). 248 tests, build clean.
