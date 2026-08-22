@@ -2583,3 +2583,22 @@ gone. RULES: (1) mutate LOCAL state before the network call when a
 concurrent reader can rebuild what you are deleting; (2) state that
 several code paths write is safer DERIVED from one source than written
 imperatively in each. 257 tests, build clean.
+
+**Normal-wallet activation was a dead end (staging 2026-08-22):** with
+only Lobstr connected, the guided setup created the companion Stellar
+wallet, then the "Send XLM" button failed with "The XLM transfer was not
+completed." — and there was NO other way to activate it. Cause: the
+activate step could only send XLM FROM the connected wallet, and that
+wallet held USDC (39.43) but too little XLM; the failure message named
+neither the reason nor an alternative. The external-wallet dialog has
+solved this since #74 (QR + Horizon poll + auto-advance) — the
+companion dialog never got the same treatment. FIX: the activate step
+now shows the companion's ADDRESS + QR ("send at least 1 XLM from any
+wallet or exchange"), polls every 4s while the step is 'activate' or
+'fund', and advances BY ITSELF the moment the funds land — the
+send-from-connected-wallet path remains as a shortcut, below. The error
+now names the real problem ("your connected wallet only has X XLM —
+lower the amount or use the QR above"). RULE (2nd time — the readiness
+notices learned it in #74): every funding step needs a fund-from-
+ANYWHERE path; a flow that can only be completed from one wallet is a
+dead end the moment that wallet cannot pay. 257 tests, build clean.

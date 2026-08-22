@@ -18,6 +18,7 @@
 
 import type { Token } from '@normalfinance/types';
 
+import QRCode from 'qrcode';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useStellarConfig } from '@/hooks';
@@ -47,6 +48,7 @@ import FingerprintIcon from '@mui/icons-material/Fingerprint';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from '@/components/template/iconify';
+import CopyIconButton from '@/components/copy-icon-button';
 
 const MONO = { fontFamily: '"Geist Mono", "Courier New", monospace' } as const;
 
@@ -75,6 +77,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
   const [error, setError] = useState<string | null>(null);
   const [fundingXlm, setFundingXlm] = useState(String(SETUP_FUNDING_XLM));
   const [fundUsdc, setFundUsdc] = useState('');
+  const [qrUrl, setQrUrl] = useState('');
 
   const step: SetupStep = deriveSetupStep(companionAddress, probe, neededUsdc);
 
@@ -94,6 +97,36 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
       setProbing(false);
     }
   }, [config]);
+
+  // QR for the companion address, so XLM can be sent from ANYWHERE — an
+  // exchange, a phone wallet, a friend (Niko staging 2026-08-22: the
+  // connected wallet had USDC but not enough XLM, so the "send from your
+  // connected wallet" button was a dead end with no other way forward).
+  useEffect(() => {
+    if (!open || !companionAddress) {
+      setQrUrl('');
+      return;
+    }
+    QRCode.toDataURL(companionAddress, {
+      width: 168,
+      margin: 1,
+      color: { dark: '#0A0A0F', light: '#FFFFFF' },
+    })
+      .then(setQrUrl)
+      .catch(() => setQrUrl(''));
+  }, [open, companionAddress]);
+
+  // Arrival checker: while the wallet still needs XLM (or USDC), re-probe
+  // every 4s so the dialog ADVANCES BY ITSELF the moment funds land —
+  // whoever sent them, however they were sent.
+  useEffect(() => {
+    if (!open) return undefined;
+    if (step !== 'activate' && step !== 'fund') return undefined;
+    const id = setInterval(() => {
+      refresh();
+    }, 4000);
+    return () => clearInterval(id);
+  }, [open, step, refresh]);
 
   useEffect(() => {
     if (!open) return;
@@ -133,6 +166,21 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
         if (!xlm) throw new Error(t('XLM balance not loaded yet — try again in a moment.'));
         const amount = BigNumber(fundingXlm);
         if (!amount.gte(2)) throw new Error(t('At least 2 XLM is needed to activate the wallet.'));
+        // Name the real problem instead of "the transfer was not completed"
+        // (Niko staging 2026-08-22: the connected wallet held USDC but too
+        // little XLM, so the button could never work and the message said
+        // nothing about why — or about the QR right above it).
+        if (BigNumber(xlm.balance || 0).lt(amount)) {
+          throw new Error(
+            t(
+              '{{wallet}} only has {{have}} XLM — either lower the amount, or use the QR code above to send at least 1 XLM from another wallet or an exchange.',
+              {
+                wallet: t('Your connected wallet'),
+                have: BigNumber(xlm.balance || 0).toFixed(2),
+              }
+            )
+          );
+        }
         const hash = await stellarSend({
           destination: companionAddress!,
           token: xlm,
@@ -289,14 +337,82 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
 
           {/* Step inputs */}
           {step === 'activate' && (
-            <TextField
-              size="small"
-              fullWidth
-              value={fundingXlm}
-              onChange={(e) => setFundingXlm(e.target.value.replace(/[^0-9.]/g, ''))}
-              label={t('XLM to send')}
-              sx={{ mb: '10px', '& input': { ...MONO, fontSize: '14px' } }}
-            />
+            <>
+              {/* Option A — send from anywhere (always available). */}
+              <Box
+                sx={{
+                  p: '14px',
+                  mb: '12px',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(10,10,15,0.1)',
+                  bgcolor: '#FAFAFB',
+                  textAlign: 'center',
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: '12.5px',
+                    color: 'rgba(10,10,15,0.6)',
+                    mb: '10px',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {t(
+                    'Send at least 1 XLM to this address from any wallet or exchange — this screen continues by itself as soon as it arrives.'
+                  )}
+                </Typography>
+                {qrUrl && (
+                  <Box
+                    component="img"
+                    src={qrUrl}
+                    alt={t('Normal wallet address')}
+                    sx={{ width: 168, height: 168, borderRadius: '10px', mb: '8px' }}
+                  />
+                )}
+                <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
+                  <Typography
+                    sx={{
+                      ...MONO,
+                      fontSize: '11.5px',
+                      color: '#0A0A0F',
+                      wordBreak: 'break-all',
+                      textAlign: 'left',
+                    }}
+                  >
+                    {companionAddress}
+                  </Typography>
+                  {companionAddress && (
+                    <CopyIconButton value={companionAddress} alert={t('Address copied')} />
+                  )}
+                </Stack>
+                {probing && (
+                  <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '6px' }}>
+                    {t('Watching for the payment…')}
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Option B — the shortcut, only when the connected wallet can
+                  actually pay: XLM there, not just USDC. */}
+              <Typography
+                sx={{
+                  fontSize: '12px',
+                  color: 'rgba(10,10,15,0.5)',
+                  mb: '6px',
+                  textAlign: 'center',
+                }}
+              >
+                {t('or send it from your connected wallet')}
+              </Typography>
+              <TextField
+                size="small"
+                fullWidth
+                value={fundingXlm}
+                onChange={(e) => setFundingXlm(e.target.value.replace(/[^0-9.]/g, ''))}
+                label={t('XLM to send')}
+                sx={{ mb: '10px', '& input': { ...MONO, fontSize: '14px' } }}
+              />
+            </>
           )}
           {step === 'fund' && (
             <TextField
