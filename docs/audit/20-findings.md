@@ -2696,3 +2696,59 @@ card, explore row, swap card) switched from `??` to `||`. RULE (2nd
 occurrence): for a fallback whose empty value is a STRING, `??` is the
 wrong operator — an empty string is a missing value, not a present one.
 257 tests, build clean.
+
+**"Turnkey error 16: CREDENTIAL_NOT_FOUND" — fixed at the prompt, not
+the message (staging 2026-08-22):** adding the trustline failed AFTER
+the biometric with a raw dump naming an organizationId and credentialId.
+Cause: every ceremony built `new WebauthnStamper({ rpId })` with NO
+allowCredentials, so the browser offered EVERY passkey on the device —
+on a test device with several accounts, picking one that belongs to a
+different sub-org fails deep inside Turnkey. The user did nothing wrong;
+the picker let them pick something that could not work.
+DYNAMIC FIX (the error is now unreachable, not merely explained): new
+`/api/turnkey/credentials` (withAuth) returns the credential ids
+registered to THIS user's sub-org, and a shared
+`createPasskeyStamper()` passes them as allowCredentials — the browser
+only offers the right passkey. Cached 60s, and a failed lookup falls
+back to an unrestricted prompt so a lookup problem can never block
+signing. Rewired ALL 10 ceremony sites (stellar + evm signers,
+add-account, import-mnemonic, autopilot consent/revoke, LI.FI execute,
+the three send adapters, wallet export); the now-dead rpId/import
+leftovers were stripped so no call site can drift back. SECOND HALF:
+`friendlyTurnkeyError()` maps what remains — wrong passkey, dismissed/
+timed-out prompt, already-registered, unsupported device, domain
+mismatch, rate limit — and passes anything unknown through UNCHANGED so
+nothing is hidden from support; wired into the setup + export dialogs,
+4 unit tests. RULE: when a user-visible error blames the user for a
+choice the UI offered, fix the OFFER — constrain the input — before
+improving the wording. 262 tests, build clean.
+
+**CREDENTIAL_NOT_FOUND — the diagnosis corrected by evidence
+(2026-08-22):** I told Niko he had picked another account's passkey. He
+replied that the company browser held exactly ONE passkey — the one
+created with that wallet. He was right to push back, so I queried
+Turnkey directly for the org in his error:
+  registered in sub-org 2277cefa…: credentialId ggx1N8a7euQG4RvBGTFm1g
+  presented by the browser:        credentialId IkCCdl9uaZftPop_F0TUmw
+The DB row for that sub-org is correct and was created the same day, so
+we addressed the right organization. Conclusion: a SECOND passkey for
+our rpId exists on that device — an ORPHAN from an earlier creation
+attempt whose sub-org never became the stored one — and Chrome's
+single-tap prompt used it without ever showing a choice. Both of Niko's
+statements ("only one passkey offered") and the error are therefore
+true at once; the fault was never his selection.
+CONSEQUENCES: (1) the allowCredentials fix is exactly right and was
+verified against his real org — /api/turnkey/credentials returns
+ggx1N8a7…, so the browser can only use the credential Turnkey knows;
+(2) it was NOT yet on staging when he hit this; (3) the error mapper
+had a gap this exposed — with a RESTRICTED prompt, "NotAllowedError" no
+longer means "you dismissed it", it usually means THIS DEVICE HOLDS
+NONE OF THE ACCOUNT'S CREDENTIALS. The mapper now tracks whether the
+last prompt was restricted and says so.
+OPEN (documented, not built): an orphaned passkey leaves a device able
+to prompt but never authorize; recovering by ADDING this device's
+passkey to the sub-org needs an existing credential's signature (root
+quorum) — a chicken-and-egg that wants Turnkey's email-auth recovery.
+RULE: when a user disputes a diagnosis, query the system of record
+before defending the theory — the provider's own data settled this in
+one call. 262 tests, build clean.

@@ -28,6 +28,7 @@ import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { friendlyTurnkeyError } from '@/lib/turnkey/passkey-stamper';
 import { getXlmToken, getSwapUsdcToken } from '@/utils/token-selectors';
 import { getTurnkeyWalletInfo, invalidateTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import {
@@ -92,7 +93,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
       setCompanionAddress(addr);
       setProbe(addr ? await probeCompanion(addr, config) : null);
     } catch (e: any) {
-      setError(String(e?.message ?? e));
+      setError(friendlyTurnkeyError(e));
     } finally {
       setProbing(false);
     }
@@ -205,7 +206,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
       }
       await refresh();
     } catch (e: any) {
-      setError(String(e?.message ?? e));
+      setError(friendlyTurnkeyError(e));
     } finally {
       setBusy(false);
     }

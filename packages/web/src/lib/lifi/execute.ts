@@ -5,6 +5,7 @@ import type { ChainAddresses } from '@/lib/chains/registry';
 import { describePsbt } from '@/lib/lifi/psbt-debug';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { runWebauthnCeremony } from '@/lib/turnkey/webauthn-guard';
+import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 
 // ---------------------------------------------------------------------------
@@ -61,13 +62,8 @@ function log(msg: string, extra?: unknown) {
 }
 
 async function getTurnkeyClient() {
-  const rpId =
-    typeof window !== 'undefined'
-      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
-      : 'localhost';
-  const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const { TurnkeyClient } = await import('@turnkey/http');
-  return new TurnkeyClient({ baseUrl: 'https://api.turnkey.com' }, new WebauthnStamper({ rpId }));
+  return new TurnkeyClient({ baseUrl: 'https://api.turnkey.com' }, await createPasskeyStamper());
 }
 
 function hexToBytes(hex: string): Uint8Array {

@@ -5,6 +5,7 @@ import type { Token } from '@normalfinance/types';
 import { BigNumber } from 'bignumber.js';
 import { buildAuthHeaders } from '@/utils/http';
 import { announceTransaction } from '@/lib/tx-events';
+import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 
 import type { SendParams, SendAdapter } from './index';
 
@@ -87,15 +88,10 @@ export function createBitcoinAdapter(
         const { psbtHex, subOrgId } = await buildBtcTransaction(params.destination, amountSat);
 
         // Step 2 — sign with Turnkey via the user's passkey (WebAuthn prompt)
-        const rpId =
-          typeof window !== 'undefined'
-            ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
-            : 'localhost';
 
-        const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
         const { TurnkeyClient } = await import('@turnkey/http');
 
-        const stamper = new WebauthnStamper({ rpId });
+        const stamper = await createPasskeyStamper();
         const client = new TurnkeyClient({ baseUrl: 'https://api.turnkey.com' }, stamper);
 
         // Guarded ceremony (#51 coverage completed 2026-08-14): queued +

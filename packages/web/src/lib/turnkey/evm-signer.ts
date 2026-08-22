@@ -1,5 +1,7 @@
 'use client';
 
+import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
+
 // Signs a serialized EVM transaction with the user's Turnkey-held key via
 // passkey (WebAuthn prompt). Turnkey signs Ethereum transactions natively —
 // same flow as the ETH send adapter, extracted for reuse by contract calls
@@ -10,16 +12,10 @@ export async function signEvmTxWithTurnkey(
   subOrgId: string,
   signWith: string
 ): Promise<`0x${string}`> {
-  const rpId =
-    typeof window !== 'undefined'
-      ? (process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname)
-      : 'localhost';
-
-  const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const { TurnkeyClient } = await import('@turnkey/http');
   const client = new TurnkeyClient(
     { baseUrl: 'https://api.turnkey.com' },
-    new WebauthnStamper({ rpId })
+    await createPasskeyStamper()
   );
 
   // Serialized against other passkey prompts (CCTP outbound signs Stellar
