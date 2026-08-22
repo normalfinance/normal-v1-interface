@@ -6,9 +6,11 @@ import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
+import { usePersistStore } from '@normalfinance/state';
 import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
 import { getTurnkeyWalletInfo, type TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
+import { forgetWalletLink, useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -35,6 +37,8 @@ export function SettingsAccounts() {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const config = useStellarConfig();
+  const persist = usePersistStore();
+  const { disconnectWallet: kitDisconnect } = useStellarWalletsKit();
   const [wallets, setWallets] = useState<LinkedWallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingWallet, setEditingWallet] = useState<string | null>(null);
@@ -114,6 +118,21 @@ export function SettingsAccounts() {
     try {
       setIsUnlinking(true);
       await unlinkWallet(walletToUnlink);
+      // Unlinking the wallet that is CURRENTLY CONNECTED must also disconnect
+      // it (Niko 2026-08-22). Otherwise the app kept showing its tabs, source
+      // pills and labels while the DB row was gone — so ownership checks
+      // failed (403s) and the next page load silently RE-LINKED it, undoing
+      // the unlink. Forget the session memo too, or a reconnect would skip
+      // re-linking and leave it connected-but-unowned.
+      if (walletToUnlink === persist.wallet.address) {
+        forgetWalletLink(walletToUnlink);
+        try {
+          await kitDisconnect();
+        } catch {
+          /* the kit may already be disconnected — the slot clear below is what matters */
+        }
+        persist.disconnectWallet();
+      }
       enqueueSnackbar(t('Account unlinked successfully'), { variant: 'success' });
       setUnlinkDialogOpen(false);
       setWalletToUnlink(null);

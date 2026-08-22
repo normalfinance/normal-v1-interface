@@ -22,6 +22,14 @@ export const SESSION_BASED_WALLET_TYPES = new Set(['lobstr', 'wallet-connect']);
 // their own lookup on every navigation.
 const linkEnsured = new Set<string>();
 
+/** Forget that an address was linked this session. MUST be called when a
+ *  wallet is unlinked — otherwise a reconnect in the SAME session skips the
+ *  re-link and leaves the wallet connected-but-unowned (403s when logging
+ *  transactions, finding #41's failure mode). */
+export function forgetWalletLink(address: string | null | undefined): void {
+  if (address) linkEnsured.delete(address);
+}
+
 /**
  * Make sure the connected external wallet has a `linked_wallets` row.
  *

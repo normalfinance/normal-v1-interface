@@ -2376,3 +2376,28 @@ PAYS is a money path and gets money-path scrutiny, even when it ships
 as a UX nicety; (3) a row that names a wallet must derive it from the
 transaction, never from context. Funds not lost (SOL delivered; wrong
 pocket). 248 tests, build clean.
+
+**Self-audit after the wrong-wallet incident — 2 more found (2026-08-22):**
+Asked "any other questionable things you added?", so I re-read my own
+recent additions instead of reassuring.
+(1) MANDATORY BACKUP COULD SILENTLY NEVER FIRE for a brand-new user:
+markWalletNeedsBackup(data.wallet?.subOrgId) — but /api/turnkey/wallet
+replies via pickAddresses(), which returns ADDRESS FIELDS ONLY, so
+subOrgId was ALWAYS undefined and the code always fell through to a
+fire-and-forget getTurnkeyWalletInfo().then(...). One failed lookup =
+no marker = no backup prompt for the exact user the feature exists for.
+Now read back and AWAITED. RULE: never infer a payload field you
+haven't read — grep the responder.
+(2) SETTINGS UNLINK LEFT THE WALLET CONNECTED: handleUnlinkConfirm only
+deleted the linked_wallets row. The persist slot kept the address, so
+holdings tabs / swap source pills / labels stayed, while ownership
+checks (userOwnsWallet) failed → 403s on transaction logging (#41's
+failure mode) and the autopilot recipient pin would refuse it; worse,
+the next page load's ensureWalletLinked backfill SILENTLY RE-LINKED it,
+undoing the unlink. Now: unlinking the CONNECTED wallet also
+kit-disconnects + clears the slot, and new forgetWalletLink() drops the
+session memo so a reconnect actually re-links (without it, reconnecting
+in the same session left it connected-but-unowned). ACCEPTED/known and
+documented, not fixed: autopilot display never downgrades mid-run
+(cosmetic; signing re-checks live), and refetchChain now costs one
+extra address read per arrival. 248 tests, build clean.
