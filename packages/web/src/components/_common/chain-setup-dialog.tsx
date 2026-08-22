@@ -5,10 +5,14 @@ import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
-import { linkWallet } from '@/services/linked-wallets';
 import { shouldAdoptIntoSlot } from '@/lib/wallet-slot';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import {
+  linkWallet,
+  checkWalletLinkLimit,
+  describeRateLimitReset,
+} from '@/services/linked-wallets';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -63,6 +67,21 @@ export function ChainSetupDialog({
     setLoading(true);
     setError(null);
     try {
+      // Same pre-flight as the Normal-wallet dialog: only the stellar branch
+      // consumes a wallet-link slot, and discovering the limit AFTER
+      // ensureChainAccount would have already minted a passkey and a sub-org
+      // for a first-timer. A null answer never blocks — the link re-checks.
+      if (chain === 'stellar') {
+        const limit = await checkWalletLinkLimit();
+        if (limit && !limit.allowed) {
+          const wait = limit.reset ? describeRateLimitReset(limit.reset) : null;
+          throw new Error(
+            wait
+              ? t('You can only add 3 wallets per day. Try again in {{wait}}.', { wait })
+              : t('You can only add 3 wallets per day.')
+          );
+        }
+      }
       // Lazy provisioning — derives the chain account on the existing wallet,
       // or creates passkey + sub-org + single-chain wallet for first-timers.
       const result = await ensureChainAccount(chain, userId, userEmail);
