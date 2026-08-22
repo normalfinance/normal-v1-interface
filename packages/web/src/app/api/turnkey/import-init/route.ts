@@ -47,7 +47,13 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       }
 
       const result = await turnkey.apiClient().createSubOrganization({
-        subOrganizationName: `normal-${user.id.slice(0, 8)}`,
+        // Unique by construction. The name is a dashboard label — nothing
+        // parses it — but the uid prefix alone REPEATS when an account is
+        // re-provisioned (support wipes the turnkey_wallets row so a user whose
+        // passkey became unusable can start over, and the uid is unchanged).
+        // A name we cannot guarantee is accepted twice would fail exactly the
+        // recovery it is needed for, so the suffix removes the question.
+        subOrganizationName: `normal-${user.id.slice(0, 8)}-${Date.now().toString(36)}`,
         rootQuorumThreshold: 1,
         rootUsers: [buildPasskeyRootUser(user, body.challenge, body.attestation)],
         // no `wallet` — the user's own mnemonic arrives via the import
