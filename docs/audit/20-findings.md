@@ -2899,3 +2899,17 @@ a root-quorum activity needing the sub-org's own passkey, and the SDK exposes
 no delete method. An unreachable sub-org is abandoned, not removed; what
 actually frees the account is the turnkey_wallets row, since POST
 /api/turnkey/wallet is idempotent on supabaseUid.
+
+**Re-provisioning would have collided on the sub-org name (2026-08-22,
+fixed):** createSubOrganization used `normal-${uid.slice(0,8)}` — derived
+ONLY from the supabase uid, which does not change when an account is
+re-provisioned. Support's recovery path (delete the turnkey_wallets row, let
+the user create a new wallet) would therefore request a name Turnkey had
+already seen. Whether Turnkey rejects duplicate sub-org names is not
+something I could verify without polluting the live org, so the name is now
+unique by construction (`…-${Date.now().toString(36)}`) in BOTH creation
+paths (wallet + import-init). Nothing parses the name; it is a dashboard
+label. Cheaper than an experiment, and it removes a failure that would only
+ever fire during recovery — i.e. when the user is already stuck.
+Runbook: docs/audit/sql/reprovision_wallet.sql (SELECT → DELETE → verify,
+keyed on subOrgId so a typo matches nothing).
