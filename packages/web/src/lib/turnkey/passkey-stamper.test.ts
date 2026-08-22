@@ -55,9 +55,11 @@ describe('createPasskeyStamper', () => {
     mockCredentials([{ id: 'ggx1N8a7euQG4RvBGTFm1g', transports: ['hybrid'] }]);
     const mod = freshModule();
     await mod.createPasskeyStamper();
-    expect(mod.friendlyTurnkeyError(new Error('NotAllowedError'))).toMatch(
-      /open this page on that phone/i
-    );
+    // The live failure was a user clicking "other devices" when their passkey
+    // was sitting under "On this device" — the message must name that row.
+    const msg = mod.friendlyTurnkeyError(new Error('NotAllowedError'));
+    expect(msg).toMatch(/on this device/i);
+    expect(msg).toMatch(/not "Use a phone/i);
   });
 
   // THE regression guard for this whole feature: restricting the prompt is an
@@ -96,12 +98,34 @@ describe('createPasskeyStamper', () => {
   });
 });
 
+describe('CREDENTIAL_NOT_FOUND tells the two causes apart', () => {
+  const raw =
+    'Turnkey error 16: credential ID could not be found in organization organizationId=2277cefa credentialId=IkCCdl9uaZftPop_F0TUmw';
+
+  it('blames a stale page when the prompt WAS pinned to this account', async () => {
+    mockCredentials([{ id: 'ggx1N8a7euQG4RvBGTFm1g', transports: ['internal'] }]);
+    const mod = freshModule();
+    await mod.createPasskeyStamper();
+    // Pinning worked, yet another credential came back ⇒ the code that pins
+    // is not the code that ran. Telling the user to "pick a different
+    // passkey" here would be advice they cannot act on.
+    expect(mod.friendlyTurnkeyError(new Error(raw))).toMatch(/older version|reload/i);
+  });
+
+  it('blames the failed lookup when the prompt could NOT be pinned', async () => {
+    mockCredentials([]);
+    const mod = freshModule();
+    await mod.createPasskeyStamper();
+    expect(mod.friendlyTurnkeyError(new Error(raw))).toMatch(/could not confirm/i);
+  });
+});
+
 describe('friendlyTurnkeyError', () => {
   it('explains the wrong-passkey case in the words a user can act on', () => {
     const raw =
       'Turnkey error 16: credential ID could not be found in organization or its parent organization organizationId=2277cefa credentialId=IkCCdl9 (Details: [{"turnkeyErrorCode":"CREDENTIAL_NOT_FOUND"}])';
     const msg = friendlyTurnkeyError(new Error(raw));
-    expect(msg).toMatch(/different account/i);
+    expect(msg).toMatch(/different account|could not confirm/i);
     expect(msg).not.toMatch(/organizationId|credentialId|Turnkey error/);
   });
 

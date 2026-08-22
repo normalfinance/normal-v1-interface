@@ -83,6 +83,9 @@ async function fetchCredentials(): Promise<PasskeyCredential[]> {
 let lastPromptWasRestricted = false;
 /** Transports of the credentials the last prompt was pinned to. */
 let lastTransports: string[] = [];
+/** Ids we asked for, and the rpId we asked under — for the mismatch report. */
+let lastCredentialIds: string[] = [];
+let lastRpId = '';
 
 /** Invalidate after adding/removing a passkey. */
 export function invalidatePasskeyCredentials(): void {
@@ -100,6 +103,8 @@ export async function createPasskeyStamper() {
   const creds = await fetchCredentials();
   lastPromptWasRestricted = creds.length > 0;
   lastTransports = creds.flatMap((c) => c.transports);
+  lastCredentialIds = creds.map((c) => c.id);
+  lastRpId = rpId;
   return new WebauthnStamper({
     rpId,
     ...(creds.length
@@ -130,7 +135,24 @@ export function friendlyTurnkeyError(e: unknown): string {
   const raw = String((e as { message?: string })?.message ?? e ?? '');
 
   if (/CREDENTIAL_NOT_FOUND|credential ID could not be found/i.test(raw)) {
-    return 'That passkey belongs to a different account. Choose the passkey you created for this account — if your device offered several, look for the one named after this app and email.';
+    // Turnkey names the credential the browser actually used. Printing it
+    // next to the one we asked for turns "wrong passkey" from a guess into a
+    // fact — and distinguishes the two causes below, which need different
+    // fixes and which cost several debugging rounds to tell apart.
+    const presented = /credentialId=([A-Za-z0-9_-]+)/.exec(raw)?.[1];
+    console.warn('[passkey] Turnkey rejected the credential the browser used', {
+      presented,
+      expected: lastCredentialIds,
+      rpId: lastRpId,
+      promptWasRestricted: lastPromptWasRestricted,
+    });
+    return lastPromptWasRestricted
+      ? // We DID pin the id, yet the browser returned another one — the page
+        // running the pinning code is not the page that made this request.
+        'Your browser signed with a passkey from a different account even though this one was requested — the page is running an older version. Reload it (Ctrl+Shift+R) and try again.'
+      : // No pin: the lookup failed, so every passkey on the device was on
+        // offer and an older account's was used.
+        'We could not confirm which passkey belongs to this account, so your browser offered all of them and used the wrong one. Reload the page and try again — passkeys also do not carry across web addresses, so a wallet created on another address cannot sign here.';
   }
   if (/NotAllowedError|operation (was )?not allowed|timed out/i.test(raw)) {
     // With the prompt restricted to this account's credentials, "not allowed"
@@ -142,13 +164,14 @@ export function friendlyTurnkeyError(e: unknown): string {
       // A hybrid credential is SAVED ON A PHONE (e.g. Google Password
       // Manager), not in this laptop's fingerprint reader — telling the user
       // to "use the device you set it up on" would send them nowhere.
-      // Lead with the route that works on EVERY OS. Windows 10 (and Chrome
-      // when it hands WebAuthn to the Windows API) shows a security-key-only
-      // dialog with no "use a phone" option at all, so naming that option
-      // first sends the user looking for a button that isn't there. Opening
-      // the page on the phone that holds the passkey always works.
+      // A Google Password Manager passkey reports BOTH hybrid and internal,
+      // and Chrome lists it under "On this device" while ALSO offering an
+      // "On other devices" row. Picking the second row leads to a QR/security
+      // -key flow that dead-ends at "insert a USB key" on Windows — verified
+      // live 2026-08-22, and it cost real debugging time. So point at the
+      // account row explicitly, and only then at the phone.
       return lastTransports.includes('hybrid')
-        ? 'Your passkey for this account is saved on your phone, not on this computer. Open this page on that phone and sign in there. (If this prompt offers "Use a phone or tablet", that works too — scan the QR with Bluetooth on.)'
+        ? 'Pick the entry listed under "On this device" (your email, saved in Google Password Manager) — not "Use a phone, tablet or security key", which leads to a USB prompt this wallet cannot use. If your email is not listed there, open this page on the phone signed in to that Google account.'
         : 'This device does not have the passkey for this account — use the device you set the wallet up on, or dismiss and try again if you cancelled the prompt.';
     }
     return 'The passkey prompt was dismissed or timed out. Try again and confirm with your fingerprint, face or device PIN.';

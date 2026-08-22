@@ -2827,3 +2827,75 @@ DIAGNOSIS NOTE: whether the new build is live is visible in the Network tab —
 new route; a response carrying only `credentialIds` is the older one.
 RULE: never instruct a user to click a control we have not confirmed their
 platform renders; name the platform-independent path first.
+
+**RESOLVED — the passkey was on the laptop all along, one row up
+(2026-08-22):** Chrome's dialog (Slovenian locale) listed
+  "V tej napravi" (On this device):  niko@bloomteam.io — Google Password Manager
+  "V drugih napravah" (On other devices): use a phone, tablet or security key
+He was clicking the SECOND row, which on Windows dead-ends at "insert a USB
+security key". The first row was his passkey, reachable locally because
+Google Password Manager is signed in to this Chrome. So allowCredentials +
+transports worked exactly as intended — Chrome surfaced precisely the one
+credential Turnkey knows (ggx1N8a7…) and offered it on this device.
+This also corrects my previous advice in this file: a GPM credential reports
+BOTH hybrid and internal, so "your passkey is on your phone, not this
+computer" was wrong — hybrid means it CAN travel to a phone, not that it is
+only there. The error text now names the "On this device" row first and
+warns off the other-devices row by name.
+RULE: transports say where a credential MAY be used, never where it is. Read
+the browser's own dialog before telling a user their credential is elsewhere.
+COST: three rounds of wrong advice (wrong-passkey → deploy the fix → use your
+phone) because I kept reasoning from the API record instead of the one
+artefact that showed the truth — the screenshot of the picker.
+
+**The offered passkey belongs to NO account we have (2026-08-22, exhaustive):**
+checked credentialId IkCCdl9uaZftPop_F0TUmw against the authenticators of ALL
+10 turnkey_wallets sub-orgs. It matches none of them:
+  2026-08-22 GDCLBOHD… ggx1N8a7euQG4RvBGTFm1g   <- the stuck account
+  2026-08-08 GDTGWZNZ… gc36u4y5J4C66T5ntFKyifGOwpU
+  2026-08-05 GDRMKSIL… oFo5NVMrwnDpOVE6OlTdb6t39oD859aRenWFuGlI
+  … (7 more, all different)
+So the Google Password Manager entry labelled niko@bloomteam.io is a TRUE
+ORPHAN — a passkey whose sub-org was never created or never saved — which is
+why clicking "On this device" fails with CREDENTIAL_NOT_FOUND. My advice to
+click that row was wrong: I read a picker entry as proof of ownership when
+only the credential id proves it.
+It also means the account's real credential (ggx1N8a7…) is NOT in that
+browser's Google Password Manager, or GPM would have listed it — GPM replaces
+a passkey only when rpId AND user.id match, and these carry different ids.
+SECOND HARD FACT: local .env sets NEXT_PUBLIC_TURNKEY_RP_ID=localhost while
+that passkey was registered under normalfinance.io (the Chrome dialog names
+it). A passkey CANNOT be used under a different rpId, so that account can
+never be signed from the dev server — only from the staging/live address.
+DIAGNOSTIC SHIPPED: CREDENTIAL_NOT_FOUND now console.warns {presented,
+expected, rpId, promptWasRestricted} and the user-facing text splits the two
+causes — pinned-but-mismatched ⇒ the page is running older code (reload);
+not-pinned ⇒ the lookup failed so every passkey was on offer. These need
+opposite fixes and had been indistinguishable.
+RULE: a name in a passkey picker proves nothing — only the credential id does.
+
+**ROOT CAUSE of the orphan — signup strands a passkey on any failed POST
+(2026-08-22, fixed):** in add-account.ts the ceremony ran, then the wallet
+was created:
+    const {challenge, attestation} = await createPasskeyRegistration(...)
+    const res = await fetch('/api/turnkey/wallet', {method:'POST', ...})
+    if (!res.ok) throw ...
+The passkey EXISTS on the device the moment create() resolves. If that POST
+failed — 500, dropped connection, expired session, rate limit — the passkey
+belonged to nothing, forever; and the natural retry re-ran the ceremony and
+stranded a SECOND one. That is how IkCCdl9… came to exist, and why the
+device offers passkeys that look identical to the real one.
+At 1k→10k users this is not an edge case: every transient signup failure
+mints a permanent orphan on a real user's device, and WebAuthn gives us no
+way to delete it afterwards.
+FIX: lib/turnkey/pending-registration.ts parks the attestation in
+sessionStorage BEFORE the POST; a retry reuses it instead of minting another
+passkey. Scoped to the supabase user (shared browsers), 24h TTL, cleared on
+success, and discarded on 400/422 (a rejected attestation never becomes
+valid, so keeping it would trap the user in an unwinnable retry loop).
+6 tests. Storage failures degrade to today's behaviour.
+NOTE: the sub-org itself CANNOT be deleted with our parent key — deletion is
+a root-quorum activity needing the sub-org's own passkey, and the SDK exposes
+no delete method. An unreachable sub-org is abandoned, not removed; what
+actually frees the account is the turnkey_wallets row, since POST
+/api/turnkey/wallet is idempotent on supabaseUid.

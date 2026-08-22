@@ -11,6 +11,12 @@ import { createPasskeyRegistration } from './passkey';
 import { markWalletNeedsBackup } from './wallet-backup';
 import { getTurnkeyWalletInfo, invalidateTurnkeyWalletInfo } from './wallet-info';
 import { XLM_ACCOUNT, SOLANA_ACCOUNT, BITCOIN_ACCOUNT, ETHEREUM_ACCOUNT } from './account-specs';
+import {
+  readPendingRegistration,
+  writePendingRegistration,
+  clearPendingRegistration,
+  shouldKeepPendingRegistration,
+} from './pending-registration';
 
 // ---------------------------------------------------------------------------
 // Adds accounts for a new chain to the user's EXISTING Turnkey wallet.
@@ -146,8 +152,16 @@ export async function ensureChainAccount(
     };
   }
 
-  // Nothing yet → register a passkey and create the sub-org + wallet
-  const { challenge, attestation } = await createPasskeyRegistration(supabaseUserId, userEmail);
+  // Nothing yet → register a passkey and create the sub-org + wallet.
+  // Reuse an attestation stranded by an earlier failed attempt rather than
+  // minting a second passkey the device would offer alongside the first.
+  const pending = readPendingRegistration(supabaseUserId);
+  const { challenge, attestation } =
+    pending ?? (await createPasskeyRegistration(supabaseUserId, userEmail));
+  // Park it BEFORE the network call — the passkey already exists on the
+  // device by now, so this window is precisely where orphans are born.
+  if (!pending) writePendingRegistration({ supabaseUserId, challenge, attestation });
+
   const headers = await buildAuthHeaders();
   const res = await fetch('/api/turnkey/wallet', {
     method: 'POST',
@@ -156,8 +170,11 @@ export async function ensureChainAccount(
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    if (!shouldKeepPendingRegistration(res.status)) clearPendingRegistration();
     throw new Error(err.error ?? `Failed to create wallet (${res.status})`);
   }
+  // The sub-org owns the passkey now; nothing left to recover.
+  clearPendingRegistration();
   const data = await res.json();
   invalidateTurnkeyWalletInfo();
   // A brand-new seed was just created → the user MUST back it up (doc 79).
