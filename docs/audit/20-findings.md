@@ -2938,3 +2938,24 @@ its purpose is abuse of wallet CREATION; linking a wallet the user just
 created legitimately consumes a slot, so heavy testing exhausts it in a day.
 Clearing a stuck counter = delete the single Upstash key
 faucet-wallet:<uid>:<window>. 275 tests, build clean.
+
+**"USDC balance not loaded yet — try again in a moment." was unreachable
+truth (2026-08-22, fixed):** the wallet-setup dialog's step 4 resolves USDC
+with getSwapUsdcToken → getTokenByContract(tokens, config.USDC_ADDRESS), i.e.
+matching on the Soroban C… address. Its tokens come from useStellarTokens,
+which maps the portfolio aggregate through portfolioAssetToToken — and
+NATIVE_DISPLAY has entries only for BTC/ETH/SOL, so XLM and USDC take the
+fallback `contract: a.symbol` and carry the literal string "USDC".
+'USDC' !== 'CCW67TSZ…' ⇒ the lookup ALWAYS failed. Waiting could never help,
+yet the message asked the user to wait — the worst error shape there is.
+XLM was unaffected only because getXlmToken matches by SYMBOL.
+Almost certainly a doc-75 Phase 2c regression: the retired persist token
+store carried real contracts; the aggregate replacement does not.
+FIX: withStellarTokenIdentity (src/utils/stellar-token-identity.ts) patches
+the contract + issuer from config where the aggregate is mapped. Fixed at the
+SOURCE, not by loosening the selector to match on symbol — the same selectors
+are handed open token lists, where a look-alike "USDC" must never win.
+4 tests. Also split the message: tokens still empty ⇒ "balances are still
+loading"; tokens present but no USDC ⇒ "your connected wallet has no USDC to
+move". No consumer depended on contract === 'USDC' (checked).
+RULE: never tell a user to wait for something that cannot change.
