@@ -2647,3 +2647,32 @@ earlier today.) RULE: when several gates can block an action, order
 them by TIME-TO-RESOLVE, not by code convenience — and never let a
 secondary gate contradict a warning the same screen is showing.
 257 tests, build clean.
+
+**Scenario audit of the swap gates (2026-08-22, Niko: "did you make it
+dynamic? double check"):** verified rather than assumed. The gates ARE
+state- and direction-derived, and the reorder only changed precedence
+among them:
+  · needsTrustline — only when USDC LANDS on Stellar (direction 'in')
+    or when USDC is moved in from the external wallet
+  · lowFeeXlm — outbound only (Soroban fees are paid by the burn source)
+  · nativeAddress — the SOURCE chain inbound, the DESTINATION chain
+    outbound
+  · missingStellar — covers "no address" AND "exists but not activated"
+  · the guided dialog derives its own step (create/activate/trustline/
+    fund/ready) so it resumes at the first unmet condition, and
+    ChainSetupDialog creates whichever chain is missing
+Traced end-to-end: outbound hybrid (the live case), inbound chain-first,
+single-wallet, and hybrid-with-trustline — each yields the right CTA
+chain. THE AUDIT ALSO FOUND TWO DEAD BUTTONS for single-wallet users,
+the same dead-end class Niko has hit twice: "Add USDC Trustline first"
+(action: null) and "Top up XLM to swap" (action: onNeedsSetup ?? null →
+null). Both now act: the trustline is signed inline by the connected
+wallet (the pattern the readiness notice and soroswap engine already
+use), and the XLM top-up opens the app's Receive flow (asset picker →
+address + QR). ONE PRECEDENCE CHOICE IS FIXED, NOT DERIVED, and is
+recorded as such: with NOTHING set up on an inbound pair we ask for the
+Stellar side before the source-chain address — defensible (Stellar is
+the slow, money-dependent step and is required for delivery) but it is
+a judgement call, not a per-scenario rule. RULE: a gate that can block
+an action must offer the action that unblocks it — "no action" is a
+dead end by definition. 257 tests, build clean.

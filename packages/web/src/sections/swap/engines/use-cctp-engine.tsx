@@ -19,6 +19,7 @@
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
 import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { fCurrency } from '@/utils/format-number';
@@ -32,8 +33,10 @@ import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
 import { setActiveCctpTransfer } from '@/lib/cctp/active-transfer';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
 
@@ -168,6 +171,12 @@ export function useCctpEngine({
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
   const { user } = useSupabaseAuth();
+  // Single-wallet users had DEAD buttons on two gates below (no action at
+  // all): they can sign their own trustline, and they can receive XLM — both
+  // are real, available actions, so offer them instead of a dead end.
+  const config = useStellarConfig();
+  const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
+  const { startAction } = useAssetActionsContext();
   const network = useNetworkStore((s) => s.network);
   // Fresh-account path (Niko scenario trace 2026-08-21): after the guided
   // STELLAR setup, the ETH (Base pivot) and BTC/SOL (source/delivery)
@@ -1034,8 +1043,19 @@ export function useCctpEngine({
       return onNeedsSetup && stellarAddress !== wallet.address
         ? { label: t('Add USDC to your Normal wallet'), action: onNeedsSetup, loading: false }
         : {
-            label: t('Add USDC Trustline first'),
-            action: null,
+            label: isAddingTrustline ? t('Adding trustline…') : t('Add USDC trustline'),
+            action: isAddingTrustline
+              ? null
+              : async () => {
+                  try {
+                    await addTrustLine('USDC', config.USDC_ISSUER);
+                    enqueueSnackbar(t('USDC trustline added.'), { variant: 'success' });
+                  } catch (e: any) {
+                    enqueueSnackbar(e?.message ?? t('Could not add the USDC trustline.'), {
+                      variant: 'error',
+                    });
+                  }
+                },
             loading: false,
             helper: (
               <Typography
@@ -1050,7 +1070,9 @@ export function useCctpEngine({
     if (lowFeeXlm)
       return {
         label: t('Top up XLM to swap'),
-        action: onNeedsSetup ?? null,
+        // Hybrid → the guided dialog; single-wallet → the app's own Receive
+        // flow (asset picker → address + QR), never a dead button.
+        action: onNeedsSetup ?? (() => startAction('receive')),
         loading: false,
         helper: (
           <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
@@ -1157,6 +1179,11 @@ export function useCctpEngine({
     minUsdShort,
     stellarAddress,
     wallet.address,
+    addTrustLine,
+    isAddingTrustline,
+    startAction,
+    config.USDC_ISSUER,
+    enqueueSnackbar,
     enabled,
     network,
     nativeAddress,
