@@ -43,6 +43,11 @@ async function fetchCredentialIds(): Promise<string[]> {
   }
 }
 
+// Whether the LAST stamper we built could restrict the prompt. It changes
+// what a "not allowed" failure means: unrestricted ⇒ the user dismissed it;
+// restricted ⇒ this DEVICE does not hold the account's passkey at all.
+let lastPromptWasRestricted = false;
+
 /** Invalidate after adding/removing a passkey. */
 export function invalidatePasskeyCredentials(): void {
   cached = null;
@@ -60,6 +65,7 @@ export async function createPasskeyStamper() {
       : 'localhost';
   const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
   const ids = await fetchCredentialIds();
+  lastPromptWasRestricted = ids.length > 0;
   return new WebauthnStamper({
     rpId,
     ...(ids.length
@@ -85,7 +91,14 @@ export function friendlyTurnkeyError(e: unknown): string {
     return 'That passkey belongs to a different account. Choose the passkey you created for this account — if your device offered several, look for the one named after this app and email.';
   }
   if (/NotAllowedError|operation (was )?not allowed|timed out/i.test(raw)) {
-    return 'The passkey prompt was dismissed or timed out. Try again and confirm with your fingerprint, face or device PIN.';
+    // With the prompt restricted to this account's credentials, "not allowed"
+    // usually means the device simply has none of them — a different message
+    // entirely from "you dismissed it" (verified 2026-08-22: a device can
+    // hold an ORPHAN passkey from an earlier attempt while the account's real
+    // one lives elsewhere).
+    return lastPromptWasRestricted
+      ? 'This device does not have the passkey for this account — use the device you set the wallet up on, or dismiss and try again if you cancelled the prompt.'
+      : 'The passkey prompt was dismissed or timed out. Try again and confirm with your fingerprint, face or device PIN.';
   }
   if (/InvalidStateError|already registered/i.test(raw)) {
     return 'This device already has a passkey for this account — use it to continue instead of creating a new one.';
