@@ -1,6 +1,7 @@
 import { logger } from '@normalfinance/utils';
 import { useRef, useEffect, useCallback } from 'react';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { rememberExternalWallet } from '@/lib/wallet-reconnect-memo';
 import { LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
@@ -11,11 +12,6 @@ import {
   getLinkedWallets,
   updateWalletName,
 } from '@/services/linked-wallets';
-import {
-  forgetExternalWallet,
-  readExternalWalletMemo,
-  rememberExternalWallet,
-} from '@/lib/wallet-reconnect-memo';
 
 // Wallets that use WalletConnect sessions — sessions do not survive page reloads.
 // Signing after a page reload will fail until the user reconnects.
@@ -130,35 +126,13 @@ export const useStellarWalletsKit = () => {
           return;
         }
 
-        type SlotWalletType = typeof persistStore.wallet.walletType;
-        let storedWalletType: SlotWalletType = persistStore.wallet.walletType;
-
-        // Post-logout re-attach (2026-08-22): logout clears the slot on
-        // purpose, so an external wallet the user never disconnected would
-        // vanish. Re-attach it — but ONLY after the server confirms the
-        // address is linked to the session that just signed in, so a
-        // different user on this browser can never inherit it.
-        if (!storedWalletType) {
-          const memo = readExternalWalletMemo();
-          if (!memo) return;
-          let ownsIt = false;
-          try {
-            ownsIt = (await getLinkedWallets()).some((w) => w.walletAddress === memo.address);
-          } catch {
-            // Not signed in yet / transient: leave the slot empty and try
-            // again on a later mount. Never restore on an unverified guess.
-            return;
-          }
-          if (!ownsIt) {
-            // Definitively someone else's memo on a shared browser.
-            forgetExternalWallet();
-            return;
-          }
-          await persistStore.connectWallet(memo.address, memo.walletType);
-          storedWalletType = memo.walletType as SlotWalletType;
-        }
-
-        if (storedWalletType === 'normal-wallet') {
+        // NOTE: this function only ever runs when a wallet type is ALREADY in
+        // the slot (see the guard at the bottom of this effect), so it cannot
+        // restore anything after a logout. Post-logout re-attach lives in
+        // components/_common/external-wallet-reattach.tsx, which writes the
+        // slot and lets this effect do the kit-level work.
+        const storedWalletType = persistStore.wallet.walletType;
+        if (!storedWalletType || storedWalletType === 'normal-wallet') {
           return;
         }
 

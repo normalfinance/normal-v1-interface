@@ -26,6 +26,7 @@ import { SnackbarProvider } from '@/components/template/snackbar';
 import WalletBackupGate from '@/components/_common/wallet-backup-gate';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
+import ExternalWalletReattach from '@/components/_common/external-wallet-reattach';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
 
 // ----------------------------------------------------------------------
@@ -154,6 +155,8 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                                   <DashboardLayout>{children}</DashboardLayout>
                                   {/* doc 79: one global mandatory-backup gate */}
                                   <WalletBackupGate />
+                                  {/* Re-attach the external wallet after login */}
+                                  <ExternalWalletReattach />
                                 </AssetActionsProvider>
                               </ModalProvider>
                             </WalletPasswordProvider>

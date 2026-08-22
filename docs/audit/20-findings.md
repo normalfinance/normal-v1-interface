@@ -2422,3 +2422,31 @@ when you disconnect it. RULE: "cleared on logout" and "forgotten
 forever" are different intents — a session-scoped clear needs a
 server-verified re-attach, not a longer-lived slot. 248 tests, build
 clean.
+
+**Logout re-attach take 2 — the fix was UNREACHABLE CODE (2026-08-22):**
+Niko: "it dont work" — reconnect Lobstr, log out, log in, still gone.
+ROOT CAUSE, proven by reading the effect: my re-attach lived inside
+use-stellar-wallets-kit's `checkConnection()`, which the effect only
+calls when `persistStore.wallet.walletType` is ALREADY set:
+  if (walletType && walletType !== 'normal-wallet' && ...) checkConnection()
+After logout that field is undefined, so the function never ran — I had
+put "restore the wallet when nothing is connected" inside a function
+that only runs when something IS connected. Second defect in the same
+attempt: that effect's deps are wallet/kit fields only, so nothing
+re-runs it when a SESSION appears at login, meaning even a corrected
+guard would have missed the moment. VERIFIED SOUND: the memo WRITE path
+(kit awaits persistStore.connectWallet before resolving, so getState()
+is fresh at the remember() call). FIX: deleted the dead branch and gave
+the job its own mounted component
+(components/_common/external-wallet-reattach.tsx) that watches the auth
+user — when a session exists, the slot is empty and a memo is present,
+it verifies ownership via getLinkedWallets() and then writes ONLY the
+persist slot; `walletType` is already a dependency of the kit's restore
+effect, so the existing machinery does the kit-level attach. Bounded
+retry via STATE (a ref bump re-runs nothing — the first retry was
+equally inert). +5 tests on the memo's safety rules (never remember the
+Normal wallet; forget really forgets). RULES: (1) when adding a branch
+to an existing function, check what GATES that function — reachability
+first; (2) "runs when X is absent" logic cannot live inside code gated
+on X being present; (3) a retry must change STATE, never a ref.
+253 tests, build clean.
