@@ -142,8 +142,13 @@ export function friendlyTurnkeyError(e: unknown): string {
       // A hybrid credential is SAVED ON A PHONE (e.g. Google Password
       // Manager), not in this laptop's fingerprint reader — telling the user
       // to "use the device you set it up on" would send them nowhere.
+      // Lead with the route that works on EVERY OS. Windows 10 (and Chrome
+      // when it hands WebAuthn to the Windows API) shows a security-key-only
+      // dialog with no "use a phone" option at all, so naming that option
+      // first sends the user looking for a button that isn't there. Opening
+      // the page on the phone that holds the passkey always works.
       return lastTransports.includes('hybrid')
-        ? 'Your passkey for this account is saved on your phone. Choose "Use a phone or tablet" in the prompt and scan the QR code with that phone — keep Bluetooth on.'
+        ? 'Your passkey for this account is saved on your phone, not on this computer. Open this page on that phone and sign in there. (If this prompt offers "Use a phone or tablet", that works too — scan the QR with Bluetooth on.)'
         : 'This device does not have the passkey for this account — use the device you set the wallet up on, or dismiss and try again if you cancelled the prompt.';
     }
     return 'The passkey prompt was dismissed or timed out. Try again and confirm with your fingerprint, face or device PIN.';

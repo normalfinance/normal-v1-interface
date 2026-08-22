@@ -2807,3 +2807,23 @@ no authenticatorAttachment, so the authenticator picks — GPM sync makes the
 wallet portable across the user's devices, but means the passkey is not
 where a "this device" mental model expects. Pinning 'platform' would bind it
 to one machine and lean harder on the recovery phrase.
+
+**The "Use a phone or tablet" option does not always exist (2026-08-22):**
+with transports [hybrid, internal] deployed, Chrome still showed only the USB
+security-key dialog. Chrome on Windows hands WebAuthn to the Windows platform
+API, and that dialog offers the phone/QR flow only on newer Windows — on
+Windows 10, and in several Chrome-on-Windows paths, there is no such button
+no matter what transports we send. So the error text telling him to pick it
+was pointing at a control he does not have.
+The message now leads with the route that works on every OS: OPEN THE PAGE ON
+THE PHONE THAT HOLDS THE PASSKEY and sign in there (the QR flow is kept as a
+parenthetical for the OSes that do offer it).
+Also added the regression guard this feature actually needed: an empty
+credential list, or a throwing lookup, must produce NO allowCredentials at
+all — restricting is an enhancement, and if it ever hard-failed it would
+break signing app-wide rather than for one user. Two tests pin that.
+DIAGNOSIS NOTE: whether the new build is live is visible in the Network tab —
+/api/turnkey/credentials returning `credentials: [{transports: [...]}]` is the
+new route; a response carrying only `credentialIds` is the older one.
+RULE: never instruct a user to click a control we have not confirmed their
+platform renders; name the platform-independent path first.

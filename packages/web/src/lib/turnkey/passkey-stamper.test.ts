@@ -55,7 +55,31 @@ describe('createPasskeyStamper', () => {
     mockCredentials([{ id: 'ggx1N8a7euQG4RvBGTFm1g', transports: ['hybrid'] }]);
     const mod = freshModule();
     await mod.createPasskeyStamper();
-    expect(mod.friendlyTurnkeyError(new Error('NotAllowedError'))).toMatch(/phone or tablet/i);
+    expect(mod.friendlyTurnkeyError(new Error('NotAllowedError'))).toMatch(
+      /open this page on that phone/i
+    );
+  });
+
+  // THE regression guard for this whole feature: restricting the prompt is an
+  // enhancement, and if the lookup ever fails or returns nothing the ceremony
+  // must fall back to exactly the pre-existing behaviour. Getting this wrong
+  // would break signing app-wide, not just for one user.
+  it('sends NO allowCredentials when the lookup comes back empty', async () => {
+    mockCredentials([]);
+    const cfg = (await freshModule().createPasskeyStamper()) as unknown as {
+      allowCredentials?: unknown;
+      rpId: string;
+    };
+    expect(cfg.allowCredentials).toBeUndefined();
+    expect(cfg.rpId).toBeTruthy();
+  });
+
+  it('falls back to unrestricted when the credentials request throws', async () => {
+    (global as unknown as { fetch: unknown }).fetch = jest.fn().mockRejectedValue(new Error('500'));
+    const cfg = (await freshModule().createPasskeyStamper()) as unknown as {
+      allowCredentials?: unknown;
+    };
+    expect(cfg.allowCredentials).toBeUndefined();
   });
 
   it('omits transports when none were recorded, rather than inventing them', async () => {
