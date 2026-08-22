@@ -25,7 +25,15 @@ export function resolveRpId(): string {
 }
 
 const CACHE_TTL_MS = 60_000;
-let cached: { ids: string[]; at: number } | null = null;
+
+/** A registered passkey: its id, and WHERE it lives (phone, this device, …). */
+interface PasskeyCredential {
+  id: string;
+  /** WebAuthn transports as reported at registration; may be empty. */
+  transports: string[];
+}
+
+let cached: { creds: PasskeyCredential[]; at: number } | null = null;
 
 /** base64url → the ArrayBuffer WebAuthn wants for allowCredentials. */
 function toBuffer(base64url: string): ArrayBuffer {
@@ -37,8 +45,8 @@ function toBuffer(base64url: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-async function fetchCredentialIds(): Promise<string[]> {
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.ids;
+async function fetchCredentials(): Promise<PasskeyCredential[]> {
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.creds;
   try {
     const { buildAuthHeaders } = await import('@/utils/http');
     const res = await fetch('/api/turnkey/credentials', {
@@ -46,12 +54,20 @@ async function fetchCredentialIds(): Promise<string[]> {
       credentials: 'include',
     });
     const data = await res.json();
-    const ids: string[] = Array.isArray(data?.credentialIds) ? data.credentialIds : [];
-    if (!ids.length) {
+    // Prefer the shape carrying transports; fall back to bare ids so a server
+    // that predates the transport field still restricts the prompt.
+    const creds: PasskeyCredential[] = Array.isArray(data?.credentials)
+      ? data.credentials
+          .filter((c: PasskeyCredential) => c?.id)
+          .map((c: PasskeyCredential) => ({ id: c.id, transports: c.transports ?? [] }))
+      : Array.isArray(data?.credentialIds)
+        ? data.credentialIds.map((id: string) => ({ id, transports: [] }))
+        : [];
+    if (!creds.length) {
       console.warn('[passkey] no credentials returned — prompt NOT restricted to this account');
     }
-    cached = { ids, at: Date.now() };
-    return ids;
+    cached = { creds, at: Date.now() };
+    return creds;
   } catch (e) {
     // Fail-open by design (a lookup must never block signing) — but SAY so.
     // Without this, a 500ing or not-yet-deployed route is indistinguishable
@@ -65,6 +81,8 @@ async function fetchCredentialIds(): Promise<string[]> {
 // what a "not allowed" failure means: unrestricted ⇒ the user dismissed it;
 // restricted ⇒ this DEVICE does not hold the account's passkey at all.
 let lastPromptWasRestricted = false;
+/** Transports of the credentials the last prompt was pinned to. */
+let lastTransports: string[] = [];
 
 /** Invalidate after adding/removing a passkey. */
 export function invalidatePasskeyCredentials(): void {
@@ -79,15 +97,24 @@ export function invalidatePasskeyCredentials(): void {
 export async function createPasskeyStamper() {
   const rpId = resolveRpId();
   const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
-  const ids = await fetchCredentialIds();
-  lastPromptWasRestricted = ids.length > 0;
+  const creds = await fetchCredentials();
+  lastPromptWasRestricted = creds.length > 0;
+  lastTransports = creds.flatMap((c) => c.transports);
   return new WebauthnStamper({
     rpId,
-    ...(ids.length
+    ...(creds.length
       ? {
-          allowCredentials: ids.map((id) => ({
-            id: toBuffer(id),
+          // Transports are NOT cosmetic: pinning an id without them makes
+          // Chrome guess where the credential lives, and it offers "insert a
+          // USB security key" — unusable for a passkey synced in Google
+          // Password Manager on the user's phone. With 'hybrid' present the
+          // browser offers the phone/QR flow that can actually satisfy it.
+          allowCredentials: creds.map((c) => ({
+            id: toBuffer(c.id),
             type: 'public-key' as const,
+            ...(c.transports.length
+              ? { transports: c.transports as AuthenticatorTransport[] }
+              : {}),
           })),
         }
       : {}),
@@ -111,9 +138,15 @@ export function friendlyTurnkeyError(e: unknown): string {
     // entirely from "you dismissed it" (verified 2026-08-22: a device can
     // hold an ORPHAN passkey from an earlier attempt while the account's real
     // one lives elsewhere).
-    return lastPromptWasRestricted
-      ? 'This device does not have the passkey for this account — use the device you set the wallet up on, or dismiss and try again if you cancelled the prompt.'
-      : 'The passkey prompt was dismissed or timed out. Try again and confirm with your fingerprint, face or device PIN.';
+    if (lastPromptWasRestricted) {
+      // A hybrid credential is SAVED ON A PHONE (e.g. Google Password
+      // Manager), not in this laptop's fingerprint reader — telling the user
+      // to "use the device you set it up on" would send them nowhere.
+      return lastTransports.includes('hybrid')
+        ? 'Your passkey for this account is saved on your phone. Choose "Use a phone or tablet" in the prompt and scan the QR code with that phone — keep Bluetooth on.'
+        : 'This device does not have the passkey for this account — use the device you set the wallet up on, or dismiss and try again if you cancelled the prompt.';
+    }
+    return 'The passkey prompt was dismissed or timed out. Try again and confirm with your fingerprint, face or device PIN.';
   }
   if (/InvalidStateError|already registered/i.test(raw)) {
     return 'This device already has a passkey for this account — use it to continue instead of creating a new one.';
