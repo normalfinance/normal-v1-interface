@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { format } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
+import { forgetExternalWallet } from '@/lib/wallet-reconnect-memo';
 import { getTurnkeyWalletInfo, type TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 import { forgetWalletLink, useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
@@ -126,6 +127,8 @@ export function SettingsAccounts() {
       // re-linking and leave it connected-but-unowned.
       if (walletToUnlink === persist.wallet.address) {
         forgetWalletLink(walletToUnlink);
+        forgetExternalWallet(); // explicit disconnect: do NOT re-attach on next login
+
         try {
           await kitDisconnect();
         } catch {

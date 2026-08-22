@@ -2401,3 +2401,24 @@ in the same session left it connected-but-unowned). ACCEPTED/known and
 documented, not fixed: autopilot display never downgrades mid-run
 (cosmetic; signing re-checks live), and refetchChain now costs one
 extra address read per arrival. 248 tests, build clean.
+
+**External wallet vanished after logout → re-attach on login (2026-08-22):**
+Niko logged out WITHOUT disconnecting Lobstr; after logging back in it
+was gone. Cause (pre-existing, not the unlink change): the drawer's
+logout calls persist.disconnectWallet(), which clears the slot ADDRESS
+— only `lastWalletType` survives — so nothing could restore an external
+wallet on the next login, and the app's own breadcrumb then SUPPRESSED
+the Turnkey auto-connect too. Keeping the slot across logout would be
+wrong (shared browser: the next user would inherit the previous user's
+wallet). Fix: new lib/wallet-reconnect-memo.ts records the last external
+wallet {address, walletType} in localStorage; the kit's restore effect,
+when the slot is empty, re-attaches it ONLY after getLinkedWallets()
+confirms the address belongs to the session that just signed in — a
+different user's memo is refused AND deleted; an unauthenticated/failed
+lookup restores nothing (never restore on an unverified guess). Written
+at all three connect paths, cleared on EXPLICIT unlink in Settings —
+never on logout. That is exactly the requested rule: it disappears only
+when you disconnect it. RULE: "cleared on logout" and "forgotten
+forever" are different intents — a session-scoped clear needs a
+server-verified re-attach, not a longer-lived slot. 248 tests, build
+clean.

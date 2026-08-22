@@ -11,6 +11,11 @@ import {
   getLinkedWallets,
   updateWalletName,
 } from '@/services/linked-wallets';
+import {
+  forgetExternalWallet,
+  readExternalWalletMemo,
+  rememberExternalWallet,
+} from '@/lib/wallet-reconnect-memo';
 
 // Wallets that use WalletConnect sessions — sessions do not survive page reloads.
 // Signing after a page reload will fail until the user reconnects.
@@ -125,8 +130,35 @@ export const useStellarWalletsKit = () => {
           return;
         }
 
-        const storedWalletType = persistStore.wallet.walletType;
-        if (!storedWalletType || storedWalletType === 'normal-wallet') {
+        type SlotWalletType = typeof persistStore.wallet.walletType;
+        let storedWalletType: SlotWalletType = persistStore.wallet.walletType;
+
+        // Post-logout re-attach (2026-08-22): logout clears the slot on
+        // purpose, so an external wallet the user never disconnected would
+        // vanish. Re-attach it — but ONLY after the server confirms the
+        // address is linked to the session that just signed in, so a
+        // different user on this browser can never inherit it.
+        if (!storedWalletType) {
+          const memo = readExternalWalletMemo();
+          if (!memo) return;
+          let ownsIt = false;
+          try {
+            ownsIt = (await getLinkedWallets()).some((w) => w.walletAddress === memo.address);
+          } catch {
+            // Not signed in yet / transient: leave the slot empty and try
+            // again on a later mount. Never restore on an unverified guess.
+            return;
+          }
+          if (!ownsIt) {
+            // Definitively someone else's memo on a shared browser.
+            forgetExternalWallet();
+            return;
+          }
+          await persistStore.connectWallet(memo.address, memo.walletType);
+          storedWalletType = memo.walletType as SlotWalletType;
+        }
+
+        if (storedWalletType === 'normal-wallet') {
           return;
         }
 
@@ -159,6 +191,7 @@ export const useStellarWalletsKit = () => {
             // `linked_wallets` row and would stay unable to log transactions
             // until they happened to reconnect. Guarded to once per session,
             // and it never blocks the restore.
+            rememberExternalWallet(storedAddress, storedWalletType);
             void ensureWalletLinked(storedAddress, connectedWalletLabel(storedWalletType));
           } else {
             await new Promise((resolve) => setTimeout(resolve, 500));
@@ -167,6 +200,7 @@ export const useStellarWalletsKit = () => {
               walletKitStore.setPublicKey(result.address);
               walletKitStore.setConnected(true);
               await persistStore.connectWallet(result.address, storedWalletType);
+              rememberExternalWallet(result.address, storedWalletType);
               void ensureWalletLinked(result.address, connectedWalletLabel(storedWalletType));
             }
           }
@@ -214,9 +248,12 @@ export const useStellarWalletsKit = () => {
     // Read the address from getState(): the zustand value captured in this
     // closure is from the render before the connect, so it is still stale.
     // Null means the user closed the picker without choosing.
+    const connectedAddress = useStellarWalletKitStore.getState().publicKey;
+    // Remember it for the next login (cleared only by an explicit disconnect).
+    rememberExternalWallet(connectedAddress, usePersistStore.getState().wallet.walletType);
     await ensureWalletLinked(
-      useStellarWalletKitStore.getState().publicKey,
-      connectedWalletLabel(persistStore.wallet.walletType)
+      connectedAddress,
+      connectedWalletLabel(usePersistStore.getState().wallet.walletType)
     );
   }, [walletKitStore, persistStore]);
 
