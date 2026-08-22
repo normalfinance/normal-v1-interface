@@ -2483,3 +2483,30 @@ signing/transport state are separate — a transport failure may never
 delete identity; (2) with keepPreviousData, a null key does NOT clear
 data — derive from the KEY, not the retained payload. 253 tests, build
 clean.
+
+**THE REAL CAUSE: login itself switched the wallet (2026-08-22, 3rd
+attempt):** two prior fixes failed because I audited the wrong side.
+After enumerating every DISCONNECT site (attempt 2) I finally
+enumerated every WRITER of the wallet slot — and found
+onboarding-wizard's `handleAfterAuth`, which runs on EVERY login:
+    const tk = await getTurnkeyWalletInfo();
+    if (tkAddress) { await connectWalletWithoutKeypair(tkAddress); ... }
+It overwrote the slot with the TURNKEY wallet unconditionally, with no
+external-wallet guard — the same wallet-switch class as finding #42,
+but on the LOGIN path rather than the self-heal (which HAS been guarded
+by shouldRestoreTurnkeyStellar since chunk 1). Sequence matching the
+report exactly: re-attach writes Lobstr → hero shows the combined $53 →
+handleAfterAuth's awaits resolve → slot overwritten with the Normal
+wallet → companion collapses to null (same address) → $19.29. It also
+explains the ORIGINAL complaint (before any re-attach existed, login
+always ended on the Turnkey wallet) and the transient doubled savings
+(slot=Normal while the companion SWR still held the same position).
+FIX: before the Turnkey auto-connect, if the browser memo names an
+external wallet AND that address is in `wallets` (the linked list this
+function already fetched = server-side ownership proof), connect THAT
+and close. Invariant I8 (silent Turnkey connect on login) is preserved
+for everyone without a verified external memo. RULE — the one I should
+have applied two attempts ago: when state is being destroyed, audit
+every WRITER of that state, not only the code that clears it; an
+overwrite looks identical to a wipe from the outside. 253 tests, build
+clean.
