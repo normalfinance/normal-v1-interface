@@ -118,6 +118,33 @@ export default function WalletExportDialog({
       stamperRef.current = stamper;
       const targetPublicKey = await stamper.init();
 
+      // Style the phrase inside Turnkey's iframe to match our design — the
+      // default is a raw browser textarea (Niko 2026-08-21). We can only
+      // reach the iframe's content through this API, never read it.
+      await stamper
+        .applySettings({
+          styles: {
+            padding: '0',
+            margin: '0',
+            borderWidth: '0',
+            borderStyle: 'none',
+            fontSize: '15px',
+            fontWeight: '600',
+            fontFamily: '"Geist Mono", ui-monospace, "Courier New", monospace',
+            lineHeight: '1.9',
+            color: '#0A0A0F',
+            backgroundColor: 'transparent',
+            width: '100%',
+            height: '84px',
+            resize: 'none',
+            overflowWrap: 'break-word',
+            wordWrap: 'break-word',
+          },
+        })
+        .catch(() => {
+          /* styling is cosmetic — a failure must never hide the phrase */
+        });
+
       // 2) Ask Turnkey to export, encrypted to the iframe's key, authorized
       //    by the user's PASSKEY (guarded like every ceremony, #51/#63).
       const rpId =
@@ -284,20 +311,52 @@ export default function WalletExportDialog({
       )}
 
       {/* The iframe container is always mounted (init needs it in the DOM);
-          it only holds content once revealed. */}
-      <Box
-        id={IFRAME_CONTAINER_ID}
-        sx={{
-          display: phase === 'revealed' ? 'block' : 'none',
-          mt: '4px',
-          p: '14px',
-          borderRadius: '12px',
-          border: '1px solid rgba(10,10,15,0.12)',
-          bgcolor: '#FAFAFB',
-          minHeight: 96,
-          wordBreak: 'break-word',
-        }}
-      />
+          it only holds content once revealed. Styled as a "secret card" — a
+          soft framed panel with a small lock header — so the phrase reads as
+          part of our UI, not a raw browser textarea. The phrase itself lives
+          in Turnkey's iframe (styled via applySettings); we never see it. */}
+      <Box sx={{ display: phase === 'revealed' ? 'block' : 'none', mt: '4px' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            mb: '8px',
+          }}
+        >
+          <Iconify
+            icon="solar:lock-keyhole-minimalistic-bold"
+            width={14}
+            sx={{ color: 'rgba(10,10,15,0.4)' }}
+          />
+          <Typography
+            sx={{
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'rgba(10,10,15,0.4)',
+            }}
+          >
+            {t('Recovery phrase')}
+          </Typography>
+        </Box>
+        <Box
+          id={IFRAME_CONTAINER_ID}
+          sx={{
+            px: '16px',
+            py: '16px',
+            borderRadius: '14px',
+            border: '1px solid rgba(10,10,15,0.1)',
+            bgcolor: '#F6F6F8',
+            boxShadow: 'inset 0 1px 2px rgba(10,10,15,0.04)',
+            wordBreak: 'break-word',
+            // The iframe fills the box; its own textarea is styled transparent
+            // (applySettings) so this panel's background shows through.
+            '& iframe': { width: '100%', border: '0', display: 'block' },
+          }}
+        />
+      </Box>
 
       {phase === 'revealed' && (
         <>
