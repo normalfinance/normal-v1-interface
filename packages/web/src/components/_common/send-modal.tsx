@@ -684,7 +684,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     >
                       <Box
                         component="img"
-                        src={sendToken.icon ?? getCryptoIconUrl(sendToken.symbol)}
+                        src={sendToken.icon || getCryptoIconUrl(sendToken.symbol)}
                         sx={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }}
                       />
                       <Typography

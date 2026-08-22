@@ -2628,3 +2628,71 @@ with a comment, so the stale value cannot be reached again. RULES:
 never from the enclosing render's values; (2) a "fix this" step must be
 gated on a probe that says it is broken, never on the action that
 preceded it. 257 tests, build clean.
+
+**Swap CTA contradicted the page banner (staging 2026-08-22):** with a
+Lobstr-only account the page showed "Normal wallet is not active on
+Stellar yet — send it at least 1 XLM" while the primary button said
+"Set up SOL wallet", so the flow never reached the Stellar activation
+Niko was being told about. Cause: the cctp button gates were ordered
+chain-addresses-first (!nativeAddress → !evmAddress → missingStellar →
+needsTrustline → lowFeeXlm), so a missing SOL address outranked an
+unactivated Stellar wallet. Reordered to Stellar-side first. Reasoning
+recorded in the code: activation is the SLOW, money-dependent step
+(~1 XLM must arrive from outside, minutes), while the chain addresses
+are instant one-passkey formalities — asking for the long pole first
+starts the wait earlier AND keeps the CTA agreeing with the banner.
+(missingStellar already covers "exists but not activated" via
+accountExists, so the CTA now opens the guided dialog with the QR added
+earlier today.) RULE: when several gates can block an action, order
+them by TIME-TO-RESOLVE, not by code convenience — and never let a
+secondary gate contradict a warning the same screen is showing.
+257 tests, build clean.
+
+**Scenario audit of the swap gates (2026-08-22, Niko: "did you make it
+dynamic? double check"):** verified rather than assumed. The gates ARE
+state- and direction-derived, and the reorder only changed precedence
+among them:
+  · needsTrustline — only when USDC LANDS on Stellar (direction 'in')
+    or when USDC is moved in from the external wallet
+  · lowFeeXlm — outbound only (Soroban fees are paid by the burn source)
+  · nativeAddress — the SOURCE chain inbound, the DESTINATION chain
+    outbound
+  · missingStellar — covers "no address" AND "exists but not activated"
+  · the guided dialog derives its own step (create/activate/trustline/
+    fund/ready) so it resumes at the first unmet condition, and
+    ChainSetupDialog creates whichever chain is missing
+Traced end-to-end: outbound hybrid (the live case), inbound chain-first,
+single-wallet, and hybrid-with-trustline — each yields the right CTA
+chain. THE AUDIT ALSO FOUND TWO DEAD BUTTONS for single-wallet users,
+the same dead-end class Niko has hit twice: "Add USDC Trustline first"
+(action: null) and "Top up XLM to swap" (action: onNeedsSetup ?? null →
+null). Both now act: the trustline is signed inline by the connected
+wallet (the pattern the readiness notice and soroswap engine already
+use), and the XLM top-up opens the app's Receive flow (asset picker →
+address + QR). ONE PRECEDENCE CHOICE IS FIXED, NOT DERIVED, and is
+recorded as such: with NOTHING set up on an inbound pair we ask for the
+Stellar side before the source-chain address — defensible (Stellar is
+the slow, money-dependent step and is required for delivery) but it is
+a judgement call, not a per-scenario rule. RULE: a gate that can block
+an action must offer the action that unblocks it — "no action" is a
+dead end by definition. 257 tests, build clean.
+
+**Bitcoin icon broken in the asset picker (staging 2026-08-22):** two
+causes, both verified against the code rather than guessed:
+(1) getCryptoIconUrl builds `/tokens/<SYMBOL>.webp`, but the native
+chains are stored under their NAME — `bitcoin.webp`, `ethereum.webp`,
+`solana.webp` (proven by ASSET_DISPLAY, which the home hero uses and
+which renders correctly). So the fallback URL `/tokens/BTC.webp` 404s.
+ETH/SOL escaped it only because their tokens usually carry an explicit
+icon; on a fresh account with no BTC wallet, BTC falls back to the
+placeholder and breaks.
+(2) The fallback itself was `token.icon ?? getCryptoIconUrl(...)`, and
+`??` does NOT catch an EMPTY STRING — the exact trap that broke the
+XLM/USDC icons in the drawer during #32 round 4.
+FIXED AT THE ROOT: getCryptoIconUrl now maps BTC/ETH/SOL to their real
+filenames (so every call site is correct at once), and all NINE icon
+fallbacks across the app (picker ×4, send modal, send review, withdraw
+card, explore row, swap card) switched from `??` to `||`. RULE (2nd
+occurrence): for a fallback whose empty value is a STRING, `??` is the
+wrong operator — an empty string is a missing value, not a present one.
+257 tests, build clean.

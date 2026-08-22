@@ -19,6 +19,7 @@
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
 import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { fCurrency } from '@/utils/format-number';
@@ -32,8 +33,10 @@ import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
 import { setActiveCctpTransfer } from '@/lib/cctp/active-transfer';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
 
@@ -168,6 +171,12 @@ export function useCctpEngine({
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
   const { user } = useSupabaseAuth();
+  // Single-wallet users had DEAD buttons on two gates below (no action at
+  // all): they can sign their own trustline, and they can receive XLM — both
+  // are real, available actions, so offer them instead of a dead end.
+  const config = useStellarConfig();
+  const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
+  const { startAction } = useAssetActionsContext();
   const network = useNetworkStore((s) => s.network);
   // Fresh-account path (Niko scenario trace 2026-08-21): after the guided
   // STELLAR setup, the ETH (Base pivot) and BTC/SOL (source/delivery)
@@ -999,6 +1008,81 @@ export function useCctpEngine({
           </Typography>
         ),
       };
+    // ORDER MATTERS (Niko staging 2026-08-22: the page banner said "Normal
+    // wallet is not active" while this button said "Set up SOL wallet" — two
+    // competing instructions, and the swap never reached the Stellar step).
+    // Stellar-side setup comes FIRST because it is the slow, money-dependent
+    // one: activation needs ~1 XLM to arrive from outside and can take
+    // minutes. The chain addresses below are instant one-passkey formalities,
+    // so they are asked for last — the user starts the long pole earliest and
+    // the CTA always agrees with the banner.
+    if (missingStellar)
+      return onNeedsSetup
+        ? { label: t('Set up your Normal wallet'), action: onNeedsSetup, loading: false }
+        : {
+            // Sweep 2026-08-21: a BTC/ETH/SOL-first Turnkey user has NO
+            // Stellar slot — this was a dead button. ChainSetupDialog's
+            // stellar branch derives the account on the EXISTING wallet and
+            // adopts it into the empty slot (guarded by shouldAdoptIntoSlot).
+            label: t('Set up Stellar wallet'),
+            action: user ? () => setSetupChain('stellar') : null,
+            loading: false,
+            helper: (
+              <Typography
+                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}
+              >
+                {t('One passkey adds Stellar to your wallet — the swap continues right after.')}
+              </Typography>
+            ),
+          };
+    if (needsTrustline)
+      // The companion dialog can only fix the COMPANION — when the probed
+      // address is the connected external wallet (deliver-to-external), fall
+      // through to the generic copy instead of a dialog that loops (sweep
+      // 2026-08-21; the deliver pill itself offers the kit-signed add).
+      return onNeedsSetup && stellarAddress !== wallet.address
+        ? { label: t('Add USDC to your Normal wallet'), action: onNeedsSetup, loading: false }
+        : {
+            label: isAddingTrustline ? t('Adding trustline…') : t('Add USDC trustline'),
+            action: isAddingTrustline
+              ? null
+              : async () => {
+                  try {
+                    await addTrustLine('USDC', config.USDC_ISSUER);
+                    enqueueSnackbar(t('USDC trustline added.'), { variant: 'success' });
+                  } catch (e: any) {
+                    enqueueSnackbar(e?.message ?? t('Could not add the USDC trustline.'), {
+                      variant: 'error',
+                    });
+                  }
+                },
+            loading: false,
+            helper: (
+              <Typography
+                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}
+              >
+                {t(
+                  'Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.'
+                )}
+              </Typography>
+            ),
+          };
+    if (lowFeeXlm)
+      return {
+        label: t('Top up XLM to swap'),
+        // Hybrid → the guided dialog; single-wallet → the app's own Receive
+        // flow (asset picker → address + QR), never a dead button.
+        action: onNeedsSetup ?? (() => startAction('receive')),
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t(
+              'The swap pays its Stellar network fee in XLM from {{which}} — a little XLM is needed there.',
+              { which: onNeedsSetup ? t('your Normal wallet') : t('your wallet') }
+            )}
+          </Typography>
+        ),
+      };
     if (!nativeAddress) {
       const sym = (direction === 'in' ? fromSymbol : toSymbol) as CrosschainSymbol;
       const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[sym];
@@ -1031,60 +1115,6 @@ export function useCctpEngine({
     // #32 chunk 4a: for external-wallet users every Stellar-side preflight
     // failure routes into the guided setup dialog, which derives the exact
     // step to resume at (create / activate / trustline / top-up).
-    if (missingStellar)
-      return onNeedsSetup
-        ? { label: t('Set up your Normal wallet'), action: onNeedsSetup, loading: false }
-        : {
-            // Sweep 2026-08-21: a BTC/ETH/SOL-first Turnkey user has NO
-            // Stellar slot — this was a dead button. ChainSetupDialog's
-            // stellar branch derives the account on the EXISTING wallet and
-            // adopts it into the empty slot (guarded by shouldAdoptIntoSlot).
-            label: t('Set up Stellar wallet'),
-            action: user ? () => setSetupChain('stellar') : null,
-            loading: false,
-            helper: (
-              <Typography
-                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}
-              >
-                {t('One passkey adds Stellar to your wallet — the swap continues right after.')}
-              </Typography>
-            ),
-          };
-    if (needsTrustline)
-      // The companion dialog can only fix the COMPANION — when the probed
-      // address is the connected external wallet (deliver-to-external), fall
-      // through to the generic copy instead of a dialog that loops (sweep
-      // 2026-08-21; the deliver pill itself offers the kit-signed add).
-      return onNeedsSetup && stellarAddress !== wallet.address
-        ? { label: t('Add USDC to your Normal wallet'), action: onNeedsSetup, loading: false }
-        : {
-            label: t('Add USDC Trustline first'),
-            action: null,
-            loading: false,
-            helper: (
-              <Typography
-                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}
-              >
-                {t(
-                  'Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.'
-                )}
-              </Typography>
-            ),
-          };
-    if (lowFeeXlm)
-      return {
-        label: t('Top up XLM to swap'),
-        action: onNeedsSetup ?? null,
-        loading: false,
-        helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
-            {t(
-              'The swap pays its Stellar network fee in XLM from {{which}} — a little XLM is needed there.',
-              { which: onNeedsSetup ? t('your Normal wallet') : t('your wallet') }
-            )}
-          </Typography>
-        ),
-      };
     if (amount.lte(0)) return { label: t('Enter an amount'), action: null, loading: false };
     if (insufficient) return { label: t('Insufficient balance'), action: null, loading: false };
     if (stage && stage !== 'done')
@@ -1149,6 +1179,11 @@ export function useCctpEngine({
     minUsdShort,
     stellarAddress,
     wallet.address,
+    addTrustLine,
+    isAddingTrustline,
+    startAction,
+    config.USDC_ISSUER,
+    enqueueSnackbar,
     enabled,
     network,
     nativeAddress,

@@ -655,7 +655,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
       >
         <Box
           component="img"
-          src={tk.icon ?? getCryptoIconUrl(sym)}
+          src={tk.icon || getCryptoIconUrl(sym)}
           sx={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }}
         />
         <Typography

@@ -379,7 +379,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Box
                   component="img"
-                  src={sendToken ? (sendToken.icon ?? getCryptoIconUrl(sendToken.symbol)) : ''}
+                  src={sendToken ? sendToken.icon || getCryptoIconUrl(sendToken.symbol) : ''}
                   sx={{
                     width: 36,
                     height: 36,
