@@ -2676,3 +2676,23 @@ the slow, money-dependent step and is required for delivery) but it is
 a judgement call, not a per-scenario rule. RULE: a gate that can block
 an action must offer the action that unblocks it — "no action" is a
 dead end by definition. 257 tests, build clean.
+
+**Bitcoin icon broken in the asset picker (staging 2026-08-22):** two
+causes, both verified against the code rather than guessed:
+(1) getCryptoIconUrl builds `/tokens/<SYMBOL>.webp`, but the native
+chains are stored under their NAME — `bitcoin.webp`, `ethereum.webp`,
+`solana.webp` (proven by ASSET_DISPLAY, which the home hero uses and
+which renders correctly). So the fallback URL `/tokens/BTC.webp` 404s.
+ETH/SOL escaped it only because their tokens usually carry an explicit
+icon; on a fresh account with no BTC wallet, BTC falls back to the
+placeholder and breaks.
+(2) The fallback itself was `token.icon ?? getCryptoIconUrl(...)`, and
+`??` does NOT catch an EMPTY STRING — the exact trap that broke the
+XLM/USDC icons in the drawer during #32 round 4.
+FIXED AT THE ROOT: getCryptoIconUrl now maps BTC/ETH/SOL to their real
+filenames (so every call site is correct at once), and all NINE icon
+fallbacks across the app (picker ×4, send modal, send review, withdraw
+card, explore row, swap card) switched from `??` to `||`. RULE (2nd
+occurrence): for a fallback whose empty value is a STRING, `??` is the
+wrong operator — an empty string is a missing value, not a present one.
+257 tests, build clean.

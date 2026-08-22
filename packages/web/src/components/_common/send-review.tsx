@@ -183,7 +183,7 @@ const SendReview: React.FC<SendReviewProps> = ({
           >
             <Box
               component="img"
-              src={sendToken.icon ?? getCryptoIconUrl(sendToken.symbol)}
+              src={sendToken.icon || getCryptoIconUrl(sendToken.symbol)}
               sx={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }}
             />
             <Typography

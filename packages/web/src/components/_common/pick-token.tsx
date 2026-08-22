@@ -169,7 +169,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                     <Box
                       component="img"
-                      src={token.icon ?? getCryptoIconUrl(token.symbol)}
+                      src={token.icon || getCryptoIconUrl(token.symbol)}
                       sx={{
                         width: 40,
                         height: 40,
@@ -267,7 +267,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   >
                     <Box
                       component="img"
-                      src={token.icon ?? getCryptoIconUrl(token.symbol)}
+                      src={token.icon || getCryptoIconUrl(token.symbol)}
                       sx={{
                         width: 20,
                         height: 20,
@@ -319,7 +319,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                         <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                           <Box
                             component="img"
-                            src={token.icon ?? getCryptoIconUrl(token.symbol)}
+                            src={token.icon || getCryptoIconUrl(token.symbol)}
                             sx={{
                               width: 40,
                               height: 40,
@@ -402,7 +402,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                         <Box
                           component="img"
-                          src={token.icon ?? getCryptoIconUrl(token.symbol)}
+                          src={token.icon || getCryptoIconUrl(token.symbol)}
                           sx={{
                             width: 40,
                             height: 40,

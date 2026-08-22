@@ -18,6 +18,21 @@ export function getCryptoIconUrl(symbol: string): string {
     return cdn('/tokens/XLM.webp');
   }
 
+  // The native chains are stored under their NAME, not their ticker
+  // (tokens/bitcoin.webp, not tokens/BTC.webp) — building "/tokens/BTC.webp"
+  // 404s, which is exactly how Bitcoin rendered as a broken image in the
+  // asset picker on staging (2026-08-22) while ETH/SOL happened to carry an
+  // explicit icon. Keep this in step with ASSET_DISPLAY in
+  // web/src/lib/portfolio/display.ts, which uses the same files.
+  const NATIVE_ICON_FILES: Record<string, string> = {
+    BTC: 'bitcoin',
+    ETH: 'ethereum',
+    SOL: 'solana',
+  };
+  if (NATIVE_ICON_FILES[sanitized]) {
+    return cdn(`/tokens/${NATIVE_ICON_FILES[sanitized]}.webp`);
+  }
+
   // Check if original symbol started with lowercase 'n' and was followed by an uppercase letter
   const isNormalToken = /^n[A-Z0-9]/.test(symbol);
 
