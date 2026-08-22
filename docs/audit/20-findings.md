@@ -2776,3 +2776,54 @@ second sub-org), so deleting the row is the only way to get a fresh passkey —
 and it would strand those funds permanently, because reaching them needs the
 sub-org id we just deleted. Fallback for testing is a NEW signup email, which
 leaves the row intact for recovery from the device that holds the credential.
+
+**"It asks for a USB key, no biometrics" — the credential is on the PHONE
+(2026-08-22, solved from Turnkey's own record):** the dashboard shows one
+authenticator, Last Used = 3:09 PM = its creation minute, i.e. it has NEVER
+signed. The full API record explains why:
+    transports: [HYBRID, INTERNAL]
+    aaguid:     ea9b8d66-4d01-1d21-3ce4-b6b48cb575d4  = Google Password Manager
+So the account's passkey is SYNCED TO A GOOGLE ACCOUNT (phone), not held by
+the laptop's Windows Hello. That completes the earlier picture: the laptop
+holds a local orphan (IkCCdl9…), which an unrestricted prompt naturally
+preferred → CREDENTIAL_NOT_FOUND. Once allowCredentials pinned the real id,
+Chrome found no LOCAL match and fell back to its generic "insert a security
+key" flow — because we passed the id WITHOUT its transports, so the browser
+had to guess where the credential lives, and guessed wrong.
+FIX: /api/turnkey/credentials now returns each credential's transports
+(Turnkey's AUTHENTICATOR_TRANSPORT_* mapped to WebAuthn's strings) and the
+stamper passes them into allowCredentials. With 'hybrid' present Chrome
+offers the phone/QR + Bluetooth flow that can actually satisfy the prompt.
+The NotAllowedError text now branches on it too: a hybrid credential says
+"your passkey is saved on your phone — choose Use a phone or tablet", never
+"use the device you set it up on", which would send the user nowhere.
+WORKAROUND WITHOUT A DEPLOY: in the Chrome dialog pick "Use a phone or
+tablet" and scan with the phone signed into that Google account.
+RULE: a credential id without its transports is half an answer — WebAuthn
+needs to know WHERE a credential lives, or the browser guesses and offers a
+modality the user does not own.
+OPEN DECISION (not changed): registration sets residentKey 'preferred' with
+no authenticatorAttachment, so the authenticator picks — GPM sync makes the
+wallet portable across the user's devices, but means the passkey is not
+where a "this device" mental model expects. Pinning 'platform' would bind it
+to one machine and lean harder on the recovery phrase.
+
+**The "Use a phone or tablet" option does not always exist (2026-08-22):**
+with transports [hybrid, internal] deployed, Chrome still showed only the USB
+security-key dialog. Chrome on Windows hands WebAuthn to the Windows platform
+API, and that dialog offers the phone/QR flow only on newer Windows — on
+Windows 10, and in several Chrome-on-Windows paths, there is no such button
+no matter what transports we send. So the error text telling him to pick it
+was pointing at a control he does not have.
+The message now leads with the route that works on every OS: OPEN THE PAGE ON
+THE PHONE THAT HOLDS THE PASSKEY and sign in there (the QR flow is kept as a
+parenthetical for the OSes that do offer it).
+Also added the regression guard this feature actually needed: an empty
+credential list, or a throwing lookup, must produce NO allowCredentials at
+all — restricting is an enhancement, and if it ever hard-failed it would
+break signing app-wide rather than for one user. Two tests pin that.
+DIAGNOSIS NOTE: whether the new build is live is visible in the Network tab —
+/api/turnkey/credentials returning `credentials: [{transports: [...]}]` is the
+new route; a response carrying only `credentialIds` is the older one.
+RULE: never instruct a user to click a control we have not confirmed their
+platform renders; name the platform-independent path first.
