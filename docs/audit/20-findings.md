@@ -3057,3 +3057,29 @@ abandoned. Bounded and non-blocking; worth an idempotency key if it is ever
 seen in the wild.
 RULE: verifying a fix "covers all chains" means walking the whole path the
 retry takes, not just the call that threw.
+
+**Enabling autopilot did not help the swap you enabled it for (2026-08-22,
+fixed):** the engine decided server-vs-interactive by reading
+/api/autopilot/status immediately before each Base leg. That read is
+authoritative but it is a SNAPSHOT — a grant that lands after it cannot
+change the leg. So the user enabled "one signature", still signed the approve
++ pivot manually on that run, and only saw the benefit on the NEXT swap,
+which reads exactly like "the popup didn't register".
+Worse, the in-modal offer promises the current run in so many words: "Enable
+automatic completion and this swap finishes by itself."
+Ruled out first, by reading the code rather than guessing: the status route
+is force-dynamic (no cache); the consent dialog awaits the ceremony; and the
+ceremony throws unless Turnkey returned a real policyId — so a resolved grant
+means the policy genuinely exists.
+FIX: createAutopilotGate (sections/swap/engines/autopilot-gate.ts) makes a
+completed grant STICKY for the run and skips the status read once granted —
+that read is precisely what lagged. Both doors funnel through
+handleConsentChoice, so one seam covers the start dialog AND the in-modal
+box; a grant from Settings in another tab still resolves through the live
+check. Optimism is safe by construction: the server re-verifies ownership,
+transfer state, addresses and the policy, and tryAutopilot returns null on
+any refusal, so the caller falls back to interactive — an optimistic yes
+costs one refused request, never a wrong signature. A revocation mid-run is
+equally safe for the same reason. 4 tests.
+RULE: when a user action changes what the current run may do, the run must
+hold that fact, not re-derive it from a source that can lag.
