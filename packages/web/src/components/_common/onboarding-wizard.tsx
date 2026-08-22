@@ -9,7 +9,6 @@ import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
-import { shouldAdoptIntoSlot } from '@/lib/wallet-slot';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
@@ -21,6 +20,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { importMnemonicIntoTurnkey } from '@/lib/turnkey/import-mnemonic';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { shouldAdoptIntoSlot, shouldReattachExternalOnLogin } from '@/lib/wallet-slot';
 import { getTurnkeyWalletInfo, isTurnkeyStellarAddress } from '@/lib/turnkey/wallet-info';
 import { linkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 import {
@@ -311,7 +311,13 @@ export default function OnboardingWizard({
       // server-side ownership check: a memo from another user on a shared
       // browser can never match.
       const externalMemo = readExternalWalletMemo();
-      if (externalMemo && wallets.some((w) => w.walletAddress === externalMemo.address)) {
+      if (
+        externalMemo &&
+        shouldReattachExternalOnLogin(
+          externalMemo.address,
+          wallets.map((w) => w.walletAddress)
+        )
+      ) {
         await persist.connectWallet(externalMemo.address, externalMemo.walletType);
         onClose();
         return;

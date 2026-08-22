@@ -45,3 +45,29 @@ export function shouldRestoreTurnkeyStellar(
 export function shouldAdoptIntoSlot(slotAddress: string | undefined): boolean {
   return !slotAddress;
 }
+
+/**
+ * On LOGIN, may we re-attach the external wallet this browser last used
+ * instead of silently connecting the Turnkey wallet? (onboarding-wizard's
+ * handleAfterAuth — invariant I9)
+ *
+ * The login path used to connect the Turnkey wallet unconditionally, which
+ * SWITCHED the wallet of anyone who had an external one connected: they saw
+ * their combined balances for a moment, then only the Normal wallet (live
+ * incident 2026-08-22). It is the same wallet-switch hazard as the self-heal
+ * (#42), on a different path — hence the same style of guard, kept pure and
+ * tested.
+ *
+ * Two conditions, both required:
+ * - the browser remembers an external wallet (memo), AND
+ * - that address is in THIS account's linked wallets — a server-side
+ *   ownership proof, so a memo left by another user on a shared browser can
+ *   never be re-attached.
+ */
+export function shouldReattachExternalOnLogin(
+  memoAddress: string | undefined | null,
+  linkedAddresses: readonly string[]
+): boolean {
+  if (!memoAddress) return false;
+  return linkedAddresses.includes(memoAddress);
+}

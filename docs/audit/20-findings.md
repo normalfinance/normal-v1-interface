@@ -2510,3 +2510,28 @@ have applied two attempts ago: when state is being destroyed, audit
 every WRITER of that state, not only the code that clears it; an
 overwrite looks identical to a wipe from the outside. 253 tests, build
 clean.
+
+**Exhaustive writer audit + invariant I9 (2026-08-22, closing):** after
+fixing the login overwrite I audited EVERY remaining writer of the
+wallet slot instead of asking Niko to test again:
+  · onboarding-wizard :675 create → guarded by shouldAdoptIntoSlot ✓
+  · :723 import, :2033 "switch wallet" → explicit user actions ✓
+  · use-normal-wallet :243/:270/:290 → create/import flows ✓,
+    :138 self-heal → guarded by shouldRestoreTurnkeyStellar ✓,
+    restore effect → returns unless walletType === 'normal-wallet' ✓
+  · chain-setup-dialog :82 → guarded by shouldAdoptIntoSlot ✓
+  · use-stellar-wallets-kit :186 restore (external slot only) / :230
+    user connect ✓
+A cross-check (files that are session-aware AND write the slot) returns
+exactly three: the wizard, use-normal-wallet, use-stellar-wallets-kit —
+all accounted for. Also verified the memo's write side end-to-end: all
+FIVE external-connect entry points (wallet-gate, drawer ×2,
+use-wallet-reconnect ×2, wizard) go through
+useStellarWalletsKit().connectWallet, the single place that records it,
+and the kit's restore path re-records it on every load, so an existing
+connection seeds the memo without the user doing anything. HARDENING:
+the login decision is now the pure `shouldReattachExternalOnLogin(memo,
+linkedAddresses)` in lib/wallet-slot.ts beside the other slot
+invariants, with 4 tests (I9): re-attach when owned, refuse a foreign
+memo (shared browser), no memo ⇒ untouched Turnkey connect (I8), no
+linked wallets ⇒ refuse. 257 tests, build clean.
