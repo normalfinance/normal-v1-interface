@@ -9,6 +9,7 @@ import { pickAddresses, getChainAddress } from '@/lib/chains/registry';
 
 import { createPasskeyRegistration } from './passkey';
 import { markWalletNeedsBackup } from './wallet-backup';
+import { isPathAlreadyExistsError } from './turnkey-error-codes';
 import { getTurnkeyWalletInfo, invalidateTurnkeyWalletInfo } from './wallet-info';
 import { XLM_ACCOUNT, SOLANA_ACCOUNT, BITCOIN_ACCOUNT, ETHEREUM_ACCOUNT } from './account-specs';
 import {
@@ -40,16 +41,28 @@ export async function addWalletAccounts(
     await createPasskeyStamper()
   );
 
-  // Passkey prompt — derive the new account(s) on the existing seed
-  const activity = await client.createWalletAccounts({
-    type: 'ACTIVITY_TYPE_CREATE_WALLET_ACCOUNTS',
-    timestampMs: String(Date.now()),
-    organizationId: subOrgId,
-    parameters: { walletId, accounts },
-  });
-
-  const created = activity?.activity?.result?.createWalletAccountsResult?.addresses;
-  if (!created?.length) throw new Error('Turnkey did not create the account');
+  // Passkey prompt — derive the new account(s) on the existing seed.
+  // "Ensure the account exists", NOT "create it": if the path is already on
+  // the wallet, the address is real and only our DB is behind, so fall
+  // through to the sync below instead of failing. Without this the gate that
+  // asked for the address could never be satisfied — Turnkey refused to
+  // create what it already had, and the sync that would have told us sits
+  // after this call (live 2026-08-22).
+  let created: string[] | undefined;
+  let alreadyExisted = false;
+  try {
+    const activity = await client.createWalletAccounts({
+      type: 'ACTIVITY_TYPE_CREATE_WALLET_ACCOUNTS',
+      timestampMs: String(Date.now()),
+      organizationId: subOrgId,
+      parameters: { walletId, accounts },
+    });
+    created = activity?.activity?.result?.createWalletAccountsResult?.addresses;
+  } catch (e) {
+    if (!isPathAlreadyExistsError(e)) throw e;
+    alreadyExisted = true;
+  }
+  if (!alreadyExisted && !created?.length) throw new Error('Turnkey did not create the account');
 
   // Server re-reads the wallet's accounts from Turnkey and syncs the DB
   const headers = await buildAuthHeaders();

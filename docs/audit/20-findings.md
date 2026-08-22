@@ -3010,3 +3010,28 @@ NOTED, NOT CHANGED (needs a product call):
    in one prompt would halve it — distinct from the lazy-provisioning rule,
    which forbids creating chains the user has not asked for.
 279 tests, build clean.
+
+**"Turnkey error 6: path already exists" — the gate could never be satisfied
+(2026-08-22, fixed):** after setting up SOL, "Set up Ethereum wallet" failed
+on every click. Live proof from Turnkey — the account was already there:
+    wallet 5638012b "Normal Wallet"
+      XLM      m/44'/148'/0'       GD6VNX3Y…
+      SOLANA   m/44'/501'/0'/0'    6D5Zhb1t…
+      ETHEREUM m/44'/60'/0'/0/0    0x31d889B66d98A4c2bB5875De8504eD4f10461C62
+…while our DB row had no ethereumAddress. addWalletAccounts calls
+createWalletAccounts and THEN posts to /api/turnkey/import, which is what
+re-reads the wallet from Turnkey and writes the addresses to our row. Because
+the create threw, the sync never ran — so the address Turnkey already held
+could never reach us, the gate kept demanding it, and every retry threw the
+same error. A permanent dead end, not a transient failure.
+Cause of the split: an earlier attempt created the account at Turnkey and
+died before syncing. The same shape as the orphaned passkey and the swap
+idempotency incident — THE EXPENSIVE STEP SUCCEEDED, THE RECORD DID NOT, AND
+THE RETRY TRIED TO REDO THE STEP INSTEAD OF ADOPTING WHAT EXISTED.
+FIX: isPathAlreadyExistsError (lib/turnkey/turnkey-error-codes.ts); on that
+error addWalletAccounts falls through to the sync instead of throwing. The
+operation is "ensure the account exists", not "create it". 4 tests, including
+that it does NOT swallow error 16 / rate limits / NotAllowedError — adopting
+an address after one of those would be inventing a success.
+RULE (third sighting today): make the RETRY converge on the desired state,
+never on repeating the action. 282 tests, build clean.
