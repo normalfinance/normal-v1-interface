@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Master QA Checklist — Wallet Creation &amp; Swaps</title>
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --muted: #5a5a66;
+    --line: #e6e6ea;
+    --soft: #f6f6f8;
+    --green: #0a6649;
+    --amber: #7a4a00;
+    --red: #991b1b;
+    --blue: #1d4ed8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    max-width: 940px;
+    padding: 48px 32px 96px;
+    font: 15px/1.65 "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: #fff;
+  }
+  h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 30px; }
+  h2 {
+    font-size: 20px; letter-spacing: -0.01em;
+    margin: 40px 0 10px; padding-top: 16px;
+    border-top: 2px solid var(--ink);
+  }
+  h3 { font-size: 15.5px; margin: 22px 0 6px; }
+  p, li { color: #23232b; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 5px 0; }
+  strong { color: var(--ink); }
+  code {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 12.5px; background: var(--soft);
+    padding: 1px 5px; border-radius: 5px;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0 18px; font-size: 13px; }
+  th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td.id { font-weight: 700; white-space: nowrap; font-family: "Consolas", monospace; }
+  td.chk { text-align: center; width: 34px; font-size: 16px; color: #bbb; }
+  .box {
+    border: 1px solid var(--line); border-left: 4px solid var(--ink);
+    background: var(--soft); border-radius: 8px; padding: 14px 18px; margin: 16px 0;
+  }
+  .box.warn { border-left-color: #d97706; }
+  .box.good { border-left-color: #1ab37d; }
+  .box .label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px;
+  }
+  .kv { color: var(--muted); font-size: 13px; }
+  .ok { color: var(--green); font-weight: 700; }
+  .no { color: var(--red); font-weight: 700; }
+  .tag {
+    display: inline-block; font-size: 10.5px; font-weight: 700; padding: 1px 7px;
+    border-radius: 999px; letter-spacing: 0.03em; white-space: nowrap;
+  }
+  .tag.pass { background: rgba(26,179,125,0.14); color: #0a6649; }
+  .tag.pend { background: rgba(10,10,15,0.06); color: #6b6b76; }
+  .tag.prod { background: rgba(122,74,0,0.12); color: #7a4a00; }
+  .toc { columns: 2; gap: 30px; font-size: 13.5px; }
+  .toc a { color: var(--blue); text-decoration: none; }
+  @media print {
+    body { padding: 0 8px; font-size: 12px; max-width: none; }
+    h2 { break-after: avoid; page-break-after: avoid; }
+    h3 { break-after: avoid; }
+    tr { break-inside: avoid; page-break-inside: avoid; }
+    .box { break-inside: avoid; }
+    .pagebreak { break-before: page; page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Master QA Checklist</h1>
+<p class="subtitle">One document to test wallet creation &amp; every swap flow on staging · branch <code>feat/external-wallet-cctp</code> · assembled 2026-08-22 from docs 73/77/78/79</p>
+
+<div class="box">
+  <div class="label">How to use this</div>
+  Work top to bottom. Each row has a <strong>Do</strong> and an <strong>Expect</strong>; tick the box
+  when it matches. The status tag shows what we already know:
+  <span class="tag pass">verified live</span> already passed a real test this cycle ·
+  <span class="tag pend">not yet run</span> needs your test ·
+  <span class="tag prod">production only</span> can't be tested on staging.
+  If an Expect doesn't match, stop and note the row id — that's the bug report.
+</div>
+
+<div class="box warn">
+  <div class="label">Staging setup &amp; scope</div>
+  <ul style="margin:6px 0 0">
+    <li><strong>Two test accounts:</strong> (A) a fresh account for the creation tests; (B) an account
+      with a funded <strong>Lobstr</strong> external wallet (a few USDC + XLM) connected alongside the
+      Normal wallet, for the hybrid swap tests.</li>
+    <li><strong>Autopilot</strong> (1-signature): only active if the three <code>AUTOPILOT_*</code> env
+      vars + both SQL migrations are present on staging. If not, autopilot rows should FALL BACK to
+      normal prompts — that fallback is itself a valid pass.</li>
+    <li><strong>Out of scope on staging:</strong> the "Deposit cash" (bank/card) on-ramp is
+      production-only and is not tested here. Cross-chain swaps route through LI.FI, which has
+      <em>no testnet liquidity</em> — so cross-chain + CCTP rows are run on <strong>mainnet</strong>
+      with small real amounts.</li>
+  </ul>
+</div>
+
+<h2 id="toc">Sections</h2>
+<div class="toc">
+  <a href="#s1">1 · Wallet creation &amp; first-run backup</a><br/>
+  <a href="#s2">2 · Recovery-phrase export (Settings)</a><br/>
+  <a href="#s3">3 · Stellar swaps (XLM ↔ USDC)</a><br/>
+  <a href="#s4">4 · Cross-chain swaps (BTC/ETH/SOL ↔ USDC/XLM)</a><br/>
+  <a href="#s5">5 · One-signature autopilot</a><br/>
+  <a href="#s6">6 · Failure, refund &amp; recovery</a><br/>
+  <a href="#s7">7 · Balances, activity &amp; displays</a><br/>
+  <a href="#s8">8 · Gas &amp; honest limits (ETH source)</a><br/>
+</div>
+
+<h2 id="s1" class="pagebreak">1 · Wallet creation &amp; first-run backup</h2>
+<p>The Normal wallet is one HD seed; each chain address is derived lazily on first use. A brand-new
+seed forces a mandatory recovery-phrase backup before the flow continues.</p>
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">W1</td><td>Fresh account → asset-first onboarding → pick <strong>Bitcoin</strong> (Receive)</td><td>Wallet is created with a BTC address; the mandatory <strong>recovery-phrase backup</strong> dialog appears before you can proceed</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W2</td><td>Repeat W1 starting from <strong>ETH</strong>, <strong>SOL</strong>, and <strong>XLM</strong> (separate fresh accounts)</td><td>Same: wallet created for that chain, backup forced. No dead ends for any starting asset</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W3</td><td>Backup dialog: read the panel listing addresses</td><td>Shows "One phrase — your whole wallet" with all four addresses (BTC/ETH/SOL/XLM) and where each restores (MetaMask/Phantom/Freighter/Sparrow)</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W4</td><td>Backup dialog: try to close it (X / click outside) BEFORE revealing + confirming</td><td>It will not close — the X is hidden until the phrase is revealed AND the "I've saved it" box is ticked</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W5</td><td>Reveal the phrase (passkey), tick the box, press "Done — continue"</td><td>Dialog closes and returns you to whatever you were doing; the phrase renders inside the styled panel (our font, not a raw textarea)</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W6</td><td>Create a wallet, then <strong>kill the tab</strong> before confirming backup; reopen the app</td><td>The mandatory backup re-appears (resumable — the wallet exists without a confirmed backup)</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W7</td><td>After confirming backup once, navigate around / reload</td><td>The backup dialog does NOT reappear (once-per-wallet)</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W8</td><td>An EXISTING account (wallet created before this feature) logs in</td><td>NOT force-gated — no backup dialog on login; backup is available from Settings instead</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W9</td><td>Lazy add: on the BTC-first account, start a swap that needs an ETH address (e.g. USDC→ETH)</td><td>One passkey creates the ETH address in-place and the swap continues; <strong>no second backup</strong> (same seed, already backed up)</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W10</td><td>Chain-first account (no Stellar) → open <strong>/swap</strong> (default view is XLM→USDC)</td><td>Button reads "Set up Stellar wallet" with a WORKING one-passkey setup — not a dead "Activate account" button</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W11</td><td>Same chain-first account → cctp pair (e.g. BTC→USDC)</td><td>Missing ETH (Base pivot) / Stellar addresses each offer a working one-passkey "Set up" — no dead buttons</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W12</td><td>Same chain-first account → drawer → <strong>Send</strong></td><td>The Send modal OPENS and lists the chain asset (it used to be a silent no-op)</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W13</td><td>External-wallet user (Lobstr only) → pick USDC→BTC → "Continue with your Normal wallet"</td><td>The guided 4-step dialog opens at "Create"</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W14</td><td>Guided dialog: complete step 1, close the tab, reopen</td><td>Resumes at "Activate" — steps are derived from state, never remembered</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W15</td><td>Guided dialog: walk steps 2–4 (4 XLM → trustline → USDC)</td><td>Reaches "Your Normal wallet is ready", then the mandatory backup, then the swap runs</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">W16</td><td>Settings → Import Account → import an existing Normal wallet</td><td>Imports and links; addresses appear</td><td><span class="tag pend">not yet run</span></td></tr>
+</table>
+
+<h2 id="s2">2 · Recovery-phrase export (Settings)</h2>
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">X1</td><td>Settings → Accounts → Normal wallet card → "Export recovery phrase" → passkey</td><td>Warning shown first; the phrase renders INSIDE Turnkey's iframe (styled panel); our DOM/network tab shows only an encrypted bundle, never the words</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">X2</td><td>Reject the passkey during export</td><td>Calm error + "Try again"; nothing is displayed, nothing exposed</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">X3</td><td><strong>Round-trip (the important one):</strong> export the phrase → import into <strong>Freighter</strong> (Stellar) AND <strong>MetaMask</strong> (Ethereum)</td><td>The SAME <code>G…</code> and <code>0x…</code> addresses as on the settings card appear. If either differs, note the derivation path the app used and STOP — do not ship the "restores anywhere" claim until this passes</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">X4</td><td>External wallet card (Lobstr) in Settings</td><td>NO export button — its keys live in the Lobstr app, nothing for us to export</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">X5</td><td>Confirm export works on our Turnkey org at all (first successful X1)</td><td>No "feature not enabled" error from Turnkey. If it errors, export must be enabled on the Turnkey org (dashboard), not a code fix</td><td><span class="tag pend">not yet run</span></td></tr>
+</table>
+
+<h2 id="s3" class="pagebreak">3 · Stellar swaps (XLM ↔ USDC, Soroswap)</h2>
+<p>Two signatures today (swap + Normal fee) until Soroswap's embedded-fee endpoint is fixed upstream; the flag <code>SOROSWAP_EMBEDDED_FEE</code> is safe to leave on — it degrades, never fails.</p>
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">S1</td><td>XLM → USDC on a single-wallet account</td><td>Progress popup (Preparing → Approve → Submitting → Updating balances → Done); two signatures; Done only after balances visibly updated — open the drawer immediately, assets already correct</td><td><span class="tag pass">verified live</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">S2</td><td>USDC → XLM</td><td>Same flow reversed; fee charged (second signature IS the fee); stellar.expert link at Done</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">S3</td><td>Reject the FIRST signature</td><td>Nothing submitted, nothing charged; modal shows error + Try again with the amount still filled</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">S4</td><td>Reject the SECOND (fee) signature</td><td>Nothing submitted (sign-both-first); modal error + Try again; retry rebuilds cleanly, no stale transaction reused</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">S5</td><td>Hybrid (Lobstr connected): XLM ↔ USDC, source pill <strong>Lobstr</strong></td><td>Lobstr kit signs both transactions (swap + fee)</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">S6</td><td>Hybrid: XLM ↔ USDC, source pill <strong>Normal wallet</strong></td><td>Balance/MAX show the Normal wallet's funds; passkey signs both; Lobstr never prompted; with an empty Lobstr the Normal pill is pre-selected — never a 0.00 greeting</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">S7</td><td>Swap to USDC on a wallet without the USDC trustline</td><td>Blocked before signing with an inline "add trustline" path — never an on-chain failure after signing</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">S8</td><td>Asset picker (any)</td><td>"Your assets" sorted by USD value, highest first</td><td><span class="tag pass">verified live</span></td></tr>
+</table>
+
+<h2 id="s4">4 · Cross-chain swaps (BTC/ETH/SOL ↔ USDC/XLM · mainnet)</h2>
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">C1</td><td>ETH → SOL (pure LI.FI, no Stellar)</td><td>Runs passkey-only; delivery tracked to the SOL wallet</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">C2</td><td>ETH → USDC (inbound cctp)</td><td>One source signature → USDC arrives on Base → burn → USDC on Stellar; MAX offers slightly less ETH (gas reserve) and the offered amount goes through</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">C3</td><td>USDC → SOL (outbound cctp)</td><td>One Stellar burn signature → mint on Base → pivot → SOL delivered; "Delivering" step holds until true delivery, then Done</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">C4</td><td>USDC → BTC, keep the popup open</td><td>"Delivering BTC" says "usually 10–60 minutes" and STAYS active until the payout confirms; Done only after the wallet refetch — closing then shows the BTC already in your balance</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">C5</td><td>BTC → USDC (inbound from Bitcoin PSBT)</td><td>Source leg signs the PSBT; the rest (arrival/gas/burn/bridge) is chain-agnostic; USDC lands on Stellar</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">C6</td><td>Hybrid: USDC → BTC, source pill <strong>Lobstr</strong></td><td>CTA "Move X USDC from Lobstr &amp; swap" → one Lobstr approval → Moving step → rest passkey-only; move appears in Activity</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">C7</td><td>Hybrid: BTC → USDC, Deliver to <strong>Lobstr</strong> without its trustline</td><td>The pill offers "add trustline" (one Lobstr approval), then delivery lands in Lobstr; rejecting the trustline keeps delivery on the Normal wallet</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">C9</td><td><strong>Wrong-wallet regression (2026-08-22):</strong> hybrid, source pill <strong>Lobstr</strong>, while the Normal wallet ALSO holds enough USDC</td><td>A Lobstr approval popup MUST appear and the Moving step must run — verify on-chain (stellar.expert) that the burn's source account is the companion only AFTER a visible Lobstr move. The Normal wallet's USDC must not drop by the swap amount</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">C10</td><td>Same swap, but source pill <strong>Normal wallet</strong></td><td>NO Lobstr popup; Normal wallet pays; the Activity row is tagged "Normal wallet", not "Lobstr"</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">C8</td><td>Below the $10 minimum on a cctp swap</td><td>Blocked BEFORE clicking (button shows the minimum), not a server error after</td><td><span class="tag pend">not yet run</span></td></tr>
+</table>
+
+<h2 id="s5" class="pagebreak">5 · One-signature autopilot</h2>
+<p>Only if the <code>AUTOPILOT_*</code> env + SQL are on staging. If not, every row here should fall back to the normal 2-signature prompts — that fallback is a valid pass.</p>
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">A1</td><td>First cctp swap → consent dialog at swap start → "Not now"</td><td>Swap continues with normal prompts; dialog never nags again; in-swap "Enable auto-finish" box + Settings keep the door open</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">A2</td><td>Settings → Accounts → "Turn on" (or Enable in the dialog)</td><td>Up to two passkey confirmations (user + policy); ONE if a delegate already exists (idempotent repair); Settings flips to On</td><td><span class="tag pass">verified live</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">A3</td><td>ETH → USDC (inbound) with autopilot ON</td><td>ONE signature at the start; the "Starting the Circle bridge" step says "Automatic — no signature needed" and completes unprompted</td><td><span class="tag pass">verified live</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">A4</td><td>USDC → SOL/ETH (outbound) with autopilot ON</td><td>ONE passkey (the Stellar burn); the pivot runs unprompted ~1 min after the mint</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">A5</td><td>Autopilot OFF (Settings → Turn off), then swap</td><td>Mid-flow prompts are back (the safety fallback) — no errors anywhere</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">A6</td><td>During a bridge wait with autopilot OFF, tap "Enable auto-finish" in the popup</td><td>Ceremony runs mid-wait; THIS swap's next step then completes without a prompt</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">A7</td><td>Revoke mid-flow: start an inbound swap, Turn off in a second tab before the burn</td><td>Engine falls back to the interactive burn — the swap still completes, nothing strands</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">A8</td><td>After A3/A4: <code>SELECT * FROM autopilot_signatures ORDER BY "createdAt" DESC</code></td><td>One row per server-signed tx (purpose cctp-inbound-* / cctp-outbound-*, amountUsd set)</td><td><span class="tag pend">not yet run</span></td></tr>
+</table>
+
+<h2 id="s6">6 · Failure, refund &amp; recovery</h2>
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">R1</td><td>Start ANY swap/send; glance at Activity before finishing signatures</td><td>The Pending row is already at the TOP, within a second, in every flow and from either wallet</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R2</td><td>Reject a signature mid-swap; separately let one complete; separately get a refund</td><td>Statuses truthful per flow: Failed / Done / Refunded distinct; unknown delivered amount shows "—", never $0</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R3</td><td>A bridge leg that REFUNDS (pick an amount the bridge refuses)</td><td>Within ~30s the popup tells the calm story ("the bridge returned your ETH — it is back in your wallet"), the Activity row flips to Failed, returned balance already visible, "Try again" one click away — no block explorers</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R4</td><td>Any swap → wait for Done → close the popup immediately</td><td>The received asset is ALREADY in the visible balances everywhere (Done waits for the refetch on every engine, BTC included)</td><td><span class="tag pass">verified live</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R5</td><td>During an active swap, look above the swap card; then reject a step (or reload mid-swap)</td><td>No recovery banner while healthy; the moment a step errors or the tab reloads, the banner appears with one-tap recovery — never lost, never duplicated</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R6</td><td>Open a halted swap's row in Activity (any page)</td><td>The detail popup has "Finish this transfer" — same one-tap recovery as the banner</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R7</td><td>Hybrid: reload to expire the Lobstr session, then start a swap FROM Lobstr</td><td>Does NOT fail: info toast + the wallet's connect window opens by itself; approving resumes the SAME step; only closing it without approving aborts</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R8</td><td>Outbound from Lobstr: approve the move → REJECT the burn → Try again</td><td>NO second Lobstr move — a toast says the Normal wallet already holds the USDC and the swap proceeds passkey-only</td><td><span class="tag pend">not yet run</span></td></tr>
+</table>
+
+<h2 id="s7" class="pagebreak">7 · Balances, activity &amp; displays</h2>
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">D1</td><td>Compare balances across drawer, swap card, savings card, send picker, /assets</td><td>All identical, all update within ~10s of any transaction — no reload needed anywhere</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D2</td><td>Home hero "Your Normal Portfolio" (hybrid)</td><td>ONE row per asset; USDC/XLM combined with per-wallet subtitle by real wallet name ("Normal wallet 23.64 · Lobstr 19.78"), never "External"; buttons in two equal rows incl. Swap</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D3</td><td>Swap button on home hero / drawer / /portfolio Holdings</td><td>Present (same icon as the navbar), routes to /swap; button groups reflow responsively as the card narrows</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D4</td><td>Drawer address rows (hybrid)</td><td>The connected Stellar wallet's row is named "Lobstr" (or the real wallet); the companion row says "Normal wallet", not "Normal"</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D5</td><td>Settings → Accounts: external wallet card</td><td>Named "Lobstr" (or the real wallet), not "Unnamed Account" — name is set at connect and backfills on reconnect</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D6</td><td>Settings → Accounts: Normal wallet card</td><td>Lists EVERY chain address (Bitcoin / Ethereum / Solana / Stellar), each labeled and copyable</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D7</td><td>Activity anywhere (drawer, /swap, /portfolio), hybrid</td><td>Both wallets in one time-ordered list, each row tagged by owning wallet; exactly ONE row per swap (no duplicates); newest sorts on top</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D8</td><td>/portfolio Holdings + /assets pages (hybrid)</td><td>Wallet tabs; account-wide totals correct (never a $2 total for a $52 account); per-wallet split line where applicable</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D13</td><td>Log OUT with Lobstr connected (do not disconnect it), then log back in</td><td>Lobstr is connected again — tabs, source pills and labels return. It only goes away when you disconnect it in Settings</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D14</td><td>Shared-browser check: log out, then log in as a DIFFERENT account</td><td>The previous user's Lobstr is NOT connected (the re-attach is refused because the server says the address isn't theirs)</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D12</td><td>Settings → Accounts → Disconnect the CONNECTED Lobstr wallet</td><td>It disconnects immediately: Lobstr tabs, swap source pills and labels all disappear; reload does NOT bring it back; reconnect via drawer "+" works and restores everything</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D11</td><td>Activity row wallet tag after a hybrid cctp swap from each source pill</td><td>The tag names the wallet that ACTUALLY paid (funded-from), not whichever wallet is connected — Lobstr-funded says Lobstr, Normal-funded says Normal wallet</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D9</td><td>Single-wallet account (no external)</td><td>Zero visual difference anywhere — no pills, tabs, or wallet labels</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">D10</td><td>Cold tab after a server/dev restart</td><td>Savings + balances paint from cache or a skeleton — never a confident $0.00</td><td><span class="tag pend">not yet run</span></td></tr>
+</table>
+
+<h2 id="s8">8 · Gas &amp; honest limits (ETH source)</h2>
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">G1</td><td>ETH → USDC, press MAX</td><td>MAX offers slightly less than the full balance (live gas reserve); the offered amount actually goes through — no "insufficient funds for gas" after signing</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">G2</td><td>ETH swap where the quote's gas is a large share of the amount</td><td>Always-visible "Network gas ≈ $X (Y%)" line; amber warning above ~20%; blocked above ~50%</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">G3</td><td>Gas-spike shortfall (hard to force; if it happens)</td><td>NO error dump — a "Network fee just went up" dialog offers the affordable amount; one tap writes it into the card + refreshes the quote; Cancel leaves everything untouched</td><td><span class="tag pend">not yet run</span></td></tr>
+</table>
+
+<h2 id="done" class="pagebreak">Sign-off</h2>
+<div class="box good">
+  <div class="label">Merge readiness</div>
+  This branch is code-complete and gated (248 unit tests, lint, typecheck, production build). What
+  gates the merge is this live matrix. The rows already marked <span class="tag pass">verified live</span>
+  passed during development; everything else is yours. Two rows are load-bearing for public claims and
+  should pass before shipping the feature that depends on them: <strong>X3</strong> (recovery phrase
+  restores the same addresses in Freighter + MetaMask) and <strong>A3/A4</strong> (autopilot really is
+  one signature both directions).
+</div>
+
+<p class="kv" style="margin-top:32px">
+  Source docs consolidated here: 73 (external-wallet + cctp), 77 (autopilot), 78 (live-fire round + sweep),
+  79 (wallet export). Register: docs/audit/20-findings.md · This document: docs/audit/80 · 2026-08-22
+</p>
+
+</body>
+</html>

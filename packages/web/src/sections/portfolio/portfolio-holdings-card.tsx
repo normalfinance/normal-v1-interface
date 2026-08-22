@@ -15,6 +15,7 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
 import Skeleton from '@mui/material/Skeleton';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 
 import { Iconify } from '@/components/template/iconify';
 import { NetworkBadge, getAssetNetwork } from '@/components/_common/network-badge';
@@ -36,9 +37,11 @@ const COL_HEADER_SX = {
 
 // Same Buy / Sell / Send / Receive flows as the home hero card, via the shared
 // useAssetActions hook (asset picker → on/off-ramp / receive, lazy chain setup).
-const ACTIONS: { key: AssetActionKey; label: string; icon: string }[] = [
+// 'swap' routes to /swap; same MUI glyph as the navbar (Niko 2026-08-21).
+const ACTIONS: { key: AssetActionKey | 'swap'; label: string; icon: string }[] = [
   { key: 'buy', label: 'Buy', icon: 'ic:round-add' },
   { key: 'sell', label: 'Sell', icon: 'ic:round-remove' },
+  { key: 'swap', label: 'Swap', icon: '' },
   { key: 'send', label: 'Send', icon: 'ic:round-arrow-upward' },
   { key: 'receive', label: 'Receive', icon: 'ic:round-arrow-downward' },
 ];
@@ -91,12 +94,24 @@ export function HoldingsCard({ holdingsData, sections, totalBalance, loading }: 
         </Box>
 
         {/* Action buttons */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+        {/* auto-fit: one row on desktop, wraps by CONTAINER width as the
+            card narrows — no viewport breakpoints to go stale. */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(88px, 1fr))',
+            gap: '6px',
+          }}
+        >
           {ACTIONS.map((btn) => (
             <Box
               key={btn.key}
               component="button"
-              onClick={() => startAction(btn.key)}
+              onClick={() =>
+                btn.key === 'swap'
+                  ? router.push(paths.swap)
+                  : startAction(btn.key as AssetActionKey)
+              }
               sx={{
                 appearance: 'none',
                 border: '1px solid rgba(10,10,15,0.08)',
@@ -135,7 +150,11 @@ export function HoldingsCard({ holdingsData, sections, totalBalance, loading }: 
                   transition: 'all .15s ease',
                 }}
               >
-                <Iconify icon={btn.icon} width={18} sx={{ color: 'inherit' }} />
+                {btn.key === 'swap' ? (
+                  <SwapVertOutlined sx={{ fontSize: 16, color: 'inherit' }} />
+                ) : (
+                  <Iconify icon={btn.icon} width={18} sx={{ color: 'inherit' }} />
+                )}
               </Box>
               {btn.label}
             </Box>

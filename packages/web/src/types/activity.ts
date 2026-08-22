@@ -9,6 +9,11 @@ export interface TokenAmount {
 }
 
 interface ActivityBase {
+  /** Which wallet's money funded this row (cctp swaps on hybrid accounts).
+   *  'external' = moved from the connected wallet first; 'normal' = spent
+   *  straight from the Normal wallet. Absent on rows created before
+   *  2026-08-22 and on non-cctp rows. */
+  fundedFrom?: 'external' | 'normal';
   id: string;
   timestamp: number;
 }

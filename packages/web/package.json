@@ -79,6 +79,7 @@
     "@supabase/supabase-js": "latest",
     "@turnkey/crypto": "^2.10.0",
     "@turnkey/http": "^4.1.0",
+    "@turnkey/iframe-stamper": "^2.11.1",
     "@turnkey/sdk-server": "^6.1.0",
     "@turnkey/webauthn-stamper": "^0.6.0",
     "@types/qrcode": "^1.5.5",

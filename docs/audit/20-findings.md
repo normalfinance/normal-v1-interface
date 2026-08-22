@@ -1923,3 +1923,663 @@ freeze, no-fabrication); (4) `useSavingsHistory` hook — SWR +
 localStorage seed + keepPreviousData; (5) chart rewired, dead APY
 builder deleted, apy prop dropped. 238 tests, full-src lint clean,
 build clean.
+
+**#33 Stage 1 implemented (feat/signature-reduction work on
+feat/savings-chart's successor branch, 2026-08-20):** Soroswap swaps →
+ONE passkey signature, flag-gated. Server: quote route passes
+feeBps (NORMAL_SWAP_FEE_BPS, default 50) + referralId
+(getFeesDepositAddress) when SOROSWAP_EMBEDDED_FEE=1 and the client
+sent gross_amount; responses carry embedded_fee {feeBps, feeAmount}.
+NEW /api/swap/submit-single (withAuth; conformance test passed
+automatically): wallet-of-record = the TX'S OWN SOURCE (never a client
+field), SwapLog written 'pending' BEFORE broadcast (#27 preserved),
+settled confirmed/failed by outcome; no fee tx exists — the 0.5% rides
+inside the swap. Client: use-swap sends gross_amount alongside the
+legacy net amount (flag OFF = byte-identical legacy path); embedded
+quotes display the API's own feeAmount; executeSwap embedded branch =
+build → ONE sign → submit-single. Engine footer says "One signature —
+the Normal fee is included" only when actually embedded. LIVE TEST
+REQUIRED (Niko): set SOROSWAP_EMBEDDED_FEE=1, one XLM→USDC swap —
+assert ONE prompt, fee visible in the SAME tx on stellar.expert, and
+CHECK THE FEE WALLET for our actual share of the 50 bps (the split
+question). 239 tests, full-src lint clean, build clean.
+
+**#33 Stage 3 slice 1 — consent ceremony lib (2026-08-20):**
+`lib/turnkey/autopilot-consent.ts` — grantAutopilotConsent(): one
+passkey session, two stamped activities on the USER'S sub-org:
+CREATE_API_ONLY_USERS ("Normal Autopilot", credential = the SERVER'S
+P-256 public key — one env keypair serves all consenting users, private
+half never leaves the server) + CREATE_POLICY_V3 (EFFECT_ALLOW, consensus
+= autopilot user only, condition = chain_id 8453 && value==0 && to ∈
+{USDC, Circle TokenMessengerV2, LI.FI diamond}). Enforcement in
+Turnkey's signer. NOT YET WIRED to UI — before it ships:
+(1) VERIFY ALLOWED_CONTRACTS against lib/cctp's live constants (the
+Circle address especially), (2) server keypair generation + env
+(NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY / AUTOPILOT_PRIVATE_KEY), (3) v2
+hardening: ABI-arg constraints (mintRecipient == user's forwarder).
+Next slices: server signer w/ kill-switch + audit log → engine/cron
+moves → Settings revoke → doc 73 Part J. Tests/build clean.
+
+**#33 Stage 3 slice 2 — autopilot server signer (2026-08-20):**
+`server/autopilot-signer.ts` — signs Base legs as the delegated user
+via the DEDICATED autopilot keypair (never the parent-org admin key;
+its authority = the per-user consent policy, so a leak can only finish
+users' own swaps). Three safety layers: AUTOPILOT_DISABLED=1
+kill-switch (refuses before any call), Turnkey policy enforcement in
+their signer, and a best-effort audit INSERT into autopilot_signatures
+(raw SQL; additive migration at docs/audit/sql/
+autopilot_signatures.sql for Niko to run — a missing table never
+blocks a swap). Callers must fall back to the interactive passkey path
+on ANY throw. scripts/generate-autopilot-key.mjs produces the env
+keypair (public also as NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY for the
+ceremony; private NEVER committed). Remaining slices: engine/cron
+moves (the payoff), Settings revoke, Part J tests. 239 tests, build
+clean.
+
+**#33 Stage 3 slice 3a — status + revoke (2026-08-20):**
+`/api/autopilot/status` (withAuth; 240th test = route-auth conformance
+auto-passed): TRUTH LIVES IN TURNKEY — active iff the "Normal
+Autopilot" user exists on the sub-org, so a revoke from any surface is
+instantly authoritative; kill-switch masks everything; a FAILED check
+returns 502 and engines must treat it as "no autopilot for this run"
+(prompt fallback), never as a revocation. `lib/turnkey/
+autopilot-revoke.ts`: one passkey prompt DELETE_USERS — the API key
+and bound policies die with the user. REMAINING for slice 3 (the
+payoff, next session with fresh context): server-side burn/pivot
+execution (port burn-evm + pivot-swap builds to the server, sign via
+signWithAutopilot, broadcast, patch row), engine branches on status
+(skip client prompts when active), inline consent UI at first cctp
+swap, Settings card, doc 73 Part J. 240 tests, build clean.
+
+**#33 Stage 3 slice 3b — Settings autopilot card (2026-08-20):**
+"Automatic swap completion" card in Settings→Accounts: live status
+from /api/autopilot/status (On/Off/Unknown — a failed check says
+Unknown, never lies either direction), plain-language description of
+the delegation's bounds (own addresses, allowlisted contracts), and a
+one-passkey "Turn off" via revokeAutopilotConsent. Safe to ship dark:
+with no consent granted anywhere yet, every user sees "Off" with the
+explainer. REMAINING (payoff, fresh session): server burn/pivot
+execution ports + engine status-branches + inline consent UI + Part J.
+240 tests, build clean.
+
+**#33 Stage 3 payoff 1/3 — server burn port + route (2026-08-20):**
+`server/autopilot-burn.ts` = byte-honest port of lib/cctp/burn-evm.ts
+(every money invariant verbatim: forwarder as mintRecipient AND
+destinationCaller, recipient G-address ONLY in hookData + regex
+refusal, MAX_UINT256 hex literal never `**`, allowance
+read-after-write 15×2s, 4-attempt burn retry) signed via
+signWithAutopilot (0x stripped toward Turnkey, restored on return —
+mirrors evm-signer.ts exactly). `/api/cctp/autopilot/burn` (withAuth)
+re-runs the banner's recover() checks server-side: ownership,
+direction=crosschain_to_stellar, srcSwapTxHash set, burnTxHash null,
+non-terminal status, signer address == the user's TurnkeyWallet row
+(case-insensitive — hex casing differs by writer), live Base USDC
+balance > 0, then burns WHAT ACTUALLY LANDED. Three port-review
+catches before they became bugs: (1) row patch must also flip status
+to BURN_SUBMITTED (PATCH route does; a bare hash write leaves the row
+in CREATED, outside PENDING_STATUSES → cron never advances → bridge
+stalls forever); (2) fresh Base wallets hold 0 ETH → the route runs
+the SAME locked gas top-up as /api/cctp/gas-topup — core extracted to
+`server/cctp-transfer-gas.ts` (CAS lock preserved, both callers
+share it) and the server waits for the top-up RECEIPT instead of the
+banner's blind 6s sleep; (3) hash write guarded with
+updateMany(burnTxHash: null) so a racing banner tap can't be
+clobbered. RULE: porting a client flow to the server means porting
+its whole DEPENDENCY CHAIN (status flips, gas fronting, locks) — not
+just the happy-path function. 241 tests, build clean.
+
+**#33 Stage 3 payoff 2/3 — server pivot port + route (2026-08-20):**
+`server/autopilot-pivot.ts` ports lib/cctp/pivot-swap.ts (quote → approve
+if short → LI.FI transactionRequest, MAX approve, gasLimit hint, receipt
+gates) onto signWithAutopilot; the LI.FI quote core moved to
+`server/lifi-quote.ts` (asset map, 1011 feeless retry, no-route message)
+because a server route cannot fetch itself — /api/lifi/quote is now a thin
+auth/rate-limit shell over the same core (contract identical). The route
+/api/cctp/autopilot/pivot re-runs the banner's 'halt-finish' gates +
+ownership; CUSTODY RULE: the delivery address is resolved from the user's
+own TurnkeyWallet row via the chain registry (chainForSymbol →
+addressField) and NEVER read from the request body — the Turnkey policy
+cannot inspect LI.FI calldata, so this server-side pinning is the custody
+boundary for the pivot leg. maxDuration=300 on both autopilot routes
+(receipt waits outlive default function timeouts — the tx would land but
+the row patch would die). 242 tests, build clean.
+
+**#33 Stage 3 payoff 3/3 — engine branches + inline consent (2026-08-20):**
+runInbound/runOutbound now ask /api/autopilot/status once per run (failed
+check = prompts, NEVER revocation) and hand the mid-flow Base leg to the
+autopilot route; ANY failure → the untouched interactive path (top-up +
+passkey) — autopilot removes prompts, never blocks. The consent moment
+(D2): AutopilotConsentDialog offered ONCE before the first cctp swap signs
+anything; Enable = one ceremony then the swap continues; "Not now" writes
+nf:autopilot-declined:v1 and never nags again; Settings card gained the
+matching "Turn on — one passkey" door (which clears the declined flag) —
+Off with no enable door would violate the everything-visible-is-actionable
+rule. Doc 73 §9f + Part J (J1–J10 incl. the policy negative test and the
+close-tab-mid-arriving resilience test); doc 76 §10 records ship gates.
+242 tests, full-src lint, build clean.
+
+**#33 ship-gate closure — allowlist + D3 caps (2026-08-20):** the consent
+policy's USDC/TokenMessenger addresses now come FROM lib/cctp/config
+(single source; they're the live-proven constants the burns hit), and the
+LI.FI diamond was verified against li.quest/v1/chains (chain 8453
+diamondAddress matches). D3 caps live in signWithAutopilot: $2k/leg,
+$10k/rolling-day, 90d idle expiry (env-overridable), armed by amountUsd
+on burn/pivot signatures only; audit gains amountUsd (additive SQL
+autopilot_signatures_amount.sql) with a legacy-shape INSERT fallback so
+auditing never silently stops mid-migration. Cap refusal = interactive
+fallback (over-cap swaps still complete with a prompt). Idle clock
+starts at first use — grant-date tracking is v2, with the ABI-arg policy
+hardening (gated on one live ceremony). 242 tests, build clean.
+
+**#33 Stage 1 flag hardening — degrade, never die (2026-08-20):** Niko
+re-hit the Soroswap fee-build 400 live — SOROSWAP_EMBEDDED_FEE=1 was
+still in his .env from the Stage-1 spike, and the flag's failure mode
+was a dead swap (our route mirrored upstream's 400). A leftover env var
+must never be able to break swaps. Now: /api/swap/quote wraps the
+embedded path in a 10-min circuit breaker — an embedded QUOTE failure
+retries the legacy shape in-place; an embedded BUILD failure trips the
+breaker and returns {embedded_unavailable} 409; subsequent quotes go
+straight to the honest 2-signature shape. use-swap's embedded branch
+takes the 1-signature path ONLY when the response provably carries
+embedded_fee — on the degrade signal (or any feeless success, e.g. a
+tripped-breaker GROSS build, discarded unsigned) it falls through to
+the fee-pair path: two signatures, fee intact, swap completes. The flag
+is now safe to leave ON: when Soroswap fixes their endpoint, 1-signature
+lights up by itself. RULE: a feature flag's failure mode must be the
+un-flagged behavior, not an error. 242 tests, build clean.
+
+**#33 consent live incident — 3 fixes (2026-08-21):** Niko's first real
+consent attempt (mid Lobstr-funded USDC→SOL swap) failed with Turnkey
+"user credential public keys must be unique" after TWO biometrics.
+Anatomy: tap 1 CREATED the delegate user but our result parsing read
+only createApiOnlyUsersResult (empty on this API version) and threw;
+the retry then hit the duplicate-credential wall — a half-state (user,
+no policy) that Settings read as "On" with no repair door. Fixes:
+(1) CEREMONY IDEMPOTENT — grant asks /api/autopilot/status for an
+existing delegate and REUSES it (repairs converge; 1 confirmation
+instead of 2), result parsing tolerant of both result keys;
+(2) STATUS TRUTH = user AND policy (getPolicies) — half-states read
+Off and keep the Turn on door; (3) PLACEMENT — the consent dialog no
+longer interposes before a swap (it interrupted the funding flow);
+it now fires AFTER a completed cctp swap's Done (never blocks, offer
+is for next time). Copy de-overpromised: "up to two quick passkey
+confirmations", buttons "Enable"/"Turn on". RULES: any ceremony a user
+can retry MUST be idempotent; "active" must mean the WHOLE grant
+(user+policy), not its first artifact; never interpose optional
+consent inside a money flow. Doc 77 J1/J1b/J4 updated. 242 tests,
+build clean.
+
+**#33 in-wait Enable + honest step copy (2026-08-21):** Niko's SOL→USDC
+live test showed the burn step still labeled "Approve in your wallet ·
+1–2 signatures" — correct for HIS state (Turnkey verified: delegate
+user present, POLICIES STILL ZERO — the enable click never completed;
+audit table empty = server never asked to sign), but it exposed two
+gaps: (1) after moving consent post-Done there was NO enable door
+during the swap — exactly when a 20–60 min wait makes it matter, and
+enabling mid-wait DOES help the running swap (the engine re-checks
+status live at the signing branch); (2) the step copy was static —
+claimed a signature even when autopilot would remove it. Now: the
+progress modal takes autopilot state (display-truth, refreshed at run
+start, flipped by a successful grant); burn/pivot step subs read
+"Automatic — no signature needed" when ON; header says "One signing
+step" when ON; and while OFF, a dismissable-by-ignoring inline box
+during the pre-signature stages offers "Enable auto-finish" → opens
+the same consent ceremony (idempotent, so his half-state completes
+with ONE confirmation). 242 tests, build clean.
+
+**#33 policy syntax — the REAL Turn on blocker (2026-08-21):** Niko's
+Turn on failed with Turnkey "invalid policy condition: Unrecognized
+token eth.tx" — my condition used `[list].contains(eth.tx.to)`, but
+Turnkey's `.contains()` takes a LITERAL argument, never a field; the
+correct membership form is `eth.tx.to in [list]` (docs.turnkey.com
+policy language). Fixed and VALIDATED AGAINST THE LIVE PARSER before
+asking for another tap: a test policy with the exact production
+condition was created and immediately deleted on the parent org —
+parse OK. This also retro-explains the incident chain: the ceremony
+could NEVER have completed (step 2 always 400'd); the duplicate-
+credential error was the retry tripping over step 1's success.
+Consent placement: restored to SWAP START per Niko's explicit call
+("it should pop up when swapping") — the earlier post-swap move was
+reacting to the broken ceremony, not the placement; in-wait box,
+post-Done backstop and Settings doors all remain. RULE: any
+generated DSL expression (policy conditions included) gets validated
+against the real parser in a spike BEFORE it ships in a user-facing
+ceremony. 242 tests, build clean.
+
+**Asset pickers sorted by USD value (2026-08-21):** Niko's ask off the
+first working 1-signature swap: highest value at top, "same in all
+asset pickers". One edit was enough BECAUSE the pickers share a single
+component — PickToken serves swap-card, send-modal, withdraw-card and
+use-asset-actions. "Your assets" and search results now sort by
+price×balance descending (NaN-safe: missing price/balance sorts as $0;
+stable sort keeps the curated order for $0 ties); "All assets" (all
+zero balance) keeps the curated order, where a value sort would be
+meaningless. 242 tests, build clean.
+
+**Soroswap progress modal + refetch-gated Done (2026-08-21):** Stellar
+swaps were the last flow with no status popup and a fire-and-forget
+ending (Niko: "we have to wait few seconds for assets to appear").
+Now: useSwap accepts opts.onStage and fires build/sign-swap/sign-fee/
+submit milestones (success snackbar suppressed when a modal owns the
+ending; error snackbars stay); new SoroswapProgressModal (same visual
+language as the cctp modal) with honest signature copy — "One
+signature — fee included" on embedded runs, "Two signatures: the swap,
+then the Normal fee" on fee-pair runs, and the sub flips to "Now the
+Normal fee" at the second prompt; the engine adds 'refetch' → 'done':
+Done shows ONLY after the awaited aggregate refresh (#62/#66 rule,
+15s cap so a refresh hiccup can't stick a successful swap), with a
+stellar.expert link at Done and error + Try again in-modal. swap-card
+passes refreshFresh. Every swap flow in the app now narrates itself
+and gates Done on visible balances. 242 tests, build clean.
+
+**Soroswap Done-gate verify-and-retry (2026-08-21, round 2):** Niko
+retested: modal said Done, drawer still needed 2-3s. Root cause: the
+gate awaited ONE aggregate refresh — which can race Horizon's read
+replicas right after the ledger closes, "freshly" caching the PRE-swap
+balances (the exact #66 arrival race, previously fixed for chains in
+swap-card's refetchChain but not applied here). Fix mirrors it: the
+swap-card's refetchStellarAfterSwap snapshots the to-asset's account
+TOTAL (slot + companion share the symbol), refreshes, and if the total
+did not move waits 5.6s (past the server's 5s refresh floor) and pulls
+once more; the engine's 15s cap still bounds the whole gate. RULE
+(now 10th instance): an awaited refresh is only half the #62 gate —
+Done requires the refresh to have VISIBLY CHANGED the number, or one
+bounded retry past the cache floor. 242 tests, build clean.
+
+**Soroswap modal copy follows the degrade (2026-08-21):** the embedded
+quote promises 1 signature, the upstream fee-build defect degrades the
+run to the fee-pair mid-flight — and the modal kept claiming "One
+signature" after two prompts. The engine now flips its embedded flag
+the moment the 'sign-fee' stage fires, so the step copy reads "Two
+signatures: the swap, then the Normal fee" for the rest of the run.
+The 2-signature reality itself is UPSTREAM (doc 76 §7) — flag stays
+on (auto-recovers when they fix), repro ready to send via Justin;
+Stage 2 router contract is the Soroswap-independent path. 242 tests,
+build clean.
+
+**ETH gas reserve: cctp-from-ETH under-reserved (2026-08-21):** Niko's
+ETH→USDC failed pre-broadcast: "insufficient funds for gas * price +
+value: have 0.009063 want 0.009094" — reserve held 0.0005 ETH, the
+route wanted 0.000531. Root cause: swap-card reserved 400k gas for
+cctp pairs vs 550k for lifi pairs — but a cctp swap FROM ETH starts
+with the IDENTICAL LI.FI mainnet deposit (relaydepository, visible in
+the failing tx calldata) that measured ~538k and set the 550k figure.
+The "bridge headroom" comment claimed larger while the code reserved
+smaller. Fix: ONE 550k limit for every pair spending ETH — the
+source-leg contract is the same regardless of what happens after.
+Also: the modal showed the RAW RPC dump (URL + request body) — the
+isInsufficientGasError mapping existed only in the lifi engine; now
+applied at all three cctp stage-error sites ("Not enough ETH left to
+pay the network fee — try a slightly smaller amount."). Funds were
+never at risk (viem refuses pre-broadcast; row marked Failed
+honestly). RULE: reserve sizing follows the SOURCE-LEG contract, not
+the pair's label — and every engine that can hit an error class needs
+the same mapping (grep engines, again). 242 tests, build clean.
+
+**Dynamic gas — shortfall becomes a choice, never an error (2026-08-21,
+Niko GO):** gas is a live market price, so ANY reserve can be beaten by
+a spike between quote and send; "never fail" is delivered as "never
+dead-end". Three layers: (1) the live reserve (existing, 550k fix);
+(2) NEW lib/lifi/gas-shortfall.ts — the node's admission rule
+(balance ≥ value + gas×price) computed LOCALLY in executeEvm BEFORE
+the passkey ceremony; a miss raises structured GasShortfallError with
+the affordable amount (rounded DOWN so the suggestion always fits),
+6 jest tests incl. the live incident's exact numbers; (3) NEW
+GasShortfallDialog (both engines, card passes onAmountAdjusted =
+setAmountIn): "Network fee just went up — use 0.00853 ETH" → one tap
+writes the affordable amount into the card, the quote refreshes, the
+user confirms the UPDATED numbers with a normal Swap press. Two locked
+decisions: never silently shrink the amount (the receive figure
+changed — the user must see it), and never auto-sign after async
+re-quoting (WebAuthn user-activation would fail NotAllowedError on
+some browsers — the design reason, not just caution). cctp inbound
+closes its row failed-before-broadcast before offering the dialog.
+Balance-read failure skips the check (the node still enforces; this
+layer is UX, not custody). 248 tests, build clean.
+
+**Fresh-account cctp trace — dead chain-setup gates fixed (2026-08-21):**
+Niko's staging plan (new account, Lobstr only, straight to USDC→SOL)
+traced through the code BEFORE he ran it. The flow holds until the last
+mile: the guided dialog creates ONLY the Stellar companion (lazy
+provisioning), and the cctp engine's gates for the missing ETH (Base
+pivot) and SOL (delivery) addresses were DEAD buttons — "Set up SOL
+wallet first" with action:null, and the ETH one pointing users at the
+Receive menu by prose. The lifi engine solved this in the multichain
+work (ChainSetupDialog: one passkey creates the chain account in-place,
+invalidateTurnkeyWalletInfo propagates the address); the cctp engine
+never got it. Now wired identically: both gates open ChainSetupDialog,
+onSuccess refetches the owning chain hook and the swap continues.
+RULE (3rd occurrence): a capability added to one engine is a
+requirement on EVERY engine — grep the engines before closing. 248
+tests, build clean.
+
+**FULL SCENARIO SWEEP (2026-08-21, Niko: "think of all possible
+scenarios and double check them all"):** systematic matrix (wallet
+states × pair types × directions × missing-asset states × failure
+combos), traced by 3 parallel code scouts + a security pass. 12
+confirmed gaps, all fixed same day, ranked:
+- SECURITY: the autopilot burn made stolen-SESSION fund redirection
+  possible (row addresses are client-supplied; policy can't see
+  hookData) → burn route now requires userOwnsWallet(destAddress);
+  gas top-ups pinned to the owner's turnkey ETH address (relayer-drain
+  via fake rows closed).
+- DEAD-ENDS (BTC/ETH/SOL-first Turnkey user, NO stellar slot — the
+  mirror of the external-user gap): cctp "Set up Stellar wallet first"
+  action:null → now opens ChainSetupDialog('stellar') which adopts
+  into the empty slot; soroswap DEFAULT VIEW showed "Activate account"
+  with no account → same stellar setup gate; drawer Send was a SILENT
+  NO-OP (ModalProvider gated the modal on wallet.address) → gate
+  removed.
+- LOOPS/LIES: ChainSetupDialog onSuccess refreshed only BALANCES —
+  the new address never reached the engines, so setup looped →
+  refetchChain now refreshes addresses first; refund-verdict rows
+  could never retire (markFailed rightly refuses once srcSwapTxHash
+  exists) → new server-VERIFIED markSourceRefunded PATCH op (re-checks
+  LI.FI status server-side); deliver-to-external trustline gap routed
+  to the companion dialog which can't fix it → generic copy instead.
+- MONEY-UX: retry after move-succeeded-burn-rejected MOVED THE USDC
+  A SECOND TIME → fundFromExternal now probes the companion first and
+  skips a covered move; shortfall write-back in fiat mode wrote ETH as
+  USD → flips to token mode; inbound Done now also refetches the
+  SOURCE chain; degraded soroswap runs tell the truth from the FIRST
+  prompt ('degraded' stage event); optimistic autopilot display no
+  longer downgraded by a lagging status read.
+DEFERRED (registered, not fixed): /assets/XLM/USDC stellar-setup loop
+via the wizard (touches login-matrix code — post-merge); cctp source
+legs still outside the pending-outflow ledger (documented #62
+exclusion; BTC multi-tab MAX edge); no quote expiry across a long
+consent ceremony (once-ever event; row closes honestly on revert).
+RULES: every server route that moves or sends value must pin its
+addresses to DB-owned wallets — client-supplied rows are untrusted;
+"one engine got it" is a bug in the other engine; a setup dialog's
+success must refresh the EXACT store its gate reads. 248 tests, build
+clean.
+
+**UI polish batch — one asset one row, Swap everywhere, real wallet
+names (2026-08-21, Niko):** (1) hero portfolio card: hybrid accounts
+now show ONE row per asset — the two Stellar wallets' XLM/USDC are
+combined into a total with a per-wallet subtitle ("Normal wallet 23.64
+· Lobstr 19.78" — real wallet names, never "External"); chain assets
+name their wallet in the subtitle; single-wallet accounts unchanged.
+(2) Swap button (the navbar's exact SwapVertOutlined glyph, routes to
+/swap) added to all three action groups: hero card, account drawer,
+/portfolio Holdings (grid 4→5). (3) Drawer address rows: the slot
+Stellar row is named by the actual wallet (Lobstr/Freighter/…) when
+external; the companion row says "Normal wallet", not "Normal".
+(4) Wallet names initiate AT CONNECT: ensureWalletLinked now passes
+connectedWalletLabel(walletType) on fresh links AND backfills unnamed
+existing rows on reconnect — but NEVER overwrites a name the user
+typed in Settings ("Unnamed Account" rows self-heal on next load).
+(5) Settings→Accounts Normal wallet card lists EVERY chain address it
+holds, labeled by chain (registry-driven — a new chain appears
+automatically). 248 tests, build clean.
+
+**Action-group responsiveness (2026-08-21, Niko):** hero card's five
+buttons → TWO fixed rows (Buy/Sell/Swap spanning 2 cols each on a
+6-col grid; Send/Receive wider at 3 each — the card is always narrow,
+so no breakpoint). Drawer + /portfolio Holdings groups → CSS
+auto-fit grids (minmax 72px/88px): one row when the CONTAINER fits,
+wrapping the moment it doesn't — container-driven, so no viewport
+breakpoints to go stale when layouts change. 248 tests, build clean.
+
+**Wallet recovery-phrase export (doc 79, GO'd 2026-08-21):** users can
+now back up their Turnkey wallet's BIP-39 recovery phrase — verified
+that Turnkey's EXPORT_WALLET returns the real mnemonic via the
+export.turnkey.com iframe (plaintext NEVER enters our origin: enclave
+→ HPKE → iframe's own key; our DOM/network see only the encrypted
+bundle), passkey-authorized only (deny-by-default — our server key AND
+the autopilot delegate provably cannot export). All 4 derivation paths
+are ecosystem standards, so the phrase restores in MetaMask/Phantom/
+Freighter/Sparrow — the "safe if Normal disappears" guarantee.
+WalletExportDialog (warnings in every phase, iframe reveal, no plaintext
+in our state); two doors: (1) Settings→Accounts Normal-wallet card
+"Export recovery phrase"; (2) MANDATORY at creation (D2) via a SINGLE
+global WalletBackupGate in the layout — markWalletNeedsBackup() set at
+the two create branches in ensureChainAccount (new seed only, NOT
+chain-adds to an existing seed), device-local marker + event so the
+gate fires mid-flow, resumable (marker persists → killed tab
+re-prompts), once-per-wallet (backed-up marker), legacy wallets never
+force-gated. Backup is a device-local UX nudge, NEVER a server gate on
+the user's own funds. D3: phrase-only (restores every chain). New
+package @turnkey/iframe-stamper. Zero server routes/schema/env. NEW
+RULE: no delegate policy may ever include export activities (autopilot
+v2 check). SHIP GATES (doc 79 §6, Niko live): confirm export enabled on
+our Turnkey org + iframe embeds on localhost/staging/prod; round-trip
+test (export → import into Freighter+MetaMask → same addresses). Part L
+tests L1-L6 in doc 79. 248 tests, build clean.
+
+**WRONG WALLET SPENT — self-inflicted, fixed same day (2026-08-22):**
+Niko picked Lobstr as the source for USDC→SOL; the USDC left his NORMAL
+wallet instead. PROVEN on-chain: burn d5204fe1… source_account =
+GA5GD6PTY…FZG7F (Normal wallet), not GCY3ZSMRE… (Lobstr). CAUSE: MY
+sweep fix S7 (2026-08-21), added to stop a retry moving funds twice.
+It skipped the external→companion move whenever "the companion already
+holds enough USDC" — reasoning that a prior attempt's move must have
+landed. But A BALANCE CANNOT PROVE AN ACTION HAPPENED: on a fresh swap
+the companion legitimately held 23.64 USDC ≥ the 19.78 requested, so
+the Lobstr move was skipped on EVERY such swap and the Normal wallet
+paid. The snackbar Niko saw ("already holds enough USDC") was that
+guard; no Lobstr popup appeared because no Lobstr tx was ever built.
+FIX: the guard now keys on a MOVE WE PERFORMED — an in-memory ref set
+only after a move is verified visible on the companion, cleared on
+success via resetInput. Deliberately NOT persisted: a stale marker
+would re-create this exact bug, and moving again (user-approved,
+visible) is strictly safer than silently spending the wrong wallet.
+SECOND BUG (it masked the first): hybrid activity rows were tagged by
+which FEED returned them — cctp rows appear in both, slot won, so
+every hybrid cctp swap claimed "Lobstr" regardless of who paid. Now
+the engine records fundedFrom on the transfer (quoteJson) and the feed
+tags cctp rows by the REAL source, falling back to the old behavior on
+legacy rows. RULES: (1) an idempotency guard must key on the ACTION,
+never on its side effects; (2) any code that can change WHICH WALLET
+PAYS is a money path and gets money-path scrutiny, even when it ships
+as a UX nicety; (3) a row that names a wallet must derive it from the
+transaction, never from context. Funds not lost (SOL delivered; wrong
+pocket). 248 tests, build clean.
+
+**Self-audit after the wrong-wallet incident — 2 more found (2026-08-22):**
+Asked "any other questionable things you added?", so I re-read my own
+recent additions instead of reassuring.
+(1) MANDATORY BACKUP COULD SILENTLY NEVER FIRE for a brand-new user:
+markWalletNeedsBackup(data.wallet?.subOrgId) — but /api/turnkey/wallet
+replies via pickAddresses(), which returns ADDRESS FIELDS ONLY, so
+subOrgId was ALWAYS undefined and the code always fell through to a
+fire-and-forget getTurnkeyWalletInfo().then(...). One failed lookup =
+no marker = no backup prompt for the exact user the feature exists for.
+Now read back and AWAITED. RULE: never infer a payload field you
+haven't read — grep the responder.
+(2) SETTINGS UNLINK LEFT THE WALLET CONNECTED: handleUnlinkConfirm only
+deleted the linked_wallets row. The persist slot kept the address, so
+holdings tabs / swap source pills / labels stayed, while ownership
+checks (userOwnsWallet) failed → 403s on transaction logging (#41's
+failure mode) and the autopilot recipient pin would refuse it; worse,
+the next page load's ensureWalletLinked backfill SILENTLY RE-LINKED it,
+undoing the unlink. Now: unlinking the CONNECTED wallet also
+kit-disconnects + clears the slot, and new forgetWalletLink() drops the
+session memo so a reconnect actually re-links (without it, reconnecting
+in the same session left it connected-but-unowned). ACCEPTED/known and
+documented, not fixed: autopilot display never downgrades mid-run
+(cosmetic; signing re-checks live), and refetchChain now costs one
+extra address read per arrival. 248 tests, build clean.
+
+**External wallet vanished after logout → re-attach on login (2026-08-22):**
+Niko logged out WITHOUT disconnecting Lobstr; after logging back in it
+was gone. Cause (pre-existing, not the unlink change): the drawer's
+logout calls persist.disconnectWallet(), which clears the slot ADDRESS
+— only `lastWalletType` survives — so nothing could restore an external
+wallet on the next login, and the app's own breadcrumb then SUPPRESSED
+the Turnkey auto-connect too. Keeping the slot across logout would be
+wrong (shared browser: the next user would inherit the previous user's
+wallet). Fix: new lib/wallet-reconnect-memo.ts records the last external
+wallet {address, walletType} in localStorage; the kit's restore effect,
+when the slot is empty, re-attaches it ONLY after getLinkedWallets()
+confirms the address belongs to the session that just signed in — a
+different user's memo is refused AND deleted; an unauthenticated/failed
+lookup restores nothing (never restore on an unverified guess). Written
+at all three connect paths, cleared on EXPLICIT unlink in Settings —
+never on logout. That is exactly the requested rule: it disappears only
+when you disconnect it. RULE: "cleared on logout" and "forgotten
+forever" are different intents — a session-scoped clear needs a
+server-verified re-attach, not a longer-lived slot. 248 tests, build
+clean.
+
+**Logout re-attach take 2 — the fix was UNREACHABLE CODE (2026-08-22):**
+Niko: "it dont work" — reconnect Lobstr, log out, log in, still gone.
+ROOT CAUSE, proven by reading the effect: my re-attach lived inside
+use-stellar-wallets-kit's `checkConnection()`, which the effect only
+calls when `persistStore.wallet.walletType` is ALREADY set:
+  if (walletType && walletType !== 'normal-wallet' && ...) checkConnection()
+After logout that field is undefined, so the function never ran — I had
+put "restore the wallet when nothing is connected" inside a function
+that only runs when something IS connected. Second defect in the same
+attempt: that effect's deps are wallet/kit fields only, so nothing
+re-runs it when a SESSION appears at login, meaning even a corrected
+guard would have missed the moment. VERIFIED SOUND: the memo WRITE path
+(kit awaits persistStore.connectWallet before resolving, so getState()
+is fresh at the remember() call). FIX: deleted the dead branch and gave
+the job its own mounted component
+(components/_common/external-wallet-reattach.tsx) that watches the auth
+user — when a session exists, the slot is empty and a memo is present,
+it verifies ownership via getLinkedWallets() and then writes ONLY the
+persist slot; `walletType` is already a dependency of the kit's restore
+effect, so the existing machinery does the kit-level attach. Bounded
+retry via STATE (a ref bump re-runs nothing — the first retry was
+equally inert). +5 tests on the memo's safety rules (never remember the
+Normal wallet; forget really forgets). RULES: (1) when adding a branch
+to an existing function, check what GATES that function — reachability
+first; (2) "runs when X is absent" logic cannot live inside code gated
+on X being present; (3) a retry must change STATE, never a ref.
+253 tests, build clean.
+
+**"Connects for a second, then disconnects" — the kit was DELETING the
+wallet (2026-08-22):** Niko: "$53 for a second, then it immediately
+disconnects." That symptom proved the re-attach now WORKS (the slot was
+being written) and that something else destroyed it. Enumerated every
+disconnectWallet() call site; two live in use-stellar-wallets-kit's
+restore path and both fire only when the KIT store starts empty — i.e.
+exactly once per fresh page/session, which is why navigation was fine
+and login was not:
+  (a) `if (!walletId) { ...persistStore.disconnectWallet() }` — the
+      wallet type could not be mapped to a kit module;
+  (b) `catch (restoreError) { ...persistStore.disconnectWallet() }` —
+      ANY error from kit.setWallet (no WalletConnect session after a
+      logout, module not ready, extension asleep).
+ROOT CONFUSION: display/identity (the persist slot) and signing
+capability (the kit) were treated as one thing, so a kit hiccup wiped
+the user's wallet everywhere. FIX: neither branch disconnects now.
+(a) logs and keeps the wallet (marking the check done — a string switch
+cannot change outcome); (b) clears ONLY kit state and allows a retry.
+Signing later goes through the existing session-expired reconnect flow
+(tested live as F10/R7), so nothing is lost by keeping the slot.
+SECOND BUG, same report: "USDC savings doubled until refresh."
+use-savings-position's companion SWR uses `keepPreviousData: true`, so
+when the companion key goes null (the companion stops being a SEPARATE
+wallet — e.g. the slot becomes the Normal wallet during the login
+transition) SWR RETAINS the last position, and use-portfolio adds it
+unconditionally: `savings.value + savings.companionValue` → double.
+Fixed by gating companionValue/companionPosition/companionEarnings on a
+real companionAddress. RULES: (1) identity/display state and
+signing/transport state are separate — a transport failure may never
+delete identity; (2) with keepPreviousData, a null key does NOT clear
+data — derive from the KEY, not the retained payload. 253 tests, build
+clean.
+
+**THE REAL CAUSE: login itself switched the wallet (2026-08-22, 3rd
+attempt):** two prior fixes failed because I audited the wrong side.
+After enumerating every DISCONNECT site (attempt 2) I finally
+enumerated every WRITER of the wallet slot — and found
+onboarding-wizard's `handleAfterAuth`, which runs on EVERY login:
+    const tk = await getTurnkeyWalletInfo();
+    if (tkAddress) { await connectWalletWithoutKeypair(tkAddress); ... }
+It overwrote the slot with the TURNKEY wallet unconditionally, with no
+external-wallet guard — the same wallet-switch class as finding #42,
+but on the LOGIN path rather than the self-heal (which HAS been guarded
+by shouldRestoreTurnkeyStellar since chunk 1). Sequence matching the
+report exactly: re-attach writes Lobstr → hero shows the combined $53 →
+handleAfterAuth's awaits resolve → slot overwritten with the Normal
+wallet → companion collapses to null (same address) → $19.29. It also
+explains the ORIGINAL complaint (before any re-attach existed, login
+always ended on the Turnkey wallet) and the transient doubled savings
+(slot=Normal while the companion SWR still held the same position).
+FIX: before the Turnkey auto-connect, if the browser memo names an
+external wallet AND that address is in `wallets` (the linked list this
+function already fetched = server-side ownership proof), connect THAT
+and close. Invariant I8 (silent Turnkey connect on login) is preserved
+for everyone without a verified external memo. RULE — the one I should
+have applied two attempts ago: when state is being destroyed, audit
+every WRITER of that state, not only the code that clears it; an
+overwrite looks identical to a wipe from the outside. 253 tests, build
+clean.
+
+**Exhaustive writer audit + invariant I9 (2026-08-22, closing):** after
+fixing the login overwrite I audited EVERY remaining writer of the
+wallet slot instead of asking Niko to test again:
+  · onboarding-wizard :675 create → guarded by shouldAdoptIntoSlot ✓
+  · :723 import, :2033 "switch wallet" → explicit user actions ✓
+  · use-normal-wallet :243/:270/:290 → create/import flows ✓,
+    :138 self-heal → guarded by shouldRestoreTurnkeyStellar ✓,
+    restore effect → returns unless walletType === 'normal-wallet' ✓
+  · chain-setup-dialog :82 → guarded by shouldAdoptIntoSlot ✓
+  · use-stellar-wallets-kit :186 restore (external slot only) / :230
+    user connect ✓
+A cross-check (files that are session-aware AND write the slot) returns
+exactly three: the wizard, use-normal-wallet, use-stellar-wallets-kit —
+all accounted for. Also verified the memo's write side end-to-end: all
+FIVE external-connect entry points (wallet-gate, drawer ×2,
+use-wallet-reconnect ×2, wizard) go through
+useStellarWalletsKit().connectWallet, the single place that records it,
+and the kit's restore path re-records it on every load, so an existing
+connection seeds the memo without the user doing anything. HARDENING:
+the login decision is now the pure `shouldReattachExternalOnLogin(memo,
+linkedAddresses)` in lib/wallet-slot.ts beside the other slot
+invariants, with 4 tests (I9): re-attach when owned, refuse a foreign
+memo (shared browser), no memo ⇒ untouched Turnkey connect (I8), no
+linked wallets ⇒ refuse. 257 tests, build clean.
+
+**Disconnecting the external wallet left NO wallet at all (2026-08-22):**
+Niko disconnected Lobstr in Settings and savings dropped to $0.00.
+Traced, not guessed: my unlink fix clears the slot, and with the slot
+empty use-savings-position disables BOTH queries — the connected-wallet
+position (line 214 needs `address`) and the companion lookup (line 237
+needs `isExternalSlot`, now false) — so savings = 0 + 0. The self-heal
+could not rescue it BY DESIGN: an empty slot whose breadcrumb names an
+external wallet means "disconnected by choice" (invariants I2/I7), so
+it stays out. The missing piece was an explicit end state: disconnecting
+an EXTERNAL wallet should leave the user on their NORMAL wallet, not on
+nothing (savings, swaps and sends all need a Stellar wallet). FIX: the
+Settings unlink now falls back to the Turnkey wallet via
+connectWalletWithoutKeypair when one exists — which also rewrites the
+breadcrumb to 'normal-wallet', so the state is self-consistent
+afterwards. Deliberately NOT done: loosening shouldRestoreTurnkeyStellar
+so the self-heal covers this case. It would fix pre-existing broken
+states automatically but changes a locked invariant with tests (I2/I7)
+and could re-open finding #42 for users who disconnected before the
+memo existed — that is Niko's call, not a silent change made mid-fix.
+Recovery for anyone already stuck (empty slot, no memo): log out and in
+— handleAfterAuth finds no external memo and connects the Turnkey
+wallet. 257 tests, build clean.
+
+**Disconnected wallet came BACK after logout/login — a race, not a
+missing clear (2026-08-22):** Niko unlinked Lobstr in Settings, logged
+out, logged in, and it was connected again. The clear WAS running; it
+was being undone. Mechanism: the unlink handler awaited
+`unlinkWallet()` (network) WHILE the slot still held Lobstr, and the
+kit's restore effect fires in that window because its guard only needs
+an external wallet in the slot. That effect does two damaging things at
+once — `rememberExternalWallet()` re-writes the memo just cleared, and
+`ensureWalletLinked()` sees "not linked" (the row was just deleted) and
+calls `linkWallet()`, RE-CREATING it. My own `forgetWalletLink()` made
+the re-link certain by clearing the guard that would have skipped it.
+Both artifacts restored ⇒ login legitimately re-attached the wallet.
+TWO STRUCTURAL FIXES: (1) ORDER — the unlink handler now disconnects
+LOCALLY first (kit + slot + memos), then deletes the server row; with
+an empty slot every restore path is inert, so nothing can undo the
+unlink behind us. (2) The memo is now DERIVED from the wallet slot in
+one effect (external ⇒ remember, normal-wallet ⇒ forget, EMPTY ⇒ leave
+alone so it survives logout) instead of being written imperatively at
+three call sites — a stray write is corrected on the next render rather
+than persisting. The imperative writes in use-stellar-wallets-kit are
+gone. RULES: (1) mutate LOCAL state before the network call when a
+concurrent reader can rebuild what you are deleting; (2) state that
+several code paths write is safer DERIVED from one source than written
+imperatively in each. 257 tests, build clean.

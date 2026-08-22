@@ -11,6 +11,9 @@ export interface SwapQuote {
   priceImpact: number;
   fee: string;
   xdr: string;
+  /** #33: fee embedded in the swap tx (Soroswap feeBps+referralId) — one
+   *  signature; the fee-pair path is skipped. */
+  embedded?: boolean;
 }
 
 export interface SwapParams {

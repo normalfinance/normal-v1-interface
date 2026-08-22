@@ -19,6 +19,7 @@ import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 
 import { Iconify } from '@/components/template/iconify';
 
@@ -89,6 +90,12 @@ export default function ConnectedWallet({
       label: t('Sell'),
       icon: <Iconify icon="ic:round-remove" width={16} />,
       onClick: () => startAction('sell'),
+    },
+    {
+      // Same MUI glyph as the navbar's Swap entry (Niko 2026-08-21).
+      label: t('Swap'),
+      icon: <SwapVertOutlined sx={{ fontSize: 16 }} />,
+      onClick: () => router.push(paths.swap),
     },
     {
       label: t('Send'),
@@ -204,11 +211,13 @@ export default function ConnectedWallet({
           )}
         </Stack>
 
-        {/* Action buttons — Buy / Sell / Send / Receive */}
+        {/* Action buttons — Buy / Sell / Swap / Send / Receive. auto-fit:
+            the row wraps by CONTAINER width, so five buttons never cramp
+            (Niko 2026-08-21 responsiveness pass). */}
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))',
             gap: '6px',
             mt: '12px',
             mx: '8px',

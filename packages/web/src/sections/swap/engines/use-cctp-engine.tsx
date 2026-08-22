@@ -31,6 +31,7 @@ import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
 import { setActiveCctpTransfer } from '@/lib/cctp/active-transfer';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
@@ -40,8 +41,12 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { useSnackbar } from '@/components/template/snackbar';
+import GasShortfallDialog from '@/components/_common/gas-shortfall-dialog';
+import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
+import AutopilotConsentDialog from '@/components/_common/autopilot-consent-dialog';
 
 import { groupOf } from './types';
+import { isInsufficientGasError } from './gas-reserve';
 import { type CctpStage, CctpProgressModal } from '../cctp-progress-modal';
 
 import type { SwapSymbol, SwapEngineResult, CrosschainSymbol } from './types';
@@ -81,6 +86,9 @@ export interface CctpEngineProps {
    * modal both announce the move — never a silent transfer.
    */
   fundFromExternal?: { label: string; execute: (amountUsdc: string) => Promise<boolean> };
+  /** Dynamic gas (2026-08-21): writes the affordable amount back into the
+   *  card when a gas spike beats the reserve on the ETH source leg. */
+  onAmountAdjusted?: (amountEth: string) => void;
 }
 
 const NATIVE_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
@@ -154,11 +162,22 @@ export function useCctpEngine({
   stellarAddressOverride,
   onNeedsSetup,
   fundFromExternal,
+  onAmountAdjusted,
 }: CctpEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
+  const { user } = useSupabaseAuth();
   const network = useNetworkStore((s) => s.network);
+  // Fresh-account path (Niko scenario trace 2026-08-21): after the guided
+  // STELLAR setup, the ETH (Base pivot) and BTC/SOL (source/delivery)
+  // addresses may still not exist — the gates below used to be DEAD buttons
+  // ("Set up SOL wallet first", action: null). Same fix as the lifi engine:
+  // one passkey in ChainSetupDialog creates the missing chain account
+  // in-place, then the original swap resumes.
+  const [setupChain, setSetupChain] = useState<
+    'bitcoin' | 'ethereum' | 'solana' | 'stellar' | null
+  >(null);
 
   // 'in': crosschain → stellar; 'out': USDC(stellar) → crosschain.
   const direction: 'in' | 'out' = groupOf(fromSymbol) === 'stellar' ? 'out' : 'in';
@@ -185,6 +204,19 @@ export function useCctpEngine({
   // move (drives the extra step in the progress modal).
   const [usedFunding, setUsedFunding] = useState(false);
   const cancelled = useRef(false);
+  // #33 Stage 3: the inline consent moment (D2). Offered once per mount, only
+  // when the delegation isn't active and the user hasn't declined before.
+  const [consentOpen, setConsentOpen] = useState(false);
+  const consentResolver = useRef<(() => void) | null>(null);
+  const consentHandled = useRef(false);
+  // Gas spike between quote and the ETH source leg → choice dialog, never an
+  // error (fires pre-sign; the transfer row closes as failed-before-broadcast).
+  const [shortfall, setShortfall] = useState<{ tried: string; affordable: string } | null>(null);
+  // Live autopilot state for the progress modal's copy + in-wait Enable
+  // offer. null = not checked yet; refreshed when a run starts and flipped
+  // by a successful grant. The RUN itself re-checks live at the branch —
+  // this state is display truth, not signing truth.
+  const [autopilotOn, setAutopilotOn] = useState<boolean | null>(null);
 
   const evmAddress = addresses.ETH; // the Base pivot is always the user's own EVM address
   const nativeAddress =
@@ -393,6 +425,83 @@ export function useCctpEngine({
     [t]
   );
 
+  // #33 Stage 3: is the server-side signing delegation live for this user?
+  // A failed check means "no autopilot for this run" (interactive prompts),
+  // NEVER a revocation — the status route 502s on Turnkey trouble by design.
+  const autopilotActive = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/autopilot/status', {
+        headers: await buildAuthHeaders(),
+        credentials: 'include',
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) return false;
+      return (await res.json())?.active === true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // The consent offer itself — at swap start (Niko's final call 2026-08-21;
+  // the earlier post-swap move was reacting to the ceremony BREAKING, not
+  // the placement). Also fired as a no-op backstop after Done. Resolves when
+  // the user chooses either way; "Not now" is remembered so the dialog never
+  // nags — Settings and the in-wait modal box keep the enable doors.
+  const maybeOfferConsent = useCallback(async () => {
+    if (!process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY) return; // feature dark
+    if (consentHandled.current) return; // one offer per mount
+    consentHandled.current = true;
+    try {
+      if (localStorage.getItem('nf:autopilot-declined:v1')) return;
+    } catch {
+      /* storage unavailable → just offer */
+    }
+    if (await autopilotActive()) return; // already granted
+    await new Promise<void>((resolve) => {
+      consentResolver.current = resolve;
+      setConsentOpen(true);
+    });
+  }, [autopilotActive]);
+
+  const handleConsentChoice = useCallback((granted: boolean) => {
+    setConsentOpen(false);
+    if (granted) setAutopilotOn(true);
+    if (!granted) {
+      try {
+        localStorage.setItem('nf:autopilot-declined:v1', String(Date.now()));
+      } catch {
+        /* fine — they'll simply be asked again next session */
+      }
+    }
+    consentResolver.current?.();
+    consentResolver.current = null;
+  }, []);
+
+  // Hand a mid-flow EVM leg to the server-side autopilot (gas top-up + sign +
+  // broadcast + row patch all happen there). null = failed / rejected / timed
+  // out → the caller runs the interactive path instead. The server re-checks
+  // everything (ownership, transfer state, addresses, the Turnkey policy) —
+  // this call is a convenience, not a trust boundary.
+  const tryAutopilot = useCallback(
+    async (leg: 'burn' | 'pivot', transferId: string): Promise<any | null> => {
+      try {
+        const res = await fetch(`/api/cctp/autopilot/${leg}`, {
+          method: 'POST',
+          headers: await buildAuthHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({ transferId }),
+          signal: AbortSignal.timeout(300_000),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.success) return null;
+        return data;
+      } catch {
+        return null;
+      }
+    },
+    []
+  );
+
   // #66: 'Done' must mean the wallet ALREADY shows the result — the LI.FI
   // engine's arrival rule (#62) applied here. The delivered side's balance
   // refetch is AWAITED (capped) before the stage flips; fire-and-forget
@@ -416,7 +525,13 @@ export function useCctpEngine({
       ];
       if (chain && refetchChain) waits.push(refetchChain(chain).catch(() => {}));
     } else {
-      // Stellar-side freshness rides refreshAggregate below (one source).
+      // Stellar-side freshness rides refreshAggregate below (one source);
+      // the SOURCE chain (BTC/ETH/SOL just spent) refreshes too so its
+      // balance isn't stale at Done (sweep 2026-08-21).
+      const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+        fromSymbol as CrosschainSymbol
+      ];
+      if (chain && refetchChain) waits.push(refetchChain(chain).catch(() => {}));
     }
     if (refreshAggregate) waits.push(refreshAggregate().catch(() => {}));
     await Promise.race([Promise.all(waits), cap]);
@@ -424,7 +539,20 @@ export function useCctpEngine({
     setActiveCctpTransfer(null); // settled — nothing left to recover
     resetInput();
     window.dispatchEvent(new Event('nf:activity-updated'));
-  }, [direction, toSymbol, resetInput, refetchChain, refreshAggregate]);
+    // #33 consent moment, AFTER the swap (Niko 2026-08-21: the pre-swap
+    // dialog interrupted a Lobstr-funded swap — the swap must just run).
+    // The user has just lived the multi-signature flow; the offer is for
+    // NEXT time, blocks nothing, and is skipped forever on "Not now".
+    void maybeOfferConsent();
+  }, [
+    direction,
+    toSymbol,
+    fromSymbol,
+    resetInput,
+    refetchChain,
+    refreshAggregate,
+    maybeOfferConsent,
+  ]);
 
   // ---- INBOUND orchestration -----------------------------------------------------
   const runInbound = useCallback(
@@ -491,7 +619,11 @@ export function useCctpEngine({
               /* transient — next interval */
             }
             if (verdict) {
-              await patch({ markFailed: true }).catch(() => {});
+              // srcSwapTxHash is already on the row, so plain markFailed is
+              // (rightly) refused — this op has the SERVER re-verify the
+              // refund against LI.FI before retiring the row (sweep 2026-08-21:
+              // without it the row sat "pending" forever).
+              await patch({ markSourceRefunded: true }).catch(() => {});
               const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
                 fromSymbol as CrosschainSymbol
               ];
@@ -524,18 +656,28 @@ export function useCctpEngine({
           await new Promise((res) => setTimeout(res, 10_000));
         }
 
+        // #33 Stage 3: with the delegation active, gas top-up + approve + burn
+        // run SERVER-side — no mid-flow passkey ~20 min after the user clicked
+        // Swap. ANY autopilot failure (no consent, revoked, kill-switch, policy
+        // rejection, timeout) falls through to the interactive path below;
+        // autopilot never blocks a swap, it only removes prompts.
         setStage('topup');
-        await topUp();
+        const autoBurn = (await autopilotActive()) ? await tryAutopilot('burn', transferId) : null;
+        if (autoBurn) {
+          setStage('burn'); // server patched burnTxHash + BURN_SUBMITTED already
+        } else {
+          await topUp();
 
-        setStage('burn');
-        const { burnTxHash } = await burnUsdcOnEvm({
-          network,
-          chain: 'base',
-          evmAddress: evmAddress!,
-          amountWire: arrivedWire,
-          stellarRecipient: stellarAddress!,
-        });
-        await patch({ burnTxHash });
+          setStage('burn');
+          const { burnTxHash } = await burnUsdcOnEvm({
+            network,
+            chain: 'base',
+            evmAddress: evmAddress!,
+            amountWire: arrivedWire,
+            stellarRecipient: stellarAddress!,
+          });
+          await patch({ burnTxHash });
+        }
 
         setStage('bridging');
         await pollStatus('COMPLETED', 15_000);
@@ -545,9 +687,25 @@ export function useCctpEngine({
         await patch({ dstAmount });
         await finish();
       } catch (e: any) {
+        const { GasShortfallError, maxAffordableEth } = await import('@/lib/lifi/gas-shortfall');
+        if (e instanceof GasShortfallError && !broadcastStarted) {
+          // Pre-sign shortfall: close the progress modal, close the row
+          // honestly (nothing moved), and offer the affordable amount.
+          setModalOpen(false);
+          setStage(null);
+          setActiveCctpTransfer(null);
+          setShortfall({ tried: amount.toFixed(), affordable: maxAffordableEth(e) });
+          await patch({ markFailed: true }).catch(() => {});
+          window.dispatchEvent(new Event('nf:activity-updated'));
+          return;
+        }
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
-          setStageError(String(e?.message ?? e));
+          setStageError(
+            isInsufficientGasError(e)
+              ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
+              : String(e?.message ?? e)
+          );
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
         if (!broadcastStarted) {
@@ -563,7 +721,10 @@ export function useCctpEngine({
       stellarAddress,
       network,
       addresses,
+      amount,
       makePatcher,
+      autopilotActive,
+      tryAutopilot,
       finish,
       t,
       fromSymbol,
@@ -594,17 +755,36 @@ export function useCctpEngine({
         setStage('bridging');
         await pollStatus('COMPLETED', 5_000); // Stellar-source attestation ≈ seconds
 
+        // #33 Stage 3: same server-side hand-off as the inbound burn — the
+        // pivot is THE prompt Niko banned ("sign, wait 20–50 min, sign again").
+        // The route resolves the delivery address from the user's own wallet
+        // row and patches dstSwapTxHash itself; any failure falls back to the
+        // interactive top-up + passkey pivot below.
         setStage('topup');
-        await topUp();
+        let result: {
+          txHash: `0x${string}`;
+          toAmountMin: string;
+          fromChainId?: number;
+          toChainId?: number;
+        };
+        const autoPivot = (await autopilotActive())
+          ? await tryAutopilot('pivot', transferId)
+          : null;
+        if (autoPivot) {
+          setStage('pivot-swap');
+          result = autoPivot;
+        } else {
+          await topUp();
 
-        setStage('pivot-swap');
-        const result = await executePivotSwap({
-          evmAddress: evmAddress!,
-          toSymbol: toSymbol as CrosschainSymbol,
-          toAddress: nativeAddress!,
-          amountWire,
-        });
-        await patch({ dstSwapTxHash: result.txHash });
+          setStage('pivot-swap');
+          result = await executePivotSwap({
+            evmAddress: evmAddress!,
+            toSymbol: toSymbol as CrosschainSymbol,
+            toAddress: nativeAddress!,
+            amountWire,
+          });
+          await patch({ dstSwapTxHash: result.txHash });
+        }
         // human delivered amount for the activity feed
         const dstAmount = BigNumber(result.toAmountMin)
           .dividedBy(BigNumber(10).pow(NATIVE_DECIMALS[toSymbol as CrosschainSymbol]))
@@ -663,7 +843,11 @@ export function useCctpEngine({
       } catch (e: any) {
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
-          setStageError(String(e?.message ?? e));
+          setStageError(
+            isInsufficientGasError(e)
+              ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
+              : String(e?.message ?? e)
+          );
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
         if (!broadcastStarted) {
@@ -678,8 +862,19 @@ export function useCctpEngine({
 
   const handleExecute = useCallback(async () => {
     if (!quote || !evmAddress || !stellarAddress || !nativeAddress) return;
+    // #33 consent moment AT SWAP START (Niko 2026-08-21: "it should pop up
+    // for user to enable one signature when swapping"). Safe now that the
+    // ceremony is idempotent; "Not now" is remembered and never re-asks.
+    await maybeOfferConsent();
     setStageError(null);
     setModalOpen(true);
+    // Display-truth refresh for the modal (copy + in-wait Enable offer);
+    // never blocks the run — the signing branch re-checks live.
+    void autopilotActive()
+      // A just-granted delegation can lag the status read — never downgrade
+      // an optimistic true mid-run (display only; signing re-checks live).
+      .then((v) => setAutopilotOn((prev) => (prev === true ? true : v)))
+      .catch(() => setAutopilotOn((prev) => (prev === true ? true : false)));
     try {
       // #32 chunk 4b: source = external wallet → move the USDC to the Normal
       // wallet FIRST (kit-signed; execute resolves only once the funds are
@@ -723,7 +918,15 @@ export function useCctpEngine({
           // inbound it's the (EVM) source, outbound the (EVM) destination.
           srcAddress: direction === 'in' ? evmAddress : stellarAddress,
           destAddress: direction === 'in' ? stellarAddress : evmAddress,
-          quoteJson: { feePercent, lifiTool: quote?.tool ?? null },
+          quoteJson: {
+            feePercent,
+            lifiTool: quote?.tool ?? null,
+            // Which wallet actually PAID (live incident 2026-08-22: the
+            // activity row said "Lobstr" for a swap funded by the Normal
+            // wallet, because rows were tagged by feed, not by source).
+            // Inbound always spends the Normal wallet's chain address.
+            fundedFrom: direction === 'out' && fundFromExternal ? 'external' : 'normal',
+          },
         }),
       });
       const data = await res.json();
@@ -738,7 +941,11 @@ export function useCctpEngine({
       else await runOutbound(data.id, amountWire);
     } catch (e: any) {
       console.error('[cctp engine] execute failed:', e); // surface stack
-      setStageError(String(e?.message ?? e));
+      setStageError(
+        isInsufficientGasError(e)
+          ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
+          : String(e?.message ?? e)
+      );
       setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
   }, [
@@ -752,6 +959,8 @@ export function useCctpEngine({
     toSymbol,
     feePercent,
     fundFromExternal,
+    autopilotActive,
+    maybeOfferConsent,
     runInbound,
     runOutbound,
     t,
@@ -790,23 +999,31 @@ export function useCctpEngine({
           </Typography>
         ),
       };
-    if (!nativeAddress)
+    if (!nativeAddress) {
+      const sym = (direction === 'in' ? fromSymbol : toSymbol) as CrosschainSymbol;
+      const chain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[sym];
       return {
-        label: t('Set up {{sym}} wallet first', {
-          sym: direction === 'in' ? fromSymbol : toSymbol,
-        }),
-        action: null,
+        label: t('Set up {{sym}} wallet', { sym }),
+        action: user ? () => setSetupChain(chain) : null,
         loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t('One passkey creates your {{sym}} address — the swap continues right after.', {
+              sym,
+            })}
+          </Typography>
+        ),
       };
+    }
     if (!evmAddress)
       return {
-        label: t('Set up Ethereum wallet first'),
-        action: null,
+        label: t('Set up Ethereum wallet'),
+        action: user ? () => setSetupChain('ethereum') : null,
         loading: false,
         helper: (
           <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
             {t(
-              'The route travels via your own Base address — create your Ethereum wallet from the Receive menu once.'
+              'The route travels via your own Base address — one passkey creates it, then the swap continues.'
             )}
           </Typography>
         ),
@@ -817,9 +1034,28 @@ export function useCctpEngine({
     if (missingStellar)
       return onNeedsSetup
         ? { label: t('Set up your Normal wallet'), action: onNeedsSetup, loading: false }
-        : { label: t('Set up Stellar wallet first'), action: null, loading: false };
+        : {
+            // Sweep 2026-08-21: a BTC/ETH/SOL-first Turnkey user has NO
+            // Stellar slot — this was a dead button. ChainSetupDialog's
+            // stellar branch derives the account on the EXISTING wallet and
+            // adopts it into the empty slot (guarded by shouldAdoptIntoSlot).
+            label: t('Set up Stellar wallet'),
+            action: user ? () => setSetupChain('stellar') : null,
+            loading: false,
+            helper: (
+              <Typography
+                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}
+              >
+                {t('One passkey adds Stellar to your wallet — the swap continues right after.')}
+              </Typography>
+            ),
+          };
     if (needsTrustline)
-      return onNeedsSetup
+      // The companion dialog can only fix the COMPANION — when the probed
+      // address is the connected external wallet (deliver-to-external), fall
+      // through to the generic copy instead of a dialog that loops (sweep
+      // 2026-08-21; the deliver pill itself offers the kit-signed add).
+      return onNeedsSetup && stellarAddress !== wallet.address
         ? { label: t('Add USDC to your Normal wallet'), action: onNeedsSetup, loading: false }
         : {
             label: t('Add USDC Trustline first'),
@@ -911,6 +1147,8 @@ export function useCctpEngine({
     gasShare,
     gasUsd,
     minUsdShort,
+    stellarAddress,
+    wallet.address,
     enabled,
     network,
     nativeAddress,
@@ -918,6 +1156,7 @@ export function useCctpEngine({
     missingStellar,
     needsTrustline,
     lowFeeXlm,
+    user,
     onNeedsSetup,
     fundFromExternal,
     amount,
@@ -1018,32 +1257,70 @@ export function useCctpEngine({
     footer: null,
     button,
     modals: (
-      <CctpProgressModal
-        open={modalOpen}
-        direction={direction}
-        stage={stage}
-        error={stageError}
-        fromSymbol={fromSymbol}
-        toSymbol={toSymbol}
-        includeFunding={usedFunding}
-        fundingWalletLabel={fundFromExternal?.label}
-        onTryAgain={
-          stageError
-            ? () => {
-                // Back to a clean, retryable card: the failed RUN is cleared;
-                // the pair, amount and quote in the card are still filled, so
-                // "try again" is one more click on Swap.
-                setStageError(null);
-                setStage(null);
-              }
-            : undefined
-        }
-        onClose={() => {
-          cancelled.current = true;
-          setModalOpen(false);
-          if (stage === 'done') setStage(null);
-        }}
-      />
+      <>
+        <AutopilotConsentDialog open={consentOpen} onChoose={handleConsentChoice} />
+        {user && setupChain && (
+          <ChainSetupDialog
+            open
+            onClose={() => setSetupChain(null)}
+            chain={setupChain}
+            userId={user.id}
+            userEmail={user.email}
+            onSuccess={async () => {
+              // stellar → the slot adoption updates the persist store and the
+              // aggregate carries balances; chain wallets refresh their hook.
+              if (setupChain === 'stellar') await refreshAggregate?.().catch(() => {});
+              else if (refetchChain) await refetchChain(setupChain);
+              setSetupChain(null);
+            }}
+          />
+        )}
+        {shortfall && (
+          <GasShortfallDialog
+            open
+            triedAmountEth={shortfall.tried}
+            affordableEth={shortfall.affordable}
+            onUseAffordable={() => {
+              onAmountAdjusted?.(shortfall.affordable);
+              setShortfall(null);
+              enqueueSnackbar(t('Amount updated — review the fresh quote and press Swap.'), {
+                variant: 'info',
+              });
+            }}
+            onCancel={() => setShortfall(null)}
+          />
+        )}
+        <CctpProgressModal
+          open={modalOpen}
+          direction={direction}
+          stage={stage}
+          error={stageError}
+          fromSymbol={fromSymbol}
+          toSymbol={toSymbol}
+          includeFunding={usedFunding}
+          fundingWalletLabel={fundFromExternal?.label}
+          autopilot={autopilotOn}
+          onEnableAutopilot={
+            process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY ? () => setConsentOpen(true) : undefined
+          }
+          onTryAgain={
+            stageError
+              ? () => {
+                  // Back to a clean, retryable card: the failed RUN is cleared;
+                  // the pair, amount and quote in the card are still filled, so
+                  // "try again" is one more click on Swap.
+                  setStageError(null);
+                  setStage(null);
+                }
+              : undefined
+          }
+          onClose={() => {
+            cancelled.current = true;
+            setModalOpen(false);
+            if (stage === 'done') setStage(null);
+          }}
+        />
+      </>
     ),
     getMaxToken,
   };

@@ -44,12 +44,25 @@ const PickToken: React.FC<PickTokenProps> = ({
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredTokens = tokens.filter((token) => {
-    const lowerTerm = searchTerm.toLowerCase();
-    return (
-      token.name.toLowerCase().includes(lowerTerm) || token.symbol.toLowerCase().includes(lowerTerm)
-    );
-  });
+  // Highest USD value first (Niko 2026-08-21) — this component IS every
+  // asset picker in the app (swap, send, withdraw, asset actions), so the
+  // ordering rule lives here once. NaN-safe: a missing price or balance
+  // sorts as $0; the sort is stable, so $0 ties keep the curated order.
+  const usdValue = (token: Token): BigNumber => {
+    const v = BigNumber(token.price || 0).multipliedBy(token.balance || 0);
+    return v.isFinite() ? v : BigNumber(0);
+  };
+  const byUsdDesc = (a: Token, b: Token) => usdValue(b).comparedTo(usdValue(a)) ?? 0;
+
+  const filteredTokens = tokens
+    .filter((token) => {
+      const lowerTerm = searchTerm.toLowerCase();
+      return (
+        token.name.toLowerCase().includes(lowerTerm) ||
+        token.symbol.toLowerCase().includes(lowerTerm)
+      );
+    })
+    .sort(byUsdDesc);
 
   const handleTokenClick = (token: Token) => {
     onTokenSelect(token);
@@ -57,7 +70,7 @@ const PickToken: React.FC<PickTokenProps> = ({
   };
 
   const featuredTokens = tokens.filter((token) => token.featured);
-  const ownedTokens = tokens.filter((token) => BigNumber(token.balance).gt(0));
+  const ownedTokens = tokens.filter((token) => BigNumber(token.balance).gt(0)).sort(byUsdDesc);
   const unownedTokens = tokens.filter((token) => BigNumber(token.balance).eq(0));
   const arrangedTokens = [...unownedTokens];
 

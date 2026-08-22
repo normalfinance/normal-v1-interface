@@ -5,9 +5,14 @@ import type { LinkedWallet } from '@/services/linked-wallets';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useState, useEffect } from 'react';
-import { format } from '@normalfinance/utils';
-import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { format, logger } from '@normalfinance/utils';
+import { usePersistStore } from '@normalfinance/state';
+import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
+import { forgetExternalWallet } from '@/lib/wallet-reconnect-memo';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { getTurnkeyWalletInfo, type TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
+import { forgetWalletLink, useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -23,6 +28,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { useSnackbar } from '@/components/template/snackbar';
+import AutopilotCard from '@/components/settings/autopilot-card';
+import WalletExportDialog from '@/components/_common/wallet-export-dialog';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import AddUsdcTrustlineButton from '@/components/settings/add-usdc-trustline-button';
 
@@ -32,6 +39,9 @@ export function SettingsAccounts() {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const config = useStellarConfig();
+  const persist = usePersistStore();
+  const { disconnectWallet: kitDisconnect } = useStellarWalletsKit();
+  const { connectWalletWithoutKeypair } = useNormalWallet();
   const [wallets, setWallets] = useState<LinkedWallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingWallet, setEditingWallet] = useState<string | null>(null);
@@ -42,10 +52,14 @@ export function SettingsAccounts() {
   const [isUnlinking, setIsUnlinking] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   // #32 chunk 2: the Turnkey (Normal) wallet's Stellar address — its card is
   // labeled and cannot be unlinked (it holds the user's funds; the server
   // refuses too, this just keeps the button honest).
   const [turnkeyStellar, setTurnkeyStellar] = useState<string | null>(null);
+  // Niko 2026-08-21: the Normal wallet card lists EVERY chain address it
+  // holds, labeled by chain — not just the Stellar one.
+  const [turnkeyInfo, setTurnkeyInfo] = useState<TurnkeyWalletInfo | null>(null);
 
   const loadWallets = async () => {
     try {
@@ -62,7 +76,10 @@ export function SettingsAccounts() {
   useEffect(() => {
     loadWallets();
     getTurnkeyWalletInfo()
-      .then((info) => setTurnkeyStellar(info?.stellarAddress ?? null))
+      .then((info) => {
+        setTurnkeyStellar(info?.stellarAddress ?? null);
+        setTurnkeyInfo(info);
+      })
       .catch(() => {});
     // Mount-only load; loadWallets is recreated per render — listing it would refire
     // the fetch on every render. eslint-disable documents the intent.
@@ -103,7 +120,39 @@ export function SettingsAccounts() {
 
     try {
       setIsUnlinking(true);
+      // ORDER IS THE FIX (live 2026-08-22: disconnect → logout → login and
+      // Lobstr was BACK). Unlinking first left the slot holding the external
+      // wallet during an await, and the kit's restore effect fires in that
+      // window: it re-writes the reconnect memo AND calls ensureWalletLinked,
+      // which re-CREATES the linked_wallets row that was just deleted (worse,
+      // forgetWalletLink had cleared the guard that would have stopped it).
+      // Disconnecting locally FIRST makes every restore path inert — they all
+      // require an external wallet in the slot — so nothing can undo the
+      // unlink behind our back.
+      const wasConnected = walletToUnlink === persist.wallet.address;
+      if (wasConnected) {
+        try {
+          await kitDisconnect();
+        } catch {
+          /* kit may already be disconnected — the slot clear below is what matters */
+        }
+        persist.disconnectWallet();
+        forgetWalletLink(walletToUnlink);
+        forgetExternalWallet(); // explicit disconnect: never re-attach at login
+      }
+
       await unlinkWallet(walletToUnlink);
+
+      if (wasConnected && turnkeyStellar) {
+        // Fall back to the Normal wallet: an empty slot leaves savings/swaps/
+        // sends with no Stellar wallet (savings read $0.00). The self-heal
+        // deliberately stays out here (I2/I7), so the end state is explicit.
+        try {
+          await connectWalletWithoutKeypair(turnkeyStellar);
+        } catch (e) {
+          logger.warn('[SETTINGS] Could not fall back to the Normal wallet:', e);
+        }
+      }
       enqueueSnackbar(t('Account unlinked successfully'), { variant: 'success' });
       setUnlinkDialogOpen(false);
       setWalletToUnlink(null);
@@ -399,32 +448,70 @@ export function SettingsAccounts() {
 
           {/* Details */}
           <Stack spacing={0} sx={{ mb: '16px' }}>
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                py: '10px',
-                borderBottom: '1px solid rgba(10,10,15,0.06)',
-              }}
-            >
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-                {t('Account ID')}
-              </Typography>
-              <Stack direction="row" spacing={0.5} alignItems="center">
-                <Typography
+            {wallet.walletAddress === turnkeyStellar && turnkeyInfo ? (
+              // The Normal wallet holds one address per chain — list them all,
+              // each labeled by its chain (registry-driven: a new chain shows
+              // up here automatically).
+              CHAIN_IDS.filter((id) => !!turnkeyInfo[CHAINS[id].addressField]).map((id) => (
+                <Box
+                  key={id}
                   sx={{
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    color: '#0A0A0F',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    py: '10px',
+                    borderBottom: '1px solid rgba(10,10,15,0.06)',
                   }}
                 >
-                  {format.fTruncate(wallet.walletAddress, 20)}
+                  <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                    {t('{{chain}} address', { chain: CHAINS[id].name })}
+                  </Typography>
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Typography
+                      sx={{
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: '#0A0A0F',
+                        fontFamily: '"Geist Mono", "Courier New", monospace',
+                      }}
+                    >
+                      {format.fTruncate(turnkeyInfo[CHAINS[id].addressField]!, 20)}
+                    </Typography>
+                    <CopyIconButton
+                      value={turnkeyInfo[CHAINS[id].addressField]!}
+                      alert={t('Address copied')}
+                    />
+                  </Stack>
+                </Box>
+              ))
+            ) : (
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: '10px',
+                  borderBottom: '1px solid rgba(10,10,15,0.06)',
+                }}
+              >
+                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                  {t('Account ID')}
                 </Typography>
-                <CopyIconButton value={wallet.walletAddress} alert={t('ID copied')} />
-              </Stack>
-            </Box>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <Typography
+                    sx={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: '#0A0A0F',
+                      fontFamily: '"Geist Mono", "Courier New", monospace',
+                    }}
+                  >
+                    {format.fTruncate(wallet.walletAddress, 20)}
+                  </Typography>
+                  <CopyIconButton value={wallet.walletAddress} alert={t('ID copied')} />
+                </Stack>
+              </Box>
+            )}
 
             {wallet.lastUsedAt && (
               <Box
@@ -445,6 +532,49 @@ export function SettingsAccounts() {
               </Box>
             )}
           </Stack>
+
+          {/* #33: automatic swap completion (autopilot) */}
+          <AutopilotCard />
+
+          {/* Recovery-phrase export (doc 79) — Normal wallet only; external
+              wallets keep their keys in their own app, nothing to export. */}
+          {wallet.walletAddress === turnkeyStellar && (
+            <Box
+              component="button"
+              onClick={() => setExportOpen(true)}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                mb: '16px',
+                px: '14px',
+                py: '11px',
+                borderRadius: '12px',
+                border: '1px solid rgba(10,10,15,0.12)',
+                bgcolor: 'transparent',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                textAlign: 'left',
+                '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' },
+              }}
+            >
+              <Iconify icon="solar:key-bold" width={18} sx={{ color: '#0A0A0F' }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F' }}>
+                  {t('Export recovery phrase')}
+                </Typography>
+                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                  {t('One phrase backs up all four addresses above — restores in any wallet app')}
+                </Typography>
+              </Box>
+              <Iconify
+                icon="eva:chevron-right-fill"
+                width={18}
+                sx={{ color: 'rgba(10,10,15,0.35)' }}
+              />
+            </Box>
+          )}
 
           {/* Trustline buttons */}
           <Stack spacing={1} sx={{ mb: '16px' }}>
@@ -624,6 +754,8 @@ export function SettingsAccounts() {
         onSuccess={handleImportSuccess}
         showLinkedWallets={false}
       />
+
+      <WalletExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
     </Stack>
   );
 }

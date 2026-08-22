@@ -280,9 +280,15 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     }
   );
   const companionValue = useMemo(() => {
+    // `keepPreviousData` keeps the LAST companion position after the SWR key
+    // goes null (which happens the moment the companion stops being a
+    // separate wallet — e.g. the slot becomes the Normal wallet itself).
+    // Without this guard that stale value was still added to the slot's own
+    // savings, showing DOUBLE until a refresh (live 2026-08-22).
+    if (!companionAddress) return 0;
     const v = parseFloat(companionPos.data?.currentValue || '0');
     return v > 0 ? v : 0;
-  }, [companionPos.data]);
+  }, [companionAddress, companionPos.data]);
   // Loading spans BOTH phases: the address lookup and the position read.
   // `data === undefined` — not `isLoading` — is the honest test: SWR's
   // isLoading drops between error retries, which would let the skeleton fall
@@ -335,9 +341,11 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     position: pos.data ?? null,
     value,
     earnings,
-    companionPosition: companionPos.data ?? null,
+    // Same retained-data rule as companionValue: no companion address ⇒ no
+    // companion position, whatever SWR is still holding.
+    companionPosition: companionAddress ? (companionPos.data ?? null) : null,
     companionValue,
-    companionEarnings: parseFloat(companionPos.data?.earnings || '0'),
+    companionEarnings: companionAddress ? parseFloat(companionPos.data?.earnings || '0') : 0,
     companionPositionLoading,
     refreshCompanionPosition: () => {
       companionPos.mutate();

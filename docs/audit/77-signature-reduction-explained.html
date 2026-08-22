@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>One Signature Per Swap — The Autopilot, Explained &amp; How to Test It</title>
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --muted: #5a5a66;
+    --line: #e6e6ea;
+    --soft: #f6f6f8;
+    --green: #0a6649;
+    --amber: #7a4a00;
+    --red: #991b1b;
+    --blue: #1d4ed8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    max-width: 860px;
+    padding: 48px 32px 96px;
+    font: 15px/1.65 "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: #fff;
+  }
+  h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 34px; }
+  h2 {
+    font-size: 21px; letter-spacing: -0.01em;
+    margin: 44px 0 12px; padding-top: 18px;
+    border-top: 2px solid var(--ink);
+  }
+  h3 { font-size: 16.5px; margin: 26px 0 8px; }
+  p, li { color: #23232b; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 5px 0; }
+  strong { color: var(--ink); }
+  code {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px; background: var(--soft);
+    padding: 1px 6px; border-radius: 5px;
+  }
+  table {
+    border-collapse: collapse; width: 100%;
+    margin: 14px 0 20px; font-size: 13.5px;
+  }
+  th, td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .box {
+    border: 1px solid var(--line); border-left: 4px solid var(--ink);
+    background: var(--soft); border-radius: 8px;
+    padding: 14px 18px; margin: 18px 0;
+  }
+  .box.warn { border-left-color: #d97706; }
+  .box.good { border-left-color: #1ab37d; }
+  .box .label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px;
+  }
+  .kv { color: var(--muted); font-size: 13px; }
+  .ok { color: var(--green); font-weight: 700; }
+  .no { color: var(--red); font-weight: 700; }
+  .toc { columns: 2; gap: 32px; font-size: 14px; }
+  .toc a { color: var(--blue); text-decoration: none; }
+  @media print {
+    body { padding: 0 8px; font-size: 12.5px; }
+    h2 { break-after: avoid; page-break-after: avoid; }
+    h3 { break-after: avoid; }
+    table, .box { break-inside: avoid; page-break-inside: avoid; }
+    .pagebreak { break-before: page; page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<h1>One Signature Per Swap</h1>
+<p class="subtitle">#33 signature reduction, Stage 3 — what the autopilot is, why every piece of it exists, and how to test it · branch <code>feat/external-wallet-cctp</code> · 2026-08-20</p>
+
+<div class="box warn">
+  <div class="label">Honest status</div>
+  Code-complete and gated (242 unit tests, lint, typecheck, production build) — but
+  <strong>nothing in this document has been live-tested yet</strong>. The feature ships dark:
+  until the three env vars exist, the app behaves byte-identically to before. The test plan
+  in §8 is written in the order that proves things safely.
+</div>
+
+<h2 id="toc">Contents</h2>
+<div class="toc">
+  <a href="#problem">1 · The problem</a><br/>
+  <a href="#idea">2 · The idea: a bounded delegation</a><br/>
+  <a href="#policy">3 · Why it's safe — the wallet enforces it</a><br/>
+  <a href="#flow">4 · What actually happens during a swap now</a><br/>
+  <a href="#rules">5 · The safety rules, each one testable</a><br/>
+  <a href="#built">6 · What was built (file map)</a><br/>
+  <a href="#setup">7 · Setup (already done / one column left)</a><br/>
+  <a href="#tests">8 · How to test — Part J</a><br/>
+  <a href="#notdone">9 · What is deliberately NOT done yet</a><br/>
+  <a href="#soroswap">10 · The other half of #33 (Soroswap, blocked)</a><br/>
+</div>
+
+<h2 id="problem">1 · The problem</h2>
+<p>Count the passkey prompts per flow before this branch:</p>
+<table>
+  <tr><th>Flow</th><th>Prompts</th><th>Why</th></tr>
+  <tr><td>LI.FI swap (BTC/ETH/SOL↔)</td><td><strong>1</strong></td><td>one source-chain transaction — the target we want everywhere</td></tr>
+  <tr><td>CCTP inbound (BTC/ETH/SOL → USDC on Stellar)</td><td><strong>2–3</strong></td><td>after the bridge (≈20 min), an approve + burn on Base needed YOUR signature</td></tr>
+  <tr><td>CCTP outbound (USDC → BTC/ETH/SOL)</td><td><strong>2</strong></td><td>after the mint (≈1 min–20 min), the pivot swap on Base needed YOUR signature</td></tr>
+</table>
+<p>The second prompt is the one Niko banned: <em>"sign, wait 20–50 minutes, sign again."</em> Nobody waits at the screen that long — so in practice the swap stalled until the user came back, found the recovery banner, and tapped it. The requirement: <strong>one signature before the swap executes, everything after runs itself.</strong></p>
+
+<h2 id="idea">2 · The idea: a bounded delegation</h2>
+<p>The mid-flow signer on Base is the user's own <strong>Turnkey wallet</strong> — and Turnkey supports adding a second, restricted "user" to a wallet organization. So with ONE passkey ceremony we add:</p>
+<ol>
+  <li>an API-only user named <strong>"Normal Autopilot"</strong> on YOUR wallet org, whose credential is our <em>server's</em> public key (one keypair serves all consenting users; the private half never leaves the server), and</li>
+  <li>a <strong>policy</strong> that says exactly what that user may sign — and nothing else.</li>
+</ol>
+<p>After that, the mid-flow Base step (gas top-up → approve → burn or pivot → receipt waits → database update) runs entirely server-side. You sign once, at the start. Bonus: closing the tab no longer matters for that step — the server finishes it.</p>
+
+<h2 id="policy">3 · Why it's safe — the WALLET enforces it, not our server</h2>
+<p>This is the part a junior must understand: the security does <strong>not</strong> depend on our server behaving. The policy lives inside Turnkey's signer. If our server is buggy — or outright breached and the autopilot key stolen — the signer still refuses anything outside:</p>
+<ul>
+  <li><strong>Chain:</strong> Base mainnet only (<code>chain_id == 8453</code>)</li>
+  <li><strong>Native value:</strong> zero (<code>value == 0</code> — the key can never move ETH)</li>
+  <li><strong>Destination:</strong> exactly three contracts — USDC, Circle's TokenMessengerV2, LI.FI's router. The first two are <em>imported from the same config constants the burn code sends to</em> (they can't drift apart); the LI.FI address was verified against LI.FI's own deployment API (<code>li.quest/v1/chains</code>).</li>
+</ul>
+<p><strong>Cause-effect: if anything tries to sign outside these bounds → Turnkey refuses → the app falls back to asking YOU to sign.</strong> The failure mode is always a prompt, never a wrong signature.</p>
+<p>On top of the policy, our server adds its own bounds (defense in depth, one chokepoint in <code>autopilot-signer.ts</code>):</p>
+<table>
+  <tr><th>Bound</th><th>Value</th><th>If exceeded</th></tr>
+  <tr><td>Per-leg cap</td><td>$2,000 (env <code>AUTOPILOT_MAX_TX_USD</code>)</td><td rowspan="3">Server refuses to sign → you get the normal passkey prompt → <strong>the swap still completes</strong>, just not automatically. Every refusal is written to the audit table.</td></tr>
+  <tr><td>Rolling daily cap</td><td>$10,000 (env <code>AUTOPILOT_MAX_DAILY_USD</code>)</td></tr>
+  <tr><td>Idle expiry</td><td>90 days without use (env <code>AUTOPILOT_IDLE_EXPIRY_DAYS</code>)</td></tr>
+  <tr><td>Kill-switch</td><td><code>AUTOPILOT_DISABLED=1</code></td><td>ALL server signing stops instantly, app-wide, without touching anyone's wallet</td></tr>
+</table>
+<p>And the routes themselves re-check everything the recovery banner checks, plus session ownership: it must be <em>your</em> transfer, in the right state, with the signer address cross-checked against <em>your</em> wallet row — and for the outbound pivot, the delivery address is read from <strong>your own wallet row in our database, never from the request</strong>. That last rule matters because the Turnkey policy cannot see inside LI.FI's calldata; the server-side lookup is what pins delivery to your own wallet.</p>
+
+<h2 id="flow">4 · What actually happens during a swap now</h2>
+<h3>First CCTP swap ever (per browser)</h3>
+<ol>
+  <li>You click Swap → a dialog appears <em>before anything signs</em>: "Finish swaps automatically?"</li>
+  <li><strong>Enable — one passkey</strong>: the ceremony runs (creates the delegated user + policy), then your swap continues normally. First time total: ceremony + the swap's own signature.</li>
+  <li><strong>Not now</strong>: the swap continues with the old prompts, the dialog never reappears (remembered in this browser), and Settings keeps a "Turn on" door.</li>
+</ol>
+<h3>Every swap after enabling</h3>
+<ol>
+  <li><strong>Inbound</strong> (ETH → USDC): you sign the source-chain swap. That's it. USDC lands on your Base address → the server tops up gas, approves, burns → the bridge mints on Stellar → Done.</li>
+  <li><strong>Outbound</strong> (USDC → SOL): you sign the Stellar burn. That's it. The bridge mints USDC on your Base address → the server tops up gas and runs the LI.FI pivot → delivery tracking to your wallet as before.</li>
+</ol>
+<p>The progress popup shows the same stages either way — the difference is simply which steps stop asking you to sign.</p>
+
+<h2 id="rules">5 · The safety rules, each one testable</h2>
+<ul>
+  <li><strong>Fallback, never blockage.</strong> ANY autopilot failure — no consent, revoked, kill-switch, Turnkey down, cap hit, policy rejection, timeout — falls back to interactive prompts. Autopilot removes prompts; it never blocks a swap. (Tests J4–J7)</li>
+  <li><strong>Status honesty.</strong> A failed status check reads "Unknown" in Settings and means "prompts for this run" in the engine — never treated as a revocation, never shown as a fake On/Off. </li>
+  <li><strong>Race safety.</strong> The row updates are guarded (<code>updateMany</code> on "hash still null"), so a simultaneous recovery-banner tap can't be clobbered; the gas top-up goes through the same locked core as the manual path, so double-funding is impossible.</li>
+  <li><strong>State-machine correctness.</strong> The server's burn patch also flips the row's status to <code>BURN_SUBMITTED</code> — without that flip the cron would never advance the bridge and the transfer would stall forever. (Caught in port review, before it could become a live incident.)</li>
+  <li><strong>Audit.</strong> Every signature attempt — signed, failed, refused-cap, refused-disabled, refused-expired — is one row in <code>autopilot_signatures</code>, with the leg's USD amount. (Test J10)</li>
+</ul>
+
+<h2 id="built" class="pagebreak">6 · What was built (file map)</h2>
+<table>
+  <tr><th>Piece</th><th>File(s)</th><th>What it does</th></tr>
+  <tr><td>Consent ceremony</td><td><code>lib/turnkey/autopilot-consent.ts</code></td><td>One passkey → delegated user + policy on YOUR wallet org. Allowlist derived from config constants.</td></tr>
+  <tr><td>Consent dialog</td><td><code>components/_common/autopilot-consent-dialog.tsx</code></td><td>The "Finish swaps automatically?" moment, offered once before your first CCTP swap.</td></tr>
+  <tr><td>Server signer</td><td><code>server/autopilot-signer.ts</code></td><td>Signs via the delegation; kill-switch, caps, idle expiry, audit — the single chokepoint.</td></tr>
+  <tr><td>Server burn / pivot</td><td><code>server/autopilot-burn.ts</code> · <code>server/autopilot-pivot.ts</code></td><td>Faithful ports of the client burn/pivot — every money invariant verbatim (forwarder recipient, hookData-only address, allowance loop, retry).</td></tr>
+  <tr><td>Shared cores</td><td><code>server/cctp-transfer-gas.ts</code> · <code>server/lifi-quote.ts</code></td><td>Extracted, not duplicated: the locked gas top-up and the LI.FI quote logic now serve both the manual routes and the autopilot.</td></tr>
+  <tr><td>Routes</td><td><code>/api/cctp/autopilot/burn</code> · <code>/api/cctp/autopilot/pivot</code></td><td>Auth + ownership + state checks + balance read + gas + sign + row patch. 5-minute function budget (receipt waits are slow).</td></tr>
+  <tr><td>Engine branches</td><td><code>sections/swap/engines/use-cctp-engine.tsx</code></td><td>Checks status once per run; hands the Base leg to the server; falls back on any failure.</td></tr>
+  <tr><td>Status + revoke + enable</td><td><code>/api/autopilot/status</code> · <code>components/settings/autopilot-card.tsx</code></td><td>Truth lives in Turnkey (the delegated user exists or it doesn't). Settings: Turn on / Turn off, one passkey each.</td></tr>
+  <tr><td>Audit table</td><td><code>docs/audit/sql/autopilot_signatures.sql</code> + <code>…_amount.sql</code></td><td>Who signed what, for which transfer purpose, for how much, when.</td></tr>
+</table>
+
+<h2 id="setup">7 · Setup</h2>
+<table>
+  <tr><th>Step</th><th>Status</th></tr>
+  <tr><td>1. <code>node scripts/generate-autopilot-key.mjs</code> → paste the 3 printed lines into <code>packages/web/.env</code>, restart dev server</td><td class="ok">DONE (Niko, 2026-08-20)</td></tr>
+  <tr><td>2. Run <code>docs/audit/sql/autopilot_signatures.sql</code> in Supabase (audit table)</td><td class="ok">DONE (Niko, 2026-08-20)</td></tr>
+  <tr><td>3. Run <code>docs/audit/sql/autopilot_signatures_amount.sql</code> in Supabase (adds the <code>amountUsd</code> column — powers the daily cap + idle expiry)</td><td class="no">TO DO — one idempotent ALTER; until then the app works but the daily sum reads 0</td></tr>
+  <tr><td>For production later: the same 3 env vars go into Vercel (private key = server-only vars, never NEXT_PUBLIC)</td><td class="kv">when we deploy</td></tr>
+</table>
+
+<h2 id="tests" class="pagebreak">8 · How to test — Part J (do them in this order)</h2>
+<div class="box">
+  <div class="label">Why this order</div>
+  J0 proves the refactor changed nothing. J4 proves declining is safe. J1/J2 are the first
+  live proof of the ceremony + the server burn — do them with a SMALL amount. Only then J3
+  (outbound), then the negative tests.
+</div>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>J0</td><td>Before anything: any normal swap (the fallback path IS the old path)</td><td>Exactly yesterday's behavior — same prompts, same stages. Any difference = refactor bug, stop and report</td></tr>
+  <tr><td>J1b</td><td>Half-ceremony repair (the 2026-08-21 incident state: delegate user exists, no policy)</td><td>Settings reads OFF (not a false On — status requires user AND policy); Turn on completes with ONE confirmation (existing user reused, only the policy is created)</td></tr>
+  <tr><td>J4</td><td>First cctp swap → consent dialog at SWAP START (final placement, Niko 2026-08-21) → <strong>"Not now"</strong></td><td>Swap continues normally with the old prompts; dialog never reappears; the in-swap "Enable auto-finish" box and Settings keep the doors open</td></tr>
+  <tr><td>J1</td><td>Settings → "Turn on" (or Enable in the swap-start dialog / the in-wait box)</td><td>Up to TWO passkey confirmations (user + policy); ONE if a delegate already exists from a prior half-attempt — the ceremony is idempotent and repairs itself; Settings flips to On</td></tr>
+  <tr><td>J2</td><td>Small ETH → USDC (inbound), autopilot ON</td><td>ONE signature at the start; the burn stage completes with NO further prompt; popup reaches Done; USDC visible on Stellar</td></tr>
+  <tr><td>J3</td><td>Small USDC → ETH or SOL (outbound), autopilot ON</td><td>ONE passkey (the Stellar burn); the pivot runs unprompted after the mint; delivery tracking unchanged</td></tr>
+  <tr><td>J5</td><td>Settings → Turn off, then swap again</td><td>Mid-flow prompts are back (fallback), no errors; Turn on restores 1-signature swaps</td></tr>
+  <tr><td>J6</td><td>Revoke mid-flow: start an inbound swap, Turn off in a second tab BEFORE the burn stage</td><td>Engine falls back to the interactive burn prompt — the swap still completes; nothing strands</td></tr>
+  <tr><td>J7</td><td>Set <code>AUTOPILOT_DISABLED=1</code>, restart, swap</td><td>Prompts everywhere, like J5; audit shows a <code>refused-disabled</code> row if a route was reached</td></tr>
+  <tr><td>J8</td><td>Autopilot ON, start an inbound swap, CLOSE THE TAB during "arriving"</td><td>Reopen later: recovery works as before — and if the server call was already running, the burn completed without you (row has burnTxHash)</td></tr>
+  <tr><td>J9</td><td>Policy negative test (dev): use the autopilot key to request a signature for a transfer to a RANDOM contract</td><td>Turnkey REFUSES (contract not allowlisted) — the proof the guarantee lives in the signer, not our code</td></tr>
+  <tr><td>J10</td><td>After J2/J3: <code>SELECT * FROM autopilot_signatures ORDER BY "createdAt" DESC</code></td><td>One row per server-signed tx — purpose <code>cctp-inbound-*</code> / <code>cctp-outbound-*</code>, outcome <code>signed</code>, correct <code>amountUsd</code> on the burn/pivot rows</td></tr>
+  <tr><td>J11</td><td>Cap test: swap over $2,000 with autopilot ON (or temporarily set <code>AUTOPILOT_MAX_TX_USD=5</code> and swap $10)</td><td>The mid-flow step asks YOU to sign (fallback) — the swap completes; audit shows <code>refused-cap</code></td></tr>
+</table>
+
+<h2 id="notdone">9 · What is deliberately NOT done yet</h2>
+<ul>
+  <li><strong>v2 policy hardening (ABI arguments).</strong> Today the policy bounds chain + value + destination contracts. v2 will also make Turnkey check the ARGUMENTS — e.g. a burn's recipient must be your own forwarder, an approve's spender must be in the allowlist, and the $2k cap moves into the policy itself. This needs uploading contract ABIs to Turnkey; building it blind risks breaking the ceremony for everyone, so it waits until ONE live ceremony (J1) has proven the v1 shape. Until then the recipient rule is enforced by our server code (which only ever constructs forwarder-recipient burns) — a real but weaker guarantee, stated honestly.</li>
+  <li><strong>Grant-date expiry.</strong> The 90-day idle clock starts at first USE, not at the grant itself (we don't store the grant date server-side yet). v2 item.</li>
+  <li><strong>Testnet autopilot.</strong> The policy allows Base mainnet only. On testnet the autopilot simply declines and you sign manually — fine, since LI.FI has no testnet liquidity anyway.</li>
+</ul>
+
+<h2 id="soroswap">10 · The other half of #33 — Soroswap single-signature (blocked upstream)</h2>
+<p>Stellar-only swaps (XLM↔USDC) and savings still take 2 signatures, because a Soroban transaction holds exactly one operation — our fee can't ride inside the swap. The fix is implemented and dormant: Soroswap's API supports an embedded fee (<code>feeBps</code> + <code>referralId</code>), our code is complete behind <code>SOROSWAP_EMBEDDED_FEE=1</code>, but their build endpoint currently 400s with the fee attached (proven with a control test; repro sent upstream — doc 76 §7). <strong>The moment Soroswap fixes it, flipping one env delivers 1-signature Stellar swaps with zero code changes.</strong> Savings need Stage 2 (the Normal router contract) — designed, not started.</p>
+
+<p class="kv" style="margin-top:40px">
+  Branch <code>feat/external-wallet-cctp</code> · Design + decisions: docs/audit/76 · Broader branch story: docs/audit/73 (§9f) ·
+  Findings register: docs/audit/20-findings.md · This document: docs/audit/77 · Generated 2026-08-20
+</p>
+
+</body>
+</html>

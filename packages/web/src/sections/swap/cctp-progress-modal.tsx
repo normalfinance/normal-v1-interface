@@ -53,6 +53,13 @@ interface Props {
   /** #32 chunk 4b: this run started by moving USDC from the external wallet. */
   includeFunding?: boolean;
   fundingWalletLabel?: string;
+  /** #33: is the server-side autopilot active for this user? true = the
+   *  mid-flow Base signature runs itself (step copy says so); false = the
+   *  inline Enable offer shows during the wait — enabling mid-swap still
+   *  helps THIS swap, because the engine re-checks right before that step.
+   *  null/undefined = unknown → neutral copy, no offer. */
+  autopilot?: boolean | null;
+  onEnableAutopilot?: () => void;
   onClose: () => void;
   /** Honest-bridge-endings (Niko): one tap back to a retryable card after a
    *  terminal error — clears the failed run; quote + amount stay filled. */
@@ -68,6 +75,8 @@ export function CctpProgressModal({
   toSymbol,
   includeFunding = false,
   fundingWalletLabel,
+  autopilot = null,
+  onEnableAutopilot,
   onClose,
   onTryAgain,
 }: Props) {
@@ -94,7 +103,9 @@ export function CctpProgressModal({
           {
             id: 'burn',
             label: t('Starting the Circle bridge'),
-            sub: t('Approve in your wallet · 1–2 signatures'),
+            sub: autopilot
+              ? t('Automatic — no signature needed')
+              : t('Approve in your wallet · 1–2 signatures'),
           },
           {
             id: 'bridging',
@@ -135,7 +146,9 @@ export function CctpProgressModal({
           {
             id: 'pivot-swap',
             label: t('Swapping USDC to {{sym}}', { sym: toSymbol }),
-            sub: t('Via LI.FI · approve in your wallet'),
+            sub: autopilot
+              ? t('Via LI.FI · automatic — no signature needed')
+              : t('Via LI.FI · approve in your wallet'),
           },
           {
             id: 'delivering' as CctpStage,
@@ -173,12 +186,16 @@ export function CctpProgressModal({
             <Typography
               sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', mt: '3px', lineHeight: 1.4 }}
             >
-              {direction === 'out'
-                ? t('Two signing steps: Stellar now, then Base after the bridge — keep this open.')
-                : t(
-                    'Two signing steps: {{sym}} now, then Base after the bridge — keep this open.',
-                    { sym: fromSymbol }
-                  )}
+              {autopilot
+                ? t('One signing step — everything after the bridge completes automatically.')
+                : direction === 'out'
+                  ? t(
+                      'Two signing steps: Stellar now, then Base after the bridge — keep this open.'
+                    )
+                  : t(
+                      'Two signing steps: {{sym}} now, then Base after the bridge — keep this open.',
+                      { sym: fromSymbol }
+                    )}
             </Typography>
           )}
         </Box>
@@ -255,6 +272,58 @@ export function CctpProgressModal({
           );
         })}
       </Stack>
+
+      {/* #33: the in-wait Enable offer (Niko 2026-08-21: "the parts in
+          between could last 1h so the user would have to sit there to sign
+          again"). Shown only while autopilot is provably OFF and the
+          signature step hasn't happened yet — enabling here makes THIS swap
+          finish itself, because the engine re-checks status right before
+          that step. */}
+      {!error &&
+        autopilot === false &&
+        !!onEnableAutopilot &&
+        stage &&
+        activeIdx >= 0 &&
+        activeIdx <
+          steps.findIndex((s) => s.id === (direction === 'in' ? 'burn' : 'pivot-swap')) && (
+          <Box
+            sx={{
+              mt: '12px',
+              px: '12px',
+              py: '10px',
+              borderRadius: '10px',
+              bgcolor: 'rgba(10,10,15,0.03)',
+              border: '1px solid rgba(10,10,15,0.08)',
+            }}
+          >
+            <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.5 }}>
+              {t(
+                "Don't want to wait around for the next signature? Enable automatic completion and this swap finishes by itself."
+              )}
+            </Typography>
+            <Box
+              component="button"
+              onClick={onEnableAutopilot}
+              sx={{
+                mt: '8px',
+                appearance: 'none',
+                border: '1px solid rgba(10,10,15,0.14)',
+                borderRadius: '10px',
+                px: '14px',
+                py: '7px',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                bgcolor: '#fff',
+                color: '#0A0A0F',
+                '&:hover': { bgcolor: 'rgba(10,10,15,0.04)' },
+              }}
+            >
+              {t('Enable auto-finish')}
+            </Box>
+          </Box>
+        )}
 
       {error && (
         <Box

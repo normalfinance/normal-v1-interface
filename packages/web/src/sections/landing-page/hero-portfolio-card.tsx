@@ -8,11 +8,13 @@ import { useRouter } from 'next/navigation';
 import { useVaultApy } from '@/hooks/use-vault-apy';
 import { useMemo, useState, useEffect } from 'react';
 import { usePortfolio } from '@/hooks/use-portfolio';
-import { assetDisplay } from '@/lib/portfolio/display';
+import { usePersistStore } from '@normalfinance/state';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
+import { assetDisplay, connectedWalletLabel } from '@/lib/portfolio/display';
 
 import { Box, Stack, Skeleton, Typography } from '@mui/material';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 
 import { Iconify } from '@/components/template/iconify';
 
@@ -115,9 +117,12 @@ const DEMO_ROWS: Row[] = [
 ];
 const DEMO_OVERALL_CHANGE = 2.4;
 
-const ACTIONS: { key: AssetActionKey; label: string; icon: string }[] = [
+// 'swap' routes to /swap (it's a full page, not a modal flow); the icon is
+// the SAME MUI glyph the navbar uses so the two entries read as one feature.
+const ACTIONS: { key: AssetActionKey | 'swap'; label: string; icon: string }[] = [
   { key: 'buy', label: 'Buy', icon: 'ic:round-add' },
   { key: 'sell', label: 'Sell', icon: 'ic:round-remove' },
+  { key: 'swap', label: 'Swap', icon: '' },
   { key: 'send', label: 'Send', icon: 'ic:round-arrow-upward' },
   { key: 'receive', label: 'Receive', icon: 'ic:round-arrow-downward' },
 ];
@@ -125,6 +130,7 @@ const ACTIONS: { key: AssetActionKey; label: string; icon: string }[] = [
 export function HeroPortfolioCard() {
   const { user } = useSupabaseAuth();
   const isAuthed = !!user;
+  const { wallet } = usePersistStore();
   const portfolio = usePortfolio(isAuthed);
   const apy = useVaultApy();
   const router = useRouter();
@@ -134,21 +140,23 @@ export function HeroPortfolioCard() {
   const rows = useMemo<Row[]>(() => {
     if (!isAuthed) return [...DEMO_ROWS].sort((a, b) => b.usd - a.usd);
     const out: Row[] = [];
-    // #32: on hybrid accounts every row is labeled by its owning wallet
-    // (chain assets + companion Stellar = Normal; slot Stellar = the
-    // external wallet). Single-wallet accounts stay label-free.
+    // #32 + Niko 2026-08-21: ONE row per asset. On hybrid accounts the two
+    // Stellar wallets' XLM/USDC are COMBINED (the row shows the total; the
+    // subtitle says how much sits in which wallet, by the wallet's real
+    // name — never "External"). Chain assets name their wallet in the
+    // subtitle too. Single-wallet accounts stay exactly as before.
     const hybrid = !!portfolio.wallet.companionStellar;
-    portfolio.walletPositions
-      .filter((p) => p.balance != null && Number(p.balance) > 0)
-      .forEach((p) => {
-        const owner = !hybrid
-          ? null
-          : p.id.startsWith('companion:') || p.chain !== 'stellar'
-            ? 'Normal'
-            : 'External';
+    const slotLabel = connectedWalletLabel(wallet.walletType);
+    const fmtBal = (n: number) =>
+      n.toLocaleString('en-US', { maximumFractionDigits: n < 1 ? 4 : 2 });
+    const positions = portfolio.walletPositions.filter(
+      (p) => p.balance != null && Number(p.balance) > 0
+    );
+    if (!hybrid) {
+      positions.forEach((p) => {
         out.push({
           id: p.id,
-          name: owner ? `${p.symbol} · ${owner}` : p.symbol,
+          name: p.symbol,
           iconUrl: p.iconUrl,
           sub: fmtCoin(Number(p.balance), p.symbol),
           usd: p.usdValue ? Number(p.usdValue) : 0,
@@ -158,6 +166,74 @@ export function HeroPortfolioCard() {
           href: paths.assets.details(p.symbol),
         });
       });
+    } else {
+      // Stellar: combine slot + companion per symbol.
+      const stellarBySym = new Map<
+        string,
+        {
+          total: number;
+          usd: number;
+          change: number | null;
+          icon: string;
+          parts: { label: string; bal: number }[];
+        }
+      >();
+      positions
+        .filter((p) => p.chain === 'stellar')
+        .forEach((p) => {
+          const isCompanion = p.id.startsWith('companion:');
+          const entry = stellarBySym.get(p.symbol) ?? {
+            total: 0,
+            usd: 0,
+            change: null,
+            icon: p.iconUrl,
+            parts: [],
+          };
+          entry.total += Number(p.balance);
+          entry.usd += p.usdValue ? Number(p.usdValue) : 0;
+          entry.change = entry.change ?? p.change24h ?? null;
+          entry.parts[isCompanion ? 0 : 1] = {
+            label: isCompanion ? 'Normal wallet' : slotLabel,
+            bal: Number(p.balance),
+          };
+          stellarBySym.set(p.symbol, entry);
+        });
+      stellarBySym.forEach((e, sym) => {
+        const parts = e.parts.filter(Boolean);
+        out.push({
+          id: `stellar:${sym}`,
+          name: sym,
+          iconUrl: e.icon,
+          // Two wallets → the split IS the subtitle; one wallet → the plain
+          // amount plus who holds it.
+          sub:
+            parts.length > 1
+              ? parts.map((pt) => `${pt.label} ${fmtBal(pt.bal)}`).join(' · ')
+              : `${fmtCoin(e.total, sym)} · ${parts[0]?.label ?? ''}`,
+          usd: e.usd,
+          changePct: e.change,
+          apyPct: null,
+          group: 'crypto',
+          href: paths.assets.details(sym),
+        });
+      });
+      // Chain assets live in the Normal wallet — say so in the subtitle.
+      positions
+        .filter((p) => p.chain !== 'stellar')
+        .forEach((p) => {
+          out.push({
+            id: p.id,
+            name: p.symbol,
+            iconUrl: p.iconUrl,
+            sub: `${fmtCoin(Number(p.balance), p.symbol)} · Normal wallet`,
+            usd: p.usdValue ? Number(p.usdValue) : 0,
+            changePct: p.change24h ?? null,
+            apyPct: null,
+            group: 'crypto',
+            href: paths.assets.details(p.symbol),
+          });
+        });
+    }
     if (portfolio.savingsUsd > 0) {
       out.push({
         id: 'savings',
@@ -177,6 +253,7 @@ export function HeroPortfolioCard() {
     isAuthed,
     portfolio.walletPositions,
     portfolio.wallet.companionStellar,
+    wallet.walletType,
     portfolio.savingsUsd,
     apy,
   ]);
@@ -472,19 +549,28 @@ export function HeroPortfolioCard() {
         )}
       </Stack>
 
-      {/* actions */}
-      <Stack direction="row" spacing={1} sx={{ mt: 2.5 }}>
-        {ACTIONS.map((a) => (
+      {/* actions — two fixed rows (Niko: five in one row is too much here):
+          Buy/Sell/Swap on top, Send/Receive wider below. 6-column grid,
+          top buttons span 2, bottom span 3. */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 1, mt: 2.5 }}>
+        {ACTIONS.map((a, idx) => (
           <Box
             key={a.key}
             role="button"
             tabIndex={0}
-            onClick={() => startAction(a.key)}
+            onClick={() =>
+              a.key === 'swap' ? router.push(paths.swap) : startAction(a.key as AssetActionKey)
+            }
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') startAction(a.key);
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              if (a.key === 'swap') router.push(paths.swap);
+              else startAction(a.key as AssetActionKey);
             }}
             sx={{
-              flex: 1,
+              // All five buttons the SAME size (Niko): 6-col grid, every
+              // button spans 2; the bottom pair starts at columns 2 and 4,
+              // so the second row is centered instead of stretched.
+              gridColumn: idx < 3 ? 'span 2' : idx === 3 ? '2 / span 2' : '4 / span 2',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -517,14 +603,18 @@ export function HeroPortfolioCard() {
                 transition: 'all .15s ease',
               }}
             >
-              <Iconify icon={a.icon} width={18} sx={{ color: 'inherit' }} />
+              {a.key === 'swap' ? (
+                <SwapVertOutlined sx={{ fontSize: 18, color: 'inherit' }} />
+              ) : (
+                <Iconify icon={a.icon} width={18} sx={{ color: 'inherit' }} />
+              )}
             </Box>
             <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'inherit' }}>
               {a.label}
             </Typography>
           </Box>
         ))}
-      </Stack>
+      </Box>
     </Box>
   );
 }

@@ -173,16 +173,15 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   // reserve below): typed amounts, MAX, display and validation all inherit
   // it. Before this, a typed amount could pass "amount <= balance" and still
   // fail on-chain with "insufficient funds for gas" (observed live
-  // 2026-08-19: 0.00499 of 0.00787 ETH + ~0.0039 gas). Sized live; cctp's
-  // ETH leg is a bridge, so it reserves against a larger gas limit.
+  // 2026-08-19: 0.00499 of 0.00787 ETH + ~0.0039 gas). Sized live.
   // Gas limits from OBSERVED route reality, not protocol minimums: LI.FI's
   // bridge deposits (relaydepository, near) ran ~538k gas live on 2026-08-19
   // — the old 250k assumption under-reserved and MAX still failed on-chain.
-  // Over-reserving only shrinks MAX; under-reserving fails swaps.
-  const ethReserve = useEthGasReserve(
-    fromSymbol === 'ETH',
-    pairTypeOf(fromSymbol, toSymbol) === 'cctp' ? 400_000n : 550_000n
-  );
+  // ONE limit for every pair spending ETH: a cctp swap FROM ETH starts with
+  // the SAME LI.FI mainnet deposit as a lifi pair (its 400k "bridge headroom"
+  // was actually SMALLER and failed live 2026-08-21: reserve 0.0005, route
+  // wanted 0.000531). Over-reserving only shrinks MAX; under-reserving fails.
+  const ethReserve = useEthGasReserve(fromSymbol === 'ETH', 550_000n);
   const fromBalance =
     fromSymbol === 'XLM'
       ? BigNumber.max(
@@ -340,6 +339,15 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     async (chain: TurnkeyChain) => {
       const hook = chain === 'bitcoin' ? btc : chain === 'ethereum' ? eth : sol;
       const symbol = chain === 'bitcoin' ? 'BTC' : chain === 'ethereum' ? 'ETH' : 'SOL';
+      // Addresses FIRST (sweep 2026-08-21): a just-created chain account
+      // lives in the turnkey-wallet SWR, not the balance aggregate — without
+      // this the setup dialogs looped ("Set up X wallet" forever) because
+      // only balances refreshed. Harmless on arrival refetches (cheap read).
+      try {
+        await hook.refetch();
+      } catch {
+        /* transient — balances below still refresh */
+      }
       const before = balancesRef.current[symbol as SwapSymbol]?.balance;
       const fresh = await hook.refetchBalance();
       const after = fresh?.find((a) => a.symbol === symbol)?.balance;
@@ -350,7 +358,44 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     },
     [btc, eth, sol]
   );
-  const resetInput = useCallback(() => setAmountIn(''), []);
+  // Same verify-and-retry for STELLAR swaps (Niko live 2026-08-21: the
+  // modal said Done but the drawer needed 2-3s — the gate's single refresh
+  // had raced Horizon's read replicas, caching a pre-swap answer). The
+  // to-asset's account TOTAL (slot + companion rows share the symbol) must
+  // move before Done counts; unchanged → wait past the server's 5s refresh
+  // floor and pull once more. Refs keep the callback stable and un-stale.
+  const aggAssetsRef = useRef(aggAssets);
+  aggAssetsRef.current = aggAssets;
+  const stellarToSymbolRef = useRef(toSymbol);
+  stellarToSymbolRef.current = toSymbol;
+  const refetchStellarAfterSwap = useCallback(async () => {
+    const sym = stellarToSymbolRef.current;
+    const total = (assets: { symbol: string; balance: string | null }[] | null | undefined) =>
+      (assets ?? [])
+        .filter((a) => a.symbol === sym)
+        .reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+    const before = total(aggAssetsRef.current);
+    const fresh = await refreshFresh();
+    if (fresh && total(fresh) === before) {
+      await new Promise((resolve) => setTimeout(resolve, 5_600)); // past the 5s server floor
+      await refreshFresh();
+    }
+  }, [refreshFresh]);
+
+  // Records a COMPLETED external→companion move for the amount currently
+  // being swapped, so a retry after a rejected burn doesn't move twice.
+  // In-memory only, and cleared the moment a swap completes (resetInput).
+  const movedForAmount = useRef<string | null>(null);
+  const resetInput = useCallback(() => {
+    movedForAmount.current = null;
+    setAmountIn('');
+  }, []);
+  // Dynamic-gas write-back is a TOKEN amount — flip fiat mode off so the
+  // field can't reinterpret 0.0085 ETH as $0.0085 (sweep 2026-08-21).
+  const handleAmountAdjusted = useCallback((v: string) => {
+    setIsFiatMode(false);
+    setAmountIn(v);
+  }, []);
 
   // All engines are always mounted (React hook rules); only the active one is
   // fed the live amount, so the others never fetch a quote.
@@ -365,6 +410,9 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     // #32 chunk 4f: Normal-wallet source — build + sign from the companion.
     stellarAddressOverride: pairType === 'stellar' ? stellarSwapAddress : null,
     onNeedsSetup: isExternalWallet ? () => setSetupOpen(true) : undefined,
+    // Progress modal's Done waits on this (#62/#66 — same gate as cctp),
+    // verify-and-retry included: Done only after the to-asset visibly moved.
+    refreshAggregate: refetchStellarAfterSwap,
   });
   const lifi = useLifiEngine({
     fromSymbol: (pairType === 'crosschain' ? fromSymbol : 'ETH') as CrosschainSymbol,
@@ -378,6 +426,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     // checks and burn LI.FI quota on quotes the gate below can never execute.
     enabled: pairType === 'crosschain' && !needsNormalWallet,
     resetInput,
+    // Dynamic gas: a spike-time shortfall writes the affordable ETH back in.
+    onAmountAdjusted: handleAmountAdjusted,
     refetchChain,
   });
   // #32 chunk 4c: selecting external delivery adds the missing USDC
@@ -409,6 +459,24 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         ? {
             label: connectedWalletLabel(wallet.walletType),
             execute: async (amountUsdc: string) => {
+              // Idempotency, take 2 (LIVE INCIDENT 2026-08-22): the first
+              // version skipped the move whenever the companion HELD ENOUGH
+              // USDC — which is true on almost every fresh swap, so it spent
+              // the Normal wallet's money while the user had picked Lobstr.
+              // A BALANCE can never prove a move happened. Only a move we
+              // actually performed in THIS attempt can, so the record is an
+              // in-memory ref: it cannot survive a reload and go stale (a
+              // stale marker would re-create the very bug it guards against).
+              // Cleared on success via resetInput.
+              if (movedForAmount.current === amountUsdc) {
+                enqueueSnackbar(
+                  t(
+                    'Your USDC was already moved for this swap — continuing without a second move.'
+                  ),
+                  { variant: 'info' }
+                );
+                return true;
+              }
               const hash = await stellarSend({
                 destination: companionStellar.address,
                 token: tokenBySymbol.USDC,
@@ -418,7 +486,11 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               for (let i = 0; i < 10; i += 1) {
                 try {
                   const probe = await probeCompanion(companionStellar.address, config);
-                  if (BigNumber(probe.usdcBalance).gte(amountUsdc)) return true;
+                  if (BigNumber(probe.usdcBalance).gte(amountUsdc)) {
+                    // Verified visible on the companion — a retry may skip it.
+                    movedForAmount.current = amountUsdc;
+                    return true;
+                  }
                 } catch {
                   /* transient Horizon hiccup — retry */
                 }
@@ -437,6 +509,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
       wallet.walletType,
       tokenBySymbol,
       stellarSend,
+      enqueueSnackbar,
+      t,
       config,
     ]
   );
@@ -450,6 +524,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     fromPrice: pairType === 'cctp' ? fromPrice : ZERO,
     enabled: pairType === 'cctp' && !needsNormalWallet,
     resetInput,
+    onAmountAdjusted: handleAmountAdjusted,
     refetchChain,
     stellarAddressOverride: cctpStellarAddress,
     refreshAggregate: refreshFresh,

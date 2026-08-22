@@ -9,17 +9,18 @@ import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
 import { supabase } from '@/lib/createSupabaseClient';
 import { usePersistStore } from '@normalfinance/state';
-import { shouldAdoptIntoSlot } from '@/lib/wallet-slot';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { readExternalWalletMemo } from '@/lib/wallet-reconnect-memo';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { importMnemonicIntoTurnkey } from '@/lib/turnkey/import-mnemonic';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
+import { shouldAdoptIntoSlot, shouldReattachExternalOnLogin } from '@/lib/wallet-slot';
 import { getTurnkeyWalletInfo, isTurnkeyStellarAddress } from '@/lib/turnkey/wallet-info';
 import { linkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
 import {
@@ -299,6 +300,29 @@ export default function OnboardingWizard({
         return;
       }
 
+      // THE external wallet the user had connected wins over the Turnkey
+      // auto-connect below (live incident 2026-08-22: "I log in, see the
+      // combined assets for a second, then it all goes away"). This block
+      // used to run unconditionally and OVERWROTE the slot with the Turnkey
+      // wallet on every login, silently switching the wallet of anyone who
+      // had connected Lobstr/Freighter — the same wallet-switch class as
+      // finding #42, but on the login path instead of the self-heal.
+      // `wallets` above is this account's linked list, so membership is a
+      // server-side ownership check: a memo from another user on a shared
+      // browser can never match.
+      const externalMemo = readExternalWalletMemo();
+      if (
+        externalMemo &&
+        shouldReattachExternalOnLogin(
+          externalMemo.address,
+          wallets.map((w) => w.walletAddress)
+        )
+      ) {
+        await persist.connectWallet(externalMemo.address, externalMemo.walletType);
+        onClose();
+        return;
+      }
+
       // A Turnkey wallet is the user's primary — connect it silently and never
       // block login with the account picker, even when old (pre-Turnkey)
       // linked wallets exist. Those stay reachable from the drawer's wallet
@@ -329,7 +353,7 @@ export default function OnboardingWizard({
       logger.error('[OnboardingWizard] handleAfterAuth error:', err);
       setStep('get-started');
     }
-  }, [marketingConsent, syncMarketingOptIn, connectWalletWithoutKeypair, onClose]);
+  }, [marketingConsent, syncMarketingOptIn, connectWalletWithoutKeypair, persist, onClose]);
 
   useEffect(() => {
     if (!open) return;

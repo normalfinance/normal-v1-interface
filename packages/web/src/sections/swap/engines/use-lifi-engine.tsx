@@ -19,6 +19,7 @@ import Typography from '@mui/material/Typography';
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
+import GasShortfallDialog from '@/components/_common/gas-shortfall-dialog';
 
 import { LifiStatusModal } from '../lifi-status-modal';
 import { isInsufficientGasError } from './gas-reserve';
@@ -70,6 +71,10 @@ export interface LifiEngineProps {
   enabled: boolean;
   resetInput: () => void;
   refetchChain: (chain: TurnkeyChain) => Promise<void> | void;
+  /** Dynamic gas (2026-08-21): writes the affordable amount back into the
+   *  card when a gas spike beats the reserve — the quote then refreshes and
+   *  the user confirms the updated numbers with a normal Swap press. */
+  onAmountAdjusted?: (amountEth: string) => void;
 }
 
 export function useLifiEngine({
@@ -82,6 +87,7 @@ export function useLifiEngine({
   enabled,
   resetInput,
   refetchChain,
+  onAmountAdjusted,
 }: LifiEngineProps): SwapEngineResult {
   const { t } = useTranslate();
   const { user } = useSupabaseAuth();
@@ -235,6 +241,10 @@ export function useLifiEngine({
     setSetupChain(null);
   };
 
+  // Gas spike between quote and send → the structured shortfall becomes a
+  // choice dialog, never an error (nothing was signed when it fires).
+  const [shortfall, setShortfall] = useState<{ tried: string; affordable: string } | null>(null);
+
   const handleExecute = async () => {
     if (!quote) return;
     setExecuting(true);
@@ -263,6 +273,12 @@ export function useLifiEngine({
       resetInput();
       setQuote(null);
     } catch (err: any) {
+      const { GasShortfallError, maxAffordableEth } = await import('@/lib/lifi/gas-shortfall');
+      if (err instanceof GasShortfallError) {
+        // Pre-sign shortfall — offer the affordable amount instead of erroring.
+        setShortfall({ tried: amount.toFixed(), affordable: maxAffordableEth(err) });
+        return;
+      }
       console.error('[lifi engine] execute failed:', err); // surface stack
       enqueueSnackbar(
         isInsufficientGasError(err)
@@ -448,6 +464,21 @@ export function useLifiEngine({
 
   const modals = (
     <>
+      {shortfall && (
+        <GasShortfallDialog
+          open
+          triedAmountEth={shortfall.tried}
+          affordableEth={shortfall.affordable}
+          onUseAffordable={() => {
+            onAmountAdjusted?.(shortfall.affordable);
+            setShortfall(null);
+            enqueueSnackbar(t('Amount updated — review the fresh quote and press Swap.'), {
+              variant: 'info',
+            });
+          }}
+          onCancel={() => setShortfall(null)}
+        />
+      )}
       {user && setupChain && (
         <ChainSetupDialog
           open

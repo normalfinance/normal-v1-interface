@@ -128,16 +128,48 @@ async function executeEvm(
   const max = (a: bigint, b: bigint) => (a > b ? a : b);
   const liveFees = await client.estimateFeesPerGas().catch(() => null);
 
-  const unsigned = tx.gasPrice
+  const legacyPrice = tx.gasPrice
+    ? max(BigInt(tx.gasPrice), (await client.getGasPrice().catch(() => 0n)) as bigint)
+    : null;
+  const maxFeePerGas = max(BigInt(tx.maxFeePerGas ?? '0'), liveFees?.maxFeePerGas ?? 0n);
+
+  // Dynamic-gas layer 2 (Niko GO 2026-08-21): run the node's own admission
+  // rule (balance ≥ value + gas×price) LOCALLY, before the passkey ceremony.
+  // A gas spike between quote and now used to surface as the node's raw
+  // "insufficient funds" dump after the user had already signed; now it
+  // raises a structured shortfall BEFORE anything signs, and the engines
+  // offer the affordable amount instead of an error. Balance-read failure
+  // skips the check (the node still enforces it — this is UX, not custody).
+  const { computeAffordability, GasShortfallError } = await import('@/lib/lifi/gas-shortfall');
+  const balanceWei = await client
+    .getBalance({ address: ethereumAddress as `0x${string}` })
+    .catch(() => null);
+  if (balanceWei !== null) {
+    const check = computeAffordability({
+      balanceWei,
+      valueWei: common.value,
+      gasLimit: gas,
+      feePerGas: legacyPrice ?? maxFeePerGas,
+    });
+    if (!check.affordable) {
+      log('ETH: gas shortfall detected pre-sign', {
+        balance: balanceWei.toString(),
+        needs: check.costWei.toString(),
+      });
+      throw new GasShortfallError({ ...check, balanceWei });
+    }
+  }
+
+  const unsigned = legacyPrice
     ? serializeTransaction({
         ...common,
         type: 'legacy',
-        gasPrice: max(BigInt(tx.gasPrice), (await client.getGasPrice().catch(() => 0n)) as bigint),
+        gasPrice: legacyPrice,
       })
     : serializeTransaction({
         ...common,
         type: 'eip1559',
-        maxFeePerGas: max(BigInt(tx.maxFeePerGas ?? '0'), liveFees?.maxFeePerGas ?? 0n),
+        maxFeePerGas,
         maxPriorityFeePerGas: max(
           BigInt(tx.maxPriorityFeePerGas ?? '0'),
           liveFees?.maxPriorityFeePerGas ?? 0n

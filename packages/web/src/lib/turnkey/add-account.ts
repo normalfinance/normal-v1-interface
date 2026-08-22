@@ -7,6 +7,7 @@ import { buildAuthHeaders } from '@/utils/http';
 import { pickAddresses, getChainAddress } from '@/lib/chains/registry';
 
 import { createPasskeyRegistration } from './passkey';
+import { markWalletNeedsBackup } from './wallet-backup';
 import { getTurnkeyWalletInfo, invalidateTurnkeyWalletInfo } from './wallet-info';
 import { XLM_ACCOUNT, SOLANA_ACCOUNT, BITCOIN_ACCOUNT, ETHEREUM_ACCOUNT } from './account-specs';
 
@@ -148,6 +149,8 @@ export async function ensureChainAccount(
     }
     const data = await res.json();
     invalidateTurnkeyWalletInfo();
+    // A brand-new seed was just created → the user must back it up (doc 79).
+    markWalletNeedsBackup(existing.subOrgId);
     return {
       ...pickAddresses(data.wallet),
     };
@@ -167,6 +170,17 @@ export async function ensureChainAccount(
   }
   const data = await res.json();
   invalidateTurnkeyWalletInfo();
+  // A brand-new seed was just created → the user MUST back it up (doc 79).
+  // The route replies with ADDRESSES ONLY (pickAddresses drops subOrgId), so
+  // this always fell through to a fire-and-forget lookup — which could fail
+  // silently and never mark the backup for a brand-new user, the exact user
+  // the feature exists for. Read it back and AWAIT it instead.
+  try {
+    const fresh = await getTurnkeyWalletInfo();
+    if (fresh?.subOrgId) markWalletNeedsBackup(fresh.subOrgId);
+  } catch {
+    /* never block wallet creation; Settings still offers backup */
+  }
 
   return {
     bitcoinAddress: data.wallet?.bitcoinAddress ?? null,

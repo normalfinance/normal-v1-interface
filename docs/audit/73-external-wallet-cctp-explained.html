@@ -454,6 +454,40 @@
   <tr><td>G7</td><td>Open a BTC swap's popup vs an ETH/SOL one</td><td>ETAs differ per chain from the registry ("usually 10–60 minutes" vs "a few minutes") — same code path, different registry entries</td></tr>
 </table>
 
+<h2 id="autopilot" class="pagebreak">9f · One signature per swap — the autopilot (#33 Stage 3, 2026-08-20)</h2>
+
+<h3>The problem, in one sentence</h3>
+<p>A cross-ecosystem swap has a step on Base that happens 20–50 minutes AFTER you click Swap (outbound: the pivot swap once the bridge mints; inbound: the burn once your USDC lands) — which meant a second passkey prompt long after you walked away, and a stranded swap if you didn't come back.</p>
+
+<h3>How it works now</h3>
+<p>Your Turnkey wallet supports <strong>policy-scoped delegations</strong>: with ONE passkey ceremony you add a "Normal Autopilot" user to your own wallet organization, holding a key that lives on our server — but the WALLET ITSELF only lets that key sign transactions matching a policy: <strong>Base chain only, zero ETH value, and only the three allowlisted contracts</strong> (USDC, Circle's TokenMessenger, LI.FI's router). The enforcement is in the signer, not in our server's good behavior — a bug (or a breach) on our side still cannot move funds anywhere the policy doesn't allow.</p>
+<p>With the delegation active, the mid-flow Base step runs SERVER-side: gas top-up, approve, burn/pivot, receipt waits, and the database update all happen in one authenticated call. You sign ONCE when the swap starts. Bonus resilience: closing the tab no longer matters for that step — the server finishes it.</p>
+
+<h3>The safety rules (each one testable)</h3>
+<ul>
+  <li><strong>Fallback, never blockage.</strong> ANY autopilot failure — no consent, revoked, kill-switch, Turnkey down, policy rejection — silently falls back to the interactive prompts. Autopilot only ever removes prompts.</li>
+  <li><strong>The server re-checks everything</strong> the recovery banner checks, plus session ownership: your transfer, your addresses (from YOUR wallet row — the delivery address is never taken from the request), correct state, real Base balance.</li>
+  <li><strong>Status honesty:</strong> a FAILED status check shows "Unknown" in Settings and means "prompts this run" in the engine — never a fake On or Off.</li>
+  <li><strong>Consent is a moment, not a nag:</strong> offered once, before your first cross-chain swap signs anything. "Not now" is remembered; Settings keeps both doors (Turn on / Turn off, one passkey each).</li>
+  <li><strong>Kill-switch:</strong> AUTOPILOT_DISABLED=1 stops all server signing instantly, for everyone, without touching anyone's wallet.</li>
+  <li><strong>Audit trail:</strong> every server-signed transaction is recorded (who, which transfer, what purpose, when).</li>
+</ul>
+
+<h3>Part J — how to test</h3>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>J1</td><td>First cctp swap on an account without the delegation (env keys set)</td><td>The consent dialog appears BEFORE anything signs; "Enable — one passkey" → one ceremony → the swap continues; total prompts this first time = ceremony + the swap's own signature</td></tr>
+  <tr><td>J2</td><td>ETH → USDC (inbound) with autopilot ON</td><td>ONE signature at the start; the burn stage completes with NO further prompt; popup reaches Done; row shows burn + delivery normally</td></tr>
+  <tr><td>J3</td><td>USDC → ETH/SOL (outbound) with autopilot ON</td><td>ONE passkey (the Stellar burn); the pivot happens with NO prompt ~1 min after the mint; delivery tracking unchanged</td></tr>
+  <tr><td>J4</td><td>Pick "Not now" in the consent dialog</td><td>The swap continues with the old prompts; the dialog never reappears; Settings → Accounts shows Off with "Turn on — one passkey"</td></tr>
+  <tr><td>J5</td><td>Settings → Turn off, then swap again</td><td>Prompts are back mid-flow (fallback), no errors anywhere; Turn on restores 1-signature swaps</td></tr>
+  <tr><td>J6</td><td>Revoke mid-flow: start an inbound swap, Turn off in another tab BEFORE the burn stage</td><td>The engine falls back to the interactive burn prompt — the swap still completes; nothing strands</td></tr>
+  <tr><td>J7</td><td>Set AUTOPILOT_DISABLED=1 on the server, swap</td><td>Same as J5 — prompts everywhere, Settings shows Off/Unknown; no server signing happens</td></tr>
+  <tr><td>J8</td><td>Autopilot ON, start an inbound swap, CLOSE THE TAB during "arriving"</td><td>Reopen later: the recovery banner path still works as before — and if the server call was already running, the burn completed without you; the row shows burnTxHash</td></tr>
+  <tr><td>J9</td><td>Policy negative test (dev): call the Turnkey sign API with the autopilot key for a transfer to a RANDOM address</td><td>Turnkey REFUSES the signature (policy: contract not allowlisted) — this is the proof the guarantee lives in the signer</td></tr>
+  <tr><td>J10</td><td>Check the audit table after J2/J3</td><td>One row per server-signed tx in autopilot_signatures (subOrg, purpose cctp-inbound-*/cctp-outbound-*, timestamp)</td></tr>
+</table>
+
 <h2 id="status">10 · Status &amp; what remains</h2>
 <ul>
   <li><strong>Done and gated</strong> (typecheck, lint, 212 unit/component tests, production build): chunks 1, 2 (+ field fixes), 3, 4a–4e.</li>
