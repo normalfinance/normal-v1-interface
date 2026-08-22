@@ -120,38 +120,37 @@ export function SettingsAccounts() {
 
     try {
       setIsUnlinking(true);
-      await unlinkWallet(walletToUnlink);
-      // Unlinking the wallet that is CURRENTLY CONNECTED must also disconnect
-      // it (Niko 2026-08-22). Otherwise the app kept showing its tabs, source
-      // pills and labels while the DB row was gone — so ownership checks
-      // failed (403s) and the next page load silently RE-LINKED it, undoing
-      // the unlink. Forget the session memo too, or a reconnect would skip
-      // re-linking and leave it connected-but-unowned.
-      if (walletToUnlink === persist.wallet.address) {
-        forgetWalletLink(walletToUnlink);
-        forgetExternalWallet(); // explicit disconnect: do NOT re-attach on next login
-
+      // ORDER IS THE FIX (live 2026-08-22: disconnect → logout → login and
+      // Lobstr was BACK). Unlinking first left the slot holding the external
+      // wallet during an await, and the kit's restore effect fires in that
+      // window: it re-writes the reconnect memo AND calls ensureWalletLinked,
+      // which re-CREATES the linked_wallets row that was just deleted (worse,
+      // forgetWalletLink had cleared the guard that would have stopped it).
+      // Disconnecting locally FIRST makes every restore path inert — they all
+      // require an external wallet in the slot — so nothing can undo the
+      // unlink behind our back.
+      const wasConnected = walletToUnlink === persist.wallet.address;
+      if (wasConnected) {
         try {
           await kitDisconnect();
         } catch {
-          /* the kit may already be disconnected — the slot clear below is what matters */
+          /* kit may already be disconnected — the slot clear below is what matters */
         }
         persist.disconnectWallet();
-        // Fall back to the Normal wallet (live 2026-08-22: disconnecting the
-        // external wallet left NO Stellar wallet connected, so savings — which
-        // live on the Normal wallet — read $0.00, and swaps/sends had no
-        // wallet either). The self-heal cannot do this for us: an empty slot
-        // whose breadcrumb names an external wallet means "disconnected by
-        // choice" (invariants I2/I7), so it deliberately stays out. Here the
-        // intent is explicit, so the fallback is explicit too.
-        if (turnkeyStellar) {
-          try {
-            await connectWalletWithoutKeypair(turnkeyStellar);
-          } catch (e) {
-            // Leave the slot empty rather than guess; the drawer still offers
-            // wallet setup/connect.
-            logger.warn('[SETTINGS] Could not fall back to the Normal wallet:', e);
-          }
+        forgetWalletLink(walletToUnlink);
+        forgetExternalWallet(); // explicit disconnect: never re-attach at login
+      }
+
+      await unlinkWallet(walletToUnlink);
+
+      if (wasConnected && turnkeyStellar) {
+        // Fall back to the Normal wallet: an empty slot leaves savings/swaps/
+        // sends with no Stellar wallet (savings read $0.00). The self-heal
+        // deliberately stays out here (I2/I7), so the end state is explicit.
+        try {
+          await connectWalletWithoutKeypair(turnkeyStellar);
+        } catch (e) {
+          logger.warn('[SETTINGS] Could not fall back to the Normal wallet:', e);
         }
       }
       enqueueSnackbar(t('Account unlinked successfully'), { variant: 'success' });

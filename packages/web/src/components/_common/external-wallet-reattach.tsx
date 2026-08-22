@@ -25,7 +25,11 @@ import { useRef, useState, useEffect } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { getLinkedWallets } from '@/services/linked-wallets';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { forgetExternalWallet, readExternalWalletMemo } from '@/lib/wallet-reconnect-memo';
+import {
+  forgetExternalWallet,
+  readExternalWalletMemo,
+  rememberExternalWallet,
+} from '@/lib/wallet-reconnect-memo';
 
 // A fresh session can take a moment to be usable by the API; retry a couple of
 // times, then stop. Never loop: the user can always reconnect by hand.
@@ -37,11 +41,26 @@ export default function ExternalWalletReattach() {
   // Subscribe to the slot address only — the store object's identity changes
   // on every state write, which would re-run this effect constantly.
   const slotAddress = usePersistStore((s) => s.wallet.address);
+  const slotWalletType = usePersistStore((s) => s.wallet.walletType);
   const attemptsFor = useRef<{ userId: string; count: number } | null>(null);
   // A retry must re-run the effect, so it has to be STATE — bumping a ref
   // changes nothing (no re-render), which is how the first version of this
   // retry silently did nothing.
   const [retryTick, setRetryTick] = useState(0);
+
+  // The memo is DERIVED from the slot, never written imperatively at call
+  // sites. Imperative writes raced with disconnect: the kit's restore effect
+  // re-remembered a wallet the user had just removed. Deriving it means any
+  // stray write is corrected on the next render.
+  //   external in the slot  → remember it
+  //   Normal wallet in slot → forget (the user is not on an external wallet)
+  //   EMPTY slot            → leave it alone; that is logout, and surviving
+  //                           logout is the whole point of the memo.
+  useEffect(() => {
+    if (!slotWalletType) return;
+    if (slotWalletType === 'normal-wallet') forgetExternalWallet();
+    else if (slotAddress) rememberExternalWallet(slotAddress, slotWalletType);
+  }, [slotAddress, slotWalletType]);
 
   useEffect(() => {
     if (!user) {

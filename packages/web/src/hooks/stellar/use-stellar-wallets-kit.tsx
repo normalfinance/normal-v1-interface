@@ -1,7 +1,6 @@
 import { logger } from '@normalfinance/utils';
 import { useRef, useEffect, useCallback } from 'react';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
-import { rememberExternalWallet } from '@/lib/wallet-reconnect-memo';
 import { LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
@@ -175,7 +174,6 @@ export const useStellarWalletsKit = () => {
             // `linked_wallets` row and would stay unable to log transactions
             // until they happened to reconnect. Guarded to once per session,
             // and it never blocks the restore.
-            rememberExternalWallet(storedAddress, storedWalletType);
             void ensureWalletLinked(storedAddress, connectedWalletLabel(storedWalletType));
           } else {
             await new Promise((resolve) => setTimeout(resolve, 500));
@@ -184,7 +182,6 @@ export const useStellarWalletsKit = () => {
               walletKitStore.setPublicKey(result.address);
               walletKitStore.setConnected(true);
               await persistStore.connectWallet(result.address, storedWalletType);
-              rememberExternalWallet(result.address, storedWalletType);
               void ensureWalletLinked(result.address, connectedWalletLabel(storedWalletType));
             }
           }
@@ -237,8 +234,9 @@ export const useStellarWalletsKit = () => {
     // closure is from the render before the connect, so it is still stale.
     // Null means the user closed the picker without choosing.
     const connectedAddress = useStellarWalletKitStore.getState().publicKey;
-    // Remember it for the next login (cleared only by an explicit disconnect).
-    rememberExternalWallet(connectedAddress, usePersistStore.getState().wallet.walletType);
+    // NB: the reconnect memo is NOT written here — it is derived from the
+    // wallet slot in components/_common/external-wallet-reattach.tsx, so it
+    // cannot race with a disconnect.
     await ensureWalletLinked(
       connectedAddress,
       connectedWalletLabel(usePersistStore.getState().wallet.walletType)

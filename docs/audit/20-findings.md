@@ -2558,3 +2558,28 @@ memo existed — that is Niko's call, not a silent change made mid-fix.
 Recovery for anyone already stuck (empty slot, no memo): log out and in
 — handleAfterAuth finds no external memo and connects the Turnkey
 wallet. 257 tests, build clean.
+
+**Disconnected wallet came BACK after logout/login — a race, not a
+missing clear (2026-08-22):** Niko unlinked Lobstr in Settings, logged
+out, logged in, and it was connected again. The clear WAS running; it
+was being undone. Mechanism: the unlink handler awaited
+`unlinkWallet()` (network) WHILE the slot still held Lobstr, and the
+kit's restore effect fires in that window because its guard only needs
+an external wallet in the slot. That effect does two damaging things at
+once — `rememberExternalWallet()` re-writes the memo just cleared, and
+`ensureWalletLinked()` sees "not linked" (the row was just deleted) and
+calls `linkWallet()`, RE-CREATING it. My own `forgetWalletLink()` made
+the re-link certain by clearing the guard that would have skipped it.
+Both artifacts restored ⇒ login legitimately re-attached the wallet.
+TWO STRUCTURAL FIXES: (1) ORDER — the unlink handler now disconnects
+LOCALLY first (kit + slot + memos), then deletes the server row; with
+an empty slot every restore path is inert, so nothing can undo the
+unlink behind us. (2) The memo is now DERIVED from the wallet slot in
+one effect (external ⇒ remember, normal-wallet ⇒ forget, EMPTY ⇒ leave
+alone so it survives logout) instead of being written imperatively at
+three call sites — a stray write is corrected on the next render rather
+than persisting. The imperative writes in use-stellar-wallets-kit are
+gone. RULES: (1) mutate LOCAL state before the network call when a
+concurrent reader can rebuild what you are deleting; (2) state that
+several code paths write is safer DERIVED from one source than written
+imperatively in each. 257 tests, build clean.
