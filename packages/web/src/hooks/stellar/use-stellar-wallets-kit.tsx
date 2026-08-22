@@ -140,11 +140,21 @@ export const useStellarWalletsKit = () => {
 
         const walletId = getWalletIdFromType(storedWalletType);
         if (!walletId) {
-          logger.warn('[WALLET KIT] Persisted wallet type cannot be restored:', storedWalletType);
-          walletKitStore.setPublicKey(null);
-          walletKitStore.setConnected(false);
-          walletKitStore.setSelectedWallet(null);
-          persistStore.disconnectWallet();
+          // DO NOT disconnect (live incident 2026-08-22: "I see $53 for a
+          // second, then it immediately disconnects"). Failing to map a
+          // wallet type to a kit module means we cannot restore SIGNING —
+          // it does not mean the user disconnected their wallet. Wiping the
+          // slot here destroyed the connection on every fresh page/session,
+          // because that is the only time the kit store starts empty and
+          // this branch is reachable. Keep the wallet; signing prompts a
+          // reconnect through the existing session-expired flow.
+          logger.warn(
+            '[WALLET KIT] Cannot map wallet type to a kit module; leaving the wallet connected for display:',
+            storedWalletType
+          );
+          // Deterministic (a switch on a string): re-running cannot change the
+          // outcome, so stop re-checking and keep the console clean.
+          connectionChecked.current = true;
           return;
         }
 
@@ -179,12 +189,16 @@ export const useStellarWalletsKit = () => {
             }
           }
         } catch (restoreError) {
+          // Same rule as above: a transient kit failure (no WalletConnect
+          // session after a logout, module not ready, extension asleep) must
+          // not delete the user's connection. Clear only the KIT's state so a
+          // later attempt can retry; the slot — which drives balances and the
+          // wallet's identity everywhere — stays.
           connectionChecked.current = false;
           walletKitStore.setPublicKey(null);
           walletKitStore.setConnected(false);
           walletKitStore.setSelectedWallet(null);
-          persistStore.disconnectWallet();
-          logger.error('Failed to restore wallet:', restoreError);
+          logger.error('Failed to restore wallet (kit only; wallet kept):', restoreError);
         }
       } catch (error) {
         logger.error('Failed to check connection:', error);

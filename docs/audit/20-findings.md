@@ -2450,3 +2450,36 @@ to an existing function, check what GATES that function — reachability
 first; (2) "runs when X is absent" logic cannot live inside code gated
 on X being present; (3) a retry must change STATE, never a ref.
 253 tests, build clean.
+
+**"Connects for a second, then disconnects" — the kit was DELETING the
+wallet (2026-08-22):** Niko: "$53 for a second, then it immediately
+disconnects." That symptom proved the re-attach now WORKS (the slot was
+being written) and that something else destroyed it. Enumerated every
+disconnectWallet() call site; two live in use-stellar-wallets-kit's
+restore path and both fire only when the KIT store starts empty — i.e.
+exactly once per fresh page/session, which is why navigation was fine
+and login was not:
+  (a) `if (!walletId) { ...persistStore.disconnectWallet() }` — the
+      wallet type could not be mapped to a kit module;
+  (b) `catch (restoreError) { ...persistStore.disconnectWallet() }` —
+      ANY error from kit.setWallet (no WalletConnect session after a
+      logout, module not ready, extension asleep).
+ROOT CONFUSION: display/identity (the persist slot) and signing
+capability (the kit) were treated as one thing, so a kit hiccup wiped
+the user's wallet everywhere. FIX: neither branch disconnects now.
+(a) logs and keeps the wallet (marking the check done — a string switch
+cannot change outcome); (b) clears ONLY kit state and allows a retry.
+Signing later goes through the existing session-expired reconnect flow
+(tested live as F10/R7), so nothing is lost by keeping the slot.
+SECOND BUG, same report: "USDC savings doubled until refresh."
+use-savings-position's companion SWR uses `keepPreviousData: true`, so
+when the companion key goes null (the companion stops being a SEPARATE
+wallet — e.g. the slot becomes the Normal wallet during the login
+transition) SWR RETAINS the last position, and use-portfolio adds it
+unconditionally: `savings.value + savings.companionValue` → double.
+Fixed by gating companionValue/companionPosition/companionEarnings on a
+real companionAddress. RULES: (1) identity/display state and
+signing/transport state are separate — a transport failure may never
+delete identity; (2) with keepPreviousData, a null key does NOT clear
+data — derive from the KEY, not the retained payload. 253 tests, build
+clean.
