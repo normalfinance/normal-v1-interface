@@ -2602,3 +2602,29 @@ lower the amount or use the QR above"). RULE (2nd time — the readiness
 notices learned it in #74): every funding step needs a fund-from-
 ANYWHERE path; a flow that can only be completed from one wallet is a
 dead end the moment that wallet cannot pay. 257 tests, build clean.
+
+**Signup: activation step for an ALREADY-ACTIVE wallet, with no QR
+(staging 2026-08-22):** Niko's "the QR code was missing" was the clue
+that identified the component — the wizard's own `fund-xlm` step, whose
+QR is keyed on `wizardWalletAddress`. Its connect handler had TWO
+defects, both visible in that one symptom:
+  (a) STALE CLOSURE — `const addr = persist.wallet.address ||
+      stellarPublicKey` reads values from the render BEFORE the connect,
+      so on a fresh signup both are empty; `wizardWalletAddress` stayed
+      '' ⇒ no QR, and useAccountStatus('') reports "not activated".
+      This is the exact trap use-stellar-wallets-kit documents for its
+      own connect path ("the zustand value captured in this closure is
+      from the render before the connect") — the wizard never got it.
+  (b) UNCONDITIONAL ROUTING — it called setStep('fund-xlm') for every
+      connect, so even a correctly-read, fully funded wallet was told to
+      activate itself.
+FIX: read the address from getState() (both stores), then probe with
+fetchAccountStrict and route to fund-xlm ONLY when the account really
+does not exist; a failed probe asserts nothing (#74 rule) and the
+wizard closes, leaving the readiness notices to raise anything real.
+`publicKey` is no longer destructured from the kit hook in the wizard,
+with a comment, so the stale value cannot be reached again. RULES:
+(1) after an await that mutates a store, re-read from getState() —
+never from the enclosing render's values; (2) a "fix this" step must be
+gated on a probe that says it is broken, never on the action that
+preceded it. 257 tests, build clean.
