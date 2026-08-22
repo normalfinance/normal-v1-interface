@@ -3057,3 +3057,53 @@ abandoned. Bounded and non-blocking; worth an idempotency key if it is ever
 seen in the wild.
 RULE: verifying a fix "covers all chains" means walking the whole path the
 retry takes, not just the call that threw.
+
+**Enabling autopilot did not help the swap you enabled it for (2026-08-22,
+fixed):** the engine decided server-vs-interactive by reading
+/api/autopilot/status immediately before each Base leg. That read is
+authoritative but it is a SNAPSHOT — a grant that lands after it cannot
+change the leg. So the user enabled "one signature", still signed the approve
++ pivot manually on that run, and only saw the benefit on the NEXT swap,
+which reads exactly like "the popup didn't register".
+Worse, the in-modal offer promises the current run in so many words: "Enable
+automatic completion and this swap finishes by itself."
+Ruled out first, by reading the code rather than guessing: the status route
+is force-dynamic (no cache); the consent dialog awaits the ceremony; and the
+ceremony throws unless Turnkey returned a real policyId — so a resolved grant
+means the policy genuinely exists.
+FIX: createAutopilotGate (sections/swap/engines/autopilot-gate.ts) makes a
+completed grant STICKY for the run and skips the status read once granted —
+that read is precisely what lagged. Both doors funnel through
+handleConsentChoice, so one seam covers the start dialog AND the in-modal
+box; a grant from Settings in another tab still resolves through the live
+check. Optimism is safe by construction: the server re-verifies ownership,
+transfer state, addresses and the policy, and tryAutopilot returns null on
+any refusal, so the caller falls back to interactive — an optimistic yes
+costs one refused request, never a wrong signature. A revocation mid-run is
+equally safe for the same reason. 4 tests.
+RULE: when a user action changes what the current run may do, the run must
+hold that fact, not re-derive it from a source that can lag.
+
+**Chain-setup dialog stayed open after the wallet was created (2026-08-22,
+fixed):** both engines closed it only AFTER awaiting a refresh —
+    if (setupChain) await refetchChain(setupChain);
+    setSetupChain(null);
+— with no catch. A rejected or hanging refresh therefore skipped the close and
+left "Set up Bitcoin wallet" on screen over a wallet that had just been
+created successfully, with no way to tell it had worked. The account exists by
+the time onSuccess runs, so the close must not depend on the refresh: it is
+now in `finally` in the cctp AND lifi engines (the lifi one had the identical
+shape — fixing one would have left the other).
+
+**"I did not get the passphrase" when adding BTC/ETH (2026-08-22, fixed):**
+by design the chain-add path did NOT ask for backup, because the new chain
+derives from the SAME seed — there is no new phrase. Correct in principle, but
+it means a user who missed or dismissed the prompt at wallet creation is never
+asked again in that session while adding addresses that all depend on that one
+phrase. ensureChainAccount now calls markWalletNeedsBackup after a successful
+chain add. That helper returns early once the phrase is confirmed, so a user
+who already backed up is never nagged — 5 tests pin exactly that property,
+since it is what stops this becoming a dialog on every BTC/ETH/SOL setup.
+NOT changed: we still do not claim the new chain has its own phrase. One seed,
+one phrase, covering every chain — the dialog just appears until it is saved.
+291 tests, build clean.

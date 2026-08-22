@@ -49,6 +49,7 @@ import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import AutopilotConsentDialog from '@/components/_common/autopilot-consent-dialog';
 
 import { groupOf } from './types';
+import { createAutopilotGate } from './autopilot-gate';
 import { isInsufficientGasError } from './gas-reserve';
 import { type CctpStage, CctpProgressModal } from '../cctp-progress-modal';
 
@@ -451,6 +452,11 @@ export function useCctpEngine({
     }
   }, []);
 
+  // Sticky for the run: a grant made mid-swap (start dialog OR the in-modal
+  // "this swap finishes by itself" box) must count for THIS swap, not just
+  // the next one. See autopilot-gate.ts.
+  const autopilotGate = useRef(createAutopilotGate(() => autopilotActive()));
+
   // The consent offer itself — at swap start (Niko's final call 2026-08-21;
   // the earlier post-swap move was reacting to the ceremony BREAKING, not
   // the placement). Also fired as a no-op backstop after Done. Resolves when
@@ -474,7 +480,12 @@ export function useCctpEngine({
 
   const handleConsentChoice = useCallback((granted: boolean) => {
     setConsentOpen(false);
-    if (granted) setAutopilotOn(true);
+    if (granted) {
+      setAutopilotOn(true);
+      // The ceremony verified the Turnkey policy before resolving, so this is
+      // fact, not optimism — and it must outrank any later status snapshot.
+      autopilotGate.current.markGranted();
+    }
     if (!granted) {
       try {
         localStorage.setItem('nf:autopilot-declined:v1', String(Date.now()));
@@ -671,7 +682,9 @@ export function useCctpEngine({
         // rejection, timeout) falls through to the interactive path below;
         // autopilot never blocks a swap, it only removes prompts.
         setStage('topup');
-        const autoBurn = (await autopilotActive()) ? await tryAutopilot('burn', transferId) : null;
+        const autoBurn = (await autopilotGate.current.isActive())
+          ? await tryAutopilot('burn', transferId)
+          : null;
         if (autoBurn) {
           setStage('burn'); // server patched burnTxHash + BURN_SUBMITTED already
         } else {
@@ -776,7 +789,7 @@ export function useCctpEngine({
           fromChainId?: number;
           toChainId?: number;
         };
-        const autoPivot = (await autopilotActive())
+        const autoPivot = (await autopilotGate.current.isActive())
           ? await tryAutopilot('pivot', transferId)
           : null;
         if (autoPivot) {
@@ -1321,9 +1334,17 @@ export function useCctpEngine({
             onSuccess={async () => {
               // stellar → the slot adoption updates the persist store and the
               // aggregate carries balances; chain wallets refresh their hook.
-              if (setupChain === 'stellar') await refreshAggregate?.().catch(() => {});
-              else if (refetchChain) await refetchChain(setupChain);
-              setSetupChain(null);
+              // The close is in `finally`: the account already exists, so a
+              // failed refresh must not leave the dialog stuck open over a
+              // wallet that was created successfully (live 2026-08-22).
+              try {
+                if (setupChain === 'stellar') await refreshAggregate?.().catch(() => {});
+                else if (refetchChain) await refetchChain(setupChain);
+              } catch {
+                /* stale read only — the next render re-fetches */
+              } finally {
+                setSetupChain(null);
+              }
             }}
           />
         )}
