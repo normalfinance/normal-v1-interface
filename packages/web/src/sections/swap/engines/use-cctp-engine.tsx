@@ -1016,25 +1016,42 @@ export function useCctpEngine({
     // minutes. The chain addresses below are instant one-passkey formalities,
     // so they are asked for last — the user starts the long pole earliest and
     // the CTA always agrees with the banner.
-    if (missingStellar)
-      return onNeedsSetup
-        ? { label: t('Set up your Normal wallet'), action: onNeedsSetup, loading: false }
-        : {
-            // Sweep 2026-08-21: a BTC/ETH/SOL-first Turnkey user has NO
-            // Stellar slot — this was a dead button. ChainSetupDialog's
-            // stellar branch derives the account on the EXISTING wallet and
-            // adopts it into the empty slot (guarded by shouldAdoptIntoSlot).
-            label: t('Set up Stellar wallet'),
-            action: user ? () => setSetupChain('stellar') : null,
-            loading: false,
-            helper: (
-              <Typography
-                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}
-              >
-                {t('One passkey adds Stellar to your wallet — the swap continues right after.')}
-              </Typography>
-            ),
-          };
+    if (missingStellar) {
+      // Hybrid users get the guided dialog, which covers BOTH halves.
+      if (onNeedsSetup)
+        return { label: t('Set up your Normal wallet'), action: onNeedsSetup, loading: false };
+      // Single-wallet users: an address that EXISTS but is unfunded is not a
+      // setup problem — Stellar activates on receiving XLM, and no passkey
+      // can do it. Sending them to ChainSetupDialog re-derived the address
+      // they already had, changed nothing, and re-armed this very gate: a
+      // loop with no exit, while the banner above already said "send it at
+      // least 1 XLM" (sweep 2026-08-22).
+      if (stellarAddress)
+        return {
+          label: t('Add XLM to activate'),
+          action: () => startAction('receive'),
+          loading: false,
+          helper: (
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+              {t('Your Stellar account activates once it receives at least 1 XLM.')}
+            </Typography>
+          ),
+        };
+      return {
+        // Sweep 2026-08-21: a BTC/ETH/SOL-first Turnkey user has NO
+        // Stellar slot — this was a dead button. ChainSetupDialog's
+        // stellar branch derives the account on the EXISTING wallet and
+        // adopts it into the empty slot (guarded by shouldAdoptIntoSlot).
+        label: t('Set up Stellar wallet'),
+        action: user ? () => setSetupChain('stellar') : null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            {t('One passkey adds Stellar to your wallet — the swap continues right after.')}
+          </Typography>
+        ),
+      };
+    }
     if (needsTrustline)
       // The companion dialog can only fix the COMPANION — when the probed
       // address is the connected external wallet (deliver-to-external), fall

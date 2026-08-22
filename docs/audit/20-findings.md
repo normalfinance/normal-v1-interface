@@ -2938,3 +2938,75 @@ its purpose is abuse of wallet CREATION; linking a wallet the user just
 created legitimately consumes a slot, so heavy testing exhausts it in a day.
 Clearing a stuck counter = delete the single Upstash key
 faucet-wallet:<uid>:<window>. 275 tests, build clean.
+
+**"USDC balance not loaded yet — try again in a moment." was unreachable
+truth (2026-08-22, fixed):** the wallet-setup dialog's step 4 resolves USDC
+with getSwapUsdcToken → getTokenByContract(tokens, config.USDC_ADDRESS), i.e.
+matching on the Soroban C… address. Its tokens come from useStellarTokens,
+which maps the portfolio aggregate through portfolioAssetToToken — and
+NATIVE_DISPLAY has entries only for BTC/ETH/SOL, so XLM and USDC take the
+fallback `contract: a.symbol` and carry the literal string "USDC".
+'USDC' !== 'CCW67TSZ…' ⇒ the lookup ALWAYS failed. Waiting could never help,
+yet the message asked the user to wait — the worst error shape there is.
+XLM was unaffected only because getXlmToken matches by SYMBOL.
+Almost certainly a doc-75 Phase 2c regression: the retired persist token
+store carried real contracts; the aggregate replacement does not.
+FIX: withStellarTokenIdentity (src/utils/stellar-token-identity.ts) patches
+the contract + issuer from config where the aggregate is mapped. Fixed at the
+SOURCE, not by loosening the selector to match on symbol — the same selectors
+are handed open token lists, where a look-alike "USDC" must never win.
+4 tests. Also split the message: tokens still empty ⇒ "balances are still
+loading"; tokens present but no USDC ⇒ "your connected wallet has no USDC to
+move". No consumer depended on contract === 'USDC' (checked).
+RULE: never tell a user to wait for something that cannot change.
+
+## Scenario sweep #2 — external-only and chain-first onboarding (2026-08-22)
+
+Scope: every path where a user reaches /swap WITHOUT the wallet the swap
+needs. Axes: slot (external / Normal / hybrid) × Turnkey chains provisioned
+(none / stellar-first / chain-first) × Stellar state (no address / address
+unfunded / funded no trustline / ready) × direction (in/out) × engine
+(soroswap / cctp / lifi).
+
+THREE REAL BUGS FOUND AND FIXED:
+
+1. **The second wallet-creation door had no pre-flight limit check.**
+   chain-setup-dialog.tsx runs ensureChainAccount — which mints passkey +
+   sub-org for a first-timer — and only then calls linkWallet, the
+   rate-limited step. Identical to the bug fixed hours earlier in
+   normal-wallet-setup-dialog: an over-limit user pays a passkey and a
+   sub-org, then is refused. Fixing one door and not the other is exactly
+   how a bug survives a fix. Pre-flight added (stellar branch only — the
+   other chains consume no slot).
+
+2. **"No Stellar address" and "address not funded" were the same state, and
+   the second one LOOPED.** use-cctp-engine collapsed both into
+   missingStellar. For a single-wallet user the CTA was "Set up Stellar
+   wallet" → ChainSetupDialog → ensureChainAccount re-derived the address
+   they already had → onSuccess → the gate re-armed → the same button. No
+   exit, while the banner directly above it already said "send it at least
+   1 XLM". Split: no address ⇒ setup; address unfunded ⇒ "Add XLM to
+   activate" → startAction('receive'). Activation is a Stellar fact; no
+   passkey can produce it.
+
+3. **The soroswap activation gate was a dead button.** "Activate account to
+   swap" with action: null — it told the user to fund an account and offered
+   no way to see the address or a QR. Now "Add XLM to activate" →
+   onNeedsSetup ?? startAction('receive'), matching the cctp engine.
+
+VERIFIED SOUND (no change needed): userOwnsWallet checks turnkey_wallets as
+well as linked_wallets, so a chain-first wallet with no linked row does NOT
+403 on log-transaction; the lifi engine's missing-address gates already carry
+real setSetupChain actions; needsNormalWallet routes external-only users into
+the guided dialog for cctp AND lifi pairs; every remaining action:null in all
+three engines is an inert state (enter an amount / insufficient balance /
+fetching quote), not a gate the user must clear.
+
+NOTED, NOT CHANGED (needs a product call):
+ - "Insufficient balance" could offer Receive instead of being inert — the
+   user who wants to swap BTC they do not hold is one tap from funding.
+ - A hybrid user swapping USDC→SOL needs THREE ceremonies (companion setup,
+   SOL address, ETH address). Creating the two chain accounts the SWAP needs
+   in one prompt would halve it — distinct from the lazy-provisioning rule,
+   which forbids creating chains the user has not asked for.
+279 tests, build clean.

@@ -5,6 +5,7 @@ import type { Token } from '@normalfinance/types';
 import { useMemo } from 'react';
 import { useStellarConfig } from '@/hooks';
 import { portfolioAssetToToken } from '@/lib/portfolio/display';
+import { withStellarTokenIdentity } from '@/utils/stellar-token-identity';
 
 import { useWalletBalances } from './use-wallet-balances';
 
@@ -24,10 +25,9 @@ export function useStellarTokens(enabled = true): Token[] {
     () =>
       assets
         .filter((a) => a.chain === 'stellar')
-        .map((a) => {
-          const tk = portfolioAssetToToken(a);
-          return { ...tk, issuer: tk.symbol === 'USDC' ? config.USDC_ISSUER : '' } as Token;
-        }),
-    [assets, config.USDC_ISSUER]
+        .map((a) => withStellarTokenIdentity(portfolioAssetToToken(a), config)),
+    [assets, config]
   );
 }
+
+export { withStellarTokenIdentity };

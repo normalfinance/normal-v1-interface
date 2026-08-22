@@ -212,7 +212,15 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
         await addCompanionUsdcTrustline(companionAddress!, config);
       } else if (step === 'fund') {
         const usdc = findToken('USDC');
-        if (!usdc) throw new Error(t('USDC balance not loaded yet — try again in a moment.'));
+        // "Try again in a moment" is only true while balances are still
+        // arriving. Once they HAVE arrived, waiting changes nothing and the
+        // real answer is that this wallet holds no USDC — say which.
+        if (!usdc)
+          throw new Error(
+            tokens.length === 0
+              ? t('Balances are still loading — try again in a moment.')
+              : t('Your connected wallet has no USDC to move.')
+          );
         const amount = BigNumber(fundUsdc || 0);
         if (!amount.gt(0)) throw new Error(t('Enter the USDC amount to move.'));
         if (amount.gt(usdc.balance))

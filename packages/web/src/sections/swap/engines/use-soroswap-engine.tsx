@@ -11,6 +11,7 @@ import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { useSwap, type SoroswapStage } from '@/hooks/stellar/use-swap';
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -74,6 +75,7 @@ export function useSoroswapEngine({
   // "Activate account to swap" with no address to fund. One passkey in
   // ChainSetupDialog derives Stellar on their existing wallet and adopts it
   // into the empty slot.
+  const { startAction } = useAssetActionsContext();
   const [stellarSetupOpen, setStellarSetupOpen] = useState(false);
 
   const ADDRESS: Record<StellarSymbol, string> = {
@@ -216,15 +218,18 @@ export function useSoroswapEngine({
       };
     if (needsAccountActivation)
       return {
-        label: t('Activate account to swap'),
-        action: null,
+        label: t('Add XLM to activate'),
+        // Was a DEAD BUTTON: it told the user to fund the account and then
+        // offered no way to see the address or QR. A gate must offer the
+        // action that clears it (sweep 2026-08-22) — Receive is that action.
+        action: onNeedsSetup ?? (() => startAction('receive')),
         loading: false,
         helper: (
           <Typography
             sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', px: 1 }}
           >
             {t(
-              'Fund this account with at least 1 XLM to activate Stellar before adding a USDC trustline.'
+              'Your Stellar account activates once it receives at least 1 XLM — then the USDC trustline can be added.'
             )}
           </Typography>
         ),
