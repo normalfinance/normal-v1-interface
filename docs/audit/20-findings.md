@@ -3035,3 +3035,25 @@ that it does NOT swallow error 16 / rate limits / NotAllowedError — adopting
 an address after one of those would be inventing a success.
 RULE (third sighting today): make the RETRY converge on the desired state,
 never on repeating the action. 282 tests, build clean.
+
+**Confirming the error-6 fix covers EVERY chain — it did not, until this
+(2026-08-22):** the create side is a single choke point (addWalletAccounts,
+reached for all four chains via CHAIN_SPECS), so the already-exists
+fall-through covers BTC/ETH/SOL/XLM alike. But the SYNC it falls through to
+had an import-era guard:
+    if (!stellarAddress && !bitcoinAddress) → 422 "no recognizable accounts"
+A wallet that legitimately holds only SOL (asset-first onboarding on Solana)
+adding ETH derives neither stellar nor bitcoin, so the sync rejected it — the
+account Turnkey had just created could never reach our row, and the retry
+looped on the same 422. The SAME dead end, one layer down, reachable by a
+real onboarding path. The guard is now scoped to genuine imports; the lazy
+branch keeps its own correct check ("Wallet has no {chain} account").
+RESIDUAL GAP (named, not fixed): the FIRST-timer path has no equivalent
+convergence — if createSubOrganization succeeds and the DB write fails there
+is no row to key on, so a retry creates a SECOND sub-org. The user still ends
+up with a working wallet (the credential is registered to both, and
+/api/turnkey/credentials pins the one on our row), but the first sub-org is
+abandoned. Bounded and non-blocking; worth an idempotency key if it is ever
+seen in the wild.
+RULE: verifying a fix "covers all chains" means walking the whole path the
+retry takes, not just the call that threw.
