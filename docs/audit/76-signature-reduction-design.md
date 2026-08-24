@@ -168,6 +168,21 @@ Build order (each slice testable):
    mid-flow falls back to manual signing prompts, kill-switch env, policy
    rejects an out-of-policy tx (negative test with a manual call).
 
+> **D3 REVERSED 2026-08-24 (Niko).** The $2k/tx and $10k/day caps are
+> REMOVED: "we dont want any cap. we want user to swap 100 000 per day if he
+> wants." Limits are now opt-in (`AUTOPILOT_MAX_TX_USD`,
+> `AUTOPILOT_MAX_DAILY_USD`; unset/0 = unlimited, the shipped default). The
+> 90-day renew-on-use expiry is KEPT — it costs an active user nothing and
+> limits how long a forgotten delegation stays reachable.
+> What this gives up: the caps were the only VALUE bound surviving a leaked
+> AUTOPILOT_API_PRIVATE_KEY, because the Turnkey policy cannot read LI.FI
+> calldata and so cannot pin WHERE funds land if our route is bypassed. The
+> remaining layers are the policy (what may be signed), route-side delivery
+> pinning, the idle expiry, the audit trail and AUTOPILOT_DISABLED=1.
+> Compensating controls recommended, not yet built: rotate the autopilot key
+> on a schedule, and alert on autopilot_signatures above a threshold —
+> detection in place of prevention.
+
 Decisions locked: inline consent (D2), $2k/$10k/90d renew-on-use (D3),
 autopilot-before-contract (D1).
 
