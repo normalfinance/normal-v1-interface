@@ -3107,3 +3107,24 @@ since it is what stops this becoming a dialog on every BTC/ETH/SOL setup.
 NOT changed: we still do not claim the new chain has its own phrase. One seed,
 one phrase, covering every chain — the dialog just appears until it is saved.
 291 tests, build clean.
+
+**Autopilot value caps removed (2026-08-24, product decision):** D3's $2k/tx
+and $10k/day were launch-conservative and would have asked a real user for
+extra signatures on a large swap. Niko: "we dont want any cap. we want user
+to swap 100 000 per day if he wants." Now opt-in via AUTOPILOT_MAX_TX_USD /
+AUTOPILOT_MAX_DAILY_USD, where unset, 0, negative or NaN all mean UNLIMITED —
+an env typo must never silently block every swap, which is the failure mode a
+naive `Number(x) || default` would have produced.
+FREE WIN: the daily ceiling required a SUM over autopilot_signatures on every
+signed leg. With limits off that query is skipped entirely — one less database
+round trip per signature, on the critical path of every swap.
+KEPT: the 90-day renew-on-use idle expiry (0 = never), because it costs an
+active user nothing and shrinks how many delegations a stolen key can reach.
+ALSO CONFIRMED while answering "what should not be leaked": the parent
+TURNKEY_API_PRIVATE_KEY cannot move user funds — every sub-org mutation needs
+the user's passkey (root quorum), and the parent is not a member; it reads
+metadata and can create NEW sub-orgs. The key that matters is
+AUTOPILOT_API_PRIVATE_KEY. Three secrets in .env are referenced NOWHERE in
+source and should be deleted: NORMAL_HOT_A_SECRET, TRANSIT_RSA_PRIVATE_KEY,
+MNEMONIC_ENCRYPTION_SECRET. .env is git-ignored and no .env is tracked.
+5 tests on the cap decision; 296 total, build clean.

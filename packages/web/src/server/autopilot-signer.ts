@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { Turnkey } from '@turnkey/sdk-server';
 
+import { capEnabled, evaluateAutopilotCaps } from './autopilot-caps';
+
 // ---------------------------------------------------------------------------
 // #33 Stage 3, slice 2 — the autopilot's server-side signer.
 //
@@ -65,15 +67,27 @@ async function audit(row: {
   }
 }
 
-// ---- D3 caps (doc 76 §4, locked): $2k per leg, $10k per rolling day, 90-day
-// idle expiry (renew-on-use). Enforced HERE — one chokepoint for both routes —
-// on amount-bearing signatures (the burn / the pivot; a MAX approve moves no
-// funds by itself and is capped implicitly by the leg that follows it).
-// Overridable by env without a code change. A cap refusal throws → the route
-// 502s → the engine falls back to the interactive passkey path: an over-cap
-// swap still WORKS, it just asks the user to sign it themselves.
-const MAX_TX_USD = Number(process.env.AUTOPILOT_MAX_TX_USD ?? 2000);
-const MAX_DAILY_USD = Number(process.env.AUTOPILOT_MAX_DAILY_USD ?? 10_000);
+// ---- Value limits (reverses the D3 caps of doc 76 §4; product decision
+// 2026-08-24, Niko: "we dont want any cap. we want user to swap 100 000 per
+// day if he wants"). Limits are now OPT-IN: unset/0 = unlimited, which is the
+// shipped default. Set either env var to impose a ceiling without a deploy.
+//
+// What still bounds a leaked AUTOPILOT_API_PRIVATE_KEY once these are off:
+// the Turnkey policy (Base legs, allowlisted contracts — enforced inside
+// Turnkey), this route's delivery pinning, the idle expiry below, the
+// autopilot_signatures audit trail, and AUTOPILOT_DISABLED=1 as the stop
+// button. The gap the caps used to cover: Turnkey cannot read LI.FI calldata,
+// so it cannot enforce WHERE funds land if our route is bypassed.
+//
+// Enforced HERE — one chokepoint for both routes — on amount-bearing
+// signatures (the burn / the pivot; a MAX approve moves no funds by itself
+// and is bounded by the leg that follows it). A refusal throws → the route
+// 502s → the engine falls back to the interactive passkey path, so an
+// over-limit swap still WORKS, it just asks the user to sign it themselves.
+const MAX_TX_USD = Number(process.env.AUTOPILOT_MAX_TX_USD ?? 0);
+const MAX_DAILY_USD = Number(process.env.AUTOPILOT_MAX_DAILY_USD ?? 0);
+// KEPT at 90 days: it costs an active user nothing and it limits how long a
+// forgotten delegation stays reachable by a stolen key. 0 = never expires.
 const IDLE_EXPIRY_DAYS = Number(process.env.AUTOPILOT_IDLE_EXPIRY_DAYS ?? 90);
 
 /** Sum of signed autopilot legs for this sub-org in the last 24h. Depends on
@@ -144,16 +158,21 @@ export async function signWithAutopilot(params: {
     throw new Error('Autopilot signing is disabled');
   }
   if (amountUsd != null) {
-    if (amountUsd > MAX_TX_USD) {
+    // The rolling-window SUM is only worth a round trip when a daily ceiling
+    // actually exists. With limits off (the default) this skips one database
+    // query per signed leg, on the critical path of every swap.
+    const dailySoFar = capEnabled(MAX_DAILY_USD) ? await dailySignedUsd(subOrgId) : 0;
+    const verdict = evaluateAutopilotCaps({
+      amountUsd,
+      dailySoFar,
+      maxTxUsd: MAX_TX_USD,
+      maxDailyUsd: MAX_DAILY_USD,
+    });
+    if (!verdict.allowed) {
       await audit({ subOrgId, signWith, purpose, outcome: 'refused-cap', amountUsd });
-      throw new Error(`Autopilot per-transaction cap ($${MAX_TX_USD}) exceeded`);
+      throw new Error(verdict.reason);
     }
-    const daily = await dailySignedUsd(subOrgId);
-    if (daily + amountUsd > MAX_DAILY_USD) {
-      await audit({ subOrgId, signWith, purpose, outcome: 'refused-cap', amountUsd });
-      throw new Error(`Autopilot daily cap ($${MAX_DAILY_USD}) exceeded`);
-    }
-    if (await idleExpired(subOrgId)) {
+    if (capEnabled(IDLE_EXPIRY_DAYS) && (await idleExpired(subOrgId))) {
       await audit({ subOrgId, signWith, purpose, outcome: 'refused-expired', amountUsd });
       throw new Error('Autopilot delegation expired from inactivity — re-enable in Settings');
     }
