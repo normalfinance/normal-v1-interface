@@ -54,6 +54,7 @@ type Phase = 'warn' | 'revealing' | 'revealed' | 'error';
 export default function WalletExportDialog({
   open,
   onClose,
+  preselectWalletId,
   /** Mandatory-backup mode (doc 79 D2): after wallet creation the user must
    *  confirm they saved the phrase before the flow proceeds. onClose is
    *  disabled until 'revealed'; onConfirmedBackup fires on the checkbox. */
@@ -62,6 +63,10 @@ export default function WalletExportDialog({
 }: {
   open: boolean;
   onClose: () => void;
+  /** Open straight onto this wallet (doc 83 phase 2). Settings passes it when
+   *  the user asked to export ONE named wallet, so the dialog never starts on
+   *  a different seed than the row they clicked. */
+  preselectWalletId?: string;
   requireConfirm?: boolean;
   onConfirmedBackup?: () => void;
 }) {
@@ -94,15 +99,19 @@ export default function WalletExportDialog({
           credentials: 'include',
         });
         const data = await res.json();
-        setSeeds(Array.isArray(data?.wallets) ? data.wallets : []);
-        setSeedIndex(0);
+        const list: WalletSeed[] = Array.isArray(data?.wallets) ? data.wallets : [];
+        setSeeds(list);
+        const wanted = preselectWalletId
+          ? list.findIndex((w) => w.walletId === preselectWalletId)
+          : -1;
+        setSeedIndex(wanted >= 0 ? wanted : 0);
       } catch {
         // Falls back to the single-wallet path below — export must not depend
         // on this list being reachable.
         setSeeds([]);
       }
     })();
-  }, [open]);
+  }, [open, preselectWalletId]);
 
   // Prefer the SELECTED seed's own addresses; fall back to the wallet row only
   // when the seed list is unavailable (migration pending / older deployment).
