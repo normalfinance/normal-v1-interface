@@ -20,10 +20,20 @@
 
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
+import { buildAuthHeaders } from '@/utils/http';
 import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { runWebauthnCeremony } from '@/lib/turnkey/webauthn-guard';
 import { getTurnkeyWalletInfo, type TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+
+/** One Turnkey wallet (seed) as returned by /api/turnkey/wallets. */
+interface WalletSeed {
+  walletId: string;
+  label: string;
+  origin: string;
+  isPrimary: boolean;
+  addresses: Record<string, string | null>;
+}
 import { createPasskeyStamper, friendlyTurnkeyError } from '@/lib/turnkey/passkey-stamper';
 
 import Box from '@mui/material/Box';
@@ -63,6 +73,13 @@ export default function WalletExportDialog({
   // their whole wallet, not one chain (Niko 2026-08-21: "I don't even know
   // which wallet it is for?"). One HD seed derives all four.
   const [info, setInfo] = useState<TurnkeyWalletInfo | null>(null);
+  // doc 83: a sub-organization can hold SEVERAL wallets, each its own phrase
+  // with its own addresses. Reading walletId from one place and the addresses
+  // from another is what made the old dialog able to show wallet A's
+  // addresses above wallet B's phrase. Both now come from the same seed.
+  const [seeds, setSeeds] = useState<WalletSeed[]>([]);
+  const [seedIndex, setSeedIndex] = useState(0);
+  const seed: WalletSeed | null = seeds[seedIndex] ?? null;
   const stamperRef = useRef<{ clear: () => void } | null>(null);
 
   useEffect(() => {
@@ -70,9 +87,30 @@ export default function WalletExportDialog({
     getTurnkeyWalletInfo()
       .then(setInfo)
       .catch(() => {});
+    (async () => {
+      try {
+        const res = await fetch('/api/turnkey/wallets', {
+          headers: await buildAuthHeaders(),
+          credentials: 'include',
+        });
+        const data = await res.json();
+        setSeeds(Array.isArray(data?.wallets) ? data.wallets : []);
+        setSeedIndex(0);
+      } catch {
+        // Falls back to the single-wallet path below — export must not depend
+        // on this list being reachable.
+        setSeeds([]);
+      }
+    })();
   }, [open]);
 
-  const coveredChains = CHAIN_IDS.filter((id) => !!info?.[CHAINS[id].addressField]);
+  // Prefer the SELECTED seed's own addresses; fall back to the wallet row only
+  // when the seed list is unavailable (migration pending / older deployment).
+  const seedAddress = (id: (typeof CHAIN_IDS)[number]): string | null => {
+    if (seed) return seed.addresses[id] ?? null;
+    return (info?.[CHAINS[id].addressField] as string | undefined) ?? null;
+  };
+  const coveredChains = CHAIN_IDS.filter((id) => !!seedAddress(id));
 
   const teardown = useCallback(() => {
     // Removing the iframe wipes its decrypted phrase from the DOM entirely.
@@ -100,10 +138,16 @@ export default function WalletExportDialog({
     setPhase('revealing');
     try {
       const wallet = await getTurnkeyWalletInfo();
-      if (!wallet?.subOrgId || !wallet.walletId) {
+      if (!wallet?.subOrgId) {
         throw new Error(t('No Normal wallet found to export.'));
       }
       setInfo(wallet);
+      // The wallet whose phrase we are about to reveal. The selected seed wins
+      // over the row: they differ exactly in the case this feature exists for.
+      const exportWalletId = seed?.walletId ?? wallet.walletId;
+      if (!exportWalletId) {
+        throw new Error(t('No Normal wallet found to export.'));
+      }
 
       const container = document.getElementById(IFRAME_CONTAINER_ID);
       if (!container) throw new Error(t('Export view is not ready — try again.'));
@@ -158,7 +202,7 @@ export default function WalletExportDialog({
           type: 'ACTIVITY_TYPE_EXPORT_WALLET',
           timestampMs: String(Date.now()),
           organizationId: wallet.subOrgId,
-          parameters: { walletId: wallet.walletId, targetPublicKey },
+          parameters: { walletId: exportWalletId, targetPublicKey },
         })
       );
       const bundle = activity?.activity?.result?.exportWalletResult?.exportBundle;
@@ -240,8 +284,40 @@ export default function WalletExportDialog({
         }}
       >
         <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: '#0A0A0F', mb: '6px' }}>
-          {t('One phrase — your whole wallet. It restores all of these:')}
+          {seeds.length > 1
+            ? t('This phrase restores {{label}} — and only these addresses:', {
+                label: seed?.label ?? t('this wallet'),
+              })
+            : t('One phrase — your whole wallet. It restores all of these:')}
         </Typography>
+
+        {/* Only shown when there IS a choice. Each wallet is a different seed
+            with different addresses, so picking the wrong one means saving a
+            phrase that does not open the wallet you meant. */}
+        {seeds.length > 1 && phase === 'warn' && (
+          <Stack direction="row" spacing={0.5} sx={{ mb: '8px', flexWrap: 'wrap' }}>
+            {seeds.map((w, i) => (
+              <Box
+                key={w.walletId}
+                onClick={() => setSeedIndex(i)}
+                sx={{
+                  cursor: 'pointer',
+                  px: '10px',
+                  py: '4px',
+                  borderRadius: '999px',
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                  border: '1px solid',
+                  borderColor: i === seedIndex ? '#0A0A0F' : 'rgba(10,10,15,0.15)',
+                  color: i === seedIndex ? '#FFF' : 'rgba(10,10,15,0.7)',
+                  background: i === seedIndex ? '#0A0A0F' : 'transparent',
+                }}
+              >
+                {w.label}
+              </Box>
+            ))}
+          </Stack>
+        )}
         <Stack spacing={0.5}>
           {coveredChains.map((id) => (
             <Stack key={id} direction="row" justifyContent="space-between" alignItems="center">
@@ -255,7 +331,7 @@ export default function WalletExportDialog({
                   fontFamily: '"Geist Mono", "Courier New", monospace',
                 }}
               >
-                {format.fTruncate(info![CHAINS[id].addressField]!, 14)}
+                {format.fTruncate(seedAddress(id)!, 14)}
               </Typography>
             </Stack>
           ))}

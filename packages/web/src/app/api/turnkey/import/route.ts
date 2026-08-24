@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { turnkey } from '@/lib/turnkey/server';
 import { CHAINS, CHAIN_IDS, isChainId, pickAddresses } from '@/lib/chains/registry';
+import { isPrimaryWallet, defaultSeedLabel, seedAddressUpdate } from '@/lib/turnkey/wallet-seeds';
 
 // ---------------------------------------------------------------------------
 // POST /api/turnkey/import
@@ -88,8 +89,19 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       });
     }
 
-    if (row.walletId && row.walletId !== walletId) {
-      logger.warn('[turnkey/import] Replacing existing wallet reference with imported wallet', {
+    // Is this the user's PRIMARY wallet? True for the wallet created at
+    // signup, for a first-ever import (import-init leaves walletId ''), and
+    // for every lazy chain-add, which re-syncs the same wallet.
+    //
+    // False means a SECOND seed arrived. Before doc 83 the row's walletId was
+    // overwritten while address columns were only filled when empty, so the
+    // row ended up describing two seeds at once — walletId from the imported
+    // wallet, stellarAddress from the original — and the export dialog, which
+    // picks by walletId, handed back a phrase that did not open the wallet on
+    // screen. The primary row is now left completely alone in that case.
+    const primary = isPrimaryWallet(row.walletId, walletId);
+    if (!primary) {
+      logger.log('[turnkey/import] Recording a SECOND wallet as a seed; primary row untouched', {
         uid: user.id.slice(0, 8),
       });
     }
@@ -118,6 +130,46 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
         const addr = derived[id];
         if (addr && !row[col]) data[col] = addr;
       }
+    }
+
+    // Every wallet is recorded here, primary or not — this table is the full
+    // list, and it is what the export dialog reads so a phrase is always shown
+    // with the addresses it actually controls. Best-effort: the table ships as
+    // additive SQL, so a deployment where it has not been run yet must still
+    // import wallets exactly as before.
+    try {
+      await prisma.turnkeyWalletSeed.upsert({
+        where: { supabaseUid_walletId: { supabaseUid: user.id, walletId } },
+        create: {
+          supabaseUid: user.id,
+          walletId,
+          label: defaultSeedLabel(primary, derived.stellar),
+          origin: primary ? 'created' : 'imported',
+          isPrimary: primary,
+          stellarAddress: derived.stellar,
+          bitcoinAddress: derived.bitcoin,
+          ethereumAddress: derived.ethereum,
+          solanaAddress: derived.solana,
+        },
+        // A lazy chain-add re-syncs the same wallet with one more address, so
+        // only overwrite fields we actually derived — never null one out.
+        update: seedAddressUpdate(derived),
+      });
+    } catch (e) {
+      logger.warn('[turnkey/import] Could not record wallet seed (migration pending?)', {
+        uid: user.id.slice(0, 8),
+        error: String((e as Error)?.message ?? e).slice(0, 120),
+      });
+    }
+
+    // A second seed must NOT rewrite the primary row: that rewrite is the
+    // whole defect. The imported wallet is recorded above and surfaces in the
+    // UI in phase 2.
+    if (!primary) {
+      return NextResponse.json(
+        { wallet: pickAddresses(row), stellarMatch, secondary: true, walletId },
+        { status: 201 }
+      );
     }
 
     const saved = await prisma.turnkeyWallet.update({

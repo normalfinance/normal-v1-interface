@@ -237,6 +237,31 @@ model TurnkeyWallet {
   @@map("turnkey_wallets")
 }
 
+/// One row per Turnkey WALLET (seed). A sub-organization can hold several;
+/// TurnkeyWallet above stays the user's sub-org + PRIMARY wallet, and this is
+/// the full list. Signing never uses walletId (Turnkey signs by
+/// organizationId + address), so this table is for records and display only.
+/// Table ships as additive SQL: docs/audit/sql/turnkey_wallet_seeds.sql
+model TurnkeyWalletSeed {
+  id              String   @id @default(cuid())
+  supabaseUid     String
+  walletId        String
+  label           String?
+  /// 'created' (made in-app) | 'imported' (a phrase the user brought)
+  origin          String   @default("created")
+  isPrimary       Boolean  @default(false)
+  bitcoinAddress  String?
+  ethereumAddress String?
+  solanaAddress   String?
+  stellarAddress  String?
+  createdAt       DateTime @default(now())
+
+  @@unique([supabaseUid, walletId], map: "turnkey_wallet_seeds_uid_wallet_key")
+  @@index([supabaseUid])
+  @@index([stellarAddress])
+  @@map("turnkey_wallet_seeds")
+}
+
 model normal_contract_events {
   id                          String   @id
   type                        String

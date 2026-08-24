@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Closing the Register — The Audit Tail, Explained &amp; How to Test It</title>
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --muted: #5a5a66;
+    --line: #e6e6ea;
+    --soft: #f6f6f8;
+    --green: #0a6649;
+    --amber: #7a4a00;
+    --red: #991b1b;
+    --blue: #1d4ed8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    max-width: 860px;
+    padding: 48px 32px 96px;
+    font: 15px/1.65 "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: #fff;
+  }
+  h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 34px; }
+  h2 {
+    font-size: 21px; letter-spacing: -0.01em;
+    margin: 44px 0 12px; padding-top: 18px;
+    border-top: 2px solid var(--ink);
+  }
+  h3 { font-size: 16.5px; margin: 26px 0 8px; }
+  p, li { color: #23232b; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 5px 0; }
+  strong { color: var(--ink); }
+  code {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px; background: var(--soft);
+    padding: 1px 6px; border-radius: 5px;
+  }
+  pre {
+    background: var(--soft); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; overflow-x: auto; font-size: 12.5px;
+    font-family: "Consolas", "Courier New", monospace; line-height: 1.5;
+  }
+  table {
+    border-collapse: collapse; width: 100%;
+    margin: 14px 0 20px; font-size: 13.5px;
+  }
+  th, td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .box {
+    border: 1px solid var(--line); border-left: 4px solid var(--ink);
+    background: var(--soft); border-radius: 8px;
+    padding: 14px 18px; margin: 18px 0;
+  }
+  .box.warn { border-left-color: #d97706; }
+  .box.good { border-left-color: #1ab37d; }
+  .box.bad { border-left-color: #991b1b; }
+  .box .label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px;
+  }
+  .kv { color: var(--muted); font-size: 13px; }
+  .ok { color: var(--green); font-weight: 700; }
+  .no { color: var(--red); font-weight: 700; }
+  .toc { columns: 2; gap: 32px; font-size: 14px; }
+  .toc a { color: var(--blue); text-decoration: none; }
+  @media print {
+    body { padding: 0 8px; font-size: 12.5px; }
+    h2 { break-after: avoid; page-break-after: avoid; }
+    h3 { break-after: avoid; }
+    table, .box { break-inside: avoid; page-break-inside: avoid; }
+    .pagebreak { break-before: page; page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Closing the Register</h1>
+<p class="subtitle">The last rows of the audit backlog · branch <code>chore/register-tail</code> · 2026-08-24 · plan in doc 81</p>
+
+<div class="box good">
+  <div class="label">The theme of this document</div>
+  Three leftover items, and the lesson that a backlog is a <em>claim</em>, not a fact. Checking
+  the register against the code first showed several rows were already closed — and one row
+  filed as "cosmetic" turned out to be the most serious finding of the batch: under one
+  specific flow, the recovery phrase we hand a user does not control the wallet we show them.
+  Two items shipped; the third is deliberately <strong>not</strong> fixed, because the fix is a
+  product decision and building UI over an unresolved data question is how you ship something
+  that looks right and isn't.
+</div>
+
+<h2 id="toc">Contents</h2>
+<div class="toc">
+  <a href="#stale">1 · The backlog was stale — check before you build</a><br/>
+  <a href="#turbo">2 · 68 variables the build cache could not see</a><br/>
+  <a href="#guard">3 · The guard is a test, not a script</a><br/>
+  <a href="#activity">4 · An open door into the database</a><br/>
+  <a href="#misses">5 · Two near-misses the change almost caused</a><br/>
+  <a href="#limit">6 · The limit that never reached Postgres</a><br/>
+  <a href="#spike">7 · #40: one row, two seeds, wrong phrase</a><br/>
+  <a href="#tests">8 · Tests — automated and by hand</a><br/>
+  <a href="#left">9 · What is left, and the plan for each</a><br/>
+</div>
+
+<h2 id="stale">1 · The backlog was stale — check before you build</h2>
+
+<p>The first step was not writing code, it was re-reading the register against the codebase.
+Four rows listed as open were already done:</p>
+
+<table>
+  <tr><th>Register row</th><th>Reality on 2026-08-24</th></tr>
+  <tr><td>Block C #1 — auth on the two <code>log-transaction</code> routes</td><td><span class="ok">Done</span> — both have <code>withAuth</code> plus an ownership check</td></tr>
+  <tr><td>Block C #3 — <code>lifi/quote</code> + <code>swap/quote</code> unprotected</td><td><span class="ok">Done</span> — both rate-limited</td></tr>
+  <tr><td>#7/#12 — retire the persisted token store</td><td><span class="ok">Done</span> — no readers left</td></tr>
+  <tr><td>#53 — chart on recorded history</td><td><span class="ok">Done</span> — <code>savings-chart.tsx:110</code> reads <code>#53: REAL history</code></td></tr>
+</table>
+
+<div class="box">
+  <div class="label">The habit worth copying</div>
+  A backlog records what was true when someone wrote it down. Before planning work from one,
+  spend ten minutes proving each row against the code. Here it saved building four things that
+  already existed — and it is the same habit that turned row #40 from "cosmetic" into the most
+  important finding in this batch.
+</div>
+
+<h2 id="turbo">2 · 68 variables the build cache could not see</h2>
+
+<p>Turborepo decides "did anything change since the last build?" by hashing the inputs it has
+been <em>told</em> about, in <code>turbo.jsonc</code>. A variable the app reads but the config
+never mentions is invisible to that hash.</p>
+
+<pre>change NEXT_PUBLIC_TURNKEY_RP_ID  →  rebuild  →  turbo reports a CACHE HIT
+                                  →  the previous bundle ships, still carrying the old value</pre>
+
+<p>Nothing in the diff explains it. It bites hardest on <code>NEXT_PUBLIC_*</code>, which
+Next.js inlines directly into the JavaScript at build time — the value is baked into the file,
+so a stale bundle is a stale <em>value</em>, not just stale code.</p>
+
+<p>The count:</p>
+
+<table>
+  <tr><th></th><th>Count</th></tr>
+  <tr><td>Variables the app reads (<code>process.env.X</code>)</td><td>96</td></tr>
+  <tr><td>Declared in <code>turbo.jsonc</code></td><td>56</td></tr>
+  <tr><td><strong>Read but undeclared</strong></td><td><strong>68</strong></td></tr>
+</table>
+
+<p class="kv">(68 exceeds 96 − 56 because some declared entries were themselves unused.)</p>
+
+<p>And the undeclared list was precisely the set whose silent staleness is hardest to diagnose:</p>
+
+<pre>NEXT_PUBLIC_TURNKEY_RP_ID          ← the passkey domain
+NEXT_PUBLIC_SUPABASE_URL / ANON_KEY
+NEXT_PUBLIC_MAINNET_USDC_ADDRESS / XLM_ADDRESS / DEFINDEX_VAULT
+NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY
+TURNKEY_* · AUTOPILOT_* · CCTP_* · LIFI_* · SOROSWAP_* · CRON_SECRET
+SUPABASE_SERVICE_ROLE_KEY · HELIUS / ETHERSCAN / COINGECKO / DUNE keys</pre>
+
+<div class="box warn">
+  <div class="label">Why this one was worth doing first</div>
+  We had just spent a day on a passkey failure where the config said one thing and the deployed
+  bundle behaved as though it said another. This is the mechanism that produces that class of
+  bug <em>on purpose</em>. Fixing it first means every later deploy on this branch is trustworthy.
+</div>
+
+<p>Also removed: <code>MNEMONIC_ENCRYPTION_SECRET</code>, declared but read nowhere in the source.
+Two more dead secrets live in <code>.env</code> only — see §9.</p>
+
+<h3>A correction on the record</h3>
+<p>The first version of this analysis reported "zero declarations". That was task-level
+<code>env</code>; <code>globalEnv</code> existed with 56 entries. The real figure is the 68 above.</p>
+
+<h2 id="guard">3 · The guard is a test, not a script</h2>
+
+<p>Adding 68 names fixes today. It does nothing about the next variable someone adds. The plan
+called for a CI script — but the repo already runs Jest in CI, and Jest can read files, so the
+guard became a <strong>test</strong> instead: no new dependency, no new pipeline step, and it
+fails on the pull request that introduces the gap.</p>
+
+<pre>src/utils/turbo-env-audit.ts        pure helpers
+src/utils/turbo-env-audit.test.ts   4 unit tests + 1 whole-tree guard</pre>
+
+<p>The helpers are pure and tested separately on purpose. A guard that silently passes — because
+its own parsing is broken — is worse than no guard at all, since it also removes the suspicion
+that something might be wrong.</p>
+
+<h2 id="activity">4 · An open door into the database</h2>
+
+<p><code>GET /api/wallet/activity</code> took a wallet address in the query string and returned
+that address's confirmed savings deposits and swaps. No login. No rate limit.</p>
+
+<p>The register dismissed it as "chain data is public anyway". That is true of the
+<em>content</em> — every row carries a transaction hash and the same facts sit on the Stellar
+ledger. It is not true of what we were doing:</p>
+
+<ul>
+  <li>we served a <strong>curated, filtered, ready-to-parse index</strong> of someone's money
+    movements, where the ledger requires scraping and reassembly</li>
+  <li>every call was <strong>two unauthenticated Postgres queries</strong> — an open load channel
+    into the database, not just a privacy question</li>
+</ul>
+
+<p>Decision A was taken: the route now requires a session and checks ownership, exactly like the
+two <code>log-transaction</code> routes. <code>userOwnsWallet</code> consults both
+<code>turnkey_wallets</code> and <code>linked_wallets</code>, so a hybrid user's companion wallet
+<em>and</em> their connected Lobstr wallet both still pass.</p>
+
+<div class="box">
+  <div class="label">Why private, when the data is public anyway</div>
+  Going private → public later is an endpoint you design, cache and rate-limit deliberately.
+  Going public → private later means breaking whatever grew to depend on it. "Public by design"
+  is a choice; "public by accident" is what this was.
+</div>
+
+<h2 id="misses">5 · Two near-misses the change almost caused</h2>
+
+<p>Wrapping a route in authentication is a two-line change that can break a feature in two
+directions. Both happened here, and both were caught before merge.</p>
+
+<h3>The caller had no session</h3>
+<p><code>fetchWalletActivity</code> used a bare <code>fetch(url)</code>. Adding
+<code>withAuth</code> without touching it would have returned 401 to every activity feed.</p>
+
+<div class="box bad">
+  <div class="label">Why that would have been nasty</div>
+  The fetcher returns <code>[]</code> when the response is not a success. So the failure would
+  have rendered as <strong>an empty activity list</strong> — indistinguishable from "this wallet
+  has no activity yet". A silent, plausible-looking wrong answer beats a loud error at hiding
+  from you.
+</div>
+
+<h3>The conformance guard still blessed the route</h3>
+<p><code>route-auth-conformance.test.ts</code> exists so no route is born public by accident:
+every route must use <code>withAuth</code> or appear in an allowlist <em>with a reason</em>.
+<code>wallet/activity</code> was in that list as "scoping decision pending". Left there, the
+guard designed to prevent this exact class of problem would have kept approving it. The entry is
+removed, with a note that it must never return.</p>
+
+<h2 id="limit">6 · The limit that never reached Postgres</h2>
+
+<p>Found while reading the route for the auth change, unrelated to it:</p>
+
+<pre>const limit = parseLimit(...)                      // parsed
+prisma.vaultDeposit.findMany({ where, orderBy })   // no `take`
+prisma.swapLog.findMany({ where, orderBy })        // no `take`
+items.slice(0, limit)                              // trimmed only here</pre>
+
+<p>Cause and effect: a wallet with 5,000 confirmed rows and a request for 50 → Postgres reads and
+ships all 5,000, and 4,950 are thrown away in the Node process. Your heaviest users generate your
+heaviest queries, on an endpoint the drawer opens on <em>every</em> visit. Both queries now carry
+<code>take: limit</code>.</p>
+
+<h2 id="spike">7 · #40: one row, two seeds, wrong phrase</h2>
+
+<p>The register said: <em>"Importing a Normal Stellar wallet hides the Turnkey one. VERIFIED
+cosmetic (DB keeps both). Fix = wallet list."</em></p>
+
+<p>It cannot be. <code>turnkey_wallets.supabaseUid</code> is <strong>unique</strong>, so there is
+exactly one row per user and the database cannot keep both. Reading the import path:</p>
+
+<ul>
+  <li><code>/api/turnkey/import</code> <strong>always</strong> overwrites <code>walletId</code>
+    with the imported wallet — it even logs <code>Replacing existing wallet reference</code></li>
+  <li>address columns are <strong>additive</strong>: <code>if (addr &amp;&amp; !row[col])</code>,
+    so an already-populated <code>stellarAddress</code> is left untouched</li>
+  <li><code>importMnemonicIntoTurnkey</code> <strong>explicitly supports</strong> an existing
+    sub-org (it skips the passkey ceremony when one exists), so this path is reachable by design,
+    not an edge case</li>
+</ul>
+
+<p>So a user who creates a Normal wallet and later imports a mnemonic ends with
+<strong>one row describing two seeds</strong>:</p>
+
+<pre>row.walletId        →  wallet B  (the imported one)
+row.stellarAddress  →  wallet A  (the original, never overwritten)</pre>
+
+<div class="box bad">
+  <div class="label">Why this is not cosmetic</div>
+  <code>wallet-export-dialog</code> exports <code>wallet.walletId</code>. So "Export recovery
+  phrase" hands the user <strong>wallet B's phrase</strong>, while the app shows and spends
+  <strong>wallet A's Stellar address</strong>. They save a phrase that does not control the
+  balance they are looking at. Separately, <code>addWalletAccounts</code> derives new chains from
+  <code>walletId</code>, so a later "Set up BTC wallet" lands on B while Stellar stays on A.
+</div>
+
+<p>The existing <code>stellarMatch</code> guard does not catch this: it compares the derived
+address against the <em>mnemonic's own</em> expected address, never against the row's
+pre-existing one.</p>
+
+<div class="box warn">
+  <div class="label">Confidence, stated honestly</div>
+  This is read from code, <strong>not reproduced live</strong>. It is written up rather than
+  fixed because the right fix is a product decision — refuse the import, migrate the row
+  wholesale, or model multiple wallets per user — and each implies different UI and different
+  migration work. Building a "wallet list" on top of the current row would have hidden the real
+  defect behind a nicer display.
+</div>
+
+<h2 id="tests">8 · Tests — automated and by hand</h2>
+
+<p>Everything needed to verify this branch lives in this section. The same manual rows are
+mirrored into doc 80 (D15–D17) so a full QA run picks them up, but this document is the
+authoritative copy: if the two ever disagree, this one is the source.</p>
+
+<h3>8.1 Automated — what runs in CI</h3>
+<table>
+  <tr><th>File</th><th>Tests</th><th>What it pins, and why that matters</th></tr>
+  <tr>
+    <td><code>src/utils/turbo-env-audit.test.ts</code></td>
+    <td>4 unit</td>
+    <td>
+      <strong>finds every <code>process.env.X</code></strong> — including repeats, so the set is
+      right<br/>
+      <strong>ignores lookalikes</strong> — <code>const NEXT_PUBLIC_FAKE</code> and
+      <code>obj.env.NOT_THIS</code> are not env reads<br/>
+      <strong>parses JSONC</strong> — declarations inside <code>//</code> comments must not count
+      as declared<br/>
+      <strong>separates undeclared reads from dead declarations</strong> — the two need opposite
+      actions
+    </td>
+  </tr>
+  <tr>
+    <td>…same file</td>
+    <td>1 guard</td>
+    <td>Walks <code>packages/web/src</code> and <code>packages/utils/src</code>, diffs against
+      <code>turbo.jsonc</code>, fails when anything is undeclared. This is the part that stops the
+      list rotting again — the 68 were not added by malice, they accumulated one variable at a
+      time with nobody watching</td>
+  </tr>
+  <tr>
+    <td><code>src/app/api/route-auth-conformance.test.ts</code></td>
+    <td>71</td>
+    <td>Every route must use <code>withAuth</code> or be allowlisted with a reason.
+      <code>wallet/activity</code> now falls under the rule instead of the exemption</td>
+  </tr>
+</table>
+
+<p class="kv">Suite total: <strong>301 tests across 37 suites</strong>. ESLint clean,
+<code>tsc --noEmit</code> clean, isolated production build exit 0.</p>
+
+<div class="box">
+  <div class="label">Why the guard is tested itself</div>
+  A guard whose own parsing is broken passes silently and, worse, removes the suspicion that
+  anything is wrong. The four unit tests exist so the fifth one can be trusted.
+</div>
+
+<h3>8.2 By hand — setup</h3>
+<ul>
+  <li><strong>Account A:</strong> a hybrid account — Normal wallet plus a connected
+    <strong>Lobstr</strong> wallet, both with some history (a swap and a savings deposit each is
+    enough).</li>
+  <li><strong>Account B:</strong> any second account, used only to prove one address cannot read
+    another's history.</li>
+  <li>Browser DevTools open on the <strong>Network</strong> tab for D17.</li>
+</ul>
+
+<h3>8.3 By hand — do → see</h3>
+<table>
+  <tr><th>#</th><th>Do</th><th>See</th></tr>
+  <tr>
+    <td>D15</td>
+    <td>As account A, open the drawer, then <code>/portfolio</code>, then an asset page</td>
+    <td>Activity renders for <strong>both</strong> wallets, same as before this branch.
+      <span class="no">An empty feed here is a failure, not "no activity"</span> — that is exactly
+      what a missing session now looks like</td>
+  </tr>
+  <tr>
+    <td>D16</td>
+    <td>Sign out. Open <code>/api/wallet/activity?walletAddress=&lt;any G…&gt;</code> in a tab</td>
+    <td><code>401</code>. Now sign in as account B and request account A's address:
+      <code>403</code>. Before this branch both returned the full history</td>
+  </tr>
+  <tr>
+    <td>D17</td>
+    <td>As the account with the longest history, open the drawer with the Network tab visible</td>
+    <td>One <code>wallet/activity</code> request, returning promptly. The database now reads only
+      the rows it returns</td>
+  </tr>
+  <tr>
+    <td>T1</td>
+    <td>Change any <code>NEXT_PUBLIC_*</code> value, then run the web build twice</td>
+    <td>The first build after the change is a <strong>miss</strong>. Before this branch turbo could
+      report a hit and ship the previous bundle, still carrying the old value</td>
+  </tr>
+  <tr>
+    <td>T2</td>
+    <td>Add <code>process.env.SOMETHING_NEW</code> anywhere in the app, then run <code>yarn test</code></td>
+    <td>The suite <strong>fails</strong>, naming <code>SOMETHING_NEW</code>. That is the guard doing
+      its job; declare it in <code>turbo.jsonc</code> and it passes</td>
+  </tr>
+</table>
+
+<div class="box warn">
+  <div class="label">The row that actually matters</div>
+  D15 is the only place this branch can plausibly break a user-visible thing, and its failure mode
+  is quiet. Run it before merging, on a hybrid account, and look at the feed rather than at whether
+  the page loaded.
+</div>
+
+<h2 id="left" class="pagebreak">9 · What is left, and the plan for each</h2>
+
+<p>Two items belong to Niko and need no code. Three are engineering work, each with a sketch of
+the approach so the next session starts from a position rather than a blank page. <strong>None of
+the three has a GO yet</strong> — they are written here to be argued with, not to be built
+silently.</p>
+
+<h3>9.1 Yours, no code needed</h3>
+<table>
+  <tr><th>Item</th><th>Detail</th></tr>
+  <tr>
+    <td><strong>Live-verify D15</strong> before merging this branch</td>
+    <td>Hybrid account, activity present for both wallets. Quiet failure mode, so look at the feed
+      itself</td>
+  </tr>
+  <tr>
+    <td><strong>Delete three dead secrets</strong></td>
+    <td><code>NORMAL_HOT_A_SECRET</code>, <code>TRANSIT_RSA_PRIVATE_KEY</code>,
+      <code>MNEMONIC_ENCRYPTION_SECRET</code> — read nowhere in the source. Remove from
+      <code>.env</code> and from the hosting environment. A secret nobody uses is pure liability:
+      it can leak but cannot help</td>
+  </tr>
+</table>
+
+<h3>9.2 #40 — the wrong-phrase defect (highest severity of the three)</h3>
+
+<p><strong>Step one is a live reproduction</strong>, because everything below rests on code
+reading alone. On staging: create a Normal wallet, note its Stellar address, then import a
+<em>different</em> mnemonic into the same account. Then compare four things:</p>
+
+<pre>row.walletId          vs  the imported wallet's id
+row.stellarAddress    vs  the address the app displays
+Turnkey getWallets    →  does the sub-org now hold two wallets?
+Export recovery phrase →  which wallet's phrase comes back?</pre>
+
+<p>If it reproduces, three fixes are possible and they are genuinely different products:</p>
+
+<table>
+  <tr><th>Option</th><th>What the user experiences</th><th>Cost / risk</th></tr>
+  <tr>
+    <td><strong>A. Refuse the import</strong> when the account already has a wallet</td>
+    <td>"You already have a Normal wallet. Importing another is not supported yet."</td>
+    <td>Smallest, safest, ships today. Removes a flow that currently appears to work — and that
+      some users may have already used, so it does not repair existing rows</td>
+  </tr>
+  <tr>
+    <td><strong>B. Migrate the row wholesale</strong> — import replaces every address, not just
+      empty columns</td>
+    <td>The imported wallet fully becomes their Normal wallet; the old one is abandoned</td>
+    <td>Honest and consistent, but silently strands any balance on the original wallet unless we
+      check balances first and refuse or warn</td>
+  </tr>
+  <tr>
+    <td><strong>C. Model multiple wallets</strong> per user</td>
+    <td>Both wallets visible, switchable, each with its own phrase — this is also the real fix for
+      the drawer list that #40 was originally filed about</td>
+    <td>Largest: schema change, migration, UI, and every place assuming one wallet per user</td>
+  </tr>
+</table>
+
+<div class="box">
+  <div class="label">Recommendation</div>
+  <strong>A now, C later.</strong> A closes the dangerous state in an afternoon and buys time; C is
+  the honest end state but should not be rushed under the pressure of an active defect. B is the
+  one to avoid — "helpfully" overwriting the record of a wallet that may hold funds is how a
+  cosmetic bug becomes a loss. Whichever is chosen, add a repair pass for any row where
+  <code>stellarAddress</code> does not belong to <code>walletId</code>.
+</div>
+
+<h3>9.3 <code>feat/autopilot-monitoring</code> — the gap we chose</h3>
+
+<p>Removing the $2k / $10k caps (doc 76 §4 reversal) traded prevention for detection. The
+detection does not exist yet, which makes this the largest known gap in the system today.</p>
+
+<table>
+  <tr><th>Piece</th><th>Sketch</th></tr>
+  <tr>
+    <td><strong>Key rotation</strong></td>
+    <td><code>AUTOPILOT_API_PRIVATE_KEY</code> is the only key that can move user funds. Rotation
+      means adding a new API key to the delegated user, switching the env, then deleting the old
+      one — the Turnkey policy keys on the <em>user id</em>, not the key, so the policy survives
+      rotation untouched. Needs a written runbook more than it needs code</td>
+  </tr>
+  <tr>
+    <td><strong>Alerting</strong></td>
+    <td><code>autopilot_signatures</code> already records every attempt with an outcome and a USD
+      amount. Two alerts pay for themselves: a single leg above a threshold you choose, and a spike
+      in <code>refused-*</code> rows (which is what a key being probed looks like). The cron
+      heartbeat is the natural place to evaluate them</td>
+  </tr>
+  <tr>
+    <td><strong>Kill-switch drill</strong></td>
+    <td><code>AUTOPILOT_DISABLED=1</code> plus a deploy stops all autopilot signing. Worth testing
+      once, deliberately, and making sure someone other than you can do it</td>
+  </tr>
+</table>
+
+<h3>9.4 Phase 5 — load tests and monitoring</h3>
+
+<p>The last phase of the optimisation project, never started. Everything this project claims about
+capacity — the 15-second shared balance cache, the one-hour last-good snapshot, the single
+vault-info entry serving every user, halving request volume by removing the redirect hop — is
+<strong>reasoned from the code and never measured under load</strong>.</p>
+
+<p>Scope, per the earlier no-staging-database decision: read-path load tests against the cached
+endpoints, plus monitoring and alerting including cron heartbeats. The point is not to discover
+that the caching works; it is to find the first thing that breaks at 10k and fix it while it is
+cheap.</p>
+
+<div class="box warn">
+  <div class="label">Honest framing</div>
+  The building is done and the proving is not. Of the remaining work this is the only item where
+  being wrong is expensive, because you would find out from users rather than from a test.
+</div>
+
+<div class="box">
+  <div class="label">The recurring shape, one more time</div>
+  Three of this week's bugs — the orphaned passkey, the chain account Turnkey already had, and the
+  autopilot grant that arrived mid-swap — share one root: <em>the expensive step succeeded, the
+  record did not, and the retry repeated the step instead of adopting what already existed</em>.
+  #40 is the same shape with the roles swapped: the record was overwritten while the thing it
+  described stayed put. When you touch a flow that writes a record after doing real work, ask what
+  a retry sees, and what the record now claims about reality.
+</div>
+
+</body>
+</html>

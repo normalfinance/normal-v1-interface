@@ -100,6 +100,28 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     const address = result.wallet?.addresses?.[0] ?? null;
     const walletId = result.wallet?.walletId ?? '';
 
+    // Record the new wallet in the seed list too (doc 83). Best-effort: the
+    // table is additive SQL, and a wallet must be created even where it has
+    // not been run yet.
+    const recordSeed = async (row: {
+      supabaseUid: string;
+      walletId: string;
+      stellarAddress: string | null;
+      bitcoinAddress: string | null;
+      ethereumAddress: string | null;
+      solanaAddress: string | null;
+    }) => {
+      try {
+        await prisma.turnkeyWalletSeed.upsert({
+          where: { supabaseUid_walletId: { supabaseUid: row.supabaseUid, walletId: row.walletId } },
+          create: { ...row, label: 'Normal wallet', origin: 'created', isPrimary: true },
+          update: {},
+        });
+      } catch {
+        /* migration pending — wallet creation must not depend on it */
+      }
+    };
+
     const saved = await prisma.turnkeyWallet.create({
       data: {
         supabaseUid: user.id,
@@ -112,6 +134,15 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     });
 
     logger.log('[turnkey/wallet] Created wallet for user', { uid: user.id.slice(0, 8), chain });
+
+    await recordSeed({
+      supabaseUid: saved.supabaseUid,
+      walletId: saved.walletId,
+      stellarAddress: saved.stellarAddress,
+      bitcoinAddress: saved.bitcoinAddress,
+      ethereumAddress: saved.ethereumAddress,
+      solanaAddress: saved.solanaAddress,
+    });
 
     return NextResponse.json(
       {
