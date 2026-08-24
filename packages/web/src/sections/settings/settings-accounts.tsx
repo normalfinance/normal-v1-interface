@@ -60,6 +60,21 @@ export function SettingsAccounts() {
   // Niko 2026-08-21: the Normal wallet card lists EVERY chain address it
   // holds, labeled by chain — not just the Stellar one.
   const [turnkeyInfo, setTurnkeyInfo] = useState<TurnkeyWalletInfo | null>(null);
+  // doc 83 phase 2 — every Turnkey WALLET (seed) this account owns. Normally
+  // there is exactly one and nothing extra renders; a second appears only when
+  // someone imported a phrase, which is rare and legacy. Each seed is its own
+  // recovery phrase controlling its own addresses, so each gets its own export
+  // button rather than one button that guesses.
+  const [seeds, setSeeds] = useState<
+    {
+      walletId: string;
+      label: string;
+      origin: string;
+      isPrimary: boolean;
+      addresses: Record<string, string | null>;
+    }[]
+  >([]);
+  const [exportWalletId, setExportWalletId] = useState<string | undefined>(undefined);
 
   const loadWallets = async () => {
     try {
@@ -81,6 +96,19 @@ export function SettingsAccounts() {
         setTurnkeyInfo(info);
       })
       .catch(() => {});
+    (async () => {
+      try {
+        const { buildAuthHeaders } = await import('@/utils/http');
+        const res = await fetch('/api/turnkey/wallets', {
+          headers: await buildAuthHeaders(),
+          credentials: 'include',
+        });
+        const data = await res.json();
+        setSeeds(Array.isArray(data?.wallets) ? data.wallets : []);
+      } catch {
+        /* the single-wallet view below is unaffected */
+      }
+    })();
     // Mount-only load; loadWallets is recreated per render — listing it would refire
     // the fetch on every render. eslint-disable documents the intent.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -755,7 +783,88 @@ export function SettingsAccounts() {
         showLinkedWallets={false}
       />
 
-      <WalletExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
+      {/* Only when a second wallet exists. One wallet renders exactly as before,
+          so the common path is untouched. */}
+      {seeds.length > 1 && (
+        <Box
+          sx={{
+            border: '1px solid rgba(10,10,15,0.08)',
+            borderRadius: '16px',
+            p: '18px',
+            mt: '16px',
+          }}
+        >
+          <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#0A0A0F', mb: '4px' }}>
+            {t('Your Normal wallets')}
+          </Typography>
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.55)', mb: '14px' }}>
+            {t(
+              'Each of these is a separate recovery phrase with its own addresses. Save the phrase for every wallet you hold funds on.'
+            )}
+          </Typography>
+
+          <Stack spacing={2}>
+            {seeds.map((w) => (
+              <Box key={w.walletId}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F' }}>
+                    {w.label}
+                  </Typography>
+                  <Typography
+                    onClick={() => {
+                      setExportWalletId(w.walletId);
+                      setExportOpen(true);
+                    }}
+                    sx={{
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#0A0A0F',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    {t('Export recovery phrase')}
+                  </Typography>
+                </Stack>
+                {CHAIN_IDS.filter((id) => !!w.addresses[id]).map((id) => (
+                  <Stack
+                    key={id}
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    sx={{ py: '6px' }}
+                  >
+                    <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                      {CHAINS[id].name}
+                    </Typography>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Typography
+                        sx={{
+                          fontSize: '11.5px',
+                          color: 'rgba(10,10,15,0.7)',
+                          fontFamily: '"Geist Mono", "Courier New", monospace',
+                        }}
+                      >
+                        {format.fTruncate(w.addresses[id]!, 20)}
+                      </Typography>
+                      <CopyIconButton value={w.addresses[id]!} alert={t('Address copied')} />
+                    </Stack>
+                  </Stack>
+                ))}
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <WalletExportDialog
+        open={exportOpen}
+        preselectWalletId={exportWalletId}
+        onClose={() => {
+          setExportOpen(false);
+          setExportWalletId(undefined);
+        }}
+      />
     </Stack>
   );
 }

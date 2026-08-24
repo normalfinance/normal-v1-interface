@@ -224,7 +224,10 @@ function mapMgiDbToActivity(rows: MgiDbTransaction[]): Activity[] {
 }
 
 async function fetchWalletActivity(url: string): Promise<Activity[]> {
-  const res = await fetch(url);
+  // The route is authenticated + ownership-checked (doc 81 item 1), so this
+  // must carry the session: a bare fetch would 401 and the feed would render
+  // empty, which looks exactly like "this wallet has no activity".
+  const res = await fetch(url, { headers: await buildAuthHeaders(), credentials: 'include' });
   const data: WalletActivityResponse = await res.json();
   if (!data.success || !data.items) {
     return [];

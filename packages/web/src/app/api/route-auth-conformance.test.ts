@@ -27,7 +27,10 @@ const PUBLIC_ROUTES: Record<string, string> = {
   'savings/earnings-history':
     'address-keyed append-only vault history; same exposure class as user-position (Block C #2)',
   'savings/vault-info': 'single shared vault read; cached + rate-limited',
-  'wallet/activity': 'Block C finding #2 — scoping decision pending with the team',
+  // 'wallet/activity' was here as "scoping decision pending". RESOLVED
+  // 2026-08-24 (doc 81 item 1, decision A): it reads OUR database rather than
+  // the chain, so it is now withAuth + ownership-checked and must never
+  // return to this list.
   'mgi/info': 'static SEP anchor info, cached 300s, no user data',
   'cron/cctp-advance': 'cron-secret auth, not user sessions',
   'cron/dune-sync': 'cron-secret auth, not user sessions',
