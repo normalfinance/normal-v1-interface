@@ -6,9 +6,9 @@
 // from becoming a dialog on every BTC/ETH/SOL setup.
 
 import {
-  markWalletNeedsBackup,
   markWalletBackedUp,
   pendingBackupSubOrg,
+  markWalletNeedsBackup,
   BACKUP_REQUIRED_EVENT,
 } from './wallet-backup';
 

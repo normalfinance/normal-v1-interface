@@ -3128,3 +3128,75 @@ AUTOPILOT_API_PRIVATE_KEY. Three secrets in .env are referenced NOWHERE in
 source and should be deleted: NORMAL_HOT_A_SECRET, TRANSIT_RSA_PRIVATE_KEY,
 MNEMONIC_ENCRYPTION_SECRET. .env is git-ignored and no .env is tracked.
 5 tests on the cap decision; 296 total, build clean.
+
+**#30 CLOSED — 68 environment variables were invisible to the build cache
+(2026-08-24, branch chore/register-tail):** turbo hashes only what it is told
+about, so an undeclared variable cannot invalidate a cached build. Change
+NEXT_PUBLIC_TURNKEY_RP_ID, rebuild, and turbo reports a cache HIT: the
+previous bundle ships carrying the old value, with nothing in the diff to
+explain it. Worst for NEXT_PUBLIC_*, which Next.js inlines at build time — and
+the undeclared list contained exactly the variables whose silent staleness is
+hardest to diagnose (the passkey rpId, the Supabase URL/anon key, the USDC and
+vault addresses, every Turnkey/autopilot/CCTP secret).
+Correction on the record: I first reported "zero declarations". That was
+task-level `env`; globalEnv existed with 56 entries. The real figure was 96
+used / 68 undeclared.
+FIX: all 68 declared, grouped by subsystem. MNEMONIC_ENCRYPTION_SECRET removed
+(declared, read nowhere). Verified with `turbo run build --dry=json`: turbo
+now reports them under environmentVariables.specified.env.
+THE DURABLE PART: src/utils/turbo-env-audit.test.ts walks the source tree,
+diffs `process.env.*` against turbo.jsonc and fails CI on any gap — the list
+cannot rot again the way it did. The helpers are pure and separately tested,
+because a guard that silently passes is worse than no guard.
+
+**Block C #2 CLOSED — wallet/activity is now private (2026-08-24, decision A):**
+the route read OUR database (vault_deposits + swap_logs) keyed on an address
+from the query string, with no auth and no rate limit. The backlog dismissed
+it as "chain data is public anyway"; the content is indeed on the ledger, but
+we were serving a curated, free, enumerable index of it AND an
+unauthenticated pair of Postgres queries per call. Now withAuth +
+userOwnsWallet (403), mirroring both log-transaction routes; a hybrid user's
+companion and connected Lobstr wallet both still pass, since ownership covers
+turnkey_wallets and linked_wallets alike.
+TWO THINGS THIS ALMOST BROKE, both caught before merge:
+ 1. hooks/stellar/use-user-activity.ts fetched with a BARE fetch(url) — no
+    session. Wrapping the route without fixing the caller would have 401'd
+    every activity feed, and an empty feed reads as "no activity", not as an
+    error. Now sends buildAuthHeaders().
+ 2. route-auth-conformance.test.ts listed wallet/activity as an intentional
+    public route ("scoping decision pending"). Left in place, the guard that
+    exists to stop routes being born public would have kept blessing this one.
+    Entry removed, with a note that it must never return.
+ALSO FIXED HERE: `limit` was applied as items.slice(0, limit) AFTER two
+unbounded findMany calls, so a wallet with 5,000 confirmed rows made Postgres
+read and ship all 5,000 to return 50 — the heaviest users generating the
+heaviest queries on an endpoint the drawer opens every visit. Both queries now
+carry `take: limit`.
+
+**#40 SPIKE — the drawer is the symptom; the row is the problem (2026-08-24,
+code-level, NOT yet reproduced live):** the backlog called this "VERIFIED
+cosmetic (DB keeps both)". turnkey_wallets.supabaseUid is UNIQUE, so the DB
+holds exactly one row per user and cannot keep both. Reading the import path:
+ - /api/turnkey/import always overwrites data.walletId with the imported
+   wallet, and already logs "Replacing existing wallet reference".
+ - address columns are ADDITIVE on a genuine import: `if (addr && !row[col])`
+   — an already-populated stellarAddress is left untouched.
+ - importMnemonicIntoTurnkey explicitly SUPPORTS an existing sub-org (it skips
+   the passkey ceremony when one exists), so this path is reachable by design.
+Therefore a user who created a Normal wallet and later imports a mnemonic ends
+with ONE ROW DESCRIBING TWO SEEDS: walletId = imported wallet B, while
+stellarAddress still belongs to created wallet A.
+WHY THAT IS WORSE THAN A MISSING LIST: wallet-export-dialog exports
+`wallet.walletId`, so "Export recovery phrase" hands back WALLET B's phrase
+while the app shows and spends wallet A's Stellar address. The user saves a
+phrase that does not control the balance they are looking at — a self-custody
+promise that is not true. Separately, addWalletAccounts derives new chains on
+walletId, so a later "Set up BTC wallet" lands on B while Stellar stays on A.
+The existing stellarMatch guard does NOT catch this: it compares the derived
+address against the mnemonic's OWN expected address, never against the row's
+pre-existing one.
+CONFIDENCE: read from code, not reproduced. Live repro needed (create wallet →
+import a different mnemonic → compare row.walletId, row.stellarAddress,
+Turnkey's wallets, and the exported phrase). NOT FIXED — deliberately: the
+fix depends on which is right (refuse the import, migrate the row wholesale,
+or model multiple wallets), and that is a product decision.
