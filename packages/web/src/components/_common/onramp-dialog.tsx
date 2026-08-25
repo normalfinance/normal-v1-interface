@@ -15,12 +15,9 @@ import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { FAILED_MGI_STATUSES, TERMINAL_MGI_STATUSES } from '@/lib/mgi/statuses';
 import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
+import { defaultSelection, buildStellarWalletOptions } from '@/lib/wallet-options';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 import { runDepositFlow, openTxInAnchorUI, hasCachedMgiToken } from '@/lib/mgi/client';
-import {
-  defaultSelection,
-  buildStellarWalletOptions,
-} from '@/lib/wallet-options';
 import {
   cdn,
   logger,
@@ -113,7 +110,8 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
   const walletBalances = useWalletBalances(open && stellarRamp);
   const stellarOptions = useMemo(() => {
     if (!stellarRamp) return [];
-    const total = Number(walletBalances.getAsset(asset.symbol)?.balance ?? NaN);
+    // The aggregate's Stellar rows are SLOT-only (companion arrives separately).
+    const slotBal = Number(walletBalances.getAsset(asset.symbol)?.balance ?? NaN);
     const compRaw = walletBalances.companionStellar?.assets.find(
       (a) => a.symbol.toUpperCase() === asset.symbol.toUpperCase()
     )?.balance;
@@ -122,7 +120,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
       slotWalletType: persist.wallet.walletType,
       slotLabel: connectedWalletLabel(persist.wallet.walletType),
       companionAddress: walletBalances.companionStellar?.address ?? null,
-      ...(Number.isFinite(total) ? { totalBalance: total } : {}),
+      ...(Number.isFinite(slotBal) ? { slotBalance: slotBal } : {}),
       ...(compRaw != null ? { companionBalance: Number(compRaw) } : {}),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

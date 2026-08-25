@@ -199,6 +199,7 @@ seed forces a mandatory recovery-phrase backup before the flow continues.</p>
   <tr><td class="chk">☐</td><td class="id">R5</td><td>Single-wallet account (Normal only): open Buy and Sell dialogs</td><td>NO pill row — instead one plain line naming the wallet ("Funds will arrive in Normal wallet" / "Selling from Normal wallet"). Behaviour otherwise unchanged</td><td><span class="tag pend">not yet run</span></td></tr>
   <tr><td class="chk">☐</td><td class="id">R6</td><td>Sell BTC / ETH / SOL (native chains)</td><td>No picker (exactly one possible address per chain) — flow unchanged</td><td><span class="tag pend">not yet run</span></td></tr>
   <tr><td class="chk">☐</td><td class="id">R7</td><td>Hybrid where ONLY the Normal wallet holds USDC: open Sell</td><td>Lobstr is filtered out (it cannot sell what it does not hold); the single remaining wallet shows as a named line and is used</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R8</td><td>Hybrid account: open the <strong>Assets</strong> page</td><td>ONE row per Stellar asset — USDC and XLM each appear once, balance = both wallets combined, subtitle shows the split by real wallet name ("Normal wallet 0.40 · Lobstr 12.30"). Single-wallet accounts unchanged. Clicking the row still opens the asset page, where Buy/Sell now ask which wallet</td><td><span class="tag pend">not yet run</span></td></tr>
 </table>
 
 <h2 id="s4">4 · Cross-chain swaps (BTC/ETH/SOL ↔ USDC/XLM · mainnet)</h2>

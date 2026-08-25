@@ -16,8 +16,6 @@
 // Pure on purpose: callers supply the slot wallet, the companion and the
 // balances; every rule below is testable without React or a network.
 
-import BigNumber from 'bignumber.js';
-
 export interface WalletOption {
   /** Stable key for selection state. */
   key: 'external' | 'normal';
@@ -39,11 +37,13 @@ export interface BuildOptionsInput {
   companionAddress: string | null | undefined;
   /** Asset balance held by the companion, when known. */
   companionBalance?: number;
-  /** TOTAL balance of the asset across Stellar wallets (the aggregate view).
-   *  The external wallet's share is total − companion, floored at 0 — the
-   *  aggregate is the only per-user total we have, and the companion's share
-   *  is reported separately by the portfolio route. */
-  totalBalance?: number;
+  /** Asset balance held by the SLOT wallet, when known. The portfolio
+   *  aggregate's Stellar rows are slot-only (the route feeds it the slot
+   *  address and fetches the companion separately), so this is read straight
+   *  from the aggregate — no arithmetic. An earlier draft subtracted the
+   *  companion from a presumed combined total, understating the external
+   *  wallet by exactly the companion's share. */
+  slotBalance?: number;
 }
 
 const isExternalType = (t: string | null | undefined): boolean =>
@@ -61,13 +61,7 @@ export function buildStellarWalletOptions(input: BuildOptionsInput): WalletOptio
       address: input.slotAddress!,
       label: input.slotLabel,
     };
-    if (input.totalBalance != null) {
-      const companionShare = input.companionBalance ?? 0;
-      external.balance = BigNumber.max(
-        BigNumber(input.totalBalance).minus(companionShare),
-        0
-      ).toNumber();
-    }
+    if (input.slotBalance != null) external.balance = input.slotBalance;
     options.push(external);
     if (input.companionAddress) {
       options.push({
@@ -87,7 +81,7 @@ export function buildStellarWalletOptions(input: BuildOptionsInput): WalletOptio
       key: 'normal',
       address: input.slotAddress,
       label: 'Normal wallet',
-      ...(input.totalBalance != null ? { balance: input.totalBalance } : {}),
+      ...(input.slotBalance != null ? { balance: input.slotBalance } : {}),
     });
   }
   return options;

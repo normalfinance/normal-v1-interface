@@ -112,7 +112,8 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   const walletBalances = useWalletBalances(open && stellarRamp);
   const stellarOptions = useMemo(() => {
     if (!stellarRamp) return [];
-    const total = Number(walletBalances.getAsset(asset.symbol)?.balance ?? NaN);
+    // The aggregate's Stellar rows are SLOT-only (companion arrives separately).
+    const slotBal = Number(walletBalances.getAsset(asset.symbol)?.balance ?? NaN);
     const compRaw = walletBalances.companionStellar?.assets.find(
       (a) => a.symbol.toUpperCase() === asset.symbol.toUpperCase()
     )?.balance;
@@ -121,7 +122,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
       slotWalletType: persist.wallet.walletType,
       slotLabel: connectedWalletLabel(persist.wallet.walletType),
       companionAddress: walletBalances.companionStellar?.address ?? null,
-      ...(Number.isFinite(total) ? { totalBalance: total } : {}),
+      ...(Number.isFinite(slotBal) ? { slotBalance: slotBal } : {}),
       ...(compRaw != null ? { companionBalance: Number(compRaw) } : {}),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

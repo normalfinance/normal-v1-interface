@@ -79,26 +79,47 @@ export default function AssetsView() {
   const displayTokens = useMemo(() => {
     const hybrid =
       wallet.walletType != null && wallet.walletType !== 'normal-wallet' && !!companionStellar;
-    // Slot Stellar rows from the aggregate (XLM/USDC always emitted, so both
-    // stay pickable at zero balance); labeled by owner on hybrid accounts.
+    // ONE row per Stellar asset (Niko, 2026-08-25). The split rows predate
+    // F1: they existed so the user could SEE which wallet held what, because
+    // nothing ever asked. Now every action asks — buy/sell via WalletChoice,
+    // send via its own picker — so the page-level split is redundant noise
+    // and the per-wallet amounts move into the subtitle, hero-card style
+    // (doc 80 D2: companion first, real wallet names, never "External").
+    // Single-wallet accounts render exactly as before.
+    const slotLabel = connectedWalletLabel(wallet.walletType);
+    const fmtBal = (n: number) =>
+      n.toLocaleString('en-US', { maximumFractionDigits: n < 1 ? 4 : 2 });
     const stellar = aggAssets
       .filter((a) => a.chain === 'stellar')
       .map((a) => {
         const tk = portfolioAssetToToken(a);
-        return hybrid
-          ? ({ ...tk, name: `${tk.name} · ${connectedWalletLabel(wallet.walletType)}` } as Token)
-          : tk;
+        if (!hybrid) return tk;
+        // The aggregate's Stellar rows are SLOT-only; the companion arrives
+        // separately (portfolio route) — combining is an addition, not a split.
+        const slotBal = Number(a.balance ?? 0);
+        const compBal = Number(
+          companionStellar?.assets.find((c) => c.symbol.toUpperCase() === a.symbol.toUpperCase())
+            ?.balance ?? 0
+        );
+        const parts = [
+          ...(compBal > 0 ? [{ label: 'Normal wallet', bal: compBal }] : []),
+          ...(slotBal > 0 ? [{ label: slotLabel, bal: slotBal }] : []),
+        ];
+        const name =
+          parts.length > 1
+            ? `${tk.name} · ${parts.map((pt) => `${pt.label} ${fmtBal(pt.bal)}`).join(' · ')}`
+            : parts.length === 1
+              ? `${tk.name} · ${parts[0].label}`
+              : tk.name;
+        return {
+          ...tk,
+          balance: BigNumber(slotBal).plus(compBal).toString(),
+          name,
+        } as Token;
       });
-    const companion = (companionStellar?.assets ?? [])
-      .filter((a) => BigNumber(a.balance ?? 0).gt(0))
-      .map(
-        (a) =>
-          ({
-            ...portfolioAssetToToken(a),
-            contract: `__companion_${a.symbol.toLowerCase()}__`,
-            name: `${portfolioAssetToToken(a).name} · Normal wallet`,
-          }) as Token
-      );
+    // Kept as a shape so the row assembly below stays untouched; the
+    // companion's balances now live inside the combined rows above.
+    const companion: Token[] = [];
     const savingsRow: Token[] =
       savingsUsd > 0
         ? [

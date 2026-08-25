@@ -282,3 +282,17 @@ Not published on the marketing page ("pricing and fees may vary"). Prior
 research (doc 85): redemption is typically free above a volume threshold
 (~$100k tier noted); confirm the real schedule during the sales conversation —
 ASK EXPLICITLY for the fee table in writing.
+
+### Follow-up shipped with F1 (2026-08-25): Assets page combines Stellar rows
+Niko: the doubled USDC/XLM rows should combine "because we pick where they
+will land on the assets page itself". Exactly right — the split predates F1;
+now that every action asks which wallet, the page-level split is redundant.
+One row per Stellar asset, balance = slot + companion, subtitle carries the
+per-wallet split hero-card style (companion first, real wallet names).
+ALSO FIXED HERE — a real F1 bug caught while reading the portfolio route:
+the aggregate's Stellar rows are SLOT-ONLY (the route feeds aggregatePortfolio
+the slot address; the companion comes separately via aggregateStellarOnly).
+wallet-options had assumed a combined total and computed external = total −
+companion, which UNDERSTATED the external wallet by the companion's share
+(Lobstr showing 11.90 instead of 12.30). Semantics changed to a direct
+slotBalance; tests updated. QA row R8.

@@ -27,14 +27,14 @@ describe('buildStellarWalletOptions', () => {
     expect(opts[1].address).toBe(NORMAL);
   });
 
-  it('splits the aggregate balance: external = total − companion, floored at 0', () => {
-    const opts = buildStellarWalletOptions(hybrid({ totalBalance: 39.44, companionBalance: 10 }));
-    expect(opts[0].balance).toBeCloseTo(29.44);
-    expect(opts[1].balance).toBe(10);
-    // A companion reported larger than the total (staleness between two
-    // reads) must clamp, never show a negative external balance.
-    const clamped = buildStellarWalletOptions(hybrid({ totalBalance: 5, companionBalance: 9 }));
-    expect(clamped[0].balance).toBe(0);
+  it('reads each wallet balance directly — the aggregate is slot-only', () => {
+    // The portfolio route feeds the aggregate the SLOT address and fetches
+    // the companion separately, so there is no arithmetic to do. (An earlier
+    // draft subtracted the companion from a presumed combined total, showing
+    // Lobstr 11.90 when it actually held 12.30.)
+    const opts = buildStellarWalletOptions(hybrid({ slotBalance: 12.3, companionBalance: 0.4 }));
+    expect(opts[0].balance).toBeCloseTo(12.3);
+    expect(opts[1].balance).toBeCloseTo(0.4);
   });
 
   it('gives a single-wallet user ONE named option — named is the point', () => {
@@ -43,7 +43,7 @@ describe('buildStellarWalletOptions', () => {
       slotWalletType: 'normal-wallet',
       slotLabel: 'Normal wallet',
       companionAddress: null,
-      totalBalance: 12,
+      slotBalance: 12,
     });
     expect(opts).toHaveLength(1);
     expect(opts[0]).toMatchObject({ key: 'normal', label: 'Normal wallet', balance: 12 });
@@ -62,7 +62,7 @@ describe('buildStellarWalletOptions', () => {
 });
 
 describe('filterSellableOptions', () => {
-  const both = () => buildStellarWalletOptions(hybrid({ totalBalance: 40, companionBalance: 15 }));
+  const both = () => buildStellarWalletOptions(hybrid({ slotBalance: 40, companionBalance: 15 }));
 
   it('keeps every wallet that holds the asset', () => {
     expect(filterSellableOptions(both())).toHaveLength(2);
@@ -70,7 +70,7 @@ describe('filterSellableOptions', () => {
 
   it('drops a wallet with zero — it cannot sell what it does not hold', () => {
     const opts = buildStellarWalletOptions(
-      hybrid({ totalBalance: 15, companionBalance: 15 }) // external share = 0
+      hybrid({ slotBalance: 0, companionBalance: 15 }) // external holds nothing
     );
     const sellable = filterSellableOptions(opts);
     expect(sellable).toHaveLength(1);
@@ -85,7 +85,7 @@ describe('filterSellableOptions', () => {
   });
 
   it('keeps all options when nothing holds a balance, rather than none', () => {
-    const opts = buildStellarWalletOptions(hybrid({ totalBalance: 0, companionBalance: 0 }));
+    const opts = buildStellarWalletOptions(hybrid({ slotBalance: 0, companionBalance: 0 }));
     expect(filterSellableOptions(opts)).toHaveLength(2);
   });
 });
@@ -97,14 +97,14 @@ describe('defaultSelection', () => {
   });
 
   it('off-ramp defaults to the only wallet that holds the asset', () => {
-    const opts = buildStellarWalletOptions(hybrid({ totalBalance: 15, companionBalance: 15 }));
+    const opts = buildStellarWalletOptions(hybrid({ slotBalance: 0, companionBalance: 15 }));
     expect(defaultSelection(opts, 'offramp')?.key).toBe('normal');
   });
 
   it('off-ramp keeps today’s behaviour when both hold it: external first', () => {
     // A hybrid user’s default must not change under their feet — the fix is
     // the visible CHOICE, not a new silent pick.
-    const opts = buildStellarWalletOptions(hybrid({ totalBalance: 40, companionBalance: 15 }));
+    const opts = buildStellarWalletOptions(hybrid({ slotBalance: 40, companionBalance: 15 }));
     expect(defaultSelection(opts, 'offramp')?.key).toBe('external');
   });
 
