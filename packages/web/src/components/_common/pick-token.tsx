@@ -193,10 +193,22 @@ const PickToken: React.FC<PickTokenProps> = ({
                           {token.name.includes('Short') && (
                             <Chip label="Short" color="error" size="small" variant="soft" />
                           )}
-                          {token.name.replace('Short', '')}
+                          {token.name.replace('Short', '').split(' · ')[0]}
                         </Typography>
                         <NetworkBadge network={getAssetNetwork(token)} />
                       </Box>
+                      {token.name.includes(' · ') && (
+                        <Typography
+                          sx={{
+                            fontSize: '11.5px',
+                            color: theme.palette.text.secondary,
+                            textAlign: 'left',
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          {token.name.split(' · ').slice(1).join(' · ')}
+                        </Typography>
+                      )}
                     </Box>
                   </Box>
                   <Box>
@@ -343,10 +355,22 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 {token.name.includes('Short') && (
                                   <Chip label="Short" color="error" size="small" variant="soft" />
                                 )}
-                                {token.name.replace('Short', '')}
+                                {token.name.replace('Short', '').split(' · ')[0]}
                               </Typography>
                               <NetworkBadge network={getAssetNetwork(token)} />
                             </Box>
+                            {token.name.includes(' · ') && (
+                              <Typography
+                                sx={{
+                                  fontSize: '11.5px',
+                                  color: theme.palette.text.secondary,
+                                  textAlign: 'left',
+                                  lineHeight: 1.35,
+                                }}
+                              >
+                                {token.name.split(' · ').slice(1).join(' · ')}
+                              </Typography>
+                            )}
                           </Box>
                         </Box>
                         <Box>
@@ -427,10 +451,22 @@ const PickToken: React.FC<PickTokenProps> = ({
                               {token.name.includes('Short') && (
                                 <Chip label="Short" color="error" size="small" variant="soft" />
                               )}
-                              {token.name.replace('Short', '')}
+                              {token.name.replace('Short', '').split(' · ')[0]}
                             </Typography>
                             <NetworkBadge network={getAssetNetwork(token)} />
                           </Box>
+                          {token.name.includes(' · ') && (
+                            <Typography
+                              sx={{
+                                fontSize: '11.5px',
+                                color: theme.palette.text.secondary,
+                                textAlign: 'left',
+                                lineHeight: 1.35,
+                              }}
+                            >
+                              {token.name.split(' · ').slice(1).join(' · ')}
+                            </Typography>
+                          )}
                         </Box>
                       </Box>
                       <Box>
