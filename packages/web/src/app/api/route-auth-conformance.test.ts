@@ -35,6 +35,7 @@ const PUBLIC_ROUTES: Record<string, string> = {
   'cron/cctp-advance': 'cron-secret auth, not user sessions',
   'cron/dune-sync': 'cron-secret auth, not user sessions',
   'cron/fee-escrow-sweep': 'cron-secret auth, not user sessions',
+  'cron/autopilot-watch': 'cron-secret auth, not user sessions; reads only, sends alerts',
 };
 
 const API_DIR = path.join(__dirname);

@@ -167,6 +167,14 @@
     "NORMAL_FEES_DEPOSIT_ADDRESS",
     "NORMAL_SWAP_FEE_BPS",
 
+    // Alerting (doc 84). ALERT_WEBHOOK_URL unset = findings go to the log
+    // only; each threshold unset = that signal is off, never zero.
+    "ALERT_WEBHOOK_URL",
+    "AUTOPILOT_ALERT_TX_USD",
+    "AUTOPILOT_ALERT_HOURLY_USD",
+    "AUTOPILOT_ALERT_REFUSALS",
+    "RELAYER_FLOAT_MIN_ETH",
+
     // Ops, jobs and analytics
     "CRON_SECRET",
     "CUSTOMERIO_API_KEY",
