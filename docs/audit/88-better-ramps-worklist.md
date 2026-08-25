@@ -296,3 +296,13 @@ wallet-options had assumed a combined total and computed external = total −
 companion, which UNDERSTATED the external wallet by the companion's share
 (Lobstr showing 11.90 instead of 12.30). Semantics changed to a direct
 slotBalance; tests updated. QA row R8.
+
+### Follow-up shipped (2026-08-25): send modal combined + source tabs
+Same rule extended to Send: the asset picker shows ONE row per Stellar asset
+(combined balance, per-wallet split in the subtitle); after picking, a
+"Send from" tab row (WalletChoice, new flow='send') chooses the source when
+both wallets hold the asset. ARCHITECTURE NOTE: the merge is DISPLAY-ONLY —
+sendToken always remains a real per-wallet token (the __companion_*__
+contract routes signing/reserves/MAX), and the combined row + tabs resolve
+back to those exact objects. Default source = the slot wallet when it holds
+any (the old list order), else the companion. QA rows R9–R11.

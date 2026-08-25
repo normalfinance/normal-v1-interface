@@ -22,8 +22,9 @@ interface Props {
   /** Key of the selected option (controlled by the dialog). */
   selectedKey: string | null;
   onSelect: (option: WalletOption) => void;
-  /** "Where should it arrive?" vs "Which wallet are you selling from?" */
-  flow: 'onramp' | 'offramp';
+  /** "Where should it arrive?" / "Which wallet are you selling from?" /
+   *  "Which wallet is this send leaving from?" */
+  flow: 'onramp' | 'offramp' | 'send';
   /** Symbol used next to balances, e.g. USDC. */
   symbol?: string;
 }
@@ -41,7 +42,9 @@ export default function WalletChoice({ options, selectedKey, onSelect, flow, sym
       <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.55)', mb: '10px' }}>
         {flow === 'onramp'
           ? t('Funds will arrive in {{label}}', { label: only.label })
-          : t('Selling from {{label}}', { label: only.label })}
+          : flow === 'send'
+            ? t('Sending from {{label}}', { label: only.label })
+            : t('Selling from {{label}}', { label: only.label })}
         {only.balance != null && symbol ? ` · ${fmtBal(only.balance)} ${symbol}` : ''}
       </Typography>
     );
@@ -50,7 +53,7 @@ export default function WalletChoice({ options, selectedKey, onSelect, flow, sym
   return (
     <Box sx={{ mb: '12px' }}>
       <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.55)', mb: '6px' }}>
-        {flow === 'onramp' ? t('Deposit to') : t('Sell from')}
+        {flow === 'onramp' ? t('Deposit to') : flow === 'send' ? t('Send from') : t('Sell from')}
       </Typography>
       <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', rowGap: '6px' }}>
         {options.map((opt) => {

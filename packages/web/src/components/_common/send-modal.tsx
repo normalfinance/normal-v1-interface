@@ -14,6 +14,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
+import { buildStellarWalletOptions } from '@/lib/wallet-options';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { buildOwnWalletCandidates } from '@/lib/stellar/own-wallets';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
@@ -35,6 +36,8 @@ import {
   DialogTitle,
   DialogContent,
 } from '@mui/material';
+
+import WalletChoice from '@/components/_common/wallet-choice';
 
 import PickToken from './pick-token';
 import SendReview from './send-review';
@@ -146,6 +149,47 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     solToken,
   ]);
 
+  // ONE picker row per Stellar asset (Niko 2026-08-25 — same rule as the
+  // assets page). DISPLAY-ONLY merge: sendToken always stays a REAL
+  // per-wallet token, because the __companion_*__ contract is what routes
+  // signing, reserves, savings buffers and MAX. The combined row resolves
+  // back to those same objects on selection, and the source tabs below swap
+  // between them. Natives and single-wallet accounts pass through untouched.
+  const pickerTokens = useMemo(() => {
+    if (!(isExternalSlot && companionStellar)) return sendableTokens;
+    const fmtBal = (n: number) =>
+      n.toLocaleString('en-US', { maximumFractionDigits: n < 1 ? 4 : 2 });
+    const out: Token[] = [];
+    const seen = new Set<string>();
+    for (const tk of sendableTokens) {
+      const isCompanion = tk.contract.startsWith('__companion_');
+      if (tk.contract.startsWith('__') && !isCompanion) {
+        out.push(tk); // native chains: one wallet, nothing to combine
+        continue;
+      }
+      if (seen.has(tk.symbol)) continue;
+      seen.add(tk.symbol);
+      const slotTk = sendableTokens.find(
+        (o) => o.symbol === tk.symbol && !o.contract.startsWith('__')
+      );
+      const compTk = sendableTokens.find(
+        (o) => o.symbol === tk.symbol && o.contract.startsWith('__companion_')
+      );
+      if (slotTk && compTk) {
+        const slotBal = Number(slotTk.balance);
+        const compBal = Number(compTk.balance);
+        out.push({
+          ...slotTk,
+          balance: BigNumber(slotBal).plus(compBal).toString(),
+          name: `${slotTk.name.split(' · ')[0]} · Normal wallet ${fmtBal(compBal)} · ${connectedWalletLabel(persist.wallet.walletType)} ${fmtBal(slotBal)}`,
+        } as Token);
+      } else {
+        out.push(tk);
+      }
+    }
+    return out;
+  }, [sendableTokens, isExternalSlot, companionStellar, persist.wallet.walletType]);
+
   const xlmPrice = useMemo(
     () =>
       BigNumber(
@@ -205,6 +249,33 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       ),
     [stellarSend, isCompanionToken, companionStellar]
   );
+
+  // Source tabs (Niko 2026-08-25): when BOTH wallets hold the selected
+  // Stellar asset, the send's source is an explicit choice. Switching swaps
+  // sendToken to the sibling token — every sender-side number (spendable,
+  // MAX, XLM reserve, savings buffer, signer) follows it for free, because
+  // they all already key off sendToken.
+  const sourceSiblings = useMemo(() => {
+    if (!sendToken || isNative) return null;
+    const slotTk = sendableTokens.find(
+      (o) => o.symbol === sendToken.symbol && !o.contract.startsWith('__')
+    );
+    const compTk = sendableTokens.find(
+      (o) => o.symbol === sendToken.symbol && o.contract.startsWith('__companion_')
+    );
+    return slotTk && compTk ? { slotTk, compTk } : null;
+  }, [sendToken, isNative, sendableTokens]);
+  const sourceOptions = useMemo(() => {
+    if (!sourceSiblings) return [];
+    return buildStellarWalletOptions({
+      slotAddress: persist.wallet.address,
+      slotWalletType: persist.wallet.walletType,
+      slotLabel: connectedWalletLabel(persist.wallet.walletType),
+      companionAddress: companionStellar?.address ?? null,
+      slotBalance: Number(sourceSiblings.slotTk.balance),
+      companionBalance: Number(sourceSiblings.compTk.balance),
+    });
+  }, [sourceSiblings, persist.wallet.address, persist.wallet.walletType, companionStellar]);
 
   // #74b: "send to your own wallet" quick-pick (Stellar assets only — for
   // BTC/ETH/SOL your own wallet IS the sender). Companion address rides the
@@ -741,6 +812,18 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               )}
             </Box>
 
+            {sourceOptions.length > 1 && sourceSiblings && (
+              <WalletChoice
+                options={sourceOptions}
+                selectedKey={isCompanionToken ? 'normal' : 'external'}
+                onSelect={(o) =>
+                  setSendToken(o.key === 'normal' ? sourceSiblings.compTk : sourceSiblings.slotTk)
+                }
+                flow="send"
+                symbol={sendToken?.symbol}
+              />
+            )}
+
             {/* Amount input */}
             <Box
               sx={{
@@ -1197,9 +1280,26 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         buttonSource="send"
-        tokens={sendableTokens}
+        tokens={pickerTokens}
         onTokenSelect={(token) => {
-          setSendToken(token);
+          // A combined display row resolves to the REAL per-wallet token.
+          // Default = the slot wallet when it holds any (the old list order's
+          // first row), else the companion; the tabs swap afterwards.
+          const slotTk = sendableTokens.find(
+            (o) => o.symbol === token.symbol && !o.contract.startsWith('__')
+          );
+          const compTk = sendableTokens.find(
+            (o) => o.symbol === token.symbol && o.contract.startsWith('__companion_')
+          );
+          const real =
+            slotTk && compTk
+              ? Number(slotTk.balance) > 0
+                ? slotTk
+                : compTk
+              : (sendableTokens.find(
+                  (o) => o.symbol === token.symbol && o.contract === token.contract
+                ) ?? token);
+          setSendToken(real);
           setPickerOpen(false);
         }}
       />
