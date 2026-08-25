@@ -302,6 +302,29 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
         });
         return;
       }
+      // doc 89 F2: record the handoff BEFORE navigating, so a closed tab
+      // cannot lose the fact that money is in flight. Fire-and-forget:
+      // tracking failure must never block the purchase.
+      void (async () => {
+        try {
+          await fetch('/api/ramp/transfers', {
+            method: 'POST',
+            headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              direction: 'onramp',
+              provider: 'coinbase',
+              network: isTestnet() ? 'testnet' : 'mainnet',
+              asset: asset.symbol,
+              chain: asset.blockchain,
+              walletAddress: destAddress,
+              baselineBalance: stellarRamp ? (selectedWallet?.balance ?? null) : null,
+            }),
+          });
+        } catch {
+          /* untracked this time — never blocked */
+        }
+      })();
       const url = createCoinbasePayOnrampURL({
         amountUsd: amount,
         assetSymbol: asset.symbol,

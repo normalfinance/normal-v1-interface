@@ -33,3 +33,54 @@ export async function userOwnsWallet(supabaseUid: string, walletAddress: string)
 
   return !!linked || !!turnkey;
 }
+
+/** Ownership across EVERY chain we hold addresses for (doc 89 F2): the ramp
+ *  routes accept a walletAddress that may be Stellar, Bitcoin, Ethereum or
+ *  Solana — userOwnsWallet above is Stellar-shaped (linked wallets are
+ *  Stellar-only), so this widens the check to the Turnkey wallet's chain
+ *  columns and the seed list, plus linked wallets for Stellar. Same failure
+ *  stance: any lookup error reads as NOT owned.
+ */
+export async function userOwnsAnyWalletAddress(
+  supabaseUid: string,
+  walletAddress: string
+): Promise<boolean> {
+  if (!supabaseUid || !walletAddress) return false;
+  try {
+    const [linked, turnkey, seed] = await Promise.all([
+      prisma.linkedWallet.findUnique({
+        where: { supabaseUid_walletAddress: { supabaseUid, walletAddress } },
+        select: { id: true },
+      }),
+      prisma.turnkeyWallet.findFirst({
+        where: {
+          supabaseUid,
+          OR: [
+            { stellarAddress: walletAddress },
+            { bitcoinAddress: walletAddress },
+            { ethereumAddress: walletAddress },
+            { solanaAddress: walletAddress },
+          ],
+        },
+        select: { id: true },
+      }),
+      prisma.turnkeyWalletSeed
+        .findFirst({
+          where: {
+            supabaseUid,
+            OR: [
+              { stellarAddress: walletAddress },
+              { bitcoinAddress: walletAddress },
+              { ethereumAddress: walletAddress },
+              { solanaAddress: walletAddress },
+            ],
+          },
+          select: { id: true },
+        })
+        .catch(() => null), // seed table is additive SQL — absence must not block
+    ]);
+    return !!linked || !!turnkey || !!seed;
+  } catch {
+    return false;
+  }
+}

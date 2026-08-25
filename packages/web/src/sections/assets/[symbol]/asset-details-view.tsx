@@ -42,6 +42,7 @@ import { useSnackbar } from '@/components/template/snackbar';
 import OnRampDialog from '@/components/_common/onramp-dialog';
 import ReceiveModal from '@/components/_common/receive-modal';
 import OffRampDialog from '@/components/_common/offramp-dialog';
+import RampPendingBanner from '@/components/_common/ramp-pending-banner';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import { ChainReceiveModal } from '@/components/_common/chain-receive-modal';
@@ -632,6 +633,10 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
       <Box sx={{ mt: '20px' }}>
         {/* In-flight MoneyGram cash deposits/outs — USDC (Stellar) is the only
             asset MoneyGram ramps, so the banner only belongs here. */}
+        {/* doc 89 F2: in-flight Coinbase/MoonPay transfers for THIS asset —
+            disappears the moment the chain shows the money. MoneyGram keeps
+            its own richer banner below. */}
+        <RampPendingBanner symbol={token.symbol} />
         {token.symbol === 'USDC' && <MoneyGramPendingBanner />}
         <ActivityCard
           walletAddress={wallet.address}

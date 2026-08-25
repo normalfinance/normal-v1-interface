@@ -29,7 +29,7 @@ Decisions already taken (Niko):
 - Must also cover **multiple Turnkey wallets** (doc 83 phase 2) — options come
   from one source so those rows appear in the picker for free.
 
-### B2 — Nothing tracks money in flight for Coinbase (and future MoonPay)
+### B2 — Nothing tracks money in flight — FIXED (F2 shipped 2026-08-25)
 - After the user leaves for the provider, our UI shows nothing until the
   balance happens to refresh. Niko: "it takes a few seconds for assets to
   appear… we need some indicators if assets are on the way".
@@ -71,7 +71,22 @@ Decisions already taken (Niko):
   probe follows the selling wallet. BTC/ETH/SOL unchanged (single address).
 - Deliberately unchanged: the Coinbase amount cap still uses the aggregate
   `assetBalance` prop (conservative; Coinbase re-validates). QA rows R1–R7.
-### F2 — In-flight tracking (fixes B2) — second, provider-agnostic
+### F2 — In-flight tracking — ✅ SHIPPED 2026-08-25 (plan: doc 89)
+- ⚠️ **RUN THE SQL FIRST: `docs/audit/sql/ramp_transfers.sql`** (additive; the
+  code degrades to "no banners" until it exists — nothing breaks, nothing shows)
+- lib/ramp/status.ts: pure machine, 15 tests — forward-only, 45-min abandon,
+  ARRIVAL REQUIRES THE CHAIN, and arrived rows leave the banner the moment
+  assets appear (Niko's requirement, pinned by test)
+- POST/GET /api/ramp/transfers + forward-only PATCH; ownership via new
+  userOwnsAnyWalletAddress (all four chains + wallet seeds)
+- both Coinbase dialogs write the row BEFORE navigation, carrying the
+  WalletChoice-selected wallet and its balance as the arrival baseline
+- useInFlightRamps (10s poll while active; client arrival flip + refreshFresh)
+  → RampPendingBanner above the asset page Activity (MGI keeps its own banner)
+  + Buy/Sell pending rows in the feed
+- cron /api/cron/ramp-reconcile (5 min): abandonment + Horizon arrival for
+  closed-tab users; CRON_SECRET + heartbeat + conformance allowlisted
+- QA rows R12–R15
 ### F3 — MoonPay integration — gated on KYB (setup guide below)
 - signed widget URL (same shape as our Coinbase CDP JWT)
 - address from `WalletChoice`, never the slot
