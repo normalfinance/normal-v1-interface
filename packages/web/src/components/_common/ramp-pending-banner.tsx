@@ -41,8 +41,12 @@ export default function RampPendingBanner({ symbol }: Props) {
     typeof window === 'undefined' ? new Set() : readDismissed()
   );
 
+  // Since 2026-08-26 the IN-FLIGHT rows render inside the balance card
+  // (RampInflightInline) — this banner keeps only FAILURES, which need the
+  // dismiss affordance and more room to explain themselves.
   const visible = inFlight.filter(
-    (r) => !dismissed.has(r.id) && (!symbol || r.asset.toUpperCase() === symbol.toUpperCase())
+    (r) =>
+      r.failed && !dismissed.has(r.id) && (!symbol || r.asset.toUpperCase() === symbol.toUpperCase())
   );
   if (visible.length === 0) return null;
 
@@ -105,6 +109,57 @@ export default function RampPendingBanner({ symbol }: Props) {
               <Iconify icon="mingcute:close-line" width={16} />
             </Box>
           )}
+        </Box>
+      ))}
+    </Stack>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// The in-card variant (Niko 2026-08-26: "show inside the top left block so
+// its more clear that assets are on the way"). Renders the ACTIVE in-flight
+// rows as a compact colored line under the balance — the number it explains.
+// No dismiss: it disappears by itself the moment the chain shows the money.
+// ---------------------------------------------------------------------------
+export function RampInflightInline({ symbol }: Props) {
+  const { inFlight } = useInFlightRamps();
+  const rows = inFlight.filter(
+    (r) => !r.failed && (!symbol || r.asset.toUpperCase() === symbol.toUpperCase())
+  );
+  if (rows.length === 0) return null;
+
+  return (
+    <Stack spacing="6px" sx={{ mt: '10px' }}>
+      {rows.slice(0, 2).map((r) => (
+        <Box
+          key={r.id}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            px: '10px',
+            py: '7px',
+            borderRadius: '10px',
+            bgcolor: 'rgba(37,99,235,0.07)',
+            border: '1px solid rgba(37,99,235,0.18)',
+            width: 'fit-content',
+            maxWidth: '100%',
+          }}
+        >
+          <Iconify
+            icon="eos-icons:three-dots-loading"
+            width={18}
+            sx={{ color: '#1D4ED8', flexShrink: 0 }}
+          />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: '#1E3A8A', lineHeight: 1.35 }}>
+              {r.message}
+            </Typography>
+            <Typography sx={{ fontSize: '11px', color: 'rgba(30,58,138,0.65)', lineHeight: 1.35 }}>
+              {r.detail}
+            </Typography>
+          </Box>
         </Box>
       ))}
     </Stack>

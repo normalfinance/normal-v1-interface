@@ -68,7 +68,9 @@ export function useInFlightRamps(enabled = true) {
     if (!hasActive) return;
     for (const row of rows) {
       if (isTerminal(row.status) || row.direction !== 'onramp') continue;
-      if (row.chain !== 'stellar') continue; // native arrivals: chain rows + cron
+      // ALL chains flip here (2026-08-26): the aggregate carries SOL/ETH/BTC
+      // balances too, and "the cron will do it" was false everywhere except
+      // production — native rows ghosted forever.
       if (flipped.current.has(row.id)) continue;
 
       // Which wallet was the destination? The slot's assets live in the

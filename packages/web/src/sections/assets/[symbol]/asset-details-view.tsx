@@ -42,13 +42,13 @@ import { useSnackbar } from '@/components/template/snackbar';
 import OnRampDialog from '@/components/_common/onramp-dialog';
 import ReceiveModal from '@/components/_common/receive-modal';
 import OffRampDialog from '@/components/_common/offramp-dialog';
-import RampPendingBanner from '@/components/_common/ramp-pending-banner';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import { ChainReceiveModal } from '@/components/_common/chain-receive-modal';
 import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 import MoneyGramPendingBanner from '@/components/_common/moneygram-pending-banner';
 import { NetworkBadge, getAssetNetwork } from '@/components/_common/network-badge';
+import RampPendingBanner, { RampInflightInline } from '@/components/_common/ramp-pending-banner';
 
 import { AssetPriceChart } from './asset-price-chart';
 
@@ -493,6 +493,10 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                 )}
               </>
             )}
+            {/* Money on the way (Niko 2026-08-26): the in-flight indicator
+                lives IN the balance card — right under the number it
+                explains. Failures keep the dismissible banner below. */}
+            <RampInflightInline symbol={token.symbol} />
           </Box>
 
           {/* Actions */}
@@ -633,9 +637,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
       <Box sx={{ mt: '20px' }}>
         {/* In-flight MoneyGram cash deposits/outs — USDC (Stellar) is the only
             asset MoneyGram ramps, so the banner only belongs here. */}
-        {/* doc 89 F2: in-flight Coinbase/MoonPay transfers for THIS asset —
-            disappears the moment the chain shows the money. MoneyGram keeps
-            its own richer banner below. */}
+        {/* doc 89 F2: FAILED ramp handoffs for THIS asset (dismissible).
+            In-flight rows render inside the balance card since 2026-08-26
+            (RampInflightInline); MoneyGram keeps its own banner below. */}
         <RampPendingBanner symbol={token.symbol} />
         {token.symbol === 'USDC' && <MoneyGramPendingBanner />}
         <ActivityCard

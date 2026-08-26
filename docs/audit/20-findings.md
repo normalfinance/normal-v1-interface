@@ -3426,3 +3426,29 @@ Adapter contract grew two optional members: getMaxSendAmount() (live,
 full-precision MAX) and validateSend() (pre-passkey blocking message).
 RULE for the bank: MAX must be computed in the asset's own integer units
 from a LIVE read — display-rounded MAX math WILL strand dust on some chain.
+
+
+### 2026-08-26 — Ghost ramp banners ("double messages" that outlived arrival)
+
+Two "Buying SOL on Coinbase" rows above Activity, still showing after the SOL
+landed. DB truth: the rows were 4 HOURS apart — not a double-fire but an
+earlier attempt that could never clear, compounding three gaps:
+1. the dialog captured baselineBalance for Stellar only, so native rows
+   shipped with null baselines — and a null baseline never claims arrival
+   (correct rule, starved input);
+2. the client arrival flip skipped every non-Stellar chain ("the cron will
+   handle natives");
+3. the 45-minute abandonment lived ONLY in that cron — and Vercel crons
+   never run on localhost/staging. Nothing could clear anything.
+
+Fixes: the POST captures a live baseline server-side for every chain when
+the client sends none; the POST reuses a still-active row for the same
+(provider, asset, wallet) instead of stacking a duplicate; the GET that
+feeds the banner sweeps the caller's expired rows itself (rule 2 without a
+cron); the client hook flips arrivals for ALL chains from the aggregate
+balances. UX per Niko: in-flight rows now render INSIDE the asset page's
+balance card (RampInflightInline, all assets) — right under the number they
+explain — while the dismissible banner above Activity keeps only failures.
+RULE for the bank: a state machine whose only exit lives in a scheduler that
+does not run in this environment is a state machine with no exits — every
+read path that DISPLAYS a pending state must also be able to advance it.
