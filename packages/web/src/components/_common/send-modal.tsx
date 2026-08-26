@@ -649,7 +649,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
         fullWidth
         slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
       >
-        <DialogTitle sx={{ px: '22px', pt: '22px', pb: '4px' }}>
+        <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography
               sx={{

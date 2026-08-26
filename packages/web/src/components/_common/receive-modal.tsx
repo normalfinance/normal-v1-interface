@@ -311,7 +311,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
       fullWidth
       slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
     >
-      <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
+      <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box
           sx={{
             position: 'relative',

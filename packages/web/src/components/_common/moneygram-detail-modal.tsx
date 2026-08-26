@@ -89,7 +89,7 @@ export default function MoneyGramDetailModal({
       onClose={onClose}
       slotProps={{ paper: { sx: { width: '100%', maxWidth: 400 } } }}
     >
-      <DialogTitle sx={{ p: 2, pb: 0 }}>
+      <DialogTitle sx={{ p: 2, pb: '12px' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" color="text.primary">
             {tx?.kind === 'withdrawal' ? t('MoneyGram cash-out') : t('MoneyGram cash deposit')}

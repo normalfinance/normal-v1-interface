@@ -92,7 +92,7 @@ const PickToken: React.FC<PickTokenProps> = ({
         },
       }}
     >
-      <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
+      <DialogTitle sx={{ p: 2, pb: '12px', width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div">
             {t('Select an asset')}
