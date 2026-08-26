@@ -321,3 +321,12 @@ sendToken always remains a real per-wallet token (the __companion_*__
 contract routes signing/reserves/MAX), and the combined row + tabs resolve
 back to those exact objects. Default source = the slot wallet when it holds
 any (the old list order), else the companion. QA rows R9–R11.
+
+### Pre-merge status audit (2026-08-26): Buy/Sell pills were never rendered
+Checked "will a send show a status in activity" before merging. Sends are
+covered on all four chains (pending ledger + confirmation watchers ETH/SOL,
+mempool flags BTC, ~5s finality Stellar). But activity-row's isPending and
+failed chips covered Sent/Receive/Swap ONLY — Buy/Sell rows carrying
+pending/failed (MoneyGram always, F2 ramp rows now) rendered with no pill at
+all. Fixed: both pills extended to Buy/Sell. Without this, R12/R14's
+"pending Buy row" expectation was untestable.

@@ -173,6 +173,10 @@ export function ActivityRow({ activity }: { activity: Activity }) {
   const isPending =
     ((activity.type === 'Sent' || activity.type === 'Receive') && activity.confirmed === false) ||
     (activity.type === 'Swap' && activity.pending === true) ||
+    // Ramp rows (MoneyGram, and Coinbase/MoonPay via doc 89 F2) flag their
+    // own in-flight state — without this, a pending Buy looked identical to
+    // a settled one.
+    ((activity.type === 'Buy' || activity.type === 'Sell') && activity.pending === true) ||
     (activity.type === 'Sent' && activity.offramp === true && activity.offrampStatus === 'pending');
 
   let icon: React.ReactNode = null;
@@ -342,7 +346,8 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                   Pending
                 </Box>
               )}
-              {((activity.type === 'Swap' && activity.failed) ||
+              {(((activity.type === 'Buy' || activity.type === 'Sell') && activity.failed) ||
+                (activity.type === 'Swap' && activity.failed) ||
                 (activity.type === 'Sent' &&
                   activity.offramp &&
                   activity.offrampStatus === 'failed')) && (
