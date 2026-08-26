@@ -21,10 +21,10 @@ import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
 import { useSendToken, type TransferArgs } from '@/hooks/stellar/use-send-token';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
-import { SAVINGS_XLM_BUFFER, spendableXlmForOutflow } from '@/utils/stellar-reserve';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import { knownMemoRequirement, fetchMemoRequirement } from '@/lib/stellar/memo-required';
 import { getMaxAmount, getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
+import { SAVINGS_XLM_BUFFER, STELLAR_TX_FEE_XLM, xlmAvailableForFees, spendableXlmForOutflow } from '@/utils/stellar-reserve';
 
 import {
   Box,
@@ -526,6 +526,23 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       return;
     }
     if (isNative) {
+      // Live, exact-unit MAX when the adapter offers one (SOL: integer
+      // lamports leaving exactly 0; BTC: UTXO total minus a real fee) —
+      // display-rounded math stranded rent-dust live on 2026-08-26.
+      if (adapter?.getMaxSendAmount) {
+        setMaxLoading(true);
+        try {
+          const liveMax = await adapter.getMaxSendAmount(sendToken);
+          if (liveMax) {
+            setAmount(liveMax);
+            return;
+          }
+        } catch {
+          /* fall through to display math */
+        } finally {
+          setMaxLoading(false);
+        }
+      }
       setAmount(spendableBalance.toFixed(8, BigNumber.ROUND_DOWN));
       return;
     }
@@ -1364,7 +1381,51 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
           fiatValue={fiatAmount.toNumber()}
           address={destination}
           memo={memo}
-          sendFn={adapter.send.bind(adapter)}
+          sendFn={async (p) => {
+            // Pre-passkey guards (2026-08-26): never collect a signature for
+            // a transaction that must fail. Guard failures block with honest
+            // copy; guard UNAVAILABILITY (RPC down) lets the send proceed —
+            // the broadcast funnels still answer truthfully.
+            try {
+              const guardMsg = adapter.validateSend
+                ? await adapter.validateSend(p, effectiveSenderAddress)
+                : null;
+              if (guardMsg) {
+                enqueueSnackbar(guardMsg, { variant: 'error' });
+                return '';
+              }
+              // Stellar non-XLM assets pay their fee in XLM — a sender at the
+              // reserve floor signs a tx Horizon must reject. Check the fee
+              // budget here (the adapter has no sender address in scope).
+              if (
+                adapter.network === 'stellar' &&
+                p.token.symbol !== 'XLM' &&
+                effectiveSenderAddress
+              ) {
+                const server = new Horizon.Server(config.HORIZON_URL, {
+                  allowHttp: config.HORIZON_URL.startsWith('http://'),
+                });
+                const acc = await server.loadAccount(effectiveSenderAddress);
+                const nativeBal =
+                  acc.balances.find((b) => b.asset_type === 'native')?.balance ?? '0';
+                if (
+                  xlmAvailableForFees(nativeBal, acc.subentry_count).lt(STELLAR_TX_FEE_XLM)
+                ) {
+                  enqueueSnackbar(
+                    t(
+                      'Sending {{sym}} needs a small XLM network fee, and your XLM is at the reserve minimum. Add a little XLM first.',
+                      { sym: p.token.symbol }
+                    ),
+                    { variant: 'error' }
+                  );
+                  return '';
+                }
+              }
+            } catch {
+              /* guard unavailable — proceed */
+            }
+            return adapter.send(p);
+          }}
           estimatedFeeSat={btcEstimatedFeeSat}
           onBtcSendSuccess={handleBtcSendSuccess}
         />

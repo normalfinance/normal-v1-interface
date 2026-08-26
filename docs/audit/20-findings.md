@@ -3389,3 +3389,40 @@ Consequences shipped (same day):
 ACTION (team): report the poisoned "fly" USDC→ETH path / TSLA pool on Base
 to LI.FI support so they de-list it — every LI.FI integrator routing through
 it is currently broken the same way.
+
+
+### 2026-08-26 — Native-send dust audit (after the live SOL MAX failure)
+
+Live incident: MAX-send of all SOL was rejected with InsufficientFundsForRent
+(simulation-verified). Chain of causes: adapter spendable = balance - fee at
+full precision -> the modal rendered it at 8dp (SOL has 9) -> 9 lamports
+stranded -> the remainder fell in Solana's forbidden 0 < r < 0.00089088 SOL
+window -> the network rejects the WHOLE tx. A second, independent dust source
+sat in send-review.tsx, which re-rounded every non-BTC amount to 7dp.
+
+Audit verdict across all send assets, one fix class each:
+- SOL: exact-lamport MAX from a live balance read (leaves EXACTLY 0 —
+  allowed); pre-passkey rent-window guard with honest copy; the broadcast
+  funnel maps InsufficientFundsForRent to the same copy (matched BEFORE the
+  generic 'insufficient funds' branch, which the node's message also
+  contains). Math + copy in lib/send/native-dust.ts (jest, incl. the exact
+  347,450,359-lamport regression).
+- SOL review layer: amounts now pass at 9dp (was blanket 7dp for non-BTC).
+- BTC: MAX was a GUARANTEED failure (full balance can never cover
+  amount + fee — the builder always 400'd). MAX now = all UTXOs minus the
+  real sweep fee (same vsize math as the builder, 1 output). New pre-passkey
+  guard for sub-546-sat recipient outputs (the builder dust-protects change
+  but not the recipient). Builder itself verified good: sub-dust change
+  folds into the fee; insufficiency rejects before any signature.
+- ETH: already sound — live gas estimation with a pre-sign
+  amount+fee>balance guard and a contract-destination guard. No change.
+- XLM: already sound — reserve+savings-buffer helper on both MAX and typed
+  paths. No change.
+- Stellar non-XLM (USDC): NEW pre-sign guard — the fee is paid in XLM, so a
+  sender at the reserve floor signed a tx Horizon must reject; the modal now
+  checks xlmAvailableForFees before the passkey.
+
+Adapter contract grew two optional members: getMaxSendAmount() (live,
+full-precision MAX) and validateSend() (pre-passkey blocking message).
+RULE for the bank: MAX must be computed in the asset's own integer units
+from a LIVE read — display-rounded MAX math WILL strand dust on some chain.

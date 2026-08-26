@@ -101,7 +101,9 @@ const SendReview: React.FC<SendReviewProps> = ({
     try {
       const txHash = await sendFn({
         token: sendToken,
-        amount: tokenValue.toFixed(isBtc ? 8 : 7),
+        // Full native precision (2026-08-26): SOL is a 9dp asset — the old
+        // blanket 7dp here re-created the rent-dust the MAX fix removes.
+        amount: tokenValue.toFixed(isBtc ? 8 : isSol ? 9 : 7),
         destination: address,
         memo,
       });

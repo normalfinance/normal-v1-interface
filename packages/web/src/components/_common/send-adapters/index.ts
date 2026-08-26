@@ -35,4 +35,13 @@ export interface SendAdapter {
   feeInfo: AdapterFeeInfo | null;
   /** Returns txHash on success, empty string on handled error */
   send(params: SendParams): Promise<string>;
+  /** Live, full-precision MAX for this asset (coin-units decimal string).
+   *  null / absent / thrown -> the modal falls back to display-balance math.
+   *  Exists because display rounding of a 9dp asset once stranded lamports
+   *  in Solana's forbidden rent window (2026-08-26). */
+  getMaxSendAmount?(token: Token): Promise<string | null>;
+  /** Pre-sign guard: a friendly BLOCKING message, or null to proceed. Runs
+   *  BEFORE the passkey prompt — never collect a signature for a
+   *  transaction that must fail (same rule as the CCTP pivot classifier). */
+  validateSend?(params: SendParams, senderAddress?: string | null): Promise<string | null>;
 }
