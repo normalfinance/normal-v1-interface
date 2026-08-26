@@ -452,7 +452,13 @@ export function ActivityCard({
       // can ONLY be the Turnkey Normal wallet: external wallets are
       // Stellar-only, so inheriting the slot feed's label painted "Lobstr"
       // on transactions Lobstr cannot even sign (Niko 2026-08-26).
-      const chain = chainForSymbol(a.symbol);
+      // Sent/Receive rows carry the asset as token.symbol; Mint/Buy-style
+      // rows carry a bare symbol — read whichever the union member has.
+      const rowSymbol =
+        (a as { symbol?: string }).symbol ??
+        (a as { token?: { symbol?: string } }).token?.symbol ??
+        '';
+      const chain = chainForSymbol(rowSymbol);
       if (chain && chain !== 'stellar') return 'Normal wallet';
       return fallback;
     };
