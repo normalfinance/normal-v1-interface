@@ -15,13 +15,13 @@ import {
   Button,
   Dialog,
   Typography,
-  IconButton,
   DialogTitle,
   DialogContent,
   CircularProgress,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 // ---------------------------------------------------------------------------
 // Detail view for one MoneyGram transaction, opened from an activity row or
@@ -94,9 +94,7 @@ export default function MoneyGramDetailModal({
           <Typography variant="h6" color="text.primary">
             {tx?.kind === 'withdrawal' ? t('MoneyGram cash-out') : t('MoneyGram cash deposit')}
           </Typography>
-          <IconButton onClick={onClose} aria-label="close dialog">
-            <Iconify icon="mingcute:close-line" width={24} />
-          </IconButton>
+          <ModalCloseButton onClick={onClose} aria-label="close dialog" />
         </Box>
       </DialogTitle>
 

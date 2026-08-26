@@ -27,7 +27,6 @@ import {
   Dialog,
   Avatar,
   Typography,
-  IconButton,
   DialogTitle,
   ListItemText,
   DialogContent,
@@ -39,6 +38,7 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import WalletChoice from '@/components/_common/wallet-choice';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 import AmountDialog from '../deposit-amount-dialog';
 
@@ -504,9 +504,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                 : t('Sell {{symbol}}', { symbol: asset.symbol })}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <IconButton onClick={handleClose} aria-label="close dialog">
-                <Iconify icon="mingcute:close-line" width={24} />
-              </IconButton>
+              <ModalCloseButton onClick={handleClose} aria-label="close dialog" />
             </Box>
           </Box>
         </DialogTitle>

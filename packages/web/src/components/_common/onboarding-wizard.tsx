@@ -71,6 +71,7 @@ import {
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 import { GetStartedPicker } from './get-started-picker';
 
@@ -2538,9 +2539,7 @@ export default function OnboardingWizard({
         </IconButton>
 
         {/* Close */}
-        <IconButton size="small" onClick={handleClose} sx={{ color: 'text.secondary', ml: 0.5 }}>
-          <Iconify icon="mingcute:close-line" width={18} />
-        </IconButton>
+        <ModalCloseButton onClick={handleClose} sx={{ ml: 0.5 }} />
       </Box>
 
       <DialogContent sx={{ px: 3, pt: 2.5, pb: 3 }}>{renderContent()}</DialogContent>

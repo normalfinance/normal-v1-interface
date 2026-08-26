@@ -14,13 +14,13 @@ import {
   Button,
   TextField,
   Typography,
-  IconButton,
   DialogTitle,
   DialogContent,
   InputAdornment,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 import { NetworkBadge, getAssetNetwork } from './network-badge';
 
@@ -97,9 +97,7 @@ const PickToken: React.FC<PickTokenProps> = ({
           <Typography variant="h6" component="div">
             {t('Select an asset')}
           </Typography>
-          <IconButton onClick={onClose}>
-            <Iconify icon="mingcute:close-line" width={24} />
-          </IconButton>
+          <ModalCloseButton onClick={onClose} />
         </Box>
       </DialogTitle>
       <DialogContent

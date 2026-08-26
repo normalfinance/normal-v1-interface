@@ -36,7 +36,6 @@ import {
   Dialog,
   Avatar,
   Typography,
-  IconButton,
   DialogTitle,
   ListItemText,
   DialogContent,
@@ -48,6 +47,7 @@ import {
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import WalletChoice from '@/components/_common/wallet-choice';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 
 import AmountDialog from '../deposit-amount-dialog';
@@ -450,9 +450,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
                   : t('Buy {{symbol}}', { symbol: asset.symbol })}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <IconButton onClick={handleDialogClose} aria-label="close dialog">
-                <Iconify icon="mingcute:close-line" width={24} />
-              </IconButton>
+              <ModalCloseButton onClick={handleDialogClose} aria-label="close dialog" />
             </Box>
           </Box>
         </DialogTitle>

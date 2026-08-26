@@ -121,12 +121,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
       fullWidth
       slotProps={{ paper: { sx: { borderRadius: '22px', p: '22px' } } }}
     >
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="flex-start"
-        sx={{ mb: '6px' }}
-      >
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '6px' }}>
         <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F' }}>
           {t('Set up {{wallet}} for USDC', { wallet: walletLabel })}
         </Typography>

@@ -204,14 +204,21 @@ export function CctpProgressModal({
           onClick={onClose}
           sx={{
             all: 'unset',
+            width: 28,
+            height: 28,
+            borderRadius: '8px',
+            bgcolor: 'rgba(10,10,15,0.06)',
             cursor: 'pointer',
-            color: 'rgba(10,10,15,0.4)',
+            color: '#0A0A0F',
             display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             flexShrink: 0,
-            mt: '2px',
+            transition: 'background 150ms ease',
+            '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
           }}
         >
-          <Iconify icon="mingcute:close-line" width={20} />
+          <Iconify icon="mingcute:close-line" width={16} />
         </Box>
       </Stack>
 

@@ -24,7 +24,6 @@ import {
   Tooltip,
   Checkbox,
   TextField,
-  IconButton,
   Typography,
   DialogTitle,
   ToggleButton,
@@ -35,6 +34,7 @@ import {
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 type AuthLoginModalProps = {
   open: boolean;
@@ -294,9 +294,7 @@ const AuthLoginModal = ({
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography variant="h6">{t('Login to Normal')}</Typography>
-        <IconButton onClick={handleClose} aria-label="Close login modal">
-          <Iconify icon="mingcute:close-line" />
-        </IconButton>
+        <ModalCloseButton onClick={handleClose} aria-label="Close login modal" />
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2}>

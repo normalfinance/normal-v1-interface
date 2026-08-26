@@ -238,12 +238,7 @@ export default function WalletExportDialog({
       maxWidth="sm"
       PaperProps={{ sx: { borderRadius: '20px', p: '24px', maxWidth: 460 } }}
     >
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="flex-start"
-        sx={{ mb: '8px' }}
-      >
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '8px' }}>
         <Typography sx={{ fontSize: '18px', fontWeight: 700, color: '#0A0A0F' }}>
           {t('Your recovery phrase')}
         </Typography>

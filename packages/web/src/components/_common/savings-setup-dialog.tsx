@@ -17,10 +17,11 @@ import {
   Dialog,
   Divider,
   Typography,
-  IconButton,
   DialogContent,
   CircularProgress,
 } from '@mui/material';
+
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 import { Iconify } from '../template/iconify';
 import { useSnackbar } from '../template/snackbar';
@@ -216,9 +217,7 @@ export function SavingsSetupDialog({
                 {t('A couple of quick steps to start earning yield on USDC.')}
               </Typography>
             </Box>
-            <IconButton onClick={onClose} size="small" sx={{ mt: -0.5, mr: -0.5 }}>
-              <Iconify icon="mingcute:close-line" width={18} />
-            </IconButton>
+            <ModalCloseButton onClick={onClose} />
           </Box>
 
           {/* Step indicator */}
