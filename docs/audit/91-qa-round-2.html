@@ -84,7 +84,9 @@
 Covers: <strong>feat/better-ramps</strong> (CCTP failure-class + bridge/DEX failover, exact-unit
 send MAX + dust guards, in-card ramp indicators, wallet tags) and
 <strong>feat/honest-errors</strong> wave 1 (error classifier, session-expired banner).
-Convention going forward: every new QA round gets its own numbered doc — doc 80 stays frozen at R24.</p>
+Convention going forward: every new QA round gets its own numbered doc — doc 80 stays frozen at R24.
+The junior-level explainer for everything these rows test lives in
+<a href="./92-round-2-explainer.html">doc 92 — Round 2 Explainer</a>.</p>
 
 <table>
   <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
@@ -96,6 +98,10 @@ Convention going forward: every new QA round gets its own numbered doc — doc 8
   <tr><td class="chk">☐</td><td class="id">R30</td><td>With Lobstr connected, view SOL/ETH/BTC activity rows on the asset pages and portfolio</td><td>Native-chain Sent/Received rows are tagged "Normal wallet" (never "Lobstr" — external wallets are Stellar-only and cannot sign these); swap rows funded FROM Lobstr keep their truthful "Lobstr" tag; Stellar rows keep the per-wallet tags unchanged</td><td><span class="tag pend">not yet run</span></td></tr>
   <tr><td class="chk">☐</td><td class="id">R31</td><td>Force representative failures: cancel a passkey prompt mid-send; type an amount that triggers tx_insufficient_balance on savings; retry a send 30x to trip the rate limit; fail a MoneyGram start (e.g. below-minimum amount)</td><td>Every toast/modal shows a plain-English sentence — NO raw codes, JSON, stacks, hex hashes, org/credential ids, env-var names, or HTTP statuses; MoneyGram’s clean below-minimum message passes through verbatim; rate limits all say "Too many requests. Please wait a moment and try again."</td><td><span class="tag pend">not yet run</span></td></tr>
   <tr><td class="chk">☐</td><td class="id">R32</td><td>Let the session expire (or revoke it in Supabase) with the app open, then click anything authed (in-flight banner refresh, MGI deposit, ramp dialog)</td><td>ONE black top banner appears: "Your session expired — please sign in again" with a Sign in button; no cryptic per-surface failures ("challenge failed: 401"), and the in-flight ramp banner keeps its last data instead of silently vanishing</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R33</td><td>Expire the wallet session, then run a Soroswap swap; separately, run a cross-chain LI.FI swap on a slow route (THORChain/Chainflip)</td><td>The Soroswap modal shows "Your wallet session expired — reconnect…" with Try again (no eternal "Preparing the swap"); a bridge exceeding ~20 min produces the "still on its way — track it in Activity" info toast instead of a forever-spinning checklist</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R34</td><td>Block /api/stellar/memo-required (devtools) and paste an exchange address into Send; block /api/turnkey/wallets and open the phrase-export dialog</td><td>Send shows the amber "could not verify whether this address needs a memo" warning (never silently green); the export dialog shows the red "could not load your wallet list" card with Retry and REFUSES to export until it succeeds</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R35</td><td>Start a Coinbase cash-out, then block /api/coinbase/offramp-status; also refresh the page mid-resume; also close the wallet picker without choosing</td><td>The modal warns "Could not reach Coinbase…" — never "No pending cash-out"; after a refresh the resume modal returns (session latch); the closed picker toasts "cancelled — nothing was linked" instead of silence</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R36</td><td>During a CCTP swap, block PATCH /api/cctp/transfers/* after the burn; watch the network tab</td><td>The PATCH retries 3× with backoff; on permanent failure a warning toast says "keep this tab open until the swap completes" — the failure is never silent; when the block is lifted the row still ends truthful</td><td><span class="tag pend">not yet run</span></td></tr>
 </table>
 
 </body>

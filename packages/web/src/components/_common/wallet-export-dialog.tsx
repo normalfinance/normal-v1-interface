@@ -83,12 +83,15 @@ export default function WalletExportDialog({
   // from another is what made the old dialog able to show wallet A's
   // addresses above wallet B's phrase. Both now come from the same seed.
   const [seeds, setSeeds] = useState<WalletSeed[]>([]);
+  const [seedsFailed, setSeedsFailed] = useState(false);
+  const [seedsRetryNonce, setSeedsRetryNonce] = useState(0);
   const [seedIndex, setSeedIndex] = useState(0);
   const seed: WalletSeed | null = seeds[seedIndex] ?? null;
   const stamperRef = useRef<{ clear: () => void } | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    setSeedsFailed(false);
     getTurnkeyWalletInfo()
       .then(setInfo)
       .catch(() => {});
@@ -106,12 +109,14 @@ export default function WalletExportDialog({
           : -1;
         setSeedIndex(wanted >= 0 ? wanted : 0);
       } catch {
-        // Falls back to the single-wallet path below — export must not depend
-        // on this list being reachable.
+        // Doc 90 W2: NEVER fall back silently — on a multi-seed account the
+        // dialog could show wallet A's addresses above wallet B's phrase.
+        // Block the export and offer a retry instead.
+        setSeedsFailed(true);
         setSeeds([]);
       }
     })();
-  }, [open, preselectWalletId]);
+  }, [open, preselectWalletId, seedsRetryNonce]);
 
   // Prefer the SELECTED seed's own addresses; fall back to the wallet row only
   // when the seed list is unavailable (migration pending / older deployment).
@@ -153,6 +158,11 @@ export default function WalletExportDialog({
       setInfo(wallet);
       // The wallet whose phrase we are about to reveal. The selected seed wins
       // over the row: they differ exactly in the case this feature exists for.
+      if (seedsFailed) {
+        throw new Error(
+          'Could not confirm which wallet this phrase belongs to — use Retry above, then export.'
+        );
+      }
       const exportWalletId = seed?.walletId ?? wallet.walletId;
       if (!exportWalletId) {
         throw new Error(t('No Normal wallet found to export.'));
@@ -226,7 +236,7 @@ export default function WalletExportDialog({
       setError(friendlyTurnkeyError(e));
       setPhase('error');
     }
-  }, [t, teardown]);
+  }, [t, teardown, seed?.walletId, seedsFailed]);
 
   const locked = requireConfirm && !(phase === 'revealed' && confirmed);
 
@@ -295,6 +305,44 @@ export default function WalletExportDialog({
             : t('One phrase — your whole wallet. It restores all of these:')}
         </Typography>
 
+        {seedsFailed && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              p: '10px 12px',
+              borderRadius: '10px',
+              bgcolor: 'rgba(220,38,38,0.06)',
+              border: '1px solid rgba(220,38,38,0.2)',
+              mb: '8px',
+            }}
+          >
+            <Typography sx={{ fontSize: '12px', color: '#7F1D1D', flex: 1, lineHeight: 1.45 }}>
+              {t(
+                'Could not load your wallet list — exporting now could show the wrong wallet\u2019s phrase.'
+              )}
+            </Typography>
+            <Box
+              component="button"
+              type="button"
+              onClick={() => setSeedsRetryNonce((n) => n + 1)}
+              sx={{
+                border: '1px solid rgba(127,29,29,0.4)',
+                background: 'transparent',
+                borderRadius: '8px',
+                px: '10px',
+                py: '4px',
+                fontSize: '12px',
+                cursor: 'pointer',
+                color: '#7F1D1D',
+                fontFamily: 'inherit',
+              }}
+            >
+              {t('Retry')}
+            </Box>
+          </Box>
+        )}
         {/* Only shown when there IS a choice. Each wallet is a different seed
             with different addresses, so picking the wrong one means saving a
             phrase that does not open the wallet you meant. */}

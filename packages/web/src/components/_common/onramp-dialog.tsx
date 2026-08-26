@@ -524,7 +524,13 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
                     fullWidth
                     size="large"
                     startIcon={<Iconify icon="solar:document-text-bold" />}
-                    onClick={() => openTxInAnchorUI(userAddress!, mgiCommitted.id!)}
+                    onClick={() => {
+                      // Doc 90 W2: this button used to die silently on a
+                      // rejected promise (expired token, cancelled passkey).
+                      void openTxInAnchorUI(userAddress!, mgiCommitted.id!).catch((e) => {
+                        enqueueSnackbar(friendlyAppError(e), { variant: 'error' });
+                      });
+                    }}
                   >
                     {t('View drop-off details')}
                   </Button>

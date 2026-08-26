@@ -104,6 +104,9 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
     // Missing table (migration pending) or transient DB trouble: the ramp
     // itself must proceed — the caller treats a failed create as "no
     // tracking this time", never as "do not buy".
+    // Fail-open is deliberate (a purchase must never be blocked) — but the
+    // loss of tracking is now SAID in telemetry (doc 90 W2).
+    console.error('[ramp] transfer row creation failed — purchase untracked:', e);
     return NextResponse.json(
       { success: false, error: String(e?.message ?? e).slice(0, 200) },
       { status: 200 }

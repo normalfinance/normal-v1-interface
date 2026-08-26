@@ -511,9 +511,10 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
 
     let cancelled = false;
     fetchMemoRequirement(destination).then((req) => {
-      if (cancelled || !req.required) return;
+      if (cancelled) return;
+      if (!req.required && !req.unknown) return;
       setMemoRequirement(req);
-      setShowMemo(true);
+      if (req.required) setShowMemo(true);
     });
     return () => {
       cancelled = true;
@@ -1104,6 +1105,31 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                 it cannot be dismissed, and Review stays disabled without it. */}
             {adapter?.hasMemo && (
               <Box>
+                {!!memoRequirement?.unknown && !memoRequirement?.required && (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      p: '12px 14px',
+                      borderRadius: '12px',
+                      bgcolor: 'rgba(245,158,11,0.08)',
+                      border: '1px solid rgba(245,158,11,0.35)',
+                      mb: '8px',
+                    }}
+                  >
+                    <Iconify
+                      icon="eva:alert-triangle-outline"
+                      width={18}
+                      sx={{ color: '#B45309', mt: '1px', flexShrink: 0 }}
+                    />
+                    <Typography sx={{ fontSize: '12.5px', color: '#78350F', lineHeight: 1.5 }}>
+                      {t(
+                        'We could not verify whether this address needs a memo. If you are sending to an exchange, double-check its deposit page — without a required memo the funds will not be credited.'
+                      )}
+                    </Typography>
+                  </Box>
+                )}
                 {memoRequirement?.required ? (
                   <Box
                     sx={{

@@ -37,12 +37,33 @@ export function OfframpResumeHandler() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const KEY = 'nf:offramp-resume:v1';
     const params = new URLSearchParams(window.location.search);
-    if (params.get('offramp') !== 'coinbase') return;
+    if (params.get('offramp') !== 'coinbase') {
+      // Doc 90 W2: the markers are stripped below, so a page REFRESH used to
+      // lose the resume unrecoverably — restore it from the session latch.
+      try {
+        const saved = window.sessionStorage.getItem(KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved) as { chain?: string; sym?: string };
+          if (parsed?.chain && VALID_CHAINS.has(parsed.chain) && parsed?.sym) {
+            setResume({ chain: parsed.chain as TurnkeyChain, sym: parsed.sym });
+          }
+        }
+      } catch {
+        /* no latch */
+      }
+      return;
+    }
     const chain = params.get('chain');
     const sym = (params.get('sym') ?? '').toUpperCase();
     if (chain && VALID_CHAINS.has(chain) && sym) {
       setResume({ chain: chain as TurnkeyChain, sym });
+      try {
+        window.sessionStorage.setItem(KEY, JSON.stringify({ chain, sym }));
+      } catch {
+        /* latch is best-effort */
+      }
       router.replace(window.location.pathname); // strip markers
     }
   }, [router]);
@@ -78,7 +99,14 @@ export function OfframpResumeHandler() {
   return (
     <CoinbaseOfframpModal
       open
-      onClose={() => setResume(null)}
+      onClose={() => {
+        try {
+          window.sessionStorage.removeItem('nf:offramp-resume:v1');
+        } catch {
+          /* ignore */
+        }
+        setResume(null);
+      }}
       chain={chain}
       symbol={sym}
       address={address}

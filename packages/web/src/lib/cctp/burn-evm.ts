@@ -13,6 +13,7 @@
 import { type NetworkType } from '@normalfinance/utils';
 import { signEvmTxWithTurnkey } from '@/lib/turnkey/evm-signer';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 
 import { stellarContractToBytes32 } from './addresses';
 import { bytesToHex, encodeStellarHookData } from './hookdata';
@@ -73,15 +74,19 @@ export async function burnUsdcOnEvm(params: EvmBurnParams): Promise<{
     throw new Error('refusing to burn: invalid Stellar recipient address');
   }
 
-  const { http, erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } =
-    await import('viem');
+  const { erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } = await import(
+    'viem'
+  );
   const { base, mainnet, sepolia, baseSepolia } = await import('viem/chains');
   const chains = {
     mainnet: { base, ethereum: mainnet },
     testnet: { base: baseSepolia, ethereum: sepolia },
   } as const;
   const chain = chains[params.network][params.chain];
-  const client = createPublicClient({ chain, transport: http() });
+  const client = createPublicClient({
+    chain,
+    transport: await evmFallbackTransport(params.chain, params.network),
+  });
 
   const usdc = EVM_USDC[params.chain][params.network];
   const tokenMessenger = EVM_CCTP[params.network].tokenMessengerV2;

@@ -1,6 +1,8 @@
+import { useSnackbar } from 'notistack';
 import { logger } from '@normalfinance/utils';
 import { useRef, useEffect, useCallback } from 'react';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { LOBSTR_ID, FREIGHTER_ID } from '@creit.tech/stellar-wallets-kit';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { LEDGER_ID } from '@creit.tech/stellar-wallets-kit/modules/ledger.module';
@@ -223,8 +225,17 @@ export const useStellarWalletsKit = () => {
     walletKitStore.kit,
   ]);
 
+  const { enqueueSnackbar } = useSnackbar();
+
   const connectWallet = useCallback(async () => {
-    await walletKitStore.connectWallet(persistStore);
+    try {
+      await walletKitStore.connectWallet(persistStore);
+    } catch (e) {
+      // Doc 90 W2: a connect FAILURE used to be indistinguishable from
+      // "nothing happened".
+      enqueueSnackbar(friendlyAppError(e), { variant: 'error' });
+      return;
+    }
 
     // Done here rather than at the three call sites (account drawer, wallet
     // gate, onboarding wizard) because all three go through this hook — one
@@ -234,6 +245,13 @@ export const useStellarWalletsKit = () => {
     // closure is from the render before the connect, so it is still stale.
     // Null means the user closed the picker without choosing.
     const connectedAddress = useStellarWalletKitStore.getState().publicKey;
+    if (!connectedAddress) {
+      // User closed the picker — say so instead of total silence.
+      enqueueSnackbar('Wallet connection was cancelled — nothing was linked.', {
+        variant: 'info',
+      });
+      return;
+    }
     // NB: the reconnect memo is NOT written here — it is derived from the
     // wallet slot in components/_common/external-wallet-reattach.tsx, so it
     // cannot race with a disconnect.
@@ -241,7 +259,7 @@ export const useStellarWalletsKit = () => {
       connectedAddress,
       connectedWalletLabel(usePersistStore.getState().wallet.walletType)
     );
-  }, [walletKitStore, persistStore]);
+  }, [walletKitStore, persistStore, enqueueSnackbar]);
 
   const signTransaction = useCallback(
     async (xdr: string, networkPassphrase?: string) =>

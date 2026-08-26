@@ -65,7 +65,10 @@ export function createEthereumAdapter(
     async send(params: SendParams): Promise<string> {
       try {
         const info = await getTurnkeyWalletInfo();
-        if (!info?.subOrgId) throw new Error('Turnkey wallet not found');
+        if (!info?.subOrgId)
+          throw new Error(
+            'Could not load your wallet just now — check your connection and try again.'
+          );
         const subOrgId = info.subOrgId;
 
         const { http, parseEther, createPublicClient, serializeTransaction } = await import('viem');

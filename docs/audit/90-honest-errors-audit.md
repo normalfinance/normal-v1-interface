@@ -95,6 +95,36 @@ Server logs keep the detail (+ traceId); responses carry a code + friendly text:
 
 ## Wave 2 — Money-path truth (the dangerous silents)
 
+> **STATUS: SHIPPED 2026-08-26** (branch feat/honest-errors). What landed:
+> - CCTP patcher: every row PATCH retries 3× with backoff; the critical hash
+>   writes (srcSwapTxHash/burnTxHash) SAY it when recording permanently fails
+>   ("keep this tab open"); a timed-out Stellar burn hands its hash to the
+>   catch so the row keeps it (burn-stellar attaches txHash/mayStillLand).
+> - LI.FI tracker: >20-min bridges get an honest "still on its way" info
+>   toast instead of an eternal spinner; the activity record POST retries 3×.
+> - Soroswap: session expiry surfaces in the modal ("reconnect and try
+>   again") instead of the forever-"Preparing" spinner.
+> - Memo guard fails VISIBLE: an unreachable check renders an amber "we could
+>   not verify whether this address needs a memo" warning (never silently
+>   green); MemoRequirement gained `unknown`.
+> - Wallet export: a failed wallet-list fetch BLOCKS the export with a red
+>   retry card — never falls back to a possibly-wrong wallet's phrase.
+> - Wallet connect: store failures toast via the classifier; a closed picker
+>   says "cancelled — nothing was linked" instead of total silence.
+> - Passkey credentials: one quiet retry before the fail-open unrestricted
+>   prompt; wallet-info timeouts say "could not load your wallet just now",
+>   never "Turnkey wallet not found".
+> - Coinbase offramp: a failed status fetch is an outage warning, never
+>   "No pending cash-out"; polling skips outage ticks; resume survives page
+>   refresh via a sessionStorage latch (cleared on close).
+> - MGI: 15-20s timeouts on all client fetches; the drop-off-details button
+>   catches + toasts; poll exhaustion says "still processing — check
+>   Activity"; a 401 clears the cached SEP-10 token so the next attempt
+>   re-authenticates.
+> - Ramp fail-open row creation now logs the tracking loss server-side.
+> - Deferred-from-W1 closed: network-aware fallback transports on burn-evm
+>   and the banner's readBaseUsdc.
+
 - `use-cctp-engine.tsx:388` — `patch({burnTxHash})` failures swallowed → cron AND banner blind to the money. Retry with backoff; surface if permanently failing. Same for `markFailed`/`markSourceRefunded` at :668, :742, :771, :965 (stuck-forever activity rows)
 - `lib/cctp/burn-stellar.ts:103` — burn timeout throws BEFORE patching the hash; the burn may have succeeded → patch hash first, keep polling
 - `lifi-tracker.ts:149` — bridges >20 min spin forever → honest "still bridging — track here" ending (CCTP already has one)

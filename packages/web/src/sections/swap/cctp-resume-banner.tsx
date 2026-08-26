@@ -30,6 +30,7 @@ import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { useRef, useState, useEffect, useCallback } from 'react';
+import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { parseFailedTool, parseFailedExchanges } from '@/lib/cctp/failure-class';
@@ -100,7 +101,7 @@ async function readBaseUsdc(network: NetworkType, address: string): Promise<bigi
   const { base, baseSepolia } = await import('viem/chains');
   const client = createPublicClient({
     chain: network === 'mainnet' ? base : baseSepolia,
-    transport: http(),
+    transport: network === 'mainnet' ? await baseFallbackTransport() : http(),
   });
   return client.readContract({
     address: EVM_USDC.base[network],

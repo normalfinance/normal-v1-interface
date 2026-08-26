@@ -2,6 +2,7 @@
 
 import type { ChainId } from '@/lib/chains/registry';
 
+import { useSnackbar } from 'notistack';
 import { buildAuthHeaders } from '@/utils/http';
 import { useRef, useState, useEffect } from 'react';
 import { ETH_RPC_URLS, SOL_RPC_URLS } from '@/lib/chains/rpc-fallback';
@@ -193,6 +194,7 @@ const ARRIVAL_CAP_MS = 15_000;
 export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHandlers): Stage {
   const [stage, setStage] = useState<Stage>('confirming');
   const handlersRef = useRef(handlers);
+  const { enqueueSnackbar } = useSnackbar();
   handlersRef.current = handlers;
 
   useEffect(() => {
@@ -229,17 +231,22 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
       log('source confirmed');
 
       // 2) Record now (source landed) so it shows as one Swap row, then refresh.
-      try {
-        const headers = await buildAuthHeaders();
-        await fetch('/api/lifi/record', {
-          method: 'POST',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fromSymbol, toSymbol, amountIn, amountOut, txHash }),
-        });
-        log('recorded swap');
-      } catch (e) {
-        log('record failed (non-fatal)', (e as Error).message);
-      }
+      // Doc 90 W2: the record is the swap's ONLY activity row — funds left
+      // the wallet, so one failed POST must not erase it. Three attempts.
+      for (let recAttempt = 0; recAttempt < 3; recAttempt++)
+        try {
+          const headers = await buildAuthHeaders();
+          await fetch('/api/lifi/record', {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fromSymbol, toSymbol, amountIn, amountOut, txHash }),
+          });
+          log('recorded swap');
+          break;
+        } catch (e) {
+          log('record failed — retrying', (e as Error).message);
+          await delay(4000 * (recAttempt + 1));
+        }
       handlersRef.current.onActivity();
 
       // 3) Track the bridge until it delivers.
@@ -284,6 +291,17 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
       setStage(final);
       handlersRef.current.onActivity();
       if (final !== 'bridging') handlersRef.current.onTerminal(final);
+      else {
+        // Doc 90 W2: ~20 minutes without a terminal verdict — some routes
+        // (THORChain, Chainflip) legitimately take longer. Say so instead of
+        // spinning silently forever; the funds are in flight to the user's
+        // own address and the activity row keeps tracking delivery.
+        log('bridge still pending after poll budget — honest handoff');
+        enqueueSnackbar(
+          `Your ${toSymbol} is still on its way — this route can take a while. It arrives automatically; you can track it in Activity.`,
+          { variant: 'info', autoHideDuration: 12000 }
+        );
+      }
     })();
 
     return () => {

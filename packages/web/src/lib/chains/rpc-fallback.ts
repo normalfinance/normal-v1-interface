@@ -24,3 +24,15 @@ export async function baseFallbackTransport() {
   const { http, fallback } = await import('viem');
   return fallback(BASE_RPC_URLS.map((u) => http(u)));
 }
+
+/** Chain+network-aware EVM transport: fallback list on mainnet, plain default
+ *  RPC on testnets (the public fallback URLs are mainnet-only). */
+export async function evmFallbackTransport(
+  chain: 'base' | 'ethereum',
+  network: 'mainnet' | 'testnet'
+) {
+  const { http, fallback } = await import('viem');
+  if (network !== 'mainnet') return http();
+  const urls = chain === 'base' ? BASE_RPC_URLS : ETH_RPC_URLS;
+  return fallback(urls.map((u) => http(u)));
+}

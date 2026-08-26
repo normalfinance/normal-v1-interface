@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Round 2 Explainer — Failover, Sends, Ramps, Honest Errors</title>
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --muted: #5a5a66;
+    --line: #e6e6ea;
+    --soft: #f6f6f8;
+    --green: #0a6649;
+    --amber: #7a4a00;
+    --red: #991b1b;
+    --blue: #1d4ed8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    max-width: 940px;
+    padding: 48px 32px 96px;
+    font: 15px/1.65 "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: #fff;
+  }
+  h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 30px; }
+  h2 {
+    font-size: 20px; letter-spacing: -0.01em;
+    margin: 40px 0 10px; padding-top: 16px;
+    border-top: 2px solid var(--ink);
+  }
+  h3 { font-size: 15.5px; margin: 22px 0 6px; }
+  p, li { color: #23232b; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 5px 0; }
+  strong { color: var(--ink); }
+  code {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 12.5px; background: var(--soft);
+    padding: 1px 5px; border-radius: 5px;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0 18px; font-size: 13px; }
+  th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .box {
+    border: 1px solid var(--line); border-left: 4px solid var(--ink);
+    background: var(--soft); border-radius: 8px; padding: 14px 18px; margin: 16px 0;
+  }
+  .box.warn { border-left-color: #d97706; }
+  .box.good { border-left-color: #1ab37d; }
+  .box .label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px;
+  }
+  .bad { color: var(--red); }
+  .ok { color: var(--green); }
+  .qa { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<h1>Round 2 Explainer</h1>
+<p class="subtitle">What shipped on 2026-08-26 across <strong>feat/better-ramps</strong> and
+<strong>feat/honest-errors</strong> (wave 1), explained from the user's chair: what used to
+happen, what actually went wrong underneath, and what happens now. The manual test steps live in
+<a href="./91-qa-round-2.html">doc 91 — QA Round 2</a> (R25–R32); the full error audit and the
+remaining waves live in <code>90-honest-errors-audit.md</code>.</p>
+
+<h2>1 · Swaps that heal themselves — failure classes + bridge/DEX failover <span class="qa">(QA R25, R26)</span></h2>
+
+<h3>Before</h3>
+<p>If you swapped USDC → SOL and the exchange leg failed on-chain, the app treated it like a
+signing problem: it asked for your <strong>biometrics again</strong>, you signed the exact same
+doomed transaction, it failed identically — and the error box showed a raw hex dump.</p>
+
+<h3>What was actually wrong (the forensic)</h3>
+<p>We replayed every failed transaction at its historic block. All of them — across
+<em>two different bridges</em> (Mayan and Relay) — died at the same address: a fake, unverified
+<strong>"Tesla TSLA" token</strong> whose <code>transfer()</code> always reverts, embedded inside
+LI.FI's DEX pre-swap step (tool "fly"). The bridges were never broken. That is why "try again"
+could never work: every fresh quote included the same poisoned swap path.</p>
+
+<div class="box good">
+  <div class="label">Proven live, same day</div>
+  15:27:55 swap started → 15:28:47 Mayan+fly route reverted → the app <strong>silently</strong>
+  retried with that bridge <em>and</em> that DEX excluded → 15:28:53 a clean route (NEAR) succeeded →
+  SOL delivered. Six seconds, zero biometric prompts, zero clicks.
+</div>
+
+<h3>Now</h3>
+<ul>
+  <li>The server tells the app <strong>why</strong> a step failed. An on-chain revert never falls
+  back to a passkey prompt — your signature cannot fix a route the chain already rejected.</li>
+  <li>On a revert, the app retries once automatically with the failed bridge <em>and</em> the failed
+  DEX step excluded from the quote (<code>denyBridges</code> + <code>denyExchanges</code>). Nothing
+  is ever removed from routing in general — the exclusion lives only inside the retry of the
+  transfer that just failed.</li>
+  <li>The row records <code>"via mayan through fly (0x…)"</code>, so later retries from the banner
+  exclude everything that already failed. Exclusions accumulate — no ping-pong between two broken
+  routes.</li>
+  <li>If everything fails: an honest popup ("The exchange route failed on the provider side — your
+  USDC is safe in your own account") with two working buttons — <strong>Try again</strong> and
+  <strong>Bring back as USDC</strong>.</li>
+</ul>
+
+<h2>2 · Sends that cannot strand dust — exact MAX for every asset <span class="qa">(QA R27, R28)</span></h2>
+
+<h3>Before</h3>
+<p>MAX-sending all your SOL failed with "The network rejected this send." Cause: the MAX button
+rounded a <strong>9-decimal</strong> asset to <strong>8 decimals</strong>, stranding 9 lamports —
+and Solana forbids leaving an account with more than zero but less than ~0.00089 SOL
+(<code>InsufficientFundsForRent</code>, simulation-verified). A second rounding in the review screen
+(7 decimals for everything non-BTC) could re-create the dust even after a fix. And BTC MAX was a
+<em>guaranteed</em> failure: it offered your full balance, which can never cover amount + fee.</p>
+
+<h3>Now</h3>
+<table>
+  <tr><th>Asset</th><th>Behavior</th></tr>
+  <tr><td>SOL</td><td>MAX computes in integer lamports from a live balance read and leaves
+  <strong>exactly 0</strong> (allowed). A typed amount that would leave forbidden dust is blocked
+  <em>before</em> the passkey prompt: "leave at least 0.001 SOL".</td></tr>
+  <tr><td>BTC</td><td>MAX = all UTXOs minus the real sweep fee (the same vbyte math the builder
+  uses). Sub-546-sat sends are blocked pre-passkey (the network rejects dust outputs).</td></tr>
+  <tr><td>Stellar USDC</td><td>The fee is paid in XLM — a sender at the reserve floor is warned
+  <em>before</em> signing instead of failing at Horizon.</td></tr>
+  <tr><td>ETH / XLM</td><td>Audited: already correct (live gas estimate + reserve math). Unchanged.</td></tr>
+</table>
+<div class="box">
+  <div class="label">Rule this created</div>
+  MAX is computed in the asset's own integer units from a LIVE read — display-rounded MAX math will
+  strand dust on some chain, every time. Never collect a signature for a transaction that must fail.
+</div>
+
+<h2>3 · Money in flight you can trust <span class="qa">(QA R29)</span></h2>
+
+<h3>Before</h3>
+<p>"Buying SOL on Coinbase" messages doubled up and never went away — even after the SOL arrived.
+Three compounding causes: the arrival baseline was only captured for Stellar assets, the arrival
+check skipped every non-Stellar chain, and the 45-minute cleanup lived only in a scheduled job that
+never runs outside production. A state machine whose only exit is a cron that doesn't run has no
+exits.</p>
+
+<h3>Now</h3>
+<ul>
+  <li>The indicator lives <strong>inside the balance card</strong>, right under the number it
+  explains — a compact blue "on the way" chip, for every asset. Failures keep the dismissible
+  banner above Activity.</li>
+  <li>The server captures a live baseline for <em>every</em> chain at purchase time, and re-opening
+  a checkout reuses the active row instead of stacking a duplicate.</li>
+  <li>Arrival is proven by the chain — balance above baseline, or a confirmed incoming transfer
+  newer than the row — checked both by the open tab (within ~10 s) and by the server on every read,
+  so the chip clears even if no tab was watching when the money landed.</li>
+  <li>Abandoned checkouts clear themselves after 45 minutes on the next page load. No cron needed.</li>
+</ul>
+
+<h2>4 · Activity rows that tell the truth about wallets <span class="qa">(QA R30)</span></h2>
+<p><span class="bad">Before:</span> with Lobstr connected, SOL/ETH/BTC rows were tagged "Lobstr" —
+impossible, since external wallets are Stellar-only and cannot sign those transactions.
+<span class="ok">Now:</span> a row that declares its funding source keeps that truth (a swap Lobstr
+paid for still says Lobstr), and every other native-chain row is tagged
+<strong>Normal wallet</strong>, derived from the chain registry — no hardcoded lists.</p>
+
+<h2>5 · Honest errors, wave 1 — the infrastructure <span class="qa">(QA R31, R32)</span></h2>
+<p>A four-sweep audit found ~102 places where failures reached users as raw machine text, silently
+vanished, or blamed the wrong thing. Wave 1 shipped the plumbing the rest rides on:</p>
+
+<h3>One classifier for every error surface</h3>
+<p>Every toast and failure box now funnels through <code>friendlyAppError()</code>. If a raw
+Stellar code, Turnkey machine string, viem race, revert, rate limit, or timeout reaches it → you
+see one plain-English sentence. If the text is already human (like MoneyGram's useful "below
+minimum" rejection) → it passes through untouched. If it's a JSON dump, stack trace, hex blob, or
+internal config name → it collapses to a neutral line, and the raw detail stays in the console for
+support. Eighteen surfaces converted; twelve jest cases pin the behavior.</p>
+<table>
+  <tr><th>You used to see</th><th>You now see</th></tr>
+  <tr><td><code>Turnkey error 16: credential ID could not be found… organizationId=…</code></td>
+      <td>"Your device signed with a passkey from a different account — reload the page and try again."</td></tr>
+  <tr><td><code>Transaction failed: tx_insufficient_balance</code></td>
+      <td>"Not enough XLM to cover the network fee — add a little XLM and try again."</td></tr>
+  <tr><td><code>nonce too low</code></td>
+      <td>"The network was mid-update — try again, it usually works immediately."</td></tr>
+  <tr><td><code>deposit_for_burn submit failed: {"_attributes":{…}}</code></td>
+      <td>"That didn't go through. Please try again in a moment."</td></tr>
+  <tr><td><code>challenge failed: 401 Unauthorized</code></td>
+      <td>The one session banner (below) — after a silent retry.</td></tr>
+</table>
+
+<h3>One session-expired story</h3>
+<p>Any authed request that hits 401 now silently refreshes your session and retries once. Only if
+that still fails: a single black banner at the top — "Your session expired — please sign in
+again" — instead of a different cryptic failure on every surface. The money-in-flight banner keeps
+its last data during an outage instead of pretending nothing is pending.</p>
+
+<h3>Nothing internal leaks</h3>
+<p>Server responses no longer carry stack traces, internal MoneyGram hosts, request payloads, or
+2&nbsp;KB HTML dumps — that detail stays in server logs. The anchor's genuinely useful messages now
+reach you; the diagnostics never do.</p>
+
+<h3>One flaky node can't lie to you</h3>
+<p>Money-moving legs (the Base pivot, arrival polling, swap-delivery confirmation) now try a list
+of RPC providers instead of one public node. The worst case this kills: an RPC outage used to be
+reported as <em>"Cross-chain swap failed — no funds were moved"</em> while your funds had moved.</p>
+
+<h2>6 · Automated test coverage added in this round</h2>
+<table>
+  <tr><th>Suite</th><th>Tests</th><th>Pins</th></tr>
+  <tr><td><code>lib/cctp/failure-class.test.ts</code></td><td>13</td>
+      <td>The "via bridge through dex" grammar round-trip — if it drifts, failover silently stops excluding failed routes.</td></tr>
+  <tr><td><code>lib/send/native-dust.test.ts</code></td><td>9</td>
+      <td>The exact 347,450,359-lamport incident: MAX leaves 0; the failed send classifies as rent-dust; boundary at 890,880 lamports.</td></tr>
+  <tr><td><code>lib/ramp/status.ts</code> tests</td><td>15</td>
+      <td>Forward-only ramp transitions; arrived rows leave the banner; abandonment timing.</td></tr>
+  <tr><td><code>utils/errors/friendly-app-error.test.ts</code></td><td>12</td>
+      <td>Every mapping class + the pass-through/collapse rules (human text survives, dumps never reach users).</td></tr>
+</table>
+<p>Full suite at the end of the round: <strong>375 tests, 43 suites, all green</strong> — plus
+lint, prettier, tsc and an isolated production build.</p>
+
+<h2>7 · Honest errors, wave 2 — money-path truth <span class="qa">(QA R33–R36)</span></h2>
+<p>The dangerous silents: places where the app either lost track of money-state or told you
+something false about your money. Every one now either retries, blocks, or says so:</p>
+<ul>
+  <li><strong>Money-state writes never vanish</strong> — recording a burn/swap hash retries three
+  times with backoff; if it still fails you're told to keep the tab open (instead of the transfer
+  becoming invisible to both the cron and the recovery banner). A timed-out Stellar burn hands its
+  hash to the row anyway — the transaction may still land.</li>
+  <li><strong>No more eternal spinners</strong> — a Soroswap swap with an expired wallet session
+  shows "reconnect and try again" instead of "Preparing the swap" forever; a slow bridge
+  (&gt;20 min) says "still on its way — track it in Activity" instead of spinning silently.</li>
+  <li><strong>Guards fail visible</strong> — if the memo check can't run, Send shows an amber
+  "we could not verify whether this address needs a memo" warning instead of silently passing
+  (that guard exists because of a real lost-funds incident); the phrase-export dialog
+  <em>blocks with Retry</em> when the wallet list won't load, instead of possibly exporting the
+  wrong wallet's phrase.</li>
+  <li><strong>Outage ≠ absence</strong> — a failed Coinbase status check warns "could not reach
+  Coinbase" instead of announcing "No pending cash-out" after a real sale, and the cash-out
+  resume now survives a page refresh.</li>
+  <li><strong>Small dignities</strong> — closing the wallet picker says "cancelled" instead of
+  nothing; the MoneyGram details button can no longer die silently; its polls time out honestly
+  and re-authenticate after session expiry; a transient wallet-info timeout no longer claims
+  "Turnkey wallet not found".</li>
+</ul>
+
+<h2>8 · What's next</h2>
+<ul>
+  <li><strong>Wave 3 — unknown ≠ zero</strong>: outages render as "—" with a retry, never as
+  $0.00; the DeFindex rate-limit backoff.</li>
+  <li><strong>Wave 4 — automatic retries</strong>: one-shot silent retries for pure races
+  (<code>tx_bad_seq</code>, nonce races), quote backoff, and flow polish.</li>
+</ul>
+
+</body>
+</html>

@@ -46,6 +46,16 @@ function toBuffer(base64url: string): ArrayBuffer {
 }
 
 async function fetchCredentials(): Promise<PasskeyCredential[]> {
+  const first = await fetchCredentialsOnce();
+  if (first.length) return first;
+  // Doc 90 W2: one quiet retry before fail-open — an unrestricted prompt
+  // costs the user a biometric BEFORE the error-16 failure teaches them
+  // anything.
+  await new Promise((r) => setTimeout(r, 500));
+  return fetchCredentialsOnce();
+}
+
+async function fetchCredentialsOnce(): Promise<PasskeyCredential[]> {
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.creds;
   try {
     const { buildAuthHeaders } = await import('@/utils/http');

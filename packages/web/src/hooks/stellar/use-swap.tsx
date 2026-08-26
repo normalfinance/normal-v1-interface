@@ -428,7 +428,13 @@ export function useSwap(
         setQuote(null);
         return pair.serviceHash;
       } catch (err: any) {
-        if (err instanceof WalletSessionExpiredError) return '';
+        if (err instanceof WalletSessionExpiredError) {
+          // Doc 90 W2: the silent '' return left the progress modal spinning
+          // on "Preparing the swap" forever. Surface it — the modal shows
+          // this with Try again; the reconnect snackbar already fired.
+          setError('Your wallet session expired — reconnect your wallet and try again.');
+          return '';
+        }
         console.error('Error executing swap:', err);
         const errorMessage = friendlyAppError(err);
         setError(errorMessage);

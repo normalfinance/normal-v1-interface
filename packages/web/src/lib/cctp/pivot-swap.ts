@@ -43,7 +43,8 @@ export async function executePivotSwap(params: {
   onStep?: (step: 'quote' | 'approve' | 'swap') => void;
 }): Promise<PivotSwapResult> {
   const info = await getTurnkeyWalletInfo();
-  if (!info?.subOrgId) throw new Error('Turnkey wallet not found');
+  if (!info?.subOrgId)
+    throw new Error('Could not load your wallet just now — check your connection and try again.');
 
   const { erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } = await import(
     'viem'

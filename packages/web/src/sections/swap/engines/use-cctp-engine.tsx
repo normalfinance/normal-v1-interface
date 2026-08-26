@@ -382,13 +382,29 @@ export function useCctpEngine({
     // at "Bridging to Stellar" while the banner (fresh headers each poll)
     // already knew the swap was COMPLETED (finding #64).
     async (transferId: string) => ({
-      patch: async (body: Record<string, string | boolean>) =>
-        fetch(`/api/cctp/transfers/${transferId}`, {
-          method: 'PATCH',
-          headers: await buildAuthHeaders(),
-          credentials: 'include',
-          body: JSON.stringify(body),
-        }).catch(() => {}),
+      patch: async (body: Record<string, string | boolean>) => {
+        // Money-state writes never swallow (doc 90 W2): a lost burn hash
+        // strands funds invisibly — the cron can't advance the row and the
+        // recovery banner can't see it. Three attempts with backoff; the
+        // permanent-failure case returns undefined so critical call sites
+        // can SAY it instead of hiding it.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const res = await fetch(`/api/cctp/transfers/${transferId}`, {
+              method: 'PATCH',
+              headers: await buildAuthHeaders(),
+              credentials: 'include',
+              body: JSON.stringify(body),
+            });
+            if (res.ok) return res;
+          } catch {
+            /* retry below */
+          }
+          await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        }
+        console.error('[cctp] PATCH permanently failed:', Object.keys(body).join(','));
+        return undefined;
+      },
       pollStatus: async (target: string, intervalMs: number) => {
         let misses = 0;
         for (;;) {
@@ -620,7 +636,14 @@ export function useCctpEngine({
           solanaAddress: addresses.SOL,
         });
         broadcastStarted = true;
-        await patch({ srcSwapTxHash: srcTx });
+        if (!(await patch({ srcSwapTxHash: srcTx }))) {
+          enqueueSnackbar(
+            t(
+              'We could not record this step — your funds are safe. Keep this tab open until the swap completes.'
+            ),
+            { variant: 'warning' }
+          );
+        }
 
         setStage('arriving');
         const target = BigInt(lifiQuote.estimate.toAmountMin);
@@ -723,7 +746,14 @@ export function useCctpEngine({
             amountWire: arrivedWire,
             stellarRecipient: stellarAddress!,
           });
-          await patch({ burnTxHash });
+          if (!(await patch({ burnTxHash }))) {
+            enqueueSnackbar(
+              t(
+                'We could not record this step — your funds are safe. Keep this tab open until the swap completes.'
+              ),
+              { variant: 'warning' }
+            );
+          }
         }
 
         setStage('bridging');
@@ -752,6 +782,12 @@ export function useCctpEngine({
           // the failure popup's buttons resolve their id from this ref (the
           // marker is already null by the time they render; live 2026-08-26).
           lastFailedRunIdRef.current = getActiveCctpTransfer();
+          // A timed-out Stellar submit may still land on-chain — keep the
+          // hash on the row so the cron/banner can finish it instead of the
+          // run stranding an invisible burn (doc 90 W2).
+          if (e?.mayStillLand && e?.txHash) {
+            await patch({ burnTxHash: String(e.txHash) });
+          }
           // A classified revert records WHICH bridge failed on the row, so a
           // later "Try again" (banner recover) excludes that bridge.
           if (e?.__pivotRevert) {
@@ -778,6 +814,7 @@ export function useCctpEngine({
     },
     [
       evmAddress,
+      enqueueSnackbar,
       stellarAddress,
       network,
       addresses,
@@ -810,7 +847,14 @@ export function useCctpEngine({
           mintRecipient: evmAddressToBytes(evmAddress!),
         });
         broadcastStarted = true;
-        await patch({ burnTxHash });
+        if (!(await patch({ burnTxHash }))) {
+          enqueueSnackbar(
+            t(
+              'We could not record this step — your funds are safe. Keep this tab open until the swap completes.'
+            ),
+            { variant: 'warning' }
+          );
+        }
 
         setStage('bridging');
         await pollStatus('COMPLETED', 5_000); // Stellar-source attestation ≈ seconds
@@ -948,6 +992,12 @@ export function useCctpEngine({
           // the failure popup's buttons resolve their id from this ref (the
           // marker is already null by the time they render; live 2026-08-26).
           lastFailedRunIdRef.current = getActiveCctpTransfer();
+          // A timed-out Stellar submit may still land on-chain — keep the
+          // hash on the row so the cron/banner can finish it instead of the
+          // run stranding an invisible burn (doc 90 W2).
+          if (e?.mayStillLand && e?.txHash) {
+            await patch({ burnTxHash: String(e.txHash) });
+          }
           // A classified revert records WHICH bridge failed on the row, so a
           // later "Try again" (banner recover) excludes that bridge.
           if (e?.__pivotRevert) {
