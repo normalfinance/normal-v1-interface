@@ -312,9 +312,16 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
       //    deposit never landed. The route floors this per address, so it
       //    can't be used to hammer DeFindex.
       if (address) {
-        pos
-          .mutate(fetchUserPosition(address, network, true), { revalidate: false })
-          .catch(() => {});
+        // Doc 90 W4: this read VERIFIES the optimistic number — one silent
+        // retry before giving up, and say it in the console if both fail
+        // (the optimistic value then stands unverified).
+        pos.mutate(fetchUserPosition(address, network, true), { revalidate: false }).catch(() => {
+          setTimeout(() => {
+            pos
+              .mutate(fetchUserPosition(address, network, true), { revalidate: false })
+              .catch((e2) => console.warn('[savings] post-action confirm read failed twice:', e2));
+          }, 5_000);
+        });
       }
       // #32: companion ops write the COMPANION's cache — mirror the same
       // optimistic-then-confirm dance for it.

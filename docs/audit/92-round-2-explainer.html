@@ -263,7 +263,30 @@ render as an outage:</p>
   while being written.</li>
 </ul>
 
-<h2>9 · What's next</h2>
+<h2>9 · Honest errors, wave 4 — the app retries before you do <span class="qa">(QA R40, R41)</span></h2>
+<p>The final wave: pure races and transient blips get one automatic, quiet retry — and every
+remaining surprise gets announced:</p>
+<ul>
+  <li><strong>Quotes</strong> — a rate-limited or flaky quote retries itself once (~6s) before
+  showing an error; the pivot quote (your money is already on Base at that point) tries three
+  times and, as a last resort, allows previously-failed bridges — a worse route beats no route.</li>
+  <li><strong>Gas top-ups</strong> — retried (they're idempotent), then verified by an actual
+  balance read instead of a blind 8-second wait.</li>
+  <li><strong>Passkeys</strong> — a network blip mid-ceremony retries quietly (an API rejection
+  still never does); the context-aware passkey guidance now survives the guard's wrapping.</li>
+  <li><strong>No more surprises</strong> — autopilot falling back to manual says so before the
+  prompt; the escrowed 0.5% savings fee announces its separate settlement; a failed balance
+  pre-check warns before costing two signatures; QR failures become one quiet line.</li>
+  <li><strong>Documented limits</strong> — Stellar/EVM sequence races cannot be retried without
+  a fresh signature (the signature covers the sequence), so their honest ceiling is the wave-1
+  copy: "the network was mid-update — try again, it usually works immediately."</li>
+</ul>
+
+<h2>10 · Project status</h2>
+<p><strong>All four waves of the honest-errors audit shipped on 2026-08-26.</strong> ~102 findings
+from four parallel code sweeps: raw machine text eliminated at 18 funnels through one classifier,
+every silent money-path failure now retries or speaks, every outage renders as an outage, and pure
+races retry themselves. Remaining deferrals are itemized inside doc 90's per-wave status blocks.</p>
 <ul>
   <li><strong>Wave 3 — unknown ≠ zero</strong>: outages render as "—" with a retry, never as
   $0.00; the DeFindex rate-limit backoff.</li>

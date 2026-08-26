@@ -287,8 +287,15 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           ) {
             throw balanceErr;
           }
-          // Horizon load failure — proceed and let the tx surface the error naturally
+          // Doc 90 W4: proceeding costs the user TWO signatures before the
+          // failure — proceed, but SAY the pre-check could not run.
           console.warn('Could not pre-check USDC balance:', balanceErr.message);
+          enqueueSnackbar(
+            t(
+              'We could not pre-check your balance — the transaction may still fail after signing.'
+            ),
+            { variant: 'warning' }
+          );
         }
 
         // 1. Build the DeFindex deposit XDR for the NET amount. It carries
@@ -358,6 +365,16 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           t('Deposit successful!'),
           pair.serviceHash
         );
+        if (!pair.feeSubmitted) {
+          // Doc 90 W4: the 0.5% fee is escrowed and swept separately — a
+          // second small USDC debit minutes later must never be a surprise.
+          enqueueSnackbar(
+            t(
+              'Note: the 0.5% service fee settles as a separate small transaction in the next few minutes.'
+            ),
+            { variant: 'info' }
+          );
+        }
 
         // Optimistically update the shared savings cache so every view reflects
         // the deposit immediately (the events indexer lags 30-120s behind).

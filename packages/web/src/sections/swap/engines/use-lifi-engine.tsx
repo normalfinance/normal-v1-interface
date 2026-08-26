@@ -176,22 +176,33 @@ export function useLifiEngine({
 
     (async () => {
       try {
-        const res = await fetch('/api/lifi/quote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            fromSymbol,
-            toSymbol,
-            fromAmount: value.multipliedBy(BigNumber(10).pow(from.decimals)).toFixed(0),
-            fromAddress,
-            toAddress,
-          }),
-        });
-        const data = await res.json();
-        if (stale) return;
-        if (!res.ok || !data.success) {
-          setQuoteError(friendlyAppError(data.error ?? t('Failed to fetch quote')));
+        // Doc 90 W4: 429/5xx quote failures are transient — one quiet retry
+        // before parking an error in the card.
+        let res: Response | null = null;
+        let data: any = null;
+        for (let qAttempt = 0; qAttempt < 2; qAttempt++) {
+          res = await fetch('/api/lifi/quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              fromSymbol,
+              toSymbol,
+              fromAmount: value.multipliedBy(BigNumber(10).pow(from.decimals)).toFixed(0),
+              fromAddress,
+              toAddress,
+            }),
+          }).catch(() => null);
+          data = res ? await res.json().catch(() => null) : null;
+          if (stale) return;
+          if (res && res.ok && data?.success) break;
+          const transient = !res || res.status === 429 || res.status >= 500;
+          if (!transient || qAttempt === 1) break;
+          await new Promise((r) => setTimeout(r, 6_000));
+          if (stale) return;
+        }
+        if (!res || !res.ok || !data?.success) {
+          setQuoteError(friendlyAppError(data?.error ?? t('Failed to fetch quote')));
         } else {
           setQuote(data.quote);
           setFeePercent(typeof data.feePercent === 'number' ? data.feePercent : 0);

@@ -1,6 +1,6 @@
 # 90 — Honest Errors: app-wide error-handling audit
 
-**Date:** 2026-08-26 · **Branch:** `feat/honest-errors` (off develop) · **Status:** findings complete, fixes awaiting GO per wave.
+**Date:** 2026-08-26 · **Branch:** `feat/honest-errors` (off develop) · **Status:** ✅ ALL FOUR WAVES SHIPPED (same day). Residual deferrals are listed inside each wave's status block.
 
 **Method:** four parallel code sweeps (swap flows · send/wallet/signing · savings/prices/portfolio · API/ramps/auth), ~102 findings, every one verified at file:line. Global counts: 70 error toasts, 20 raw `e.message` pass-throughs, 195 empty catches (user-facing subset listed below), 10 routes stringifying raw exceptions into responses, 3 different rate-limit wordings.
 
@@ -193,6 +193,43 @@ Server logs keep the detail (+ traceId); responses carry a code + friendly text:
 ---
 
 ## Wave 4 — Flow polish + automatic retries
+
+> **STATUS: SHIPPED 2026-08-26** (branch feat/honest-errors). What landed:
+> - Gas top-up: 3 attempts on the idempotent relayer call, then a real Base
+>   balance poll (capped ~20s) instead of the blind 8-second sleep.
+> - Autopilot downgrade is SAID: when the delegation was active but a step
+>   falls back to interactive, an info toast announces the passkey before it
+>   pops ("Autopilot could not finish this step — confirming with your
+>   passkey instead") on both the burn and pivot legs.
+> - Quote fetches (LI.FI + CCTP cards): one quiet 6s retry on 429/5xx/network
+>   before parking an error; the PIVOT quote (money already minted on Base)
+>   gets 3 attempts with backoff and drops the deny lists on the last one —
+>   a previously-failed bridge beats no route at all.
+> - WebAuthn guard: the one-quiet-retry now also covers NETWORK-layer blips
+>   mid-ceremony (narrow by contract — API errors still never retry; new
+>   jest case pins it); the rich friendlyTurnkeyError branches now fire on
+>   guard-wrapped errors too (regex learned the wrapped phrase).
+> - Savings: a failed pre-check WARNS before costing two signatures; the
+>   escrowed 0.5% fee announces "settles as a separate small transaction";
+>   the only optimistic-write confirm read retries once and logs if it
+>   still fails.
+> - QR failures are quiet inline text in both receive modals — no eternal
+>   spinner, no alarming error toast, address always copyable.
+> - Send modal: the BTC display-MAX fallback reserves the estimated sweep
+>   fee (was the full balance — a guaranteed builder failure); a failed
+>   fresh-read MAX says "used the cached value".
+>
+> **Documented deviations (deliberate):**
+> - `tx_bad_seq`/`tx_too_late` and viem nonce races are NOT silently
+>   retried: Stellar/EVM signatures cover the sequence/nonce, so a rebuild
+>   requires a fresh signature — "silent" is physically impossible without
+>   custody-side signing. The W1 classifier copy ("the network was
+>   mid-update — try again, it usually works immediately") is the honest
+>   ceiling here.
+> - fee-pair's "taking longer than expected" optimistic-state mismatch
+>   needs a deposit-flow state machine — out of scope, tracked.
+> - Quote-CTA wording and send-picker outage states are covered by the W1
+>   classifier and the W3 stale/error machinery respectively.
 
 - Stellar races: `tx_bad_seq`/`tx_too_late` → reload account, rebuild, resubmit once silently (`use-send-token.ts:266`)
 - viem races: nonce too low / replacement underpriced → refetch pending nonce + fees, retry once (`ethereum.ts:220`)

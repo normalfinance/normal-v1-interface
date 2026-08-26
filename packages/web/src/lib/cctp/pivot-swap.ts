@@ -55,23 +55,31 @@ export async function executePivotSwap(params: {
   const usdc = EVM_USDC.base.mainnet;
 
   // --- 1. quote ---------------------------------------------------------------
+  // Doc 90 W4: the USDC is ALREADY minted on Base here — a transient quote
+  // failure must not dead-end it. Three attempts with backoff; the last one
+  // drops the deny lists (a previously-failed bridge beats no route at all).
   params.onStep?.('quote');
-  const res = await fetch('/api/lifi/quote', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      fromSymbol: 'USDC_BASE',
-      toSymbol: params.toSymbol,
-      fromAmount: params.amountWire.toString(),
-      fromAddress: params.evmAddress,
-      toAddress: params.toAddress,
-      denyBridges: params.denyBridges,
-      denyExchanges: params.denyExchanges,
-    }),
-  });
-  const data = await res.json();
-  if (!res.ok || !data.success)
-    throw new Error(data.error ?? 'No route from Base — try again shortly');
+  let data: any = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const lastResort = attempt === 2;
+    const res = await fetch('/api/lifi/quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fromSymbol: 'USDC_BASE',
+        toSymbol: params.toSymbol,
+        fromAmount: params.amountWire.toString(),
+        fromAddress: params.evmAddress,
+        toAddress: params.toAddress,
+        denyBridges: lastResort ? undefined : params.denyBridges,
+        denyExchanges: lastResort ? undefined : params.denyExchanges,
+      }),
+    }).catch(() => null);
+    data = res ? await res.json().catch(() => null) : null;
+    if (res?.ok && data?.success) break;
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 1_500 * (attempt + 1)));
+  }
+  if (!data?.success) throw new Error(data?.error ?? 'No route from Base — try again shortly');
   const quote = data.quote;
   const approvalAddress: `0x${string}` | undefined = quote.estimate?.approvalAddress;
   const txr = quote.transactionRequest;

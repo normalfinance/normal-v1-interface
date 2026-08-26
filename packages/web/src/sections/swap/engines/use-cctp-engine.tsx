@@ -287,16 +287,27 @@ export function useCctpEngine({
                 fromAddress: evmAddress,
                 toAddress: nativeAddress,
               };
-        const res = await fetch('/api/lifi/quote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify(body),
-        });
-        const data = await res.json();
-        if (stale) return;
-        if (!res.ok || !data.success)
-          setQuoteError(friendlyAppError(data.error ?? t('Failed to fetch quote')));
+        // Doc 90 W4: 429/5xx quote failures are transient — one quiet retry
+        // before parking an error in the card.
+        let res: Response | null = null;
+        let data: any = null;
+        for (let qAttempt = 0; qAttempt < 2; qAttempt++) {
+          res = await fetch('/api/lifi/quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify(body),
+          }).catch(() => null);
+          data = res ? await res.json().catch(() => null) : null;
+          if (stale) return;
+          if (res && res.ok && data?.success) break;
+          const transient = !res || res.status === 429 || res.status >= 500;
+          if (!transient || qAttempt === 1) break;
+          await new Promise((r) => setTimeout(r, 6_000));
+          if (stale) return;
+        }
+        if (!res || !res.ok || !data?.success)
+          setQuoteError(friendlyAppError(data?.error ?? t('Failed to fetch quote')));
         else {
           setQuote(data.quote);
           setFeePercent(typeof data.feePercent === 'number' ? data.feePercent : 0);
@@ -444,19 +455,46 @@ export function useCctpEngine({
         }
       },
       topUp: async () => {
-        const res = await fetch('/api/cctp/gas-topup', {
-          method: 'POST',
-          headers: await buildAuthHeaders(),
-          credentials: 'include',
-          body: JSON.stringify({ transferId }),
-          signal: AbortSignal.timeout(30_000),
-        });
-        if (!res.ok && res.status !== 409)
-          throw new Error(t('Gas top-up failed — try again in a moment.'));
-        await new Promise((r) => setTimeout(r, 8_000));
+        // Doc 90 W4: the relayer call is idempotent by design (409 = already
+        // running) — retry transients instead of failing a swap whose money
+        // is already mid-route, and verify by BALANCE instead of the blind
+        // 8-second guess.
+        let ok = false;
+        for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+          try {
+            const res = await fetch('/api/cctp/gas-topup', {
+              method: 'POST',
+              headers: await buildAuthHeaders(),
+              credentials: 'include',
+              body: JSON.stringify({ transferId }),
+              signal: AbortSignal.timeout(30_000),
+            });
+            ok = res.ok || res.status === 409;
+          } catch {
+            /* transient — retry below */
+          }
+          if (!ok) await new Promise((r) => setTimeout(r, 2_000 * (attempt + 1)));
+        }
+        if (!ok) throw new Error(t('Gas top-up failed — try again in a moment.'));
+        try {
+          const { createPublicClient } = await import('viem');
+          const { base } = await import('viem/chains');
+          const client = createPublicClient({
+            chain: base,
+            transport: await baseFallbackTransport(),
+          });
+          for (let i = 0; i < 10; i++) {
+            const bal = await client.getBalance({ address: evmAddress as `0x${string}` });
+            if (bal > 0n) return;
+            await new Promise((r) => setTimeout(r, 2_000));
+          }
+        } catch {
+          /* balance probe unavailable — proceed; the tx itself will tell */
+        }
       },
     }),
-    [t]
+
+    [t, evmAddress]
   );
 
   // #33 Stage 3: is the server-side signing delegation live for this user?
@@ -730,12 +768,19 @@ export function useCctpEngine({
         // rejection, timeout) falls through to the interactive path below;
         // autopilot never blocks a swap, it only removes prompts.
         setStage('topup');
-        const autoBurn = (await autopilotGate.current.isActive())
-          ? await tryAutopilot('burn', transferId)
-          : null;
+        const burnGateOn = await autopilotGate.current.isActive();
+        const autoBurn = burnGateOn ? await tryAutopilot('burn', transferId) : null;
         if (autoBurn) {
           setStage('burn'); // server patched burnTxHash + BURN_SUBMITTED already
         } else {
+          if (burnGateOn) {
+            // Doc 90 W4: the silent downgrade broke the "no signature needed"
+            // promise without a word — say it before the passkey appears.
+            enqueueSnackbar(
+              t('Autopilot could not finish this step — confirming with your passkey instead.'),
+              { variant: 'info' }
+            );
+          }
           await topUp();
 
           setStage('burn');
@@ -871,9 +916,8 @@ export function useCctpEngine({
           fromChainId?: number;
           toChainId?: number;
         };
-        let autoPivot = (await autopilotGate.current.isActive())
-          ? await tryAutopilot('pivot', transferId)
-          : null;
+        const pivotGateOn = await autopilotGate.current.isActive();
+        let autoPivot = pivotGateOn ? await tryAutopilot('pivot', transferId) : null;
         if (autoPivot?.__reverted) {
           // AUTOMATIC BRIDGE FAILOVER (Niko 2026-08-26): the tx reverted
           // on-chain INSIDE the quoted bridge — one silent autopilot retry
@@ -919,6 +963,12 @@ export function useCctpEngine({
           setStage('pivot-swap');
           result = autoPivot;
         } else {
+          if (pivotGateOn) {
+            enqueueSnackbar(
+              t('Autopilot could not finish this step — confirming with your passkey instead.'),
+              { variant: 'info' }
+            );
+          }
           await topUp();
 
           setStage('pivot-swap');

@@ -551,7 +551,15 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
           setMaxLoading(false);
         }
       }
-      setAmount(spendableBalance.toFixed(8, BigNumber.ROUND_DOWN));
+      // Doc 90 W4: for BTC the display fallback was the FULL balance — a
+      // guaranteed builder failure (inputs must cover amount + fee).
+      const fallbackMax = isBtc
+        ? BigNumber.max(
+            spendableBalance.minus(BigNumber((btcFeeRateSatPerVbyte ?? 15) * 141).div(1e8)),
+            0
+          )
+        : spendableBalance;
+      setAmount(fallbackMax.toFixed(8, BigNumber.ROUND_DOWN));
       return;
     }
     if (sendToken.symbol === 'XLM' && effectiveSenderAddress) {
@@ -577,7 +585,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
         const max = spendableXlmForOutflow(nativeBal, acc.subentry_count, holdBuffer);
         setAmount(max.toFixed(7, BigNumber.ROUND_DOWN));
       } catch {
+        // Doc 90 W4: the fresh-read invariant broke silently — say it.
         setAmount(spendableBalance.toFixed(7, BigNumber.ROUND_DOWN));
+        enqueueSnackbar(t('Could not read your live balance — MAX used the cached value.'), {
+          variant: 'warning',
+        });
       } finally {
         setMaxLoading(false);
       }

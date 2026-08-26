@@ -43,16 +43,22 @@ export function ChainReceiveModal({
   const { copy } = useCopyToClipboard();
   const { enqueueSnackbar } = useSnackbar();
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [qrFailed, setQrFailed] = useState(false);
 
   useEffect(() => {
     if (!open || !address) return;
+    setQrFailed(false);
     QRCode.toDataURL(address, {
       width: 200,
       margin: 1,
       color: { dark: '#0A0A0F', light: '#FFFFFF' },
     })
       .then(setQrCodeUrl)
-      .catch(() => setQrCodeUrl(''));
+      .catch(() => {
+        // Doc 90 W4: cosmetic failure — say it instead of spinning forever.
+        setQrCodeUrl('');
+        setQrFailed(true);
+      });
   }, [open, address]);
 
   if (!address) return null;
@@ -137,6 +143,12 @@ export function ChainReceiveModal({
                 alt={`${chainLabel} address QR`}
                 sx={{ maxWidth: '100%', borderRadius: '4px' }}
               />
+            ) : qrFailed ? (
+              <Typography
+                sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.45)', textAlign: 'center' }}
+              >
+                {t('QR unavailable — copy the address below.')}
+              </Typography>
             ) : (
               <CircularProgress size={36} sx={{ color: 'rgba(10,10,15,0.3)' }} />
             )}

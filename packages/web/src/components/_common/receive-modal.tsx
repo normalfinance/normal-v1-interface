@@ -71,12 +71,13 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
       });
       setQrCodeUrl(qrDataUrl);
     } catch (error) {
+      // Doc 90 W4: cosmetic — the inline text + copyable address below cover
+      // it; an ERROR toast overstated a non-problem.
       logger.error('Error generating QR code:', error);
-      enqueueSnackbar('Failed to generate QR code', { variant: 'error' });
     } finally {
       setIsGeneratingQR(false);
     }
-  }, [walletAddress, enqueueSnackbar]);
+  }, [walletAddress]);
 
   useEffect(() => {
     if (open && walletAddress) {
@@ -179,7 +180,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         />
       ) : (
         <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.4)' }}>
-          {t('Unable to generate QR code')}
+          {t('QR unavailable — copy the address below.')}
         </Typography>
       )}
     </Box>

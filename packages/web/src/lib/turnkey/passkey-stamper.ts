@@ -164,7 +164,11 @@ export function friendlyTurnkeyError(e: unknown): string {
         // offer and an older account's was used.
         'We could not confirm which passkey belongs to this account, so your browser offered all of them and used the wrong one. Reload the page and try again — passkeys also do not carry across web addresses, so a wallet created on another address cannot sign here.';
   }
-  if (/NotAllowedError|operation (was )?not allowed|timed out/i.test(raw)) {
+  if (
+    /NotAllowedError|operation (was )?not allowed|timed out|passkey confirmation did not complete/i.test(
+      raw
+    )
+  ) {
     // With the prompt restricted to this account's credentials, "not allowed"
     // usually means the device simply has none of them — a different message
     // entirely from "you dismissed it" (verified 2026-08-22: a device can
