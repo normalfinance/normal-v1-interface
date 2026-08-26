@@ -48,8 +48,8 @@ import { BtcTxStatusModal } from './btc-tx-status-modal';
 import { createSolanaAdapter } from './send-adapters/solana';
 import { createStellarAdapter } from './send-adapters/stellar';
 import { createBitcoinAdapter } from './send-adapters/bitcoin';
-import { NetworkBadge, getAssetNetwork } from './network-badge';
 import { createEthereumAdapter } from './send-adapters/ethereum';
+import { NetworkBadge, NETWORK_STYLES, getAssetNetwork, type AssetNetwork } from './network-badge';
 
 import type { SendAdapter } from './send-adapters';
 
@@ -1010,16 +1010,51 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                   }}
                 />
               </Box>
-              {!(destination && !isAddressValid) && adapter && (
-                <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '6px' }}>
-                  {t('{{network}} network — the address must be a {{network}} address', {
-                    network:
-                      adapter.network === 'stellar'
-                        ? 'Stellar'
-                        : adapter.network.charAt(0).toUpperCase() + adapter.network.slice(1),
-                  })}
-                </Typography>
-              )}
+              {!(destination && !isAddressValid) &&
+                adapter &&
+                // Tinted in the NETWORK'S own colour (Niko 2026-08-26: "highlight
+                // it more") — the same palette as the NetworkBadge, so Stellar
+                // reads teal here, on the badge, and on the review screen.
+                (() => {
+                  const netName = (
+                    adapter.network === 'stellar'
+                      ? 'Stellar'
+                      : adapter.network.charAt(0).toUpperCase() + adapter.network.slice(1)
+                  ) as AssetNetwork;
+                  const ns = NETWORK_STYLES[netName] ?? NETWORK_STYLES.Stellar;
+                  return (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '7px',
+                        mt: '8px',
+                        px: '10px',
+                        py: '7px',
+                        borderRadius: '9px',
+                        bgcolor: ns.bg,
+                        border: `1px solid ${ns.dot}33`,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: '50%',
+                          bgcolor: ns.dot,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Typography
+                        sx={{ fontSize: '12px', fontWeight: 600, color: ns.color, lineHeight: 1.4 }}
+                      >
+                        {t('{{network}} network — the address must be a {{network}} address', {
+                          network: netName,
+                        })}
+                      </Typography>
+                    </Box>
+                  );
+                })()}
               {destination && !isAddressValid && (
                 <Typography sx={{ fontSize: '12px', color: 'error.main', mt: '6px' }}>
                   {t('Not a valid {{network}} address', {
