@@ -3244,3 +3244,25 @@ at refund INITIATION) now says "returning… (usually ~20 min)".
 surface, owned by no single modal; a status that means "step N done" must not
 paint steps N+1 green; an explicit user click bypasses freshness heuristics;
 window events do not survive navigation — put resume intent in the URL.
+
+**Incident close-out + the real bombshell (2026-08-26): the staging crons have
+NEVER run.** The stuck return leg was recovered manually: the row had message
++ attestation stored and the relayer held 7.5 XLM, so the app's own
+ATTESTED→mint step was executed locally (same claim-first updateMany, same
+mint_and_forward, same rollback semantics). Mint
+6bcf207a3a5c000cff9e49fa6aaab7e885405ce8348c79e972515865d247f9ae confirmed;
+companion balance 0.4045944 → 12.7086554 (+12.304061 exact). Nothing lost.
+WHY IT WEDGED: cron:heartbeat:cctp-advance AND cron:heartbeat:fee-escrow-sweep
+are BOTH NULL in Redis (7-day TTL) — no Vercel cron has ever ticked on
+staging. Every "automatic" completion to date was actually a CLIENT TAB
+poking GET /api/cctp/transfers/[id]; close the tab and every server-side
+safety net is dead: cctp-advance, fee-escrow settlement (#26/#27), and F2's
+ramp-reconcile. Likely cause: Vercel crons fire only on a project's
+PRODUCTION deployment — a preview/branch "staging" never runs them. ACTION
+(Niko/Justin): open the staging Vercel project → Settings → Crons; either
+staging is its own project with crons enabled, or this must be fixed before
+any reliance on server-side settlement. VERIFY by curling a cron with
+CRON_SECRET and re-reading the heartbeat.
+The vindication: the heartbeats have existed since #64 and nobody ever read
+them — "recording is not monitoring" (doc 84). The autopilot-watch alert job
+(feat/autopilot-monitoring) is exactly what would have paged this on day one.

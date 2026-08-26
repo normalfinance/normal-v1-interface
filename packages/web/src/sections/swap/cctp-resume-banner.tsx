@@ -118,6 +118,12 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   const [transfers, setTransfers] = useState<TransferRow[]>([]);
   const transfersRef = useRef<TransferRow[]>([]);
   const recoverRef = useRef<((tr: TransferRow, ph: Phase) => void) | null>(null);
+  const refundRef = useRef<((tr: TransferRow) => void) | null>(null);
+  // While set in the future, phase checks skip the freshness grace — armed by
+  // the failure modal so a halted transfer surfaces INSTANTLY (2026-08-26).
+  const graceOffUntilRef = useRef(0);
+  const phaseFor = (tr: TransferRow, now: number): Phase =>
+    now < graceOffUntilRef.current ? rawPhase(tr) : phaseFor(tr, now);
   const [busyId, setBusyId] = useState<string | null>(null);
   // "Safe in your Base account" is only said once we've SEEN the balance —
   // an undelivered (later refunded) leg was described as safely arrived
@@ -137,7 +143,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   // transfer can vanish (closed tab / navigation / dev reload), and a user
   // with money mid-bridge must never be left with zero surface (2026-08-26).
   const visibleTransfers = transfers.filter(
-    (tr) => tr.id !== activeId || phaseOf(tr, Date.now()) === 'auto'
+    (tr) => tr.id !== activeId || phaseFor(tr, Date.now()) === 'auto'
   );
 
   const refresh = useCallback(async () => {
@@ -151,7 +157,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       const data = await res.json();
       const now = Date.now();
       const shown: TransferRow[] = (data.transfers ?? []).filter(
-        (tr: TransferRow) => phaseOf(tr, now) !== 'hidden'
+        (tr: TransferRow) => phaseFor(tr, now) !== 'hidden'
       );
       setTransfers(shown);
       transfersRef.current = shown;
@@ -160,12 +166,12 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       Promise.all(
         shown
           .filter((tr) => {
-            const ph = phaseOf(tr, now);
+            const ph = phaseFor(tr, now);
             return ph === 'halt-receive' || ph === 'halt-finish';
           })
           .map(async (tr) => {
             try {
-              const addr = phaseOf(tr, now) === 'halt-receive' ? tr.srcAddress : tr.destAddress;
+              const addr = phaseFor(tr, now) === 'halt-receive' ? tr.srcAddress : tr.destAddress;
               const bal = await readBaseUsdc(tr.network as NetworkType, addr);
               return bal > 0n ? tr.id : null;
             } catch {
@@ -176,7 +182,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         setVerifiedIds(new Set(ids.filter((x): x is string => !!x)));
       });
       // Poke any 'auto' (post-burn) transfer so its status advances between cron ticks.
-      const auto = shown.find((tr) => phaseOf(tr, now) === 'auto');
+      const auto = shown.find((tr) => phaseFor(tr, now) === 'auto');
       if (auto) {
         fetch(`/api/cctp/transfers/${auto.id}`, { headers, credentials: 'include' }).catch(
           () => {}
@@ -215,6 +221,32 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         if (ph === 'halt-receive' || ph === 'halt-finish') recoverRef.current?.(tr, ph);
       }
     };
+    // Failure modal on screen → surface the halt NOW, grace off for 5 min.
+    const onHalted = () => {
+      graceOffUntilRef.current = Date.now() + 5 * 60_000;
+      refresh();
+    };
+    // "Bring back as USDC" from the failure modal — same refund handler the
+    // banner button uses; retried once if the rows have not loaded yet.
+    const onRefund = (e: Event) => {
+      const id2 = (e as CustomEvent<{ id?: string }>).detail?.id;
+      if (!id2) return;
+      graceOffUntilRef.current = Date.now() + 5 * 60_000;
+      const run = () => {
+        const tr = transfersRef.current.find((x) => x.id === id2);
+        if (tr && rawPhase(tr) === 'halt-finish') {
+          refundRef.current?.(tr);
+          return true;
+        }
+        return false;
+      };
+      if (!run()) {
+        refresh();
+        setTimeout(run, 1500);
+      }
+    };
+    window.addEventListener('nf:cctp-halted', onHalted);
+    window.addEventListener('nf:cctp-refund', onRefund);
     window.addEventListener('nf:activity-updated', onActivity);
     window.addEventListener('nf:cctp-resume', onResume);
     // Cross-page "Finish this transfer": the id arrives via ?cctpResume=…
@@ -239,6 +271,8 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     }
     return () => {
       clearInterval(id);
+      window.removeEventListener('nf:cctp-halted', onHalted);
+      window.removeEventListener('nf:cctp-refund', onRefund);
       window.removeEventListener('nf:cctp-resume', onResume);
       window.removeEventListener('nf:activity-updated', onActivity);
     };
@@ -395,6 +429,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     },
     [t, enqueueSnackbar, patch, refresh]
   );
+  refundRef.current = refundToStellar;
 
   if (!visibleTransfers.length) return null;
   const now = Date.now();
@@ -410,7 +445,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       }}
     >
       {visibleTransfers.map((tr) => {
-        const phase = phaseOf(tr, now);
+        const phase = phaseFor(tr, now);
         const isHalt = phase === 'halt-receive' || phase === 'halt-finish';
         const usd = (Number(tr.amountWire) / 1e6).toFixed(2);
         return (

@@ -1396,6 +1396,25 @@ export function useCctpEngine({
                 }
               : undefined
           }
+          onBringBack={
+            stageError && direction === 'out'
+              ? () => {
+                  // The exit, offered where the failure is: abandon the swap
+                  // and bridge the minted USDC back to Stellar via the
+                  // banner's refund handler.
+                  const failedId = getActiveCctpTransfer();
+                  setStageError(null);
+                  setStage(null);
+                  setModalOpen(false);
+                  if (failedId) {
+                    setActiveCctpTransfer(null);
+                    window.dispatchEvent(
+                      new CustomEvent('nf:cctp-refund', { detail: { id: failedId } })
+                    );
+                  }
+                }
+              : undefined
+          }
           onClose={() => {
             cancelled.current = true;
             setModalOpen(false);

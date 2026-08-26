@@ -1,12 +1,12 @@
 'use client';
 
+import { useEffect } from 'react';
 // Step-by-step progress for a cross-ecosystem (CCTP) swap — same visual
 // language as the savings deposit steps. The step list depends on direction:
 //   in   (BTC/ETH/SOL → USDC on Stellar): lifi → arriving → topup → burn → bridging → done
 //   out  (USDC → BTC/ETH/SOL):            burn → bridging → topup → pivot-swap → done
 // Everything after the burn also completes/recovers server-side, so closing
 // during 'bridging' is always safe (and we say so).
-
 import { useTranslate } from '@/locales';
 import { CHAINS } from '@/lib/chains/registry';
 
@@ -64,6 +64,35 @@ interface Props {
   /** Honest-bridge-endings (Niko): one tap back to a retryable card after a
    *  terminal error — clears the failed run; quote + amount stay filled. */
   onTryAgain?: () => void;
+  /** Outbound failures only: abandon the swap and bridge the minted USDC back
+   *  to Stellar. Offered IN the failure box (Niko 2026-08-26: "the return
+   *  usdc should be in that pop up") so the exit never requires finding the
+   *  banner first. */
+  onBringBack?: () => void;
+}
+
+const TX_HASH_RE = /0x[0-9a-fA-F]{64}/;
+
+function extractTxHash(raw: string | null): string | null {
+  if (!raw) return null;
+  return TX_HASH_RE.exec(raw)?.[0] ?? null;
+}
+
+/** Raw chain errors are for explorers, not people (Niko 2026-08-26: "that
+ *  error was not user friendly"). The hash still renders — small, below. */
+function friendlyError(raw: string, t: (k: string) => string): string {
+  if (/reverted|WrappedError/i.test(raw)) {
+    return t(
+      'The exchange route failed on the provider side — your USDC is safe in your own account. You can retry, or bring it back as USDC.'
+    );
+  }
+  if (/NotAllowedError|not allowed|rejected|denied/i.test(raw)) {
+    return t('The signature was declined. Nothing was sent — you can try again.');
+  }
+  if (/timeout|timed out|network|fetch/i.test(raw)) {
+    return t('The network did not answer in time. Nothing is lost — try again in a moment.');
+  }
+  return raw;
 }
 
 export function CctpProgressModal({
@@ -79,8 +108,16 @@ export function CctpProgressModal({
   onEnableAutopilot,
   onClose,
   onTryAgain,
+  onBringBack,
 }: Props) {
   const { t } = useTranslate();
+
+  // Instant recovery surface (Niko 2026-08-26: "that thing above the swap
+  // card should also show instantly"): the moment a failure is on screen, the
+  // banner is told to bypass its freshness grace and re-read.
+  useEffect(() => {
+    if (open && error) window.dispatchEvent(new Event('nf:cctp-halted'));
+  }, [open, error]);
 
   const steps: { id: CctpStage; label: string; sub: string }[] =
     direction === 'in'
@@ -344,8 +381,21 @@ export function CctpProgressModal({
           }}
         >
           <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.5 }}>
-            {error}
+            {friendlyError(error, t)}
           </Typography>
+          {extractTxHash(error) && (
+            <Typography
+              sx={{
+                fontSize: '10.5px',
+                color: 'rgba(10,10,15,0.4)',
+                mt: '3px',
+                fontFamily: '"Geist Mono", "Courier New", monospace',
+                wordBreak: 'break-all',
+              }}
+            >
+              {extractTxHash(error)}
+            </Typography>
+          )}
           <Typography
             sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '4px', lineHeight: 1.5 }}
           >
@@ -375,6 +425,30 @@ export function CctpProgressModal({
               }}
             >
               {t('Try again')}
+            </Box>
+          )}
+          {onBringBack && (
+            <Box
+              component="button"
+              onClick={onBringBack}
+              sx={{
+                mt: '8px',
+                appearance: 'none',
+                borderRadius: '10px',
+                px: '16px',
+                py: '9px',
+                width: '100%',
+                fontSize: '13px',
+                fontWeight: 600,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                bgcolor: 'transparent',
+                border: '1px solid rgba(10,10,15,0.2)',
+                color: '#0A0A0F',
+                '&:hover': { borderColor: 'rgba(10,10,15,0.45)' },
+              }}
+            >
+              {t('Bring back as USDC')}
             </Box>
           )}
         </Box>
