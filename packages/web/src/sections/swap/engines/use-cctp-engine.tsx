@@ -31,7 +31,6 @@ import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
-import { setActiveCctpTransfer } from '@/lib/cctp/active-transfer';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
@@ -39,6 +38,7 @@ import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
+import { setActiveCctpTransfer, getActiveCctpTransfer } from '@/lib/cctp/active-transfer';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -1379,11 +1379,20 @@ export function useCctpEngine({
           onTryAgain={
             stageError
               ? () => {
-                  // Back to a clean, retryable card: the failed RUN is cleared;
-                  // the pair, amount and quote in the card are still filled, so
-                  // "try again" is one more click on Swap.
+                  // Clear the failed RUN, then hand the transfer to the
+                  // recovery banner's ONE handler — a bare reset read as
+                  // "nothing happened" when the failure was mid-flight
+                  // (funds already on Base, live 2026-08-26).
+                  const failedId = getActiveCctpTransfer();
                   setStageError(null);
                   setStage(null);
+                  setModalOpen(false);
+                  if (failedId) {
+                    setActiveCctpTransfer(null);
+                    window.dispatchEvent(
+                      new CustomEvent('nf:cctp-resume', { detail: { id: failedId } })
+                    );
+                  }
                 }
               : undefined
           }

@@ -57,7 +57,7 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   if (body.markRefunded && transfer!.status !== 'REFUNDED') {
     data.status = 'REFUNDED';
     if (!transfer!.errorDetail)
-      data.errorDetail = 'Refunded — USDC returned to your Stellar account';
+      data.errorDetail = 'Refunded — USDC is returning to your Stellar wallet (usually ~20 min)';
   }
   // Source-leg refund/failure (scenario sweep 2026-08-21): an inbound LI.FI
   // leg that terminally refunded/failed leaves a row with srcSwapTxHash set

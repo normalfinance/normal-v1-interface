@@ -133,7 +133,12 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     window.addEventListener(ACTIVE_CCTP_TRANSFER_EVENT, h);
     return () => window.removeEventListener(ACTIVE_CCTP_TRANSFER_EVENT, h);
   }, []);
-  const visibleTransfers = transfers.filter((tr) => tr.id !== activeId);
+  // 'auto' rows always render, active or not: the modal that owns the active
+  // transfer can vanish (closed tab / navigation / dev reload), and a user
+  // with money mid-bridge must never be left with zero surface (2026-08-26).
+  const visibleTransfers = transfers.filter(
+    (tr) => tr.id !== activeId || phaseOf(tr, Date.now()) === 'auto'
+  );
 
   const refresh = useCallback(async () => {
     try {
@@ -200,7 +205,11 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       if (!id2) return;
       const tr = transfersRef.current.find((x) => x.id === id2);
       if (tr) {
-        const ph = phaseOf(tr, Date.now());
+        // rawPhase, not phaseOf: the grace window exists to avoid duplicating
+        // an in-session flow, but an EXPLICIT click is the user telling us the
+        // in-session flow is gone — honoring the grace here silently swallowed
+        // the click (live 2026-08-26).
+        const ph = rawPhase(tr);
         // recoverRef: `recover` is declared below this effect; the ref keeps
         // the listener stable without a TDZ/order problem.
         if (ph === 'halt-receive' || ph === 'halt-finish') recoverRef.current?.(tr, ph);
@@ -208,6 +217,26 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     };
     window.addEventListener('nf:activity-updated', onActivity);
     window.addEventListener('nf:cctp-resume', onResume);
+    // Cross-page "Finish this transfer": the id arrives via ?cctpResume=…
+    // because a dispatched event cannot survive a full navigation. One-shot;
+    // the param is scrubbed so a reload does not re-trigger recovery.
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const resumeId = params.get('cctpResume');
+      if (resumeId) {
+        params.delete('cctpResume');
+        window.history.replaceState(
+          null,
+          '',
+          window.location.pathname + (params.toString() ? `?${params}` : '')
+        );
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('nf:cctp-resume', { detail: { id: resumeId } }));
+        }, 1500); // after the first refresh() has rows
+      }
+    } catch {
+      /* URL API unavailable — the banner buttons still work */
+    }
     return () => {
       clearInterval(id);
       window.removeEventListener('nf:cctp-resume', onResume);

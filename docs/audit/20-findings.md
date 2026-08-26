@@ -3200,3 +3200,47 @@ import a different mnemonic → compare row.walletId, row.stellarAddress,
 Turnkey's wallets, and the exported phrase). NOT FIXED — deliberately: the
 fix depends on which is right (refuse the import, migrate the row wholesale,
 or model multiple wallets), and that is a product decision.
+
+## Live incident 2026-08-26 — USDC→SOL pivot reverted; funds safe; 4 UI bugs
+
+**What happened (account 24227f4e, 12.304061 USDC USDC→SOL):** burn on
+Stellar ✓, attestation ✓, mint to the user's own Base address ✓ (verified
+on-chain: 12.304061 USDC to 0xc835…). The LI.FI pivot USDC→SOL then reverted
+TWICE on fresh quotes. Replaying the tx at its block decodes to ERC-7751
+WrappedError(target, selector, …): an UNVERIFIED intermediary contract
+(0x030b6c44…) inside LI.FI's Base→Solana route failed an internal ERC-20
+transfer. Balance was present and allowance was MAX at the revert block —
+PROVIDER-SIDE ROUTE FAILURE, not ours. gasUsed 499k of 7.9M limit (not gas).
+The user clicked "Bring back as USDC": Base burn ✓ (12:27), Circle attestation
+pending (hard finality, threshold 2000 ≈ 15–20 min), then the cctp-advance
+cron mints to the companion Stellar wallet. Design held: funds never left the
+user's own addresses.
+
+**The four UI bugs it exposed (all fixed):**
+1. **The return leg was invisible.** cctp-resume-banner filtered out the
+   ACTIVE transfer id entirely — right for in-session halts, wrong for 'auto'
+   (post-burn self-completing) rows: the modal that "owns" the active id can
+   vanish (closed tab / navigation / dev Fast Refresh), leaving money
+   mid-bridge with ZERO surface. Auto rows now always render.
+2. **The detail modal called a stuck swap "Completed", all steps green.**
+   Outbound status flips COMPLETED at MINT, and isDone/stepDone keyed on it —
+   the pivot step went green with no hash. isDone now requires dstSwapTxHash
+   for outbound; the chip says "Action needed" for minted-but-undelivered;
+   REFUNDED rows no longer show a Finish button at all.
+3. **"Finish this transfer" was dead in three ways.** (a) REFUNDED rows showed
+   the button but the handler classifies REFUNDED as hidden → silent no-op;
+   (b) the handler used phaseOf() whose 120s freshness grace swallowed
+   explicit clicks → now rawPhase() (an explicit click IS the user saying the
+   in-session flow is gone); (c) from any page but /swap the click dispatched
+   the event and then hard-navigated — A DISPATCHED EVENT DIES WITH THE OLD
+   DOCUMENT. The id now rides the URL (?cctpResume=<id>), one-shot + scrubbed.
+4. **"Try again" only reset the card** — read as "nothing happened" when the
+   failure was mid-flight with funds already on Base. It now clears the run
+   AND hands the transfer id to the recovery banner's ONE handler.
+Also: the premature server copy "USDC returned to your Stellar account" (set
+at refund INITIATION) now says "returning… (usually ~20 min)".
+
+**Rules extracted:** a self-completing money state must always have a visible
+surface, owned by no single modal; a status that means "step N done" must not
+paint steps N+1 green; an explicit user click bypasses freshness heuristics;
+window events do not survive navigation — put resume intent in the URL.
