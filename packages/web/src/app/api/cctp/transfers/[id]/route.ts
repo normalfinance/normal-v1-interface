@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { advanceTransfer } from '@/lib/cctp/state';
+import { pivotRevertDetail } from '@/lib/cctp/failure-class';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,16 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   // Delivered amount for the activity feed (set once, when the final leg lands).
   if (body.dstAmount && !transfer!.dstAmount) {
     data.dstAmount = String(body.dstAmount);
+  }
+  // A reverted pivot (interactive path) records WHICH bridge failed so the
+  // next retry can exclude it — server-formatted from validated slugs, never
+  // raw client text. Overwrite is deliberate: the LATEST revert wins.
+  if (
+    body.pivotRevert &&
+    transfer!.direction === 'stellar_to_crosschain' &&
+    !transfer!.dstSwapTxHash
+  ) {
+    data.errorDetail = pivotRevertDetail(body.pivotRevert.tool, body.pivotRevert.txHash);
   }
   // Retire an outbound swap as refunded — its minted USDC was re-bridged to Stellar.
   if (body.markRefunded && transfer!.status !== 'REFUNDED') {

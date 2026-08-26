@@ -3288,3 +3288,70 @@ RULES: never blanket-replace a symbol in the same patch that defines it —
 the definition's internals are part of the match set; and a catch that
 swallows render-path errors turns a crash into silent wrong behavior, which
 is strictly worse.
+
+**The failing LI.FI component has a name: MAYAN (2026-08-26 forensics):** the
+third revert (0x53536bf0…) replayed identically to the first two — same
+LiFiDiamond entry, same ERC-7751 WrappedError, same unverified inner target
+0x030b6c44… And the outer calldata decodes to
+`swapAndStartBridgeTokensViaMayan(...)`: all three attempts, across ~50
+minutes and three fresh quotes, were routed through the MAYAN bridge, whose
+forwarder contract kept failing an internal ERC-20 transfer. LI.FI kept
+selecting the same broken tool because it was presumably still the
+best-priced route.
+CANDIDATE FIX (not built, needs GO): on a reverted pivot, re-quote with
+`denyBridges: 'mayan'` appended (the same mechanism as the existing
+gasZipBridge blocklist, but applied per-retry rather than globally — Mayan is
+usually the RIGHT tool for Base→Solana, so a permanent deny would hurt normal
+days). Requires the quote layer to accept a per-request deny list and the
+retry path to pass it.
+
+**Why the "automatic" step asked for biometrics (2026-08-26, root-caused):**
+autopilot_signatures shows `signed cctp-outbound-pivot` for this sub-org at
+12:21:19 and 13:15:47 — the delegation IS active and the server DID sign the
+pivot on both attempts. The sequence per attempt was: autopilot signs →
+broadcasts → the tx REVERTS on-chain inside Mayan → tryAutopilot collapses
+every failure to null → the engine's designed fallback kicks in: "any
+autopilot failure ⇒ interactive passkey path" → biometrics prompt → the
+user's own signed tx hits the SAME broken route and reverts too. So each
+attempt burned TWO reverted transactions and one pointless biometric prompt.
+The fallback is right for signing-layer failures (kill switch, policy
+refusal, 502 before broadcast) and WRONG for an on-chain revert: a human
+signature cannot fix a broken route — it can only re-buy the same failure.
+CANDIDATE FIX (needs GO): the autopilot pivot route reports failure CLASS
+(reverted-with-hash vs refused/pre-broadcast), and the engine falls back to
+prompts ONLY for the signing class; an on-chain revert goes straight to the
+failure popup (Try again / Bring back), no biometrics.
+DECISION (Niko, 2026-08-26): NO to the per-retry Mayan deny — parked, not
+built. Bridges are never removed from routing.
+
+
+### 2026-08-26 — BUILT: pivot failure-class + automatic bridge failover (was "candidate fix")
+
+Niko's GO ("Go / but also if one bridge fails, why dont we have a system that
+automaticly picks the some other bridge?") — both halves shipped on
+feat/better-ramps:
+
+1. FAILURE CLASS. `/api/cctp/autopilot/pivot` now distinguishes an ON-CHAIN
+   revert (tx broadcast; chain rejected the route) from signing-layer
+   failures. A revert returns `failureClass: 'reverted'` + the LI.FI tool +
+   tx hash, and records "Exchange route failed on Base via <tool> (<hash>)"
+   on the row. The engine no longer falls back to an interactive passkey for
+   reverts — that fallback was the live incident's "biometrics then identical
+   failure" loop. Signing-layer failures still fall back exactly as designed.
+
+2. AUTOMATIC BRIDGE FAILOVER — per-RETRY exclusion, NOT removal (bridges stay
+   in routing for every other swap; Niko: "i dont want to remove the
+   bridge"). On a classified revert the engine silently retries the pivot
+   ONCE via autopilot with `denyBridges=[failedTool]` on the quote, so LI.FI
+   routes over a different bridge. If that also fails: straight to the
+   failure popup (Try again / Bring back as USDC) — no biometrics. Banner
+   retries parse the recorded tool out of errorDetail and exclude it too.
+   Grammar + parsers live in ONE module: `src/lib/cctp/failure-class.ts`
+   (jest-covered round-trip).
+
+3. Popup buttons hardened: the failure catch clears the active-transfer
+   marker BEFORE the popup renders, so both buttons resolved a null id and
+   did nothing. The id is now stashed in `lastFailedRunIdRef` at failure
+   time. RULE for the bank: a failure surface's actions must never depend on
+   state the failure path itself already cleared — capture ids at failure
+   time, not at click time.

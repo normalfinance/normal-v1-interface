@@ -29,6 +29,7 @@ import { wireToUsdc } from '@/lib/cctp/decimals';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
+import { parseFailedTool } from '@/lib/cctp/failure-class';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { getActiveCctpTransfer, ACTIVE_CCTP_TRANSFER_EVENT } from '@/lib/cctp/active-transfer';
@@ -59,6 +60,7 @@ interface TransferRow {
   mintTxHash: string | null;
   dstSwapTxHash: string | null;
   updatedAt: string;
+  errorDetail?: string | null;
 }
 
 type Phase = 'hidden' | 'auto' | 'halt-receive' | 'halt-finish';
@@ -334,11 +336,16 @@ export function CctpRecoveryBanner({ addresses }: Props) {
           const bal = await readBaseUsdc(network, tr.destAddress);
           if (bal === 0n)
             throw new Error(t('No USDC found on Base — it may already be on its way.'));
+          // Bridge failover on retry (2026-08-26): if the last attempt
+          // recorded a reverted bridge on the row ("via <tool>"), exclude it
+          // from THIS quote only — LI.FI then routes over a different bridge.
+          const failedTool = parseFailedTool(tr.errorDetail);
           const result = await executePivotSwap({
             evmAddress: tr.destAddress,
             toSymbol,
             toAddress,
             amountWire: bal,
+            denyBridges: failedTool ? [failedTool] : undefined,
           });
           const dstAmount = BigNumber(result.toAmountMin)
             .dividedBy(BigNumber(10).pow(NATIVE_DECIMALS[toSymbol]))
@@ -351,8 +358,19 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         refresh();
       } catch (e: any) {
         console.error('[cctp recovery] failed:', e); // surface stack
+        // A classified revert records the failed bridge so the NEXT retry
+        // quotes without it (failover applies here too, not just in-run).
+        if (e?.__pivotRevert) {
+          await patch(tr.id, await buildAuthHeaders(), {
+            pivotRevert: { tool: e.tool ?? null, txHash: e.txHash ?? null },
+          }).catch(() => {});
+        }
         enqueueSnackbar(
-          e?.message ?? t('Recovery failed — your funds are safe; please try again.'),
+          e?.__pivotRevert
+            ? t(
+                'The exchange route failed on the provider side — your USDC is safe. Try again to use a different route.'
+              )
+            : (e?.message ?? t('Recovery failed — your funds are safe; please try again.')),
           { variant: 'error' }
         );
       } finally {

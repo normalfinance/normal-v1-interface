@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { quoteRateLimiter } from '@/server/rateLimiter';
+import { sanitizeTool } from '@/lib/cctp/failure-class';
 import { getLifiQuote, LifiQuoteError } from '@/server/lifi-quote';
 
 // ---------------------------------------------------------------------------
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
     fromAmount?: string;
     fromAddress?: string;
     toAddress?: string;
+    denyBridges?: unknown;
   };
   try {
     body = await request.json();
@@ -42,6 +44,14 @@ export async function POST(request: NextRequest) {
       fromAmount: body.fromAmount ?? '',
       fromAddress: body.fromAddress ?? '',
       toAddress: body.toAddress ?? '',
+      // Bridge-failover retries exclude the bridge that just reverted — the
+      // list is slug-validated + bounded; junk silently drops to "no filter".
+      denyBridges: Array.isArray(body.denyBridges)
+        ? body.denyBridges
+            .map(sanitizeTool)
+            .filter((x): x is string => !!x)
+            .slice(0, 4)
+        : undefined,
     });
     return NextResponse.json({ success: true, quote, feePercent });
   } catch (error) {

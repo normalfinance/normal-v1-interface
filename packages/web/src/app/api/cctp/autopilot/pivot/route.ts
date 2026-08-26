@@ -8,6 +8,7 @@ import { autopilotEnabled } from '@/server/autopilot-signer';
 import { autopilotPivotSwap } from '@/server/autopilot-pivot';
 import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
 import { ensureTransferGas } from '@/server/cctp-transfer-gas';
+import { sanitizeTool, sanitizeTxHash, pivotRevertDetail } from '@/lib/cctp/failure-class';
 
 // #33 Stage 3 payoff — the server-side outbound pivot. Called by the engine
 // (or cron) once the CCTP mint lands USDC on the user's Base address, INSTEAD
@@ -22,19 +23,31 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 export const POST = withAuth(async (request: NextRequest, { user }) => {
+  // Row id hoisted for the catch: a classified revert records the failed
+  // bridge on the row even though the transfer vars live inside the try.
+  let revertRowId: string | null = null;
   try {
     if (!autopilotEnabled()) {
       return NextResponse.json({ success: false, error: 'autopilot-disabled' }, { status: 409 });
     }
-    const { transferId } = await request.json();
+    const { transferId, denyBridges: rawDeny } = await request.json();
     if (typeof transferId !== 'string' || !transferId) {
       return NextResponse.json({ success: false, error: 'Missing transferId' }, { status: 400 });
     }
+    // Bridge-failover retries: slug-validated + bounded; junk drops to "no
+    // filter" rather than erroring (the retry still runs, unfiltered).
+    const denyBridges = Array.isArray(rawDeny)
+      ? rawDeny
+          .map(sanitizeTool)
+          .filter((x): x is string => !!x)
+          .slice(0, 4)
+      : undefined;
 
     const tr = await prisma.cctpTransfer.findUnique({ where: { id: transferId } });
     if (!tr || tr.userId !== user.id) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
     }
+    revertRowId = tr.id;
     // Banner's 'halt-finish' phase, verbatim: outbound, burn done, mint landed
     // (mintTxHash or bridge COMPLETED), pivot leg not yet executed.
     const mintLanded = !!tr.mintTxHash || tr.status === 'COMPLETED';
@@ -118,6 +131,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       toSymbol,
       toAddress,
       amountWire: bal,
+      denyBridges,
     });
 
     // Mirror the PATCH route: hash + delivered amount land once; a racing
@@ -134,6 +148,32 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
 
     return NextResponse.json({ success: true, ...result });
   } catch (e: any) {
-    return NextResponse.json({ success: false, error: String(e?.message ?? e) }, { status: 502 });
+    // Failure CLASS (Niko 2026-08-26 GO): a revert means the autopilot DID
+    // sign and broadcast, and the CHAIN rejected the route — falling back to
+    // an interactive passkey would just burn a biometric prompt on the same
+    // reverting route. The class + failed bridge go back to the engine (for
+    // failover) AND onto the row (errorDetail), so a later banner retry
+    // excludes that bridge too.
+    if (e?.__pivotRevert) {
+      const tool = sanitizeTool(e.tool);
+      const txHash = sanitizeTxHash(e.txHash);
+      if (revertRowId) {
+        // Latest revert wins — the retry parses "via <tool>" back out.
+        await prisma.cctpTransfer
+          .updateMany({
+            where: { id: revertRowId, dstSwapTxHash: null },
+            data: { errorDetail: pivotRevertDetail(tool, txHash) },
+          })
+          .catch(() => {});
+      }
+      return NextResponse.json(
+        { success: false, failureClass: 'reverted', tool, txHash, error: String(e?.message ?? e) },
+        { status: 502 }
+      );
+    }
+    return NextResponse.json(
+      { success: false, failureClass: 'other', error: String(e?.message ?? e) },
+      { status: 502 }
+    );
   }
 });
