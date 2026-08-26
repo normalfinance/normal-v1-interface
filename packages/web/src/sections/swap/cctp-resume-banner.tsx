@@ -362,7 +362,8 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         // quotes without it (failover applies here too, not just in-run).
         if (e?.__pivotRevert) {
           await patch(tr.id, await buildAuthHeaders(), {
-            pivotRevert: { tool: e.tool ?? null, txHash: e.txHash ?? null },
+            pivotRevertTool: e.tool ?? '',
+            pivotRevertTxHash: e.txHash ?? '',
           }).catch(() => {});
         }
         enqueueSnackbar(

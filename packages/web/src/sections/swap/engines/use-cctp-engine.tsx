@@ -748,7 +748,8 @@ export function useCctpEngine({
           // later "Try again" (banner recover) excludes that bridge.
           if (e?.__pivotRevert) {
             await patch({
-              pivotRevert: { tool: e.tool ?? null, txHash: e.txHash ?? null },
+              pivotRevertTool: e.tool ?? '',
+              pivotRevertTxHash: e.txHash ?? '',
             }).catch(() => {});
           }
           setStageError(
@@ -927,7 +928,8 @@ export function useCctpEngine({
           // later "Try again" (banner recover) excludes that bridge.
           if (e?.__pivotRevert) {
             await patch({
-              pivotRevert: { tool: e.tool ?? null, txHash: e.txHash ?? null },
+              pivotRevertTool: e.tool ?? '',
+              pivotRevertTxHash: e.txHash ?? '',
             }).catch(() => {});
           }
           setStageError(

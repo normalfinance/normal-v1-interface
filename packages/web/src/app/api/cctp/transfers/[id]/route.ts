@@ -58,11 +58,11 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   // next retry can exclude it — server-formatted from validated slugs, never
   // raw client text. Overwrite is deliberate: the LATEST revert wins.
   if (
-    body.pivotRevert &&
+    (typeof body.pivotRevertTool === 'string' || typeof body.pivotRevertTxHash === 'string') &&
     transfer!.direction === 'stellar_to_crosschain' &&
     !transfer!.dstSwapTxHash
   ) {
-    data.errorDetail = pivotRevertDetail(body.pivotRevert.tool, body.pivotRevert.txHash);
+    data.errorDetail = pivotRevertDetail(body.pivotRevertTool, body.pivotRevertTxHash);
   }
   // Retire an outbound swap as refunded — its minted USDC was re-bridged to Stellar.
   if (body.markRefunded && transfer!.status !== 'REFUNDED') {
