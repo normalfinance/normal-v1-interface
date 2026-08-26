@@ -5,7 +5,8 @@ import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsAnyWalletAddress } from '@/lib/wallet-ownership';
-import { RAMP_STATUSES, type RampStatus, ABANDON_AFTER_MS, TERMINAL_STATUSES } from '@/lib/ramp/status';
+import { liveChainBalance, hasIncomingSince } from '@/server/ramp-chain';
+import { RAMP_STATUSES, type RampStatus, ABANDON_AFTER_MS, TERMINAL_STATUSES, balanceShowsArrival } from '@/lib/ramp/status';
 
 // Ramp transfers (doc 89 F2): one record per handoff to a ramp provider,
 // written BEFORE the user leaves our app so a closed tab cannot lose it.
@@ -20,80 +21,6 @@ export const dynamic = 'force-dynamic';
 const DIRECTIONS = new Set(['onramp', 'offramp']);
 const PROVIDERS = new Set(['coinbase', 'moonpay', 'moneygram', 'stripe']);
 const CHAINS = new Set(['stellar', 'bitcoin', 'ethereum', 'solana']);
-
-// The destination's live balance at commit — the arrival baseline. The
-// dialog only knows Stellar balances, so the SERVER captures the rest
-// (2026-08-26: native rows shipped with null baselines and could never
-// arrival-flip). null on any failure — an unknown baseline never blocks the
-// purchase; the 45-minute abandonment still clears the row.
-async function liveChainBalance(
-  chain: string,
-  network: string,
-  address: string,
-  asset: string
-): Promise<string | null> {
-  if (network !== 'mainnet') return null;
-  try {
-    if (chain === 'solana' && asset === 'SOL') {
-      const res = await fetch('https://api.mainnet-beta.solana.com', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'getBalance',
-          params: [address],
-        }),
-        signal: AbortSignal.timeout(8000),
-      });
-      const lamports = (await res.json())?.result?.value;
-      return Number.isFinite(lamports) ? String(lamports / 1e9) : null;
-    }
-    if (chain === 'ethereum' && asset === 'ETH') {
-      const rpcUrl = process.env.NEXT_PUBLIC_ETH_RPC_URL ?? 'https://ethereum-rpc.publicnode.com';
-      const res = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'eth_getBalance',
-          params: [address, 'latest'],
-        }),
-        signal: AbortSignal.timeout(8000),
-      });
-      const hex = (await res.json())?.result;
-      return typeof hex === 'string' ? String(Number.parseInt(hex, 16) / 1e18) : null;
-    }
-    if (chain === 'bitcoin' && asset === 'BTC') {
-      const res = await fetch(`https://mempool.space/api/address/${address}`, {
-        signal: AbortSignal.timeout(8000),
-      });
-      if (!res.ok) return null;
-      const d = await res.json();
-      const sat =
-        (d?.chain_stats?.funded_txo_sum ?? 0) - (d?.chain_stats?.spent_txo_sum ?? 0);
-      return Number.isFinite(sat) ? String(sat / 1e8) : null;
-    }
-    if (chain === 'stellar') {
-      const res = await fetch(`https://horizon.stellar.org/accounts/${address}`, {
-        signal: AbortSignal.timeout(8000),
-      });
-      if (res.status === 404) return '0'; // unfunded: genuinely zero
-      if (!res.ok) return null;
-      const balances: any[] = (await res.json())?.balances ?? [];
-      const entry =
-        asset === 'XLM'
-          ? balances.find((b) => b.asset_type === 'native')
-          : balances.find((b) => b.asset_code === asset);
-      const n = Number(entry?.balance ?? NaN);
-      return Number.isFinite(n) ? String(n) : asset === 'XLM' ? null : '0';
-    }
-  } catch {
-    /* fall through */
-  }
-  return null;
-}
 
 export const POST = withAuth(async (req: NextRequest, { user }) => {
   try {
@@ -193,6 +120,58 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
         data: { status: 'abandoned', settledAt: new Date() },
       })
       .catch(() => {});
+    // Server-side ARRIVAL (2026-08-26): the row must clear even when no tab
+    // watched the money land — the read path proves it from the CHAIN:
+    // balance above baseline when a baseline exists, or a confirmed incoming
+    // transfer newer than the row when it does not (rule 3's "found on-chain
+    // tx"). Best-effort: a dead RPC changes nothing; abandonment still
+    // bounds every row.
+    try {
+      const candidates = await prisma.rampTransfer.findMany({
+        where: {
+          supabaseUid: user.id,
+          direction: 'onramp',
+          status: { notIn: [...TERMINAL_STATUSES] },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 4,
+      });
+      for (const row of candidates) {
+        // Give a just-committed checkout a moment — an instant lookup would
+        // only measure the pre-purchase state.
+        if (Date.now() - row.createdAt.getTime() < 30_000) continue;
+        let arrivedNow = false;
+        if (row.baselineBalance != null) {
+          const current = await liveChainBalance(
+            row.chain,
+            row.network,
+            row.walletAddress,
+            row.asset
+          );
+          arrivedNow = balanceShowsArrival(
+            row.baselineBalance,
+            current == null ? null : Number(current)
+          );
+        } else {
+          arrivedNow =
+            (await hasIncomingSince(
+              row.chain,
+              row.network,
+              row.walletAddress,
+              row.asset,
+              row.createdAt.getTime()
+            )) === true;
+        }
+        if (arrivedNow) {
+          await prisma.rampTransfer.updateMany({
+            where: { id: row.id, status: { notIn: [...TERMINAL_STATUSES] } },
+            data: { status: 'arrived', settledAt: new Date() },
+          });
+        }
+      }
+    } catch {
+      /* chain checks are best-effort */
+    }
     const rows = await prisma.rampTransfer.findMany({
       where: {
         supabaseUid: user.id,

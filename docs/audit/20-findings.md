@@ -3452,3 +3452,16 @@ explain — while the dismissible banner above Activity keeps only failures.
 RULE for the bank: a state machine whose only exit lives in a scheduler that
 does not run in this environment is a state machine with no exits — every
 read path that DISPLAYS a pending state must also be able to advance it.
+
+
+#### Addendum (same day): arrival proof moved into the READ path
+
+The remaining ghost class: rows with a null baseline (pre-fix rows, or a
+failed balance read at commit) could never arrive by balance, and baselined
+rows only flipped while a tab was open. The GET that feeds the banner now
+proves arrival itself: balance-vs-baseline via liveChainBalance, or — for
+null-baseline rows — a CONFIRMED incoming transfer newer than the row
+(Solana signatures + balance delta, Horizon payments, mempool.space txs;
+Ethereum has no indexer-free tx list, so its null-baseline rows fall to the
+45-minute abandonment). Helpers live in server/ramp-chain.ts; null never
+claims arrival.
