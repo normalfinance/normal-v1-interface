@@ -1010,6 +1010,16 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                   }}
                 />
               </Box>
+              {!(destination && !isAddressValid) && adapter && (
+                <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '6px' }}>
+                  {t('{{network}} network — the address must be a {{network}} address', {
+                    network:
+                      adapter.network === 'stellar'
+                        ? 'Stellar'
+                        : adapter.network.charAt(0).toUpperCase() + adapter.network.slice(1),
+                  })}
+                </Typography>
+              )}
               {destination && !isAddressValid && (
                 <Typography sx={{ fontSize: '12px', color: 'error.main', mt: '6px' }}>
                   {t('Not a valid {{network}} address', {

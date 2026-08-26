@@ -502,7 +502,9 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
                 sx={{ color: 'warning.main', flexShrink: 0 }}
               />
               <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.5 }}>
-                {t('This wallet ONLY supports Stellar tokens!')}
+                {t(
+                  'This is a Stellar address — only send assets on the Stellar network here (XLM, USDC). Assets sent from other networks cannot be recovered.'
+                )}
               </Typography>
             </Box>
 

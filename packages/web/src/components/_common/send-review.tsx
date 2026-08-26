@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 
 import { Iconify } from '../template/iconify';
+import { NetworkBadge, getAssetNetwork } from './network-badge';
 
 import type { SendParams } from './send-adapters';
 
@@ -300,6 +301,26 @@ const SendReview: React.FC<SendReviewProps> = ({
                 </Box>
               </>
             )}
+
+            <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+
+            {/* Network — every asset in Normal lives on exactly ONE network, so
+                the confirm screen states it plainly (Niko 2026-08-26): the
+                last read before signing must say which chain this leaves on. */}
+            <Box
+              sx={{
+                px: '16px',
+                py: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                {t('Network')}
+              </Typography>
+              <NetworkBadge network={getAssetNetwork(sendToken)} />
+            </Box>
 
             <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />
 
