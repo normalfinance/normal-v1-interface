@@ -40,7 +40,7 @@ Decisions already taken (Niko):
   arrived). Explicit terminal states — no row pends forever.
 - Off-ramp mirror image: "sold, payout on the way — arrives by <date>".
 
-### B3 — Stripe on-ramp is a bare link (decision parked, bug stands)
+### B3 — Stripe on-ramp — interim state (2026-08-26): offered LAST, labelled
 - `createStripeURL` passes no destination address — the user pastes their own
   wallet address; no session, no webhook, invisible to activity.
 - Parked by Niko ("will see") — but while it stands, every Stripe purchase is
@@ -330,3 +330,35 @@ failed chips covered Sent/Receive/Swap ONLY — Buy/Sell rows carrying
 pending/failed (MoneyGram always, F2 ramp rows now) rendered with no pill at
 all. Fixed: both pills extended to Buy/Sell. Without this, R12/R14's
 "pending Buy row" expectation was untestable.
+
+
+### B3 resolution (2026-08-26) + Stripe handoff for Justin
+
+Verified against Stripe's own docs: the hosted onramp at crypto.link.com can
+only prefill currency/network/amount WITHOUT an account. Passing a destination
+wallet address requires minting an onramp SESSION server-side
+(`lock_wallet_address`), which requires a Stripe account and an approved
+onramp application. We have no Stripe credentials at all — so the "fix
+properly" path is gated on an approval, exactly like MoonPay and Circle Mint.
+
+Niko's decision after the removal: KEEP Stripe offered, LAST in every list,
+while the application runs — removal felt too drastic. Interim mitigation: its
+row description now says "you enter your wallet address on Stripe", so the
+manual-address step is at least announced. Risk stated and accepted: purchases
+via this link remain untracked (no F2 row — we cannot know the destination)
+until the session integration replaces the link.
+
+**Justin — Stripe onramp application (~48h review):**
+1. Create/sign in at https://dashboard.stripe.com/register and finish account
+   onboarding.
+2. Submit the onramp application at
+   https://dashboard.stripe.com/crypto-onramp/get-started (status visible in
+   the dashboard; most reviews within 48 hours).
+3. Once approved, Niko takes over: sandbox keys → a session route mirroring
+   `/api/coinbase/session` → the WalletChoice address passed with
+   `lock_wallet_address` → an F2 ramp_transfers row per handoff.
+
+Coverage worth knowing before relying on it: USDC (Stellar) and XLM are
+supported in the US **except New York**; several assets (including USDC on
+Base/Solana/Polygon) are **not supported in the EU**. Source currencies are
+USD and EUR only.

@@ -91,7 +91,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
   onClose,
   walletAddress,
   asset = { symbol: 'USDC', blockchain: 'stellar' },
-  providers = ['stripe', 'coinbase', 'moneygram'],
+  providers = ['coinbase', 'moneygram', 'stripe'],
 }) => {
   const theme = useTheme();
   const { t } = useTranslate();
@@ -394,14 +394,6 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
 
   const ALL_ONRAMPS: (OnrampOption & { id: OnrampProvider })[] = [
     {
-      id: 'stripe',
-      avatar:
-        'https://cdn.brandfetch.io/idxAg10C0L/w/480/h/480/theme/dark/icon.jpeg?c=1dxbfHSJFAPEGdCLU4o5B',
-      heading: 'Stripe',
-      description: t('Debit Card, ACH, Apple Pay, Google Pay'),
-      url: stripeUrl,
-    },
-    {
       id: 'coinbase',
       avatar: 'https://avatars.githubusercontent.com/u/1885080?s=200&v=4',
       heading: 'Coinbase',
@@ -414,6 +406,18 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
       heading: 'MoneyGram',
       description: t('Drop-off cash at a physical location'),
       onClick: () => moneyGramAmountDialog.onTrue(),
+    },
+    // LAST on purpose (Niko 2026-08-26): the link cannot carry a destination
+    // address until the Stripe onramp application is approved and the session
+    // integration is built — so the description says out loud that the user
+    // enters their wallet address on Stripe's page.
+    {
+      id: 'stripe',
+      avatar:
+        'https://cdn.brandfetch.io/idxAg10C0L/w/480/h/480/theme/dark/icon.jpeg?c=1dxbfHSJFAPEGdCLU4o5B',
+      heading: 'Stripe',
+      description: t('Card, ACH, Apple Pay — you enter your wallet address on Stripe'),
+      url: stripeUrl,
     },
   ];
 

@@ -661,7 +661,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         walletAddress={(native ? nativeAddress : wallet.address) ?? undefined}
         asset={{ symbol: token.symbol, blockchain: native?.chain ?? 'stellar' }}
         providers={
-          token.symbol === 'USDC' ? ['stripe', 'coinbase', 'moneygram'] : ['stripe', 'coinbase']
+          // Stripe offered LAST (Niko 2026-08-26) until the session integration
+          // replaces the bare link (doc 88 B3).
+          token.symbol === 'USDC' ? ['coinbase', 'moneygram', 'stripe'] : ['coinbase', 'stripe']
         }
       />
 
