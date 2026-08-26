@@ -1,15 +1,22 @@
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
-import React, { useState, useEffect } from 'react';
 import { useMgiLimits } from '@/hooks/use-mgi-limits';
 import { useBoolean, useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
 import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
+import React, { useMemo, useState, useEffect } from 'react';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { runWithdrawFlow, hasCachedMgiToken } from '@/lib/mgi/client';
 import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import { cdn, isTestnet, createCoinbasePayOfframpURL } from '@normalfinance/utils';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
+import {
+  defaultSelection,
+  filterSellableOptions,
+  buildStellarWalletOptions,
+} from '@/lib/wallet-options';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -20,7 +27,6 @@ import {
   Dialog,
   Avatar,
   Typography,
-  IconButton,
   DialogTitle,
   ListItemText,
   DialogContent,
@@ -31,6 +37,8 @@ import {
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import WalletChoice from '@/components/_common/wallet-choice';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 import AmountDialog from '../deposit-amount-dialog';
 
@@ -94,6 +102,49 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
 
   const persist = usePersistStore();
 
+  // doc 88 B1 — which STELLAR wallet does this ramp use? The old code
+  // hardcoded the slot (persist.wallet.address), which silently sold from /
+  // deposited into whichever wallet happened to be connected. Options are
+  // built from the slot + companion Normal wallet; WalletChoice renders them,
+  // and the choice is never made silently when more than one wallet exists.
+  // (BTC/ETH/SOL have exactly one possible address, so no picker there.)
+  const stellarRamp = asset.blockchain === 'stellar';
+  const walletBalances = useWalletBalances(open && stellarRamp);
+  const stellarOptions = useMemo(() => {
+    if (!stellarRamp) return [];
+    // The aggregate's Stellar rows are SLOT-only (companion arrives separately).
+    const slotBal = Number(walletBalances.getAsset(asset.symbol)?.balance ?? NaN);
+    const compRaw = walletBalances.companionStellar?.assets.find(
+      (a) => a.symbol.toUpperCase() === asset.symbol.toUpperCase()
+    )?.balance;
+    return buildStellarWalletOptions({
+      slotAddress: persist.wallet.address,
+      slotWalletType: persist.wallet.walletType,
+      slotLabel: connectedWalletLabel(persist.wallet.walletType),
+      companionAddress: walletBalances.companionStellar?.address ?? null,
+      ...(Number.isFinite(slotBal) ? { slotBalance: slotBal } : {}),
+      ...(compRaw != null ? { companionBalance: Number(compRaw) } : {}),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    stellarRamp,
+    walletBalances.getAsset,
+    walletBalances.companionStellar,
+    persist.wallet.address,
+    persist.wallet.walletType,
+    asset.symbol,
+  ]);
+  const rampOptions = useMemo(() => filterSellableOptions(stellarOptions), [stellarOptions]);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    setSelectedKey(defaultSelection(rampOptions, 'offramp')?.key ?? null);
+    // Re-defaulting on option-count changes only: a balance ticking over must
+    // not yank a selection the user already made.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, rampOptions.length]);
+  const selectedWallet = rampOptions.find((o) => o.key === selectedKey) ?? null;
+
   const { user, session } = useSupabaseAuth();
 
   const moneyGramAmountDialog = useBoolean();
@@ -116,7 +167,13 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   // MoneyGram is a Stellar/USDC-only flow; native chains sell straight from
   // their own chain address (passed in as walletAddress).
   const isStellarAsset = asset.blockchain === 'stellar';
-  const userAddress = persist.wallet.address;
+  // The SELECTED wallet, falling back to the old behaviour (the slot / the
+  // caller's address) when the picker has nothing — never to a different
+  // wallet than the one on screen.
+  const userAddress = stellarRamp
+    ? (selectedWallet?.address ?? persist.wallet.address)
+    : persist.wallet.address;
+  const sellAddress = stellarRamp ? (selectedWallet?.address ?? walletAddress) : walletAddress;
 
   // When the BTC amount step opens, estimate the reserve from the current
   // mempool fee rate (~2-in/2-out tx + buffer) so Max stays sendable.
@@ -143,13 +200,13 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   // When the XLM amount step opens, fetch the account's actual min-balance
   // reserve from Horizon ((2 + subentries) × 0.5 XLM + fee) so Max stays sendable.
   useEffect(() => {
-    if (!cbStep || asset.blockchain !== 'stellar' || asset.symbol !== 'XLM' || !walletAddress) {
+    if (!cbStep || asset.blockchain !== 'stellar' || asset.symbol !== 'XLM' || !sellAddress) {
       return undefined;
     }
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch(`${config.HORIZON_URL}/accounts/${walletAddress}`);
+        const r = await fetch(`${config.HORIZON_URL}/accounts/${sellAddress}`);
         const acc = await r.json();
         const subentries = Number(acc.subentry_count ?? 1);
         const reserveXlm = (2 + subentries) * 0.5 + 0.01;
@@ -161,7 +218,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [cbStep, asset.blockchain, asset.symbol, walletAddress, config.HORIZON_URL]);
+  }, [cbStep, asset.blockchain, asset.symbol, sellAddress, config.HORIZON_URL]);
 
   // Most the user can sell while leaving fee/rent behind (floored so it's always
   // safely sendable). Only used when assetBalance is provided (native off-ramp).
@@ -223,7 +280,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
       return;
     }
 
-    if (!walletAddress || !session) {
+    if (!sellAddress || !session) {
       enqueueSnackbar(t('Please connect your wallet first'), { variant: 'warning' });
       return;
     }
@@ -242,7 +299,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
         headers,
         credentials: 'include',
         body: JSON.stringify({
-          address: walletAddress,
+          address: sellAddress,
           asset: asset.symbol,
           blockchain: asset.blockchain,
         }),
@@ -255,6 +312,30 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
         });
         return;
       }
+      // doc 89 F2: record the handoff BEFORE navigating, so a closed tab
+      // cannot lose the fact that money is in flight. Fire-and-forget:
+      // tracking failure must never block the sale.
+      void (async () => {
+        try {
+          await fetch('/api/ramp/transfers', {
+            method: 'POST',
+            headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              direction: 'offramp',
+              provider: 'coinbase',
+              network: isTestnet() ? 'testnet' : 'mainnet',
+              asset: asset.symbol,
+              chain: asset.blockchain,
+              walletAddress: sellAddress,
+              amountExpected: cbAmount || null,
+              baselineBalance: stellarRamp ? (selectedWallet?.balance ?? null) : null,
+            }),
+          });
+        } catch {
+          /* untracked this time — never blocked */
+        }
+      })();
       const url = createCoinbasePayOfframpURL({
         sessionToken,
         // Return to the current page with markers so the GLOBAL resume handler
@@ -415,7 +496,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
           },
         }}
       >
-        <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
+        <DialogTitle sx={{ p: 2, pb: '12px', width: '100%' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" color="text.primary">
               {isStellarAsset && asset.symbol === 'USDC'
@@ -423,9 +504,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                 : t('Sell {{symbol}}', { symbol: asset.symbol })}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <IconButton onClick={handleClose} aria-label="close dialog">
-                <Iconify icon="mingcute:close-line" width={24} />
-              </IconButton>
+              <ModalCloseButton onClick={handleClose} aria-label="close dialog" />
             </Box>
           </Box>
         </DialogTitle>
@@ -441,6 +520,15 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
             },
           }}
         >
+          {stellarRamp && (
+            <WalletChoice
+              options={rampOptions}
+              selectedKey={selectedKey}
+              onSelect={(o) => setSelectedKey(o.key)}
+              flow="offramp"
+              symbol={asset.symbol}
+            />
+          )}
           {cbStep ? (
             // The send-dialog's visual language (Niko, 2026-08-13): labeled
             // boxes, mono amounts, unit-following Available, $/token toggle.

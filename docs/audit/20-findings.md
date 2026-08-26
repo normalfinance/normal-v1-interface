@@ -3200,3 +3200,279 @@ import a different mnemonic → compare row.walletId, row.stellarAddress,
 Turnkey's wallets, and the exported phrase). NOT FIXED — deliberately: the
 fix depends on which is right (refuse the import, migrate the row wholesale,
 or model multiple wallets), and that is a product decision.
+
+## Live incident 2026-08-26 — USDC→SOL pivot reverted; funds safe; 4 UI bugs
+
+**What happened (account 24227f4e, 12.304061 USDC USDC→SOL):** burn on
+Stellar ✓, attestation ✓, mint to the user's own Base address ✓ (verified
+on-chain: 12.304061 USDC to 0xc835…). The LI.FI pivot USDC→SOL then reverted
+TWICE on fresh quotes. Replaying the tx at its block decodes to ERC-7751
+WrappedError(target, selector, …): an UNVERIFIED intermediary contract
+(0x030b6c44…) inside LI.FI's Base→Solana route failed an internal ERC-20
+transfer. Balance was present and allowance was MAX at the revert block —
+PROVIDER-SIDE ROUTE FAILURE, not ours. gasUsed 499k of 7.9M limit (not gas).
+The user clicked "Bring back as USDC": Base burn ✓ (12:27), Circle attestation
+pending (hard finality, threshold 2000 ≈ 15–20 min), then the cctp-advance
+cron mints to the companion Stellar wallet. Design held: funds never left the
+user's own addresses.
+
+**The four UI bugs it exposed (all fixed):**
+1. **The return leg was invisible.** cctp-resume-banner filtered out the
+   ACTIVE transfer id entirely — right for in-session halts, wrong for 'auto'
+   (post-burn self-completing) rows: the modal that "owns" the active id can
+   vanish (closed tab / navigation / dev Fast Refresh), leaving money
+   mid-bridge with ZERO surface. Auto rows now always render.
+2. **The detail modal called a stuck swap "Completed", all steps green.**
+   Outbound status flips COMPLETED at MINT, and isDone/stepDone keyed on it —
+   the pivot step went green with no hash. isDone now requires dstSwapTxHash
+   for outbound; the chip says "Action needed" for minted-but-undelivered;
+   REFUNDED rows no longer show a Finish button at all.
+3. **"Finish this transfer" was dead in three ways.** (a) REFUNDED rows showed
+   the button but the handler classifies REFUNDED as hidden → silent no-op;
+   (b) the handler used phaseOf() whose 120s freshness grace swallowed
+   explicit clicks → now rawPhase() (an explicit click IS the user saying the
+   in-session flow is gone); (c) from any page but /swap the click dispatched
+   the event and then hard-navigated — A DISPATCHED EVENT DIES WITH THE OLD
+   DOCUMENT. The id now rides the URL (?cctpResume=<id>), one-shot + scrubbed.
+4. **"Try again" only reset the card** — read as "nothing happened" when the
+   failure was mid-flight with funds already on Base. It now clears the run
+   AND hands the transfer id to the recovery banner's ONE handler.
+Also: the premature server copy "USDC returned to your Stellar account" (set
+at refund INITIATION) now says "returning… (usually ~20 min)".
+
+**Rules extracted:** a self-completing money state must always have a visible
+surface, owned by no single modal; a status that means "step N done" must not
+paint steps N+1 green; an explicit user click bypasses freshness heuristics;
+window events do not survive navigation — put resume intent in the URL.
+
+**Incident close-out + the real bombshell (2026-08-26): the staging crons have
+NEVER run.** The stuck return leg was recovered manually: the row had message
++ attestation stored and the relayer held 7.5 XLM, so the app's own
+ATTESTED→mint step was executed locally (same claim-first updateMany, same
+mint_and_forward, same rollback semantics). Mint
+6bcf207a3a5c000cff9e49fa6aaab7e885405ce8348c79e972515865d247f9ae confirmed;
+companion balance 0.4045944 → 12.7086554 (+12.304061 exact). Nothing lost.
+WHY IT WEDGED: cron:heartbeat:cctp-advance AND cron:heartbeat:fee-escrow-sweep
+are BOTH NULL in Redis (7-day TTL) — no Vercel cron has ever ticked on
+staging. Every "automatic" completion to date was actually a CLIENT TAB
+poking GET /api/cctp/transfers/[id]; close the tab and every server-side
+safety net is dead: cctp-advance, fee-escrow settlement (#26/#27), and F2's
+ramp-reconcile. Likely cause: Vercel crons fire only on a project's
+PRODUCTION deployment — a preview/branch "staging" never runs them. ACTION
+(Niko/Justin): open the staging Vercel project → Settings → Crons; either
+staging is its own project with crons enabled, or this must be fixed before
+any reliance on server-side settlement. VERIFY by curling a cron with
+CRON_SECRET and re-reading the heartbeat.
+The vindication: the heartbeats have existed since #64 and nobody ever read
+them — "recording is not monitoring" (doc 84). The autopilot-watch alert job
+(feat/autopilot-monitoring) is exactly what would have paged this on day one.
+
+**Round 2 of the recovery-UX fixes was itself broken by my own patch
+(2026-08-26, fixed):** the blanket string replace that switched the banner's
+phase checks to the grace-aware helper ALSO rewrote the fallback call INSIDE
+the helper's own definition — `phaseFor` called `phaseFor`, infinite
+recursion whenever the grace was not armed. The banner's refresh() swallowed
+the crash in its transient-error catch, silently leaving an EMPTY transfer
+list: no banner after reload, and both "Finish" and "Bring back as USDC"
+look rows up in that same list, so every click was a silent no-op. One bug,
+every symptom of the user's second failed session.
+FIXES: the fallback calls the original phaseOf; the 2-minute freshness grace
+is DELETED outright (second time it hid in-flight money — its purpose, not
+duplicating the in-session modal, is already served by the activeId filter,
+which tracks the actual open modal); onResume gained the same
+refresh-and-retry as onRefund so a click survives a still-loading list; and
+the detail modal shows an amber attention icon instead of a spinner when a
+transfer is waiting on the USER — a spinner promises progress that is not
+happening.
+RULES: never blanket-replace a symbol in the same patch that defines it —
+the definition's internals are part of the match set; and a catch that
+swallows render-path errors turns a crash into silent wrong behavior, which
+is strictly worse.
+
+**The failing LI.FI component has a name: MAYAN (2026-08-26 forensics):** the
+third revert (0x53536bf0…) replayed identically to the first two — same
+LiFiDiamond entry, same ERC-7751 WrappedError, same unverified inner target
+0x030b6c44… And the outer calldata decodes to
+`swapAndStartBridgeTokensViaMayan(...)`: all three attempts, across ~50
+minutes and three fresh quotes, were routed through the MAYAN bridge, whose
+forwarder contract kept failing an internal ERC-20 transfer. LI.FI kept
+selecting the same broken tool because it was presumably still the
+best-priced route.
+CANDIDATE FIX (not built, needs GO): on a reverted pivot, re-quote with
+`denyBridges: 'mayan'` appended (the same mechanism as the existing
+gasZipBridge blocklist, but applied per-retry rather than globally — Mayan is
+usually the RIGHT tool for Base→Solana, so a permanent deny would hurt normal
+days). Requires the quote layer to accept a per-request deny list and the
+retry path to pass it.
+
+**Why the "automatic" step asked for biometrics (2026-08-26, root-caused):**
+autopilot_signatures shows `signed cctp-outbound-pivot` for this sub-org at
+12:21:19 and 13:15:47 — the delegation IS active and the server DID sign the
+pivot on both attempts. The sequence per attempt was: autopilot signs →
+broadcasts → the tx REVERTS on-chain inside Mayan → tryAutopilot collapses
+every failure to null → the engine's designed fallback kicks in: "any
+autopilot failure ⇒ interactive passkey path" → biometrics prompt → the
+user's own signed tx hits the SAME broken route and reverts too. So each
+attempt burned TWO reverted transactions and one pointless biometric prompt.
+The fallback is right for signing-layer failures (kill switch, policy
+refusal, 502 before broadcast) and WRONG for an on-chain revert: a human
+signature cannot fix a broken route — it can only re-buy the same failure.
+CANDIDATE FIX (needs GO): the autopilot pivot route reports failure CLASS
+(reverted-with-hash vs refused/pre-broadcast), and the engine falls back to
+prompts ONLY for the signing class; an on-chain revert goes straight to the
+failure popup (Try again / Bring back), no biometrics.
+DECISION (Niko, 2026-08-26): NO to the per-retry Mayan deny — parked, not
+built. Bridges are never removed from routing.
+
+
+### 2026-08-26 — BUILT: pivot failure-class + automatic bridge failover (was "candidate fix")
+
+Niko's GO ("Go / but also if one bridge fails, why dont we have a system that
+automaticly picks the some other bridge?") — both halves shipped on
+feat/better-ramps:
+
+1. FAILURE CLASS. `/api/cctp/autopilot/pivot` now distinguishes an ON-CHAIN
+   revert (tx broadcast; chain rejected the route) from signing-layer
+   failures. A revert returns `failureClass: 'reverted'` + the LI.FI tool +
+   tx hash, and records "Exchange route failed on Base via <tool> (<hash>)"
+   on the row. The engine no longer falls back to an interactive passkey for
+   reverts — that fallback was the live incident's "biometrics then identical
+   failure" loop. Signing-layer failures still fall back exactly as designed.
+
+2. AUTOMATIC BRIDGE FAILOVER — per-RETRY exclusion, NOT removal (bridges stay
+   in routing for every other swap; Niko: "i dont want to remove the
+   bridge"). On a classified revert the engine silently retries the pivot
+   ONCE via autopilot with `denyBridges=[failedTool]` on the quote, so LI.FI
+   routes over a different bridge. If that also fails: straight to the
+   failure popup (Try again / Bring back as USDC) — no biometrics. Banner
+   retries parse the recorded tool out of errorDetail and exclude it too.
+   Grammar + parsers live in ONE module: `src/lib/cctp/failure-class.ts`
+   (jest-covered round-trip).
+
+3. Popup buttons hardened: the failure catch clears the active-transfer
+   marker BEFORE the popup renders, so both buttons resolved a null id and
+   did nothing. The id is now stashed in `lastFailedRunIdRef` at failure
+   time. RULE for the bank: a failure surface's actions must never depend on
+   state the failure path itself already cleared — capture ids at failure
+   time, not at click time.
+
+
+### 2026-08-26 — FORENSIC: the pivot reverts were never the bridges — a fake token inside LI.FI's DEX step
+
+eth_call replay of all four reverted pivots (Mayan x3, Relay x1) at their
+historic blocks decodes to the SAME failure:
+
+    WrappedError target=0x030B6C444B1074Fce5112839b3613a6Efb52F784
+                 selector=0xa9059cbb (transfer)
+                 details=0xf27f64e4 (ERC20TransferFailed())
+
+0x030B6C44… is an UNVERIFIED contract named "Tesla (TSLA)" on Base — a fake
+token whose transfer() reverts. It sits inside the route's DEX swap step
+(LI.FI exchange tool "fly": USDC→ETH pre-swap for Mayan), and today's Relay
+route embedded the same poisoned path. Live-quote reproduction confirms: a
+fresh fee-less Mayan quote's calldata contains the TSLA address; a NEAR-route
+quote (no swap step) does not. CORRECTION to the earlier finding: 0x030B6C44
+is NOT "Mayan's forwarder" — that conclusion was wrong; the bridge was never
+the problem.
+
+Consequences shipped (same day):
+1. Failover and retries now deny the failed EXCHANGES too (denyExchanges),
+   parsed from the quote's includedSteps and recorded in errorDetail as
+   "via <bridge> through <dex1>+<dex2>" — grammar + parsers + tests in
+   lib/cctp/failure-class.ts. Denying only bridges provably cannot fix a
+   poisoned swap step (nonce 46: different bridge, same TSLA, same revert).
+2. Banner retries read the row FRESH before quoting and accumulate all
+   session-failed bridges/DEXes per transfer (stale in-memory detail made
+   Try-again #2 re-pick Mayan at 14:14:03).
+3. The failure now paints on the swap step, not "Covering network fees".
+
+ACTION (team): report the poisoned "fly" USDC→ETH path / TSLA pool on Base
+to LI.FI support so they de-list it — every LI.FI integrator routing through
+it is currently broken the same way.
+
+
+### 2026-08-26 — Native-send dust audit (after the live SOL MAX failure)
+
+Live incident: MAX-send of all SOL was rejected with InsufficientFundsForRent
+(simulation-verified). Chain of causes: adapter spendable = balance - fee at
+full precision -> the modal rendered it at 8dp (SOL has 9) -> 9 lamports
+stranded -> the remainder fell in Solana's forbidden 0 < r < 0.00089088 SOL
+window -> the network rejects the WHOLE tx. A second, independent dust source
+sat in send-review.tsx, which re-rounded every non-BTC amount to 7dp.
+
+Audit verdict across all send assets, one fix class each:
+- SOL: exact-lamport MAX from a live balance read (leaves EXACTLY 0 —
+  allowed); pre-passkey rent-window guard with honest copy; the broadcast
+  funnel maps InsufficientFundsForRent to the same copy (matched BEFORE the
+  generic 'insufficient funds' branch, which the node's message also
+  contains). Math + copy in lib/send/native-dust.ts (jest, incl. the exact
+  347,450,359-lamport regression).
+- SOL review layer: amounts now pass at 9dp (was blanket 7dp for non-BTC).
+- BTC: MAX was a GUARANTEED failure (full balance can never cover
+  amount + fee — the builder always 400'd). MAX now = all UTXOs minus the
+  real sweep fee (same vsize math as the builder, 1 output). New pre-passkey
+  guard for sub-546-sat recipient outputs (the builder dust-protects change
+  but not the recipient). Builder itself verified good: sub-dust change
+  folds into the fee; insufficiency rejects before any signature.
+- ETH: already sound — live gas estimation with a pre-sign
+  amount+fee>balance guard and a contract-destination guard. No change.
+- XLM: already sound — reserve+savings-buffer helper on both MAX and typed
+  paths. No change.
+- Stellar non-XLM (USDC): NEW pre-sign guard — the fee is paid in XLM, so a
+  sender at the reserve floor signed a tx Horizon must reject; the modal now
+  checks xlmAvailableForFees before the passkey.
+
+Adapter contract grew two optional members: getMaxSendAmount() (live,
+full-precision MAX) and validateSend() (pre-passkey blocking message).
+RULE for the bank: MAX must be computed in the asset's own integer units
+from a LIVE read — display-rounded MAX math WILL strand dust on some chain.
+
+
+### 2026-08-26 — Ghost ramp banners ("double messages" that outlived arrival)
+
+Two "Buying SOL on Coinbase" rows above Activity, still showing after the SOL
+landed. DB truth: the rows were 4 HOURS apart — not a double-fire but an
+earlier attempt that could never clear, compounding three gaps:
+1. the dialog captured baselineBalance for Stellar only, so native rows
+   shipped with null baselines — and a null baseline never claims arrival
+   (correct rule, starved input);
+2. the client arrival flip skipped every non-Stellar chain ("the cron will
+   handle natives");
+3. the 45-minute abandonment lived ONLY in that cron — and Vercel crons
+   never run on localhost/staging. Nothing could clear anything.
+
+Fixes: the POST captures a live baseline server-side for every chain when
+the client sends none; the POST reuses a still-active row for the same
+(provider, asset, wallet) instead of stacking a duplicate; the GET that
+feeds the banner sweeps the caller's expired rows itself (rule 2 without a
+cron); the client hook flips arrivals for ALL chains from the aggregate
+balances. UX per Niko: in-flight rows now render INSIDE the asset page's
+balance card (RampInflightInline, all assets) — right under the number they
+explain — while the dismissible banner above Activity keeps only failures.
+RULE for the bank: a state machine whose only exit lives in a scheduler that
+does not run in this environment is a state machine with no exits — every
+read path that DISPLAYS a pending state must also be able to advance it.
+
+
+#### Addendum (same day): arrival proof moved into the READ path
+
+The remaining ghost class: rows with a null baseline (pre-fix rows, or a
+failed balance read at commit) could never arrive by balance, and baselined
+rows only flipped while a tab was open. The GET that feeds the banner now
+proves arrival itself: balance-vs-baseline via liveChainBalance, or — for
+null-baseline rows — a CONFIRMED incoming transfer newer than the row
+(Solana signatures + balance delta, Horizon payments, mempool.space txs;
+Ethereum has no indexer-free tx list, so its null-baseline rows fall to the
+45-minute abandonment). Helpers live in server/ramp-chain.ts; null never
+claims arrival.
+
+
+### 2026-08-26 — Native activity rows wore the external wallet's name
+
+With Lobstr connected, SOL/ETH/BTC Sent/Received rows were tagged "Lobstr" —
+the slot feed carries the native-chain rows, and rows without an explicit
+funding declaration inherited the feed's fallback label. Factually
+impossible: external wallets are Stellar-only. Fix in bySource(): an
+explicit fundedFrom still wins (swaps paid by Lobstr stay honest), otherwise
+any row whose symbol maps to a non-Stellar chain (registry chainForSymbol,
+never hardcoded) is tagged "Normal wallet"; Stellar rows keep the fallback.

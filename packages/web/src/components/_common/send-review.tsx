@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 
 import { Iconify } from '../template/iconify';
+import { NetworkBadge, getAssetNetwork } from './network-badge';
 
 import type { SendParams } from './send-adapters';
 
@@ -100,7 +101,9 @@ const SendReview: React.FC<SendReviewProps> = ({
     try {
       const txHash = await sendFn({
         token: sendToken,
-        amount: tokenValue.toFixed(isBtc ? 8 : 7),
+        // Full native precision (2026-08-26): SOL is a 9dp asset — the old
+        // blanket 7dp here re-created the rent-dust the MAX fix removes.
+        amount: tokenValue.toFixed(isBtc ? 8 : isSol ? 9 : 7),
         destination: address,
         memo,
       });
@@ -135,10 +138,16 @@ const SendReview: React.FC<SendReviewProps> = ({
       fullWidth
       slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
     >
-      <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
+      <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography
-            sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+            sx={{
+              fontSize: '15px',
+              fontWeight: 600,
+              color: '#0A0A0F',
+              letterSpacing: '-0.01em',
+              lineHeight: '28px',
+            }}
           >
             {t('Confirm transaction')}
           </Typography>
@@ -300,6 +309,26 @@ const SendReview: React.FC<SendReviewProps> = ({
                 </Box>
               </>
             )}
+
+            <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+
+            {/* Network — every asset in Normal lives on exactly ONE network, so
+                the confirm screen states it plainly (Niko 2026-08-26): the
+                last read before signing must say which chain this leaves on. */}
+            <Box
+              sx={{
+                px: '16px',
+                py: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                {t('Network')}
+              </Typography>
+              <NetworkBadge network={getAssetNetwork(sendToken)} />
+            </Box>
 
             <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />
 

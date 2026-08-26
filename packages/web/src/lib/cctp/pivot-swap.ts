@@ -35,6 +35,10 @@ export async function executePivotSwap(params: {
   toAddress: string;
   /** USDC to swap, 6-dp wire units */
   amountWire: bigint;
+  /** bridge-failover: LI.FI tool keys to exclude from THIS quote only */
+  denyBridges?: string[];
+  /** DEX steps to exclude — the failure can live in the swap, not the bridge */
+  denyExchanges?: string[];
   onStep?: (step: 'quote' | 'approve' | 'swap') => void;
 }): Promise<PivotSwapResult> {
   const info = await getTurnkeyWalletInfo();
@@ -58,6 +62,8 @@ export async function executePivotSwap(params: {
       fromAmount: params.amountWire.toString(),
       fromAddress: params.evmAddress,
       toAddress: params.toAddress,
+      denyBridges: params.denyBridges,
+      denyExchanges: params.denyExchanges,
     }),
   });
   const data = await res.json();
@@ -95,7 +101,21 @@ export async function executePivotSwap(params: {
     const raw = await signEvmTxWithTurnkey(unsigned, info.subOrgId!, params.evmAddress);
     const hash = await client.sendRawTransaction({ serializedTransaction: raw });
     const receipt = await client.waitForTransactionReceipt({ hash });
-    if (receipt.status !== 'success') throw new Error(`transaction reverted (${hash})`);
+    if (receipt.status !== 'success') {
+      // Classified failure (2026-08-26): a revert is an ON-CHAIN outcome, not
+      // a signing problem — callers must not re-prompt signatures for it. The
+      // quoted bridge rides along so the retry can exclude it.
+      const err: any = new Error(`transaction reverted (${hash})`);
+      err.__pivotRevert = true;
+      err.txHash = hash;
+      err.tool = quote.tool ?? quote.toolDetails?.key ?? null;
+      err.exchanges = Array.isArray(quote.includedSteps)
+        ? quote.includedSteps
+            .filter((st: any) => st?.type === 'swap' && typeof st?.tool === 'string')
+            .map((st: any) => st.tool)
+        : [];
+      throw err;
+    }
     return hash;
   };
 

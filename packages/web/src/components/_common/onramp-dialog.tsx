@@ -1,18 +1,21 @@
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
-import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
 import { useMgiLimits } from '@/hooks/use-mgi-limits';
 import { usePersistStore } from '@normalfinance/state';
 import { useBoolean, useStellarConfig } from '@/hooks';
 import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
+import React, { useMemo, useState, useEffect } from 'react';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { reportMgiStatus, refreshMgiStatus } from '@/lib/mgi/db';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { FAILED_MGI_STATUSES, TERMINAL_MGI_STATUSES } from '@/lib/mgi/statuses';
 import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
+import { defaultSelection, buildStellarWalletOptions } from '@/lib/wallet-options';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
 import { runDepositFlow, openTxInAnchorUI, hasCachedMgiToken } from '@/lib/mgi/client';
 import {
@@ -33,7 +36,6 @@ import {
   Dialog,
   Avatar,
   Typography,
-  IconButton,
   DialogTitle,
   ListItemText,
   DialogContent,
@@ -44,6 +46,8 @@ import {
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import WalletChoice from '@/components/_common/wallet-choice';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 
 import AmountDialog from '../deposit-amount-dialog';
@@ -87,7 +91,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
   onClose,
   walletAddress,
   asset = { symbol: 'USDC', blockchain: 'stellar' },
-  providers = ['stripe', 'coinbase', 'moneygram'],
+  providers = ['coinbase', 'moneygram', 'stripe'],
 }) => {
   const theme = useTheme();
   const { t } = useTranslate();
@@ -95,6 +99,49 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
   const config = useStellarConfig();
 
   const persist = usePersistStore();
+
+  // doc 88 B1 — which STELLAR wallet does this ramp use? The old code
+  // hardcoded the slot (persist.wallet.address), which silently sold from /
+  // deposited into whichever wallet happened to be connected. Options are
+  // built from the slot + companion Normal wallet; WalletChoice renders them,
+  // and the choice is never made silently when more than one wallet exists.
+  // (BTC/ETH/SOL have exactly one possible address, so no picker there.)
+  const stellarRamp = asset.blockchain === 'stellar';
+  const walletBalances = useWalletBalances(open && stellarRamp);
+  const stellarOptions = useMemo(() => {
+    if (!stellarRamp) return [];
+    // The aggregate's Stellar rows are SLOT-only (companion arrives separately).
+    const slotBal = Number(walletBalances.getAsset(asset.symbol)?.balance ?? NaN);
+    const compRaw = walletBalances.companionStellar?.assets.find(
+      (a) => a.symbol.toUpperCase() === asset.symbol.toUpperCase()
+    )?.balance;
+    return buildStellarWalletOptions({
+      slotAddress: persist.wallet.address,
+      slotWalletType: persist.wallet.walletType,
+      slotLabel: connectedWalletLabel(persist.wallet.walletType),
+      companionAddress: walletBalances.companionStellar?.address ?? null,
+      ...(Number.isFinite(slotBal) ? { slotBalance: slotBal } : {}),
+      ...(compRaw != null ? { companionBalance: Number(compRaw) } : {}),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    stellarRamp,
+    walletBalances.getAsset,
+    walletBalances.companionStellar,
+    persist.wallet.address,
+    persist.wallet.walletType,
+    asset.symbol,
+  ]);
+  const rampOptions = useMemo(() => stellarOptions, [stellarOptions]);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    setSelectedKey(defaultSelection(rampOptions, 'onramp')?.key ?? null);
+    // Re-defaulting on option-count changes only: a balance ticking over must
+    // not yank a selection the user already made.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, rampOptions.length]);
+  const selectedWallet = rampOptions.find((o) => o.key === selectedKey) ?? null;
   const { connectWallet: connectNormalWallet } = useNormalWallet();
 
   const moneyGramAmountDialog = useBoolean();
@@ -116,7 +163,13 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
   // Stellar account/trustline prerequisites don't apply to them.
   const isStellarAsset = asset.blockchain === 'stellar';
 
-  const userAddress = persist.wallet.address;
+  // The DESTINATION wallet. Selection-aware for Stellar: the trustline check
+  // below must ask about the wallet the money will actually arrive in, not
+  // whichever wallet happens to occupy the slot.
+  const userAddress = stellarRamp
+    ? (selectedWallet?.address ?? persist.wallet.address)
+    : persist.wallet.address;
+  const destAddress = stellarRamp ? (selectedWallet?.address ?? walletAddress) : walletAddress;
   const isConnected = isStellarAsset ? !!userAddress : !!walletAddress;
 
   // Account status checks
@@ -211,7 +264,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
 
   /** Coinbase */
   const handleCoinbaseClick = async () => {
-    if (!walletAddress) {
+    if (!destAddress) {
       enqueueSnackbar('Please login and connect your wallet first', { variant: 'warning' });
       return;
     }
@@ -235,7 +288,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
         headers,
         credentials: 'include',
         body: JSON.stringify({
-          address: walletAddress,
+          address: destAddress,
           asset: asset.symbol,
           blockchain: asset.blockchain,
         }),
@@ -249,6 +302,29 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
         });
         return;
       }
+      // doc 89 F2: record the handoff BEFORE navigating, so a closed tab
+      // cannot lose the fact that money is in flight. Fire-and-forget:
+      // tracking failure must never block the purchase.
+      void (async () => {
+        try {
+          await fetch('/api/ramp/transfers', {
+            method: 'POST',
+            headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              direction: 'onramp',
+              provider: 'coinbase',
+              network: isTestnet() ? 'testnet' : 'mainnet',
+              asset: asset.symbol,
+              chain: asset.blockchain,
+              walletAddress: destAddress,
+              baselineBalance: stellarRamp ? (selectedWallet?.balance ?? null) : null,
+            }),
+          });
+        } catch {
+          /* untracked this time — never blocked */
+        }
+      })();
       const url = createCoinbasePayOnrampURL({
         amountUsd: amount,
         assetSymbol: asset.symbol,
@@ -318,14 +394,6 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
 
   const ALL_ONRAMPS: (OnrampOption & { id: OnrampProvider })[] = [
     {
-      id: 'stripe',
-      avatar:
-        'https://cdn.brandfetch.io/idxAg10C0L/w/480/h/480/theme/dark/icon.jpeg?c=1dxbfHSJFAPEGdCLU4o5B',
-      heading: 'Stripe',
-      description: t('Debit Card, ACH, Apple Pay, Google Pay'),
-      url: stripeUrl,
-    },
-    {
       id: 'coinbase',
       avatar: 'https://avatars.githubusercontent.com/u/1885080?s=200&v=4',
       heading: 'Coinbase',
@@ -338,6 +406,18 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
       heading: 'MoneyGram',
       description: t('Drop-off cash at a physical location'),
       onClick: () => moneyGramAmountDialog.onTrue(),
+    },
+    // LAST on purpose (Niko 2026-08-26): the link cannot carry a destination
+    // address until the Stripe onramp application is approved and the session
+    // integration is built — so the description says out loud that the user
+    // enters their wallet address on Stripe's page.
+    {
+      id: 'stripe',
+      avatar:
+        'https://cdn.brandfetch.io/idxAg10C0L/w/480/h/480/theme/dark/icon.jpeg?c=1dxbfHSJFAPEGdCLU4o5B',
+      heading: 'Stripe',
+      description: t('Card, ACH, Apple Pay — you enter your wallet address on Stripe'),
+      url: stripeUrl,
     },
   ];
 
@@ -364,7 +444,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
           },
         }}
       >
-        <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
+        <DialogTitle sx={{ p: 2, pb: '12px', width: '100%' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" color="text.primary">
               {mgiCommitted
@@ -374,9 +454,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
                   : t('Buy {{symbol}}', { symbol: asset.symbol })}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <IconButton onClick={handleDialogClose} aria-label="close dialog">
-                <Iconify icon="mingcute:close-line" width={24} />
-              </IconButton>
+              <ModalCloseButton onClick={handleDialogClose} aria-label="close dialog" />
             </Box>
           </Box>
         </DialogTitle>
@@ -392,6 +470,15 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
             },
           }}
         >
+          {stellarRamp && !mgiCommitted && (
+            <WalletChoice
+              options={rampOptions}
+              selectedKey={selectedKey}
+              onSelect={(o) => setSelectedKey(o.key)}
+              flow="onramp"
+              symbol={asset.symbol}
+            />
+          )}
           {mgiCommitted ? (
             <Stack spacing={2} sx={{ py: 1 }}>
               <Alert

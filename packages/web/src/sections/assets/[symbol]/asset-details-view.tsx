@@ -48,6 +48,7 @@ import { ChainReceiveModal } from '@/components/_common/chain-receive-modal';
 import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 import MoneyGramPendingBanner from '@/components/_common/moneygram-pending-banner';
 import { NetworkBadge, getAssetNetwork } from '@/components/_common/network-badge';
+import RampPendingBanner, { RampInflightInline } from '@/components/_common/ramp-pending-banner';
 
 import { AssetPriceChart } from './asset-price-chart';
 
@@ -492,6 +493,10 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                 )}
               </>
             )}
+            {/* Money on the way (Niko 2026-08-26): the in-flight indicator
+                lives IN the balance card — right under the number it
+                explains. Failures keep the dismissible banner below. */}
+            <RampInflightInline symbol={token.symbol} />
           </Box>
 
           {/* Actions */}
@@ -632,6 +637,10 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
       <Box sx={{ mt: '20px' }}>
         {/* In-flight MoneyGram cash deposits/outs — USDC (Stellar) is the only
             asset MoneyGram ramps, so the banner only belongs here. */}
+        {/* doc 89 F2: FAILED ramp handoffs for THIS asset (dismissible).
+            In-flight rows render inside the balance card since 2026-08-26
+            (RampInflightInline); MoneyGram keeps its own banner below. */}
+        <RampPendingBanner symbol={token.symbol} />
         {token.symbol === 'USDC' && <MoneyGramPendingBanner />}
         <ActivityCard
           walletAddress={wallet.address}
@@ -656,7 +665,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         walletAddress={(native ? nativeAddress : wallet.address) ?? undefined}
         asset={{ symbol: token.symbol, blockchain: native?.chain ?? 'stellar' }}
         providers={
-          token.symbol === 'USDC' ? ['stripe', 'coinbase', 'moneygram'] : ['stripe', 'coinbase']
+          // Stripe offered LAST (Niko 2026-08-26) until the session integration
+          // replaces the bare link (doc 88 B3).
+          token.symbol === 'USDC' ? ['coinbase', 'moneygram', 'stripe'] : ['coinbase', 'stripe']
         }
       />
 

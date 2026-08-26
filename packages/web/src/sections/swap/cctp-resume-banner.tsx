@@ -31,6 +31,7 @@ import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { parseFailedTool, parseFailedExchanges } from '@/lib/cctp/failure-class';
 import { getActiveCctpTransfer, ACTIVE_CCTP_TRANSFER_EVENT } from '@/lib/cctp/active-transfer';
 
 import Box from '@mui/material/Box';
@@ -59,11 +60,10 @@ interface TransferRow {
   mintTxHash: string | null;
   dstSwapTxHash: string | null;
   updatedAt: string;
+  errorDetail?: string | null;
 }
 
 type Phase = 'hidden' | 'auto' | 'halt-receive' | 'halt-finish';
-
-const GRACE_MS = 120_000; // don't flag a halt while a normal in-session swap runs
 
 function rawPhase(tr: TransferRow): Phase {
   if (tr.status === 'REFUNDED') return 'hidden';
@@ -85,11 +85,13 @@ function rawPhase(tr: TransferRow): Phase {
 }
 
 function phaseOf(tr: TransferRow, now: number): Phase {
-  const p = rawPhase(tr);
-  if ((p === 'halt-receive' || p === 'halt-finish') && now - Date.parse(tr.updatedAt) < GRACE_MS) {
-    return 'hidden'; // too fresh — the in-session flow is still handling it
-  }
-  return p;
+  // No freshness grace (2026-08-26, second bite): hiding a "too fresh" halt
+  // made the banner empty right after a reload, which also blinded the
+  // resume/refund handlers that look rows up in the banner's list. The
+  // in-session duplication the grace guarded against is already prevented by
+  // the activeId filter, which tracks the ACTUAL open modal.
+  void now;
+  return rawPhase(tr);
 }
 
 async function readBaseUsdc(network: NetworkType, address: string): Promise<bigint> {
@@ -118,6 +120,16 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   const [transfers, setTransfers] = useState<TransferRow[]>([]);
   const transfersRef = useRef<TransferRow[]>([]);
   const recoverRef = useRef<((tr: TransferRow, ph: Phase) => void) | null>(null);
+  const refundRef = useRef<((tr: TransferRow) => void) | null>(null);
+  // Per-transfer memory of route elements that already reverted THIS session —
+  // merged with the row's recorded detail so consecutive retries accumulate
+  // exclusions instead of ping-ponging between two broken routes.
+  const deniedRef = useRef(new Map<string, { bridges: Set<string>; exchanges: Set<string> }>());
+  // While set in the future, phase checks skip the freshness grace — armed by
+  // the failure modal so a halted transfer surfaces INSTANTLY (2026-08-26).
+  const graceOffUntilRef = useRef(0);
+  const phaseFor = (tr: TransferRow, now: number): Phase =>
+    now < graceOffUntilRef.current ? rawPhase(tr) : phaseOf(tr, now);
   const [busyId, setBusyId] = useState<string | null>(null);
   // "Safe in your Base account" is only said once we've SEEN the balance —
   // an undelivered (later refunded) leg was described as safely arrived
@@ -133,7 +145,12 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     window.addEventListener(ACTIVE_CCTP_TRANSFER_EVENT, h);
     return () => window.removeEventListener(ACTIVE_CCTP_TRANSFER_EVENT, h);
   }, []);
-  const visibleTransfers = transfers.filter((tr) => tr.id !== activeId);
+  // 'auto' rows always render, active or not: the modal that owns the active
+  // transfer can vanish (closed tab / navigation / dev reload), and a user
+  // with money mid-bridge must never be left with zero surface (2026-08-26).
+  const visibleTransfers = transfers.filter(
+    (tr) => tr.id !== activeId || phaseFor(tr, Date.now()) === 'auto'
+  );
 
   const refresh = useCallback(async () => {
     try {
@@ -146,7 +163,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       const data = await res.json();
       const now = Date.now();
       const shown: TransferRow[] = (data.transfers ?? []).filter(
-        (tr: TransferRow) => phaseOf(tr, now) !== 'hidden'
+        (tr: TransferRow) => phaseFor(tr, now) !== 'hidden'
       );
       setTransfers(shown);
       transfersRef.current = shown;
@@ -155,12 +172,12 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       Promise.all(
         shown
           .filter((tr) => {
-            const ph = phaseOf(tr, now);
+            const ph = phaseFor(tr, now);
             return ph === 'halt-receive' || ph === 'halt-finish';
           })
           .map(async (tr) => {
             try {
-              const addr = phaseOf(tr, now) === 'halt-receive' ? tr.srcAddress : tr.destAddress;
+              const addr = phaseFor(tr, now) === 'halt-receive' ? tr.srcAddress : tr.destAddress;
               const bal = await readBaseUsdc(tr.network as NetworkType, addr);
               return bal > 0n ? tr.id : null;
             } catch {
@@ -171,7 +188,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         setVerifiedIds(new Set(ids.filter((x): x is string => !!x)));
       });
       // Poke any 'auto' (post-burn) transfer so its status advances between cron ticks.
-      const auto = shown.find((tr) => phaseOf(tr, now) === 'auto');
+      const auto = shown.find((tr) => phaseFor(tr, now) === 'auto');
       if (auto) {
         fetch(`/api/cctp/transfers/${auto.id}`, { headers, credentials: 'include' }).catch(
           () => {}
@@ -198,18 +215,74 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     const onResume = (e: Event) => {
       const id2 = (e as CustomEvent<{ id?: string }>).detail?.id;
       if (!id2) return;
-      const tr = transfersRef.current.find((x) => x.id === id2);
-      if (tr) {
-        const ph = phaseOf(tr, Date.now());
+      const runResume = () => {
+        const tr = transfersRef.current.find((x) => x.id === id2);
+        if (!tr) return false;
+        const ph = rawPhase(tr);
         // recoverRef: `recover` is declared below this effect; the ref keeps
         // the listener stable without a TDZ/order problem.
         if (ph === 'halt-receive' || ph === 'halt-finish') recoverRef.current?.(tr, ph);
+        return true;
+      };
+      if (!runResume()) {
+        // The list may still be loading (fresh navigation) — re-read and try
+        // once more; a user's click must never be a silent no-op.
+        refresh();
+        setTimeout(runResume, 1500);
       }
     };
+    // Failure modal on screen → surface the halt NOW, grace off for 5 min.
+    const onHalted = () => {
+      graceOffUntilRef.current = Date.now() + 5 * 60_000;
+      refresh();
+    };
+    // "Bring back as USDC" from the failure modal — same refund handler the
+    // banner button uses; retried once if the rows have not loaded yet.
+    const onRefund = (e: Event) => {
+      const id2 = (e as CustomEvent<{ id?: string }>).detail?.id;
+      if (!id2) return;
+      graceOffUntilRef.current = Date.now() + 5 * 60_000;
+      const run = () => {
+        const tr = transfersRef.current.find((x) => x.id === id2);
+        if (tr && rawPhase(tr) === 'halt-finish') {
+          refundRef.current?.(tr);
+          return true;
+        }
+        return false;
+      };
+      if (!run()) {
+        refresh();
+        setTimeout(run, 1500);
+      }
+    };
+    window.addEventListener('nf:cctp-halted', onHalted);
+    window.addEventListener('nf:cctp-refund', onRefund);
     window.addEventListener('nf:activity-updated', onActivity);
     window.addEventListener('nf:cctp-resume', onResume);
+    // Cross-page "Finish this transfer": the id arrives via ?cctpResume=…
+    // because a dispatched event cannot survive a full navigation. One-shot;
+    // the param is scrubbed so a reload does not re-trigger recovery.
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const resumeId = params.get('cctpResume');
+      if (resumeId) {
+        params.delete('cctpResume');
+        window.history.replaceState(
+          null,
+          '',
+          window.location.pathname + (params.toString() ? `?${params}` : '')
+        );
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('nf:cctp-resume', { detail: { id: resumeId } }));
+        }, 1500); // after the first refresh() has rows
+      }
+    } catch {
+      /* URL API unavailable — the banner buttons still work */
+    }
     return () => {
       clearInterval(id);
+      window.removeEventListener('nf:cctp-halted', onHalted);
+      window.removeEventListener('nf:cctp-refund', onRefund);
       window.removeEventListener('nf:cctp-resume', onResume);
       window.removeEventListener('nf:activity-updated', onActivity);
     };
@@ -267,11 +340,41 @@ export function CctpRecoveryBanner({ addresses }: Props) {
           const bal = await readBaseUsdc(network, tr.destAddress);
           if (bal === 0n)
             throw new Error(t('No USDC found on Base — it may already be on its way.'));
+          // Deny list for THIS retry (2026-08-26 forensic): the recorded
+          // bridge AND the recorded DEX steps — the poisoned element can be
+          // either (today's reverts died in a fake token inside the "fly"
+          // swap step, not in any bridge). Read the row FRESH first: the
+          // cached copy went stale mid-session and re-picked the exact
+          // route that had just reverted.
+          let detail = tr.errorDetail ?? null;
+          try {
+            const fres = await fetch(`/api/cctp/transfers/${tr.id}`, {
+              headers,
+              credentials: 'include',
+            });
+            const fdata = await fres.json().catch(() => null);
+            if (fdata?.transfer) detail = fdata.transfer.errorDetail ?? detail;
+          } catch {
+            /* stale detail is still better than none */
+          }
+          const remembered = deniedRef.current.get(tr.id);
+          const denyBridges = [
+            ...new Set(
+              [parseFailedTool(detail), ...(remembered?.bridges ?? [])].filter(
+                (x): x is string => !!x
+              )
+            ),
+          ];
+          const denyExchanges = [
+            ...new Set([...parseFailedExchanges(detail), ...(remembered?.exchanges ?? [])]),
+          ];
           const result = await executePivotSwap({
             evmAddress: tr.destAddress,
             toSymbol,
             toAddress,
             amountWire: bal,
+            denyBridges: denyBridges.length ? denyBridges : undefined,
+            denyExchanges: denyExchanges.length ? denyExchanges : undefined,
           });
           const dstAmount = BigNumber(result.toAmountMin)
             .dividedBy(BigNumber(10).pow(NATIVE_DECIMALS[toSymbol]))
@@ -284,8 +387,29 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         refresh();
       } catch (e: any) {
         console.error('[cctp recovery] failed:', e); // surface stack
+        // A classified revert records the failed bridge so the NEXT retry
+        // quotes without it (failover applies here too, not just in-run).
+        if (e?.__pivotRevert) {
+          const entry = deniedRef.current.get(tr.id) ?? {
+            bridges: new Set<string>(),
+            exchanges: new Set<string>(),
+          };
+          if (typeof e.tool === 'string' && e.tool) entry.bridges.add(e.tool);
+          for (const x of Array.isArray(e.exchanges) ? e.exchanges : [])
+            if (typeof x === 'string' && x) entry.exchanges.add(x);
+          deniedRef.current.set(tr.id, entry);
+          await patch(tr.id, await buildAuthHeaders(), {
+            pivotRevertTool: e.tool ?? '',
+            pivotRevertTxHash: e.txHash ?? '',
+            pivotRevertExchanges: Array.isArray(e.exchanges) ? e.exchanges.join('+') : '',
+          }).catch(() => {});
+        }
         enqueueSnackbar(
-          e?.message ?? t('Recovery failed — your funds are safe; please try again.'),
+          e?.__pivotRevert
+            ? t(
+                'The exchange route failed on the provider side — your USDC is safe. Try again to use a different route.'
+              )
+            : (e?.message ?? t('Recovery failed — your funds are safe; please try again.')),
           { variant: 'error' }
         );
       } finally {
@@ -366,6 +490,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     },
     [t, enqueueSnackbar, patch, refresh]
   );
+  refundRef.current = refundToStellar;
 
   if (!visibleTransfers.length) return null;
   const now = Date.now();
@@ -381,7 +506,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       }}
     >
       {visibleTransfers.map((tr) => {
-        const phase = phaseOf(tr, now);
+        const phase = phaseFor(tr, now);
         const isHalt = phase === 'halt-receive' || phase === 'halt-finish';
         const usd = (Number(tr.amountWire) / 1e6).toFixed(2);
         return (

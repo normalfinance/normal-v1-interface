@@ -14,13 +14,13 @@ import {
   Button,
   TextField,
   Typography,
-  IconButton,
   DialogTitle,
   DialogContent,
   InputAdornment,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 import { NetworkBadge, getAssetNetwork } from './network-badge';
 
@@ -92,14 +92,12 @@ const PickToken: React.FC<PickTokenProps> = ({
         },
       }}
     >
-      <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
+      <DialogTitle sx={{ p: 2, pb: '12px', width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div">
             {t('Select an asset')}
           </Typography>
-          <IconButton onClick={onClose}>
-            <Iconify icon="mingcute:close-line" width={24} />
-          </IconButton>
+          <ModalCloseButton onClick={onClose} />
         </Box>
       </DialogTitle>
       <DialogContent
@@ -193,10 +191,22 @@ const PickToken: React.FC<PickTokenProps> = ({
                           {token.name.includes('Short') && (
                             <Chip label="Short" color="error" size="small" variant="soft" />
                           )}
-                          {token.name.replace('Short', '')}
+                          {token.name.replace('Short', '').split(' · ')[0]}
                         </Typography>
                         <NetworkBadge network={getAssetNetwork(token)} />
                       </Box>
+                      {token.name.includes(' · ') && (
+                        <Typography
+                          sx={{
+                            fontSize: '11.5px',
+                            color: theme.palette.text.secondary,
+                            textAlign: 'left',
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          {token.name.split(' · ').slice(1).join(' · ')}
+                        </Typography>
+                      )}
                     </Box>
                   </Box>
                   <Box>
@@ -343,10 +353,22 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 {token.name.includes('Short') && (
                                   <Chip label="Short" color="error" size="small" variant="soft" />
                                 )}
-                                {token.name.replace('Short', '')}
+                                {token.name.replace('Short', '').split(' · ')[0]}
                               </Typography>
                               <NetworkBadge network={getAssetNetwork(token)} />
                             </Box>
+                            {token.name.includes(' · ') && (
+                              <Typography
+                                sx={{
+                                  fontSize: '11.5px',
+                                  color: theme.palette.text.secondary,
+                                  textAlign: 'left',
+                                  lineHeight: 1.35,
+                                }}
+                              >
+                                {token.name.split(' · ').slice(1).join(' · ')}
+                              </Typography>
+                            )}
                           </Box>
                         </Box>
                         <Box>
@@ -427,10 +449,22 @@ const PickToken: React.FC<PickTokenProps> = ({
                               {token.name.includes('Short') && (
                                 <Chip label="Short" color="error" size="small" variant="soft" />
                               )}
-                              {token.name.replace('Short', '')}
+                              {token.name.replace('Short', '').split(' · ')[0]}
                             </Typography>
                             <NetworkBadge network={getAssetNetwork(token)} />
                           </Box>
+                          {token.name.includes(' · ') && (
+                            <Typography
+                              sx={{
+                                fontSize: '11.5px',
+                                color: theme.palette.text.secondary,
+                                textAlign: 'left',
+                                lineHeight: 1.35,
+                              }}
+                            >
+                              {token.name.split(' · ').slice(1).join(' · ')}
+                            </Typography>
+                          )}
                         </Box>
                       </Box>
                       <Box>

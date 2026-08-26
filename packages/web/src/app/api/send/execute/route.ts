@@ -8,6 +8,7 @@ import { cookies } from 'next/headers';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
+import { SOL_RENT_DUST_MESSAGE } from '@/lib/send/native-dust';
 import {
   settleSend,
   base58Encode,
@@ -128,6 +129,13 @@ async function broadcastSol(signedTxB64: string): Promise<BroadcastOutcome> {
     const message: string = err?.message ?? String(err);
     const m = message.toLowerCase();
     if (m.includes('already been processed')) return { outcome: 'accepted' };
+    // Rent-dust rejection (2026-08-26): the send would leave the sender's
+    // account in Solana's forbidden 0 < balance < rent-minimum window. Must
+    // match BEFORE the generic insufficient check — the node's message
+    // contains 'insufficient funds' too and would mask the real cause.
+    if (m.includes('insufficientfundsforrent') || m.includes('insufficient funds for rent')) {
+      return { outcome: 'rejected', reason: message, friendly: SOL_RENT_DUST_MESSAGE };
+    }
     if (m.includes('insufficient lamports') || m.includes('insufficient funds')) {
       return { outcome: 'rejected', reason: message, friendly: INSUFFICIENT_MESSAGE };
     }

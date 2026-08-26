@@ -224,10 +224,29 @@ export function SwapDetailModal({
 
   const steps = transfer ? buildSteps(transfer, t) : [];
   // First not-yet-done step is the "active" one (unless the whole thing is done).
-  const isDone = transfer?.status === 'COMPLETED';
+  // Outbound COMPLETED means "minted on Base", not "delivered" — the pivot is
+  // its own step and must earn its own green (live 2026-08-26: a stuck swap
+  // showed all-green + Completed while the SOL never moved).
+  const isDone =
+    transfer?.status === 'COMPLETED' &&
+    (transfer.direction !== 'stellar_to_crosschain' || !!transfer.dstSwapTxHash);
   const isFailed = transfer?.status === 'FAILED';
+  // Waiting on the USER, not on the chain — the icon must say "your move",
+  // never spin (Niko 2026-08-26: "the loading stuff that is not correct").
+  const needsAction =
+    !!transfer &&
+    transfer.direction === 'stellar_to_crosschain' &&
+    (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
+    !transfer.dstSwapTxHash &&
+    transfer.status !== 'REFUNDED';
   const activeIdx = isDone ? -1 : steps.findIndex((s) => !(s.done || !!s.hash));
-  const chip = transfer ? STATUS_CHIP[transfer.status] : undefined;
+  const chip = transfer
+    ? transfer.direction === 'stellar_to_crosschain' &&
+      transfer.status === 'COMPLETED' &&
+      !transfer.dstSwapTxHash
+      ? { label: t('Action needed'), color: '#8A4A00', bg: 'rgba(245,158,11,0.12)' }
+      : STATUS_CHIP[transfer.status]
+    : undefined;
 
   return (
     <Dialog
@@ -325,6 +344,12 @@ export function SwapDetailModal({
                         width={18}
                         sx={{ color: '#DC2626' }}
                       />
+                    ) : isActive && needsAction ? (
+                      <Iconify
+                        icon="eva:alert-triangle-fill"
+                        width={18}
+                        sx={{ color: '#B45309' }}
+                      />
                     ) : isActive ? (
                       <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />
                     ) : (
@@ -414,42 +439,49 @@ export function SwapDetailModal({
               from HERE too — recovery reachable from wherever you already
               are. The swap page's banner owns the actual handler; this
               dispatches to it (and gets you there if you're elsewhere). */}
-          {((transfer.direction === 'crosschain_to_stellar' &&
-            !!transfer.srcSwapTxHash &&
-            !transfer.burnTxHash &&
-            transfer.status !== 'COMPLETED') ||
-            (transfer.direction === 'stellar_to_crosschain' &&
-              (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
-              !transfer.dstSwapTxHash)) && (
-            <Box
-              component="button"
-              onClick={() => {
-                onClose();
-                window.dispatchEvent(
-                  new CustomEvent('nf:cctp-resume', { detail: { id: transferId } })
-                );
-                if (!window.location.pathname.startsWith('/swap')) window.location.assign('/swap');
-              }}
-              sx={{
-                mt: '12px',
-                appearance: 'none',
-                border: 'none',
-                borderRadius: '10px',
-                px: '16px',
-                py: '10px',
-                width: '100%',
-                fontSize: '13px',
-                fontWeight: 600,
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-                bgcolor: '#0A0A0F',
-                color: '#fff',
-                '&:hover': { opacity: 0.85 },
-              }}
-            >
-              {t('Finish this transfer')}
-            </Box>
-          )}
+          {transfer.status !== 'REFUNDED' &&
+            ((transfer.direction === 'crosschain_to_stellar' &&
+              !!transfer.srcSwapTxHash &&
+              !transfer.burnTxHash &&
+              transfer.status !== 'COMPLETED') ||
+              (transfer.direction === 'stellar_to_crosschain' &&
+                (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
+                !transfer.dstSwapTxHash)) && (
+              <Box
+                component="button"
+                onClick={() => {
+                  onClose();
+                  if (window.location.pathname.startsWith('/swap')) {
+                    window.dispatchEvent(
+                      new CustomEvent('nf:cctp-resume', { detail: { id: transferId } })
+                    );
+                  } else {
+                    // A dispatched event dies with the old document on a full
+                    // navigation (live 2026-08-26: "clicking does nothing" from
+                    // any page but /swap) — the id rides the URL instead.
+                    window.location.assign(`/swap?cctpResume=${transferId}`);
+                  }
+                }}
+                sx={{
+                  mt: '12px',
+                  appearance: 'none',
+                  border: 'none',
+                  borderRadius: '10px',
+                  px: '16px',
+                  py: '10px',
+                  width: '100%',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  bgcolor: '#0A0A0F',
+                  color: '#fff',
+                  '&:hover': { opacity: 0.85 },
+                }}
+              >
+                {t('Finish this transfer')}
+              </Box>
+            )}
         </>
       )}
     </Dialog>

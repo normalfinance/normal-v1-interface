@@ -27,13 +27,13 @@ import {
   Skeleton,
   TextField,
   Typography,
-  IconButton,
   DialogTitle,
   DialogContent,
   CircularProgress,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 export type NormalWalletImportProps = {
   open: boolean;
@@ -466,18 +466,7 @@ export default function NormalWalletImport({
               ? t('Reconnect Account')
               : t('Import Existing Normal Account')}
         </Typography>
-        <IconButton
-          aria-label="close"
-          onClick={handleClose}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            color: (theme) => theme.palette.grey[500],
-          }}
-        >
-          <Iconify icon="mingcute:close-line" />
-        </IconButton>
+        <ModalCloseButton onClick={handleClose} sx={{ position: 'absolute', right: 12, top: 12 }} />
       </DialogTitle>
 
       <DialogContent sx={{ py: 5 }}>

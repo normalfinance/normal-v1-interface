@@ -22,7 +22,7 @@ export function getAssetNetwork(token: { contract: string }): AssetNetwork {
   }
 }
 
-const NETWORK_STYLES: Record<AssetNetwork, { dot: string; bg: string; color: string }> = {
+export const NETWORK_STYLES: Record<AssetNetwork, { dot: string; bg: string; color: string }> = {
   Bitcoin: { dot: '#F7931A', bg: 'rgba(247,147,26,0.09)', color: '#8A4A00' },
   Stellar: { dot: '#14B8A6', bg: 'rgba(20,184,166,0.09)', color: '#0A5C52' },
   Ethereum: { dot: '#627EEA', bg: 'rgba(98,126,234,0.09)', color: '#2C3E9E' },

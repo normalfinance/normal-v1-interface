@@ -12,6 +12,7 @@ import { CHAINS, getChainAddress } from '@/lib/chains/registry';
 import { useMemo, useEffect, useSyncExternalStore } from 'react';
 import { useMgiTransactions } from '@/hooks/use-mgi-transactions';
 import { getLifiStatusOverride } from '@/lib/lifi/status-overrides';
+import { isTerminal, providerLabel, type RampStatus } from '@/lib/ramp/status';
 import { FAILED_MGI_STATUSES, PENDING_MGI_STATUSES } from '@/lib/mgi/statuses';
 import {
   toHashSet,
@@ -235,6 +236,34 @@ async function fetchWalletActivity(url: string): Promise<Activity[]> {
   return data.items.map(mapWalletActivityItem);
 }
 
+// In-flight ramp transfers (doc 89 F2) → Buy/Sell rows with the same
+// pending/failed flags MoneyGram rows already use, so the card renders them
+// with no changes. Arrived rows are EXCLUDED on purpose: the moment the chain
+// shows the money the ramp row disappears and the chain's own Receive row is
+// the permanent record ("when assets appear the message go away").
+async function fetchRampActivity(url: string): Promise<Activity[]> {
+  try {
+    const res = await fetch(url, { headers: await buildAuthHeaders(), credentials: 'include' });
+    const data = await res.json();
+    const rows: any[] = Array.isArray(data?.transfers) ? data.transfers : [];
+    return rows
+      .filter((r) => !['arrived', 'paid_out', 'abandoned'].includes(String(r.status)))
+      .map((r) => ({
+        id: `ramp:${r.id}`,
+        timestamp: new Date(r.createdAt).getTime(),
+        type: r.direction === 'onramp' ? ('Buy' as const) : ('Sell' as const),
+        symbol: String(r.asset),
+        iconUrl: getCryptoIconUrl(String(r.asset)),
+        amount: r.amountExpected ? parseFloat(r.amountExpected) || 0 : 0,
+        provider: providerLabel(String(r.provider)),
+        pending: !isTerminal(r.status as RampStatus),
+        failed: r.status === 'failed',
+      })) as Activity[];
+  } catch {
+    return [];
+  }
+}
+
 // ETH/SOL history come pre-normalized to Activity[] from our server routes
 // (the API keys stay server-side).
 async function fetchChainActivity(url: string): Promise<Activity[]> {
@@ -414,6 +443,12 @@ export function useUserActivity(
 
   // Coinbase off-ramp statuses: keyed by our on-chain txHash so we can re-label
   // the matching native Sent row as an off-ramp with its real status.
+  const { data: rampData } = useSWR<Activity[]>(
+    walletAddress ? '/api/ramp/transfers?active=1' : null,
+    fetchRampActivity,
+    { refreshInterval: 15_000, revalidateOnFocus: true }
+  );
+
   const { data: offrampStatuses, mutate: mutateOfframp } = useSWR<Record<string, OfframpInfo>>(
     // Any wallet (incl. Stellar for USDC/XLM off-ramps) — fetcher is a no-op
     // when there are no local off-ramp fills, so this is cheap.
@@ -617,6 +652,7 @@ export function useUserActivity(
     ...(data ?? []),
     ...cctpActivities,
     ...(mgiData ?? []),
+    ...(rampData ?? []),
     ...(stellarData ?? []),
     ...(btcData ?? []),
     ...(ethData ?? []),

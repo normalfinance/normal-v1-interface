@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/fee-escrow-sweep/",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron/ramp-reconcile/",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

@@ -14,16 +14,22 @@ import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
+import { buildStellarWalletOptions } from '@/lib/wallet-options';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { buildOwnWalletCandidates } from '@/lib/stellar/own-wallets';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
 import { useSendToken, type TransferArgs } from '@/hooks/stellar/use-send-token';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
-import { SAVINGS_XLM_BUFFER, spendableXlmForOutflow } from '@/utils/stellar-reserve';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import { knownMemoRequirement, fetchMemoRequirement } from '@/lib/stellar/memo-required';
 import { getMaxAmount, getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
+import {
+  SAVINGS_XLM_BUFFER,
+  STELLAR_TX_FEE_XLM,
+  xlmAvailableForFees,
+  spendableXlmForOutflow,
+} from '@/utils/stellar-reserve';
 
 import {
   Box,
@@ -36,6 +42,8 @@ import {
   DialogContent,
 } from '@mui/material';
 
+import WalletChoice from '@/components/_common/wallet-choice';
+
 import PickToken from './pick-token';
 import SendReview from './send-review';
 import { Iconify } from '../template/iconify';
@@ -45,8 +53,8 @@ import { BtcTxStatusModal } from './btc-tx-status-modal';
 import { createSolanaAdapter } from './send-adapters/solana';
 import { createStellarAdapter } from './send-adapters/stellar';
 import { createBitcoinAdapter } from './send-adapters/bitcoin';
-import { NetworkBadge, getAssetNetwork } from './network-badge';
 import { createEthereumAdapter } from './send-adapters/ethereum';
+import { NetworkBadge, NETWORK_STYLES, getAssetNetwork, type AssetNetwork } from './network-badge';
 
 import type { SendAdapter } from './send-adapters';
 
@@ -146,6 +154,47 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     solToken,
   ]);
 
+  // ONE picker row per Stellar asset (Niko 2026-08-25 — same rule as the
+  // assets page). DISPLAY-ONLY merge: sendToken always stays a REAL
+  // per-wallet token, because the __companion_*__ contract is what routes
+  // signing, reserves, savings buffers and MAX. The combined row resolves
+  // back to those same objects on selection, and the source tabs below swap
+  // between them. Natives and single-wallet accounts pass through untouched.
+  const pickerTokens = useMemo(() => {
+    if (!(isExternalSlot && companionStellar)) return sendableTokens;
+    const fmtBal = (n: number) =>
+      n.toLocaleString('en-US', { maximumFractionDigits: n < 1 ? 4 : 2 });
+    const out: Token[] = [];
+    const seen = new Set<string>();
+    for (const tk of sendableTokens) {
+      const isCompanion = tk.contract.startsWith('__companion_');
+      if (tk.contract.startsWith('__') && !isCompanion) {
+        out.push(tk); // native chains: one wallet, nothing to combine
+        continue;
+      }
+      if (seen.has(tk.symbol)) continue;
+      seen.add(tk.symbol);
+      const slotTk = sendableTokens.find(
+        (o) => o.symbol === tk.symbol && !o.contract.startsWith('__')
+      );
+      const compTk = sendableTokens.find(
+        (o) => o.symbol === tk.symbol && o.contract.startsWith('__companion_')
+      );
+      if (slotTk && compTk) {
+        const slotBal = Number(slotTk.balance);
+        const compBal = Number(compTk.balance);
+        out.push({
+          ...slotTk,
+          balance: BigNumber(slotBal).plus(compBal).toString(),
+          name: `${slotTk.name.split(' · ')[0]} · Normal wallet ${fmtBal(compBal)} · ${connectedWalletLabel(persist.wallet.walletType)} ${fmtBal(slotBal)}`,
+        } as Token);
+      } else {
+        out.push(tk);
+      }
+    }
+    return out;
+  }, [sendableTokens, isExternalSlot, companionStellar, persist.wallet.walletType]);
+
   const xlmPrice = useMemo(
     () =>
       BigNumber(
@@ -205,6 +254,33 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       ),
     [stellarSend, isCompanionToken, companionStellar]
   );
+
+  // Source tabs (Niko 2026-08-25): when BOTH wallets hold the selected
+  // Stellar asset, the send's source is an explicit choice. Switching swaps
+  // sendToken to the sibling token — every sender-side number (spendable,
+  // MAX, XLM reserve, savings buffer, signer) follows it for free, because
+  // they all already key off sendToken.
+  const sourceSiblings = useMemo(() => {
+    if (!sendToken || isNative) return null;
+    const slotTk = sendableTokens.find(
+      (o) => o.symbol === sendToken.symbol && !o.contract.startsWith('__')
+    );
+    const compTk = sendableTokens.find(
+      (o) => o.symbol === sendToken.symbol && o.contract.startsWith('__companion_')
+    );
+    return slotTk && compTk ? { slotTk, compTk } : null;
+  }, [sendToken, isNative, sendableTokens]);
+  const sourceOptions = useMemo(() => {
+    if (!sourceSiblings) return [];
+    return buildStellarWalletOptions({
+      slotAddress: persist.wallet.address,
+      slotWalletType: persist.wallet.walletType,
+      slotLabel: connectedWalletLabel(persist.wallet.walletType),
+      companionAddress: companionStellar?.address ?? null,
+      slotBalance: Number(sourceSiblings.slotTk.balance),
+      companionBalance: Number(sourceSiblings.compTk.balance),
+    });
+  }, [sourceSiblings, persist.wallet.address, persist.wallet.walletType, companionStellar]);
 
   // #74b: "send to your own wallet" quick-pick (Stellar assets only — for
   // BTC/ETH/SOL your own wallet IS the sender). Companion address rides the
@@ -455,6 +531,23 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       return;
     }
     if (isNative) {
+      // Live, exact-unit MAX when the adapter offers one (SOL: integer
+      // lamports leaving exactly 0; BTC: UTXO total minus a real fee) —
+      // display-rounded math stranded rent-dust live on 2026-08-26.
+      if (adapter?.getMaxSendAmount) {
+        setMaxLoading(true);
+        try {
+          const liveMax = await adapter.getMaxSendAmount(sendToken);
+          if (liveMax) {
+            setAmount(liveMax);
+            return;
+          }
+        } catch {
+          /* fall through to display math */
+        } finally {
+          setMaxLoading(false);
+        }
+      }
       setAmount(spendableBalance.toFixed(8, BigNumber.ROUND_DOWN));
       return;
     }
@@ -578,10 +671,16 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
         fullWidth
         slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
       >
-        <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
+        <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography
-              sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+              sx={{
+                fontSize: '15px',
+                fontWeight: 600,
+                color: '#0A0A0F',
+                letterSpacing: '-0.01em',
+                lineHeight: '28px',
+              }}
             >
               {t('Send')}
             </Typography>
@@ -740,6 +839,18 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                 </Typography>
               )}
             </Box>
+
+            {sourceOptions.length > 1 && sourceSiblings && (
+              <WalletChoice
+                options={sourceOptions}
+                selectedKey={isCompanionToken ? 'normal' : 'external'}
+                onSelect={(o) =>
+                  setSendToken(o.key === 'normal' ? sourceSiblings.compTk : sourceSiblings.slotTk)
+                }
+                flow="send"
+                symbol={sendToken?.symbol}
+              />
+            )}
 
             {/* Amount input */}
             <Box
@@ -927,6 +1038,51 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                   }}
                 />
               </Box>
+              {!(destination && !isAddressValid) &&
+                adapter &&
+                // Tinted in the NETWORK'S own colour (Niko 2026-08-26: "highlight
+                // it more") — the same palette as the NetworkBadge, so Stellar
+                // reads teal here, on the badge, and on the review screen.
+                (() => {
+                  const netName = (
+                    adapter.network === 'stellar'
+                      ? 'Stellar'
+                      : adapter.network.charAt(0).toUpperCase() + adapter.network.slice(1)
+                  ) as AssetNetwork;
+                  const ns = NETWORK_STYLES[netName] ?? NETWORK_STYLES.Stellar;
+                  return (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '7px',
+                        mt: '8px',
+                        px: '10px',
+                        py: '7px',
+                        borderRadius: '9px',
+                        bgcolor: ns.bg,
+                        border: `1px solid ${ns.dot}33`,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: '50%',
+                          bgcolor: ns.dot,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Typography
+                        sx={{ fontSize: '12px', fontWeight: 600, color: ns.color, lineHeight: 1.4 }}
+                      >
+                        {t('{{network}} network — the address must be a {{network}} address', {
+                          network: netName,
+                        })}
+                      </Typography>
+                    </Box>
+                  );
+                })()}
               {destination && !isAddressValid && (
                 <Typography sx={{ fontSize: '12px', color: 'error.main', mt: '6px' }}>
                   {t('Not a valid {{network}} address', {
@@ -1197,9 +1353,26 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         buttonSource="send"
-        tokens={sendableTokens}
+        tokens={pickerTokens}
         onTokenSelect={(token) => {
-          setSendToken(token);
+          // A combined display row resolves to the REAL per-wallet token.
+          // Default = the slot wallet when it holds any (the old list order's
+          // first row), else the companion; the tabs swap afterwards.
+          const slotTk = sendableTokens.find(
+            (o) => o.symbol === token.symbol && !o.contract.startsWith('__')
+          );
+          const compTk = sendableTokens.find(
+            (o) => o.symbol === token.symbol && o.contract.startsWith('__companion_')
+          );
+          const real =
+            slotTk && compTk
+              ? Number(slotTk.balance) > 0
+                ? slotTk
+                : compTk
+              : (sendableTokens.find(
+                  (o) => o.symbol === token.symbol && o.contract === token.contract
+                ) ?? token);
+          setSendToken(real);
           setPickerOpen(false);
         }}
       />
@@ -1213,7 +1386,49 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
           fiatValue={fiatAmount.toNumber()}
           address={destination}
           memo={memo}
-          sendFn={adapter.send.bind(adapter)}
+          sendFn={async (p) => {
+            // Pre-passkey guards (2026-08-26): never collect a signature for
+            // a transaction that must fail. Guard failures block with honest
+            // copy; guard UNAVAILABILITY (RPC down) lets the send proceed —
+            // the broadcast funnels still answer truthfully.
+            try {
+              const guardMsg = adapter.validateSend
+                ? await adapter.validateSend(p, effectiveSenderAddress)
+                : null;
+              if (guardMsg) {
+                enqueueSnackbar(guardMsg, { variant: 'error' });
+                return '';
+              }
+              // Stellar non-XLM assets pay their fee in XLM — a sender at the
+              // reserve floor signs a tx Horizon must reject. Check the fee
+              // budget here (the adapter has no sender address in scope).
+              if (
+                adapter.network === 'stellar' &&
+                p.token.symbol !== 'XLM' &&
+                effectiveSenderAddress
+              ) {
+                const server = new Horizon.Server(config.HORIZON_URL, {
+                  allowHttp: config.HORIZON_URL.startsWith('http://'),
+                });
+                const acc = await server.loadAccount(effectiveSenderAddress);
+                const nativeBal =
+                  acc.balances.find((b) => b.asset_type === 'native')?.balance ?? '0';
+                if (xlmAvailableForFees(nativeBal, acc.subentry_count).lt(STELLAR_TX_FEE_XLM)) {
+                  enqueueSnackbar(
+                    t(
+                      'Sending {{sym}} needs a small XLM network fee, and your XLM is at the reserve minimum. Add a little XLM first.',
+                      { sym: p.token.symbol }
+                    ),
+                    { variant: 'error' }
+                  );
+                  return '';
+                }
+              }
+            } catch {
+              /* guard unavailable — proceed */
+            }
+            return adapter.send(p);
+          }}
           estimatedFeeSat={btcEstimatedFeeSat}
           onBtcSendSuccess={handleBtcSendSuccess}
         />

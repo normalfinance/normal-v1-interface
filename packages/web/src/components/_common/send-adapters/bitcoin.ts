@@ -6,6 +6,7 @@ import { BigNumber } from 'bignumber.js';
 import { buildAuthHeaders } from '@/utils/http';
 import { announceTransaction } from '@/lib/tx-events';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
+import { BTC_DUST_MESSAGE, BTC_DUST_LIMIT_SAT } from '@/lib/send/native-dust';
 
 import type { SendParams, SendAdapter } from './index';
 
@@ -77,6 +78,38 @@ export function createBitcoinAdapter(
 
     getSpendableBalance(token: Token): BigNumber {
       return BigNumber(token.balance);
+    },
+
+    // Live MAX (2026-08-26): the full balance can NEVER send — the builder
+    // requires inputs >= amount + fee, so a full-balance MAX was a
+    // guaranteed 'Insufficient Bitcoin balance'. Real MAX = all UTXOs minus
+    // the fee of the sweep tx that spends them (1 output, no change) —
+    // the same vsize math the builder uses.
+    async getMaxSendAmount(): Promise<string | null> {
+      const [utxoRes, feeRes] = await Promise.all([
+        fetch(`https://mempool.space/api/address/${bitcoinAddress}/utxo`),
+        fetch('https://mempool.space/api/v1/fees/recommended'),
+      ]);
+      if (!utxoRes.ok) return null;
+      const utxos: Array<{ value: number }> = await utxoRes.json();
+      if (!utxos.length) return null;
+      const rate: number = feeRes.ok ? (await feeRes.json()).halfHourFee || 15 : 15;
+      const totalSat = utxos.reduce((sum, u) => sum + u.value, 0);
+      const n = utxos.length;
+      // P2WPKH sweep: 41 non-witness bytes per input, ONE 31-byte output.
+      const vsize = Math.ceil(((10 + n * 41 + 31) * 4 + (n * 107 + 2)) / 4);
+      const maxSat = totalSat - Math.ceil(rate * vsize);
+      if (maxSat <= BTC_DUST_LIMIT_SAT) return null;
+      return (maxSat / 1e8).toFixed(8);
+    },
+
+    // Pre-passkey guard: the builder dust-protects CHANGE but not the
+    // RECIPIENT output — a sub-546-sat send would collect a signature and
+    // then die at broadcast as non-standard.
+    async validateSend(params: SendParams): Promise<string | null> {
+      const amountSat = Math.round(parseFloat(params.amount) * 1e8);
+      if (amountSat > 0 && amountSat <= BTC_DUST_LIMIT_SAT) return BTC_DUST_MESSAGE;
+      return null;
     },
 
     async send(params: SendParams): Promise<string> {

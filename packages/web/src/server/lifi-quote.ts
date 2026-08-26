@@ -47,6 +47,11 @@ export async function getLifiQuote(input: {
   fromAmount: string;
   fromAddress: string;
   toAddress: string;
+  /** bridge-failover: LI.FI tool keys to exclude from THIS quote only */
+  denyBridges?: string[];
+  /** DEX steps to exclude — the poisoned element can be the swap inside the
+   *  route (2026-08-26: a fake token pool in the "fly" step), not the bridge */
+  denyExchanges?: string[];
 }): Promise<{ quote: any; feePercent: number }> {
   const from = LIFI_ASSETS[input.fromSymbol];
   const to = LIFI_ASSETS[input.toSymbol];
@@ -64,12 +69,20 @@ export async function getLifiQuote(input: {
     fromAddress: input.fromAddress,
     toAddress: input.toAddress,
     integrator: process.env.NEXT_PUBLIC_LIFI_INTEGRATOR ?? 'normalfinance',
-    // Gas.zip is a gas-refuel bridge, not a value bridge — it mis-handled a
-    // real SOL→ETH swap (stuck 20h+, then refunded). Blocklist it so LI.FI
-    // routes value swaps through proper bridges (Mayan/Chainflip/Near/Relay…).
-    // We deny (not allow) so newly added bridges still flow in automatically.
-    denyBridges: 'gasZipBridge',
   });
+  // Gas.zip is a gas-refuel bridge, not a value bridge — it mis-handled a
+  // real SOL→ETH swap (stuck 20h+, then refunded). Blocklist it so LI.FI
+  // routes value swaps through proper bridges (Mayan/Chainflip/Near/Relay…).
+  // We deny (not allow) so newly added bridges still flow in automatically.
+  // input.denyBridges rides along for bridge-FAILOVER retries only: the
+  // bridge that just reverted THIS transfer's pivot is excluded from the
+  // retry quote — never from routing in general (Niko 2026-08-26).
+  for (const tool of ['gasZipBridge', ...(input.denyBridges ?? [])]) {
+    params.append('denyBridges', tool);
+  }
+  for (const tool of input.denyExchanges ?? []) {
+    params.append('denyExchanges', tool);
+  }
 
   const fee = process.env.LIFI_FEE;
   // Whether the Normal integrator fee actually ends up on this quote — flipped

@@ -51,7 +51,7 @@ export function ReceiveAssetPicker({
       maxWidth="xs"
       slotProps={{ paper: { sx: { borderRadius: '20px' } } }}
     >
-      <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
+      <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography
             sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}

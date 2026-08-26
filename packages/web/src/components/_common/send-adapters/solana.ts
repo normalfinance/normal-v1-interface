@@ -7,6 +7,13 @@ import { announceTransaction } from '@/lib/tx-events';
 import { SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
+import {
+  checkSolRemainder,
+  solMaxSendLamports,
+  lamportsToSolString,
+  SOL_RENT_DUST_MESSAGE,
+  SOL_INSUFFICIENT_MESSAGE,
+} from '@/lib/send/native-dust';
 
 import type { SendParams, SendAdapter } from './index';
 
@@ -53,6 +60,36 @@ export function createSolanaAdapter(
     getSpendableBalance(token: Token): BigNumber {
       const spendable = BigNumber(token.balance).minus(SOL_FEE);
       return spendable.gt(0) ? spendable : BigNumber(0);
+    },
+
+    // Exact-lamport MAX from a LIVE balance read (2026-08-26): the display
+    // path rounded a 9dp asset to 8dp and stranded 9 lamports in Solana's
+    // forbidden rent window — MAX must leave EXACTLY zero, in integers.
+    async getMaxSendAmount(): Promise<string | null> {
+      const { Connection, PublicKey } = await import('@solana/web3.js');
+      const connection = new Connection(SOL_RPC_URL, 'confirmed');
+      const balance = await connection.getBalance(new PublicKey(solanaAddress), 'confirmed');
+      const max = solMaxSendLamports(BigInt(balance));
+      return max > 0n ? lamportsToSolString(max) : null;
+    },
+
+    // Pre-passkey guard: a typed amount that would leave 0 < remainder <
+    // rent-minimum is DOOMED on-chain — block it with honest copy instead
+    // of collecting a signature the network must reject. RPC hiccup -> null
+    // (proceed; the server broadcast funnel still answers honestly).
+    async validateSend(params: SendParams): Promise<string | null> {
+      try {
+        const { Connection, PublicKey } = await import('@solana/web3.js');
+        const connection = new Connection(SOL_RPC_URL, 'confirmed');
+        const balance = await connection.getBalance(new PublicKey(solanaAddress), 'confirmed');
+        const sendLamports = BigInt(Math.round(parseFloat(params.amount) * 1e9));
+        const verdict = checkSolRemainder(BigInt(balance), sendLamports);
+        if (verdict === 'insufficient') return SOL_INSUFFICIENT_MESSAGE;
+        if (verdict === 'rent-dust') return SOL_RENT_DUST_MESSAGE;
+        return null;
+      } catch {
+        return null;
+      }
     },
 
     async send(params: SendParams): Promise<string> {

@@ -31,7 +31,6 @@ import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
-import { setActiveCctpTransfer } from '@/lib/cctp/active-transfer';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
@@ -39,6 +38,7 @@ import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
+import { setActiveCctpTransfer, getActiveCctpTransfer } from '@/lib/cctp/active-transfer';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -214,6 +214,11 @@ export function useCctpEngine({
   // move (drives the extra step in the progress modal).
   const [usedFunding, setUsedFunding] = useState(false);
   const cancelled = useRef(false);
+  // The transfer id of the last FAILED run: the failure popup's buttons need
+  // it, but the catch clears the active-transfer marker before they render —
+  // reading only getActiveCctpTransfer() there resolved null and left both
+  // buttons dead (live 2026-08-26).
+  const lastFailedRunIdRef = useRef<string | null>(null);
   // #33 Stage 3: the inline consent moment (D2). Offered once per mount, only
   // when the delegation isn't active and the user hasn't declined before.
   const [consentOpen, setConsentOpen] = useState(false);
@@ -503,18 +508,35 @@ export function useCctpEngine({
   // everything (ownership, transfer state, addresses, the Turnkey policy) —
   // this call is a convenience, not a trust boundary.
   const tryAutopilot = useCallback(
-    async (leg: 'burn' | 'pivot', transferId: string): Promise<any | null> => {
+    async (
+      leg: 'burn' | 'pivot',
+      transferId: string,
+      extra?: Record<string, unknown>
+    ): Promise<any | null> => {
       try {
         const res = await fetch(`/api/cctp/autopilot/${leg}`, {
           method: 'POST',
           headers: await buildAuthHeaders(),
           credentials: 'include',
-          body: JSON.stringify({ transferId }),
+          body: JSON.stringify({ transferId, ...extra }),
           signal: AbortSignal.timeout(300_000),
         });
         const data = await res.json().catch(() => null);
-        if (!res.ok || !data?.success) return null;
-        return data;
+        if (res.ok && data?.success) return data;
+        // Failure CLASS (Niko 2026-08-26 GO): 'reverted' means the autopilot
+        // DID sign and broadcast, and the chain rejected the route — not a
+        // signing problem, so the caller must NOT fall back to an interactive
+        // prompt (the live incident's "biometrics then failure" loop). The
+        // failed bridge rides along for the failover retry.
+        if (data?.failureClass === 'reverted') {
+          return {
+            __reverted: true,
+            tool: data.tool ?? null,
+            txHash: data.txHash ?? null,
+            exchanges: Array.isArray(data.exchanges) ? data.exchanges : [],
+          };
+        }
+        return null;
       } catch {
         return null;
       }
@@ -723,6 +745,19 @@ export function useCctpEngine({
         }
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
+          // Stash the run's transfer id BEFORE the active marker is cleared —
+          // the failure popup's buttons resolve their id from this ref (the
+          // marker is already null by the time they render; live 2026-08-26).
+          lastFailedRunIdRef.current = getActiveCctpTransfer();
+          // A classified revert records WHICH bridge failed on the row, so a
+          // later "Try again" (banner recover) excludes that bridge.
+          if (e?.__pivotRevert) {
+            await patch({
+              pivotRevertTool: e.tool ?? '',
+              pivotRevertTxHash: e.txHash ?? '',
+              pivotRevertExchanges: Array.isArray(e.exchanges) ? e.exchanges.join('+') : '',
+            }).catch(() => {});
+          }
           setStageError(
             isInsufficientGasError(e)
               ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
@@ -789,9 +824,50 @@ export function useCctpEngine({
           fromChainId?: number;
           toChainId?: number;
         };
-        const autoPivot = (await autopilotGate.current.isActive())
+        let autoPivot = (await autopilotGate.current.isActive())
           ? await tryAutopilot('pivot', transferId)
           : null;
+        if (autoPivot?.__reverted) {
+          // AUTOMATIC BRIDGE FAILOVER (Niko 2026-08-26): the tx reverted
+          // on-chain INSIDE the quoted bridge — one silent autopilot retry
+          // with that bridge excluded from the quote. The bridge itself stays
+          // in routing for every other swap; the exclusion lives only inside
+          // this retry ("i dont want to remove the bridge" — this is not
+          // removal).
+          const firstFail = autoPivot;
+          autoPivot =
+            firstFail.tool || firstFail.exchanges?.length
+              ? await tryAutopilot('pivot', transferId, {
+                  denyBridges: firstFail.tool ? [firstFail.tool] : undefined,
+                  // 2026-08-26 forensic: the poisoned element was a fake token
+                  // pool inside the DEX step ("fly"), not the bridge — deny
+                  // the swap tools too, or "a different bridge" still gets the
+                  // same broken swap path.
+                  denyExchanges: firstFail.exchanges?.length ? firstFail.exchanges : undefined,
+                })
+              : null;
+          if (!autoPivot || autoPivot.__reverted) {
+            // Two on-chain reverts (or no alternative route): STOP. Falling
+            // back to a passkey prompt would sign the same reverting route —
+            // that is the live incident's "biometrics then identical failure"
+            // loop. Straight to the failure popup instead.
+            const last = autoPivot?.__reverted ? autoPivot : firstFail;
+            const err: any = new Error(
+              `transaction reverted (${last.txHash ?? firstFail.txHash ?? 'no hash'})`
+            );
+            err.__pivotRevert = true;
+            err.tool = last.tool ?? firstFail.tool ?? null;
+            err.txHash = last.txHash ?? firstFail.txHash ?? null;
+            err.exchanges = [
+              ...new Set([...(firstFail.exchanges ?? []), ...(last.exchanges ?? [])]),
+            ];
+            // Paint the failure on the step that actually failed — the swap —
+            // not on "Covering network fees" (stage was still 'topup' here;
+            // live 2026-08-26 screenshot showed the red icon one step early).
+            setStage('pivot-swap');
+            throw err;
+          }
+        }
         if (autoPivot) {
           setStage('pivot-swap');
           result = autoPivot;
@@ -865,6 +941,19 @@ export function useCctpEngine({
       } catch (e: any) {
         if (String(e?.message) !== 'cancelled') {
           console.error('[cctp engine] stage failed:', e); // surface stack
+          // Stash the run's transfer id BEFORE the active marker is cleared —
+          // the failure popup's buttons resolve their id from this ref (the
+          // marker is already null by the time they render; live 2026-08-26).
+          lastFailedRunIdRef.current = getActiveCctpTransfer();
+          // A classified revert records WHICH bridge failed on the row, so a
+          // later "Try again" (banner recover) excludes that bridge.
+          if (e?.__pivotRevert) {
+            await patch({
+              pivotRevertTool: e.tool ?? '',
+              pivotRevertTxHash: e.txHash ?? '',
+              pivotRevertExchanges: Array.isArray(e.exchanges) ? e.exchanges.join('+') : '',
+            }).catch(() => {});
+          }
           setStageError(
             isInsufficientGasError(e)
               ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
@@ -1379,11 +1468,39 @@ export function useCctpEngine({
           onTryAgain={
             stageError
               ? () => {
-                  // Back to a clean, retryable card: the failed RUN is cleared;
-                  // the pair, amount and quote in the card are still filled, so
-                  // "try again" is one more click on Swap.
+                  // Clear the failed RUN, then hand the transfer to the
+                  // recovery banner's ONE handler — a bare reset read as
+                  // "nothing happened" when the failure was mid-flight
+                  // (funds already on Base, live 2026-08-26).
+                  const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
                   setStageError(null);
                   setStage(null);
+                  setModalOpen(false);
+                  if (failedId) {
+                    setActiveCctpTransfer(null);
+                    window.dispatchEvent(
+                      new CustomEvent('nf:cctp-resume', { detail: { id: failedId } })
+                    );
+                  }
+                }
+              : undefined
+          }
+          onBringBack={
+            stageError && direction === 'out'
+              ? () => {
+                  // The exit, offered where the failure is: abandon the swap
+                  // and bridge the minted USDC back to Stellar via the
+                  // banner's refund handler.
+                  const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
+                  setStageError(null);
+                  setStage(null);
+                  setModalOpen(false);
+                  if (failedId) {
+                    setActiveCctpTransfer(null);
+                    window.dispatchEvent(
+                      new CustomEvent('nf:cctp-refund', { detail: { id: failedId } })
+                    );
+                  }
                 }
               : undefined
           }

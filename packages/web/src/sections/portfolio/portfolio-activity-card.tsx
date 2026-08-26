@@ -4,9 +4,9 @@ import type { Activity } from '@/types/activity';
 import type { ChainId } from '@/lib/chains/registry';
 
 import { useTranslate } from '@/locales';
-import { CHAINS } from '@/lib/chains/registry';
 import { fCurrency } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
+import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -439,11 +439,28 @@ export function ActivityCard({
     // for swaps the Normal wallet paid for (live incident 2026-08-22). When
     // the row states its funding source, that wins over the feed.
     const bySource = (a: Activity, fallback: string) => {
+      // An explicit funding declaration always wins (live incident
+      // 2026-08-22): a swap the Lobstr wallet paid for stays "Lobstr" even
+      // when it delivered a native asset.
       const funded = (a as Activity & { fundedFrom?: string }).fundedFrom;
-      if (!funded) return fallback;
-      return funded === 'external'
-        ? connectedWalletLabel(persistWallet.walletType)
-        : 'Normal wallet';
+      if (funded) {
+        return funded === 'external'
+          ? connectedWalletLabel(persistWallet.walletType)
+          : 'Normal wallet';
+      }
+      // Native-chain rows (BTC/ETH/SOL — registry-derived, never hardcoded)
+      // can ONLY be the Turnkey Normal wallet: external wallets are
+      // Stellar-only, so inheriting the slot feed's label painted "Lobstr"
+      // on transactions Lobstr cannot even sign (Niko 2026-08-26).
+      // Sent/Receive rows carry the asset as token.symbol; Mint/Buy-style
+      // rows carry a bare symbol — read whichever the union member has.
+      const rowSymbol =
+        (a as { symbol?: string }).symbol ??
+        (a as { token?: { symbol?: string } }).token?.symbol ??
+        '';
+      const chain = chainForSymbol(rowSymbol);
+      if (chain && chain !== 'stellar') return 'Normal wallet';
+      return fallback;
     };
     const tagBySource = (list: Activity[], fallback: string) =>
       list.map(

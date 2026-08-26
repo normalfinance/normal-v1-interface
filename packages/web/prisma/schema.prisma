@@ -209,6 +209,35 @@ model SendLog {
 // stuck sale). txHash null = claimed, in progress; set = fulfilled. Rows are
 // keyed on the session user; the activity feed joins them with the provider's
 // live status by providerTxnId.
+/// One record per handoff to a ramp provider (doc 89 F2): written BEFORE the
+/// user leaves, tracked until the chain confirms. walletAddress is the
+/// WalletChoice-selected wallet. Table ships as additive SQL:
+/// docs/audit/sql/ramp_transfers.sql
+model RampTransfer {
+  id              String    @id @default(cuid())
+  supabaseUid     String
+  network         String    @default("mainnet")
+  direction       String // 'onramp' | 'offramp'
+  provider        String // 'coinbase' | 'moonpay' | ...
+  asset           String
+  chain           String
+  walletAddress   String
+  amountExpected  String?
+  amountFinal     String?
+  status          String    @default("committed")
+  providerRef     String?
+  baselineBalance String?
+  failureReason   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+  settledAt       DateTime?
+
+  @@index([supabaseUid])
+  @@index([status])
+  @@index([supabaseUid, status])
+  @@map("ramp_transfers")
+}
+
 model OfframpFill {
   id            String   @id @default(cuid())
   supabaseUid   String

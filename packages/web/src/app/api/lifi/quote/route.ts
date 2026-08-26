@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { quoteRateLimiter } from '@/server/rateLimiter';
 import { getLifiQuote, LifiQuoteError } from '@/server/lifi-quote';
+import { sanitizeTool, sanitizeToolList } from '@/lib/cctp/failure-class';
 
 // ---------------------------------------------------------------------------
 // POST /api/lifi/quote
@@ -28,6 +29,8 @@ export async function POST(request: NextRequest) {
     fromAmount?: string;
     fromAddress?: string;
     toAddress?: string;
+    denyBridges?: unknown;
+    denyExchanges?: unknown;
   };
   try {
     body = await request.json();
@@ -42,6 +45,15 @@ export async function POST(request: NextRequest) {
       fromAmount: body.fromAmount ?? '',
       fromAddress: body.fromAddress ?? '',
       toAddress: body.toAddress ?? '',
+      // Bridge-failover retries exclude the bridge that just reverted — the
+      // list is slug-validated + bounded; junk silently drops to "no filter".
+      denyBridges: Array.isArray(body.denyBridges)
+        ? body.denyBridges
+            .map(sanitizeTool)
+            .filter((x): x is string => !!x)
+            .slice(0, 4)
+        : undefined,
+      denyExchanges: sanitizeToolList(body.denyExchanges),
     });
     return NextResponse.json({ success: true, quote, feePercent });
   } catch (error) {

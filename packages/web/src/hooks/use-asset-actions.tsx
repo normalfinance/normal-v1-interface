@@ -205,7 +205,9 @@ export function useAssetActions(): {
         walletAddress={flowAddress ?? undefined}
         asset={{ symbol: flow?.symbol ?? 'USDC', blockchain: flowBlockchain }}
         providers={
-          flow?.symbol === 'USDC' ? ['stripe', 'coinbase', 'moneygram'] : ['stripe', 'coinbase']
+          // Stripe offered LAST (Niko 2026-08-26) until the session integration
+          // replaces the bare link (doc 88 B3).
+          flow?.symbol === 'USDC' ? ['coinbase', 'moneygram', 'stripe'] : ['coinbase', 'stripe']
         }
       />
 

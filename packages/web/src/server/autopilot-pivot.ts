@@ -42,6 +42,10 @@ export async function autopilotPivotSwap(params: {
   toAddress: string;
   /** USDC to swap, 6-dp wire units */
   amountWire: bigint;
+  /** bridge-failover: LI.FI tool keys to exclude from THIS quote only */
+  denyBridges?: string[];
+  /** DEX steps to exclude — the failure can live in the swap, not the bridge */
+  denyExchanges?: string[];
 }): Promise<AutopilotPivotResult> {
   const { http, erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } =
     await import('viem');
@@ -57,6 +61,8 @@ export async function autopilotPivotSwap(params: {
     fromAmount: params.amountWire.toString(),
     fromAddress: params.evmAddress,
     toAddress: params.toAddress,
+    denyBridges: params.denyBridges,
+    denyExchanges: params.denyExchanges,
   });
   const approvalAddress: `0x${string}` | undefined = quote.estimate?.approvalAddress;
   const txr = quote.transactionRequest;
@@ -97,7 +103,21 @@ export async function autopilotPivotSwap(params: {
     })) as `0x${string}`;
     const hash = await client.sendRawTransaction({ serializedTransaction: raw });
     const receipt = await client.waitForTransactionReceipt({ hash });
-    if (receipt.status !== 'success') throw new Error(`transaction reverted (${hash})`);
+    if (receipt.status !== 'success') {
+      // Classified revert (2026-08-26): the tx broadcast and failed ON-CHAIN.
+      // The route maps this to failureClass 'reverted' + the quoted bridge so
+      // the engine can fail over instead of re-prompting a signature.
+      const err: any = new Error(`transaction reverted (${hash})`);
+      err.__pivotRevert = true;
+      err.txHash = hash;
+      err.tool = quote.tool ?? quote.toolDetails?.key ?? null;
+      err.exchanges = Array.isArray(quote.includedSteps)
+        ? quote.includedSteps
+            .filter((st: any) => st?.type === 'swap' && typeof st?.tool === 'string')
+            .map((st: any) => st.tool)
+        : [];
+      throw err;
+    }
     return hash;
   };
 
