@@ -62,7 +62,11 @@ export const PATCH = withAuth(async (req, { user, params }) => {
     transfer!.direction === 'stellar_to_crosschain' &&
     !transfer!.dstSwapTxHash
   ) {
-    data.errorDetail = pivotRevertDetail(body.pivotRevertTool, body.pivotRevertTxHash);
+    data.errorDetail = pivotRevertDetail(
+      body.pivotRevertTool,
+      body.pivotRevertTxHash,
+      String(body.pivotRevertExchanges ?? '').split('+')
+    );
   }
   // Retire an outbound swap as refunded — its minted USDC was re-bridged to Stellar.
   if (body.markRefunded && transfer!.status !== 'REFUNDED') {

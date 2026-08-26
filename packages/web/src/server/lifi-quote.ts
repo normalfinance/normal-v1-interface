@@ -49,6 +49,9 @@ export async function getLifiQuote(input: {
   toAddress: string;
   /** bridge-failover: LI.FI tool keys to exclude from THIS quote only */
   denyBridges?: string[];
+  /** DEX steps to exclude — the poisoned element can be the swap inside the
+   *  route (2026-08-26: a fake token pool in the "fly" step), not the bridge */
+  denyExchanges?: string[];
 }): Promise<{ quote: any; feePercent: number }> {
   const from = LIFI_ASSETS[input.fromSymbol];
   const to = LIFI_ASSETS[input.toSymbol];
@@ -76,6 +79,9 @@ export async function getLifiQuote(input: {
   // retry quote — never from routing in general (Niko 2026-08-26).
   for (const tool of ['gasZipBridge', ...(input.denyBridges ?? [])]) {
     params.append('denyBridges', tool);
+  }
+  for (const tool of input.denyExchanges ?? []) {
+    params.append('denyExchanges', tool);
   }
 
   const fee = process.env.LIFI_FEE;

@@ -1,7 +1,14 @@
 // The contract under test: pivotRevertDetail() writes what parseFailedTool()
 // reads. If the grammar drifts, bridge failover silently stops excluding the
 // failed bridge — these tests pin the round-trip (QA R25 companion).
-import { sanitizeTool, sanitizeTxHash, parseFailedTool, pivotRevertDetail } from './failure-class';
+import {
+  sanitizeTool,
+  sanitizeTxHash,
+  parseFailedTool,
+  sanitizeToolList,
+  pivotRevertDetail,
+  parseFailedExchanges,
+} from './failure-class';
 
 const HASH = `0x${'ab'.repeat(32)}`;
 
@@ -65,5 +72,29 @@ describe('parseFailedTool on foreign errorDetail copy', () => {
     expect(
       parseFailedTool('Cancelled before any transaction was sent — no funds moved')
     ).toBeNull();
+  });
+});
+
+describe('exchange (DEX) step recording — 2026-08-26 forensic', () => {
+  it('records swap-step tools and parses BOTH tool kinds back', () => {
+    const detail = pivotRevertDetail('mayan', HASH, ['fly']);
+    expect(detail).toContain('via mayan through fly');
+    expect(parseFailedTool(detail)).toBe('mayan');
+    expect(parseFailedExchanges(detail)).toEqual(['fly']);
+  });
+  it('multiple exchanges join with + and junk is filtered', () => {
+    const detail = pivotRevertDetail('relay', HASH, ['fly', 'bad tool!', 'sushiswap']);
+    expect(parseFailedExchanges(detail)).toEqual(['fly', 'sushiswap']);
+  });
+  it('no exchanges → no "through" segment, parse returns []', () => {
+    const detail = pivotRevertDetail('mayan', HASH);
+    expect(detail).not.toContain(' through ');
+    expect(parseFailedExchanges(detail)).toEqual([]);
+    expect(parseFailedExchanges(null)).toEqual([]);
+  });
+  it('sanitizeToolList bounds and filters', () => {
+    expect(sanitizeToolList(['a', 'b', 'c', 'd', 'e'])).toEqual(['a', 'b', 'c', 'd']);
+    expect(sanitizeToolList('fly')).toEqual([]);
+    expect(sanitizeToolList([42, null, 'ok'])).toEqual(['ok']);
   });
 });

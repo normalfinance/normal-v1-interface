@@ -3,8 +3,8 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
 import { quoteRateLimiter } from '@/server/rateLimiter';
-import { sanitizeTool } from '@/lib/cctp/failure-class';
 import { getLifiQuote, LifiQuoteError } from '@/server/lifi-quote';
+import { sanitizeTool, sanitizeToolList } from '@/lib/cctp/failure-class';
 
 // ---------------------------------------------------------------------------
 // POST /api/lifi/quote
@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     fromAddress?: string;
     toAddress?: string;
     denyBridges?: unknown;
+    denyExchanges?: unknown;
   };
   try {
     body = await request.json();
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
             .filter((x): x is string => !!x)
             .slice(0, 4)
         : undefined,
+      denyExchanges: sanitizeToolList(body.denyExchanges),
     });
     return NextResponse.json({ success: true, quote, feePercent });
   } catch (error) {

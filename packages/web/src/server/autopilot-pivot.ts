@@ -44,6 +44,8 @@ export async function autopilotPivotSwap(params: {
   amountWire: bigint;
   /** bridge-failover: LI.FI tool keys to exclude from THIS quote only */
   denyBridges?: string[];
+  /** DEX steps to exclude — the failure can live in the swap, not the bridge */
+  denyExchanges?: string[];
 }): Promise<AutopilotPivotResult> {
   const { http, erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } =
     await import('viem');
@@ -60,6 +62,7 @@ export async function autopilotPivotSwap(params: {
     fromAddress: params.evmAddress,
     toAddress: params.toAddress,
     denyBridges: params.denyBridges,
+    denyExchanges: params.denyExchanges,
   });
   const approvalAddress: `0x${string}` | undefined = quote.estimate?.approvalAddress;
   const txr = quote.transactionRequest;
@@ -108,6 +111,11 @@ export async function autopilotPivotSwap(params: {
       err.__pivotRevert = true;
       err.txHash = hash;
       err.tool = quote.tool ?? quote.toolDetails?.key ?? null;
+      err.exchanges = Array.isArray(quote.includedSteps)
+        ? quote.includedSteps
+            .filter((st: any) => st?.type === 'swap' && typeof st?.tool === 'string')
+            .map((st: any) => st.tool)
+        : [];
       throw err;
     }
     return hash;

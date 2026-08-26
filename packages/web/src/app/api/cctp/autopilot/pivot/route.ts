@@ -8,7 +8,7 @@ import { autopilotEnabled } from '@/server/autopilot-signer';
 import { autopilotPivotSwap } from '@/server/autopilot-pivot';
 import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
 import { ensureTransferGas } from '@/server/cctp-transfer-gas';
-import { sanitizeTool, sanitizeTxHash, pivotRevertDetail } from '@/lib/cctp/failure-class';
+import { sanitizeTool, sanitizeTxHash, sanitizeToolList, pivotRevertDetail } from '@/lib/cctp/failure-class';
 
 // #33 Stage 3 payoff — the server-side outbound pivot. Called by the engine
 // (or cron) once the CCTP mint lands USDC on the user's Base address, INSTEAD
@@ -30,7 +30,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     if (!autopilotEnabled()) {
       return NextResponse.json({ success: false, error: 'autopilot-disabled' }, { status: 409 });
     }
-    const { transferId, denyBridges: rawDeny } = await request.json();
+    const { transferId, denyBridges: rawDeny, denyExchanges: rawDenyEx } = await request.json();
     if (typeof transferId !== 'string' || !transferId) {
       return NextResponse.json({ success: false, error: 'Missing transferId' }, { status: 400 });
     }
@@ -42,6 +42,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
           .filter((x): x is string => !!x)
           .slice(0, 4)
       : undefined;
+    const denyExchanges = sanitizeToolList(rawDenyEx);
 
     const tr = await prisma.cctpTransfer.findUnique({ where: { id: transferId } });
     if (!tr || tr.userId !== user.id) {
@@ -132,6 +133,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       toAddress,
       amountWire: bal,
       denyBridges,
+      denyExchanges: denyExchanges.length ? denyExchanges : undefined,
     });
 
     // Mirror the PATCH route: hash + delivered amount land once; a racing
@@ -157,17 +159,18 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     if (e?.__pivotRevert) {
       const tool = sanitizeTool(e.tool);
       const txHash = sanitizeTxHash(e.txHash);
+      const exchanges = sanitizeToolList(e.exchanges);
       if (revertRowId) {
         // Latest revert wins — the retry parses "via <tool>" back out.
         await prisma.cctpTransfer
           .updateMany({
             where: { id: revertRowId, dstSwapTxHash: null },
-            data: { errorDetail: pivotRevertDetail(tool, txHash) },
+            data: { errorDetail: pivotRevertDetail(tool, txHash, exchanges) },
           })
           .catch(() => {});
       }
       return NextResponse.json(
-        { success: false, failureClass: 'reverted', tool, txHash, error: String(e?.message ?? e) },
+        { success: false, failureClass: 'reverted', tool, txHash, exchanges, error: String(e?.message ?? e) },
         { status: 502 }
       );
     }

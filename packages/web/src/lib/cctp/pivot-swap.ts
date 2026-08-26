@@ -37,6 +37,8 @@ export async function executePivotSwap(params: {
   amountWire: bigint;
   /** bridge-failover: LI.FI tool keys to exclude from THIS quote only */
   denyBridges?: string[];
+  /** DEX steps to exclude — the failure can live in the swap, not the bridge */
+  denyExchanges?: string[];
   onStep?: (step: 'quote' | 'approve' | 'swap') => void;
 }): Promise<PivotSwapResult> {
   const info = await getTurnkeyWalletInfo();
@@ -61,6 +63,7 @@ export async function executePivotSwap(params: {
       fromAddress: params.evmAddress,
       toAddress: params.toAddress,
       denyBridges: params.denyBridges,
+      denyExchanges: params.denyExchanges,
     }),
   });
   const data = await res.json();
@@ -106,6 +109,11 @@ export async function executePivotSwap(params: {
       err.__pivotRevert = true;
       err.txHash = hash;
       err.tool = quote.tool ?? quote.toolDetails?.key ?? null;
+      err.exchanges = Array.isArray(quote.includedSteps)
+        ? quote.includedSteps
+            .filter((st: any) => st?.type === 'swap' && typeof st?.tool === 'string')
+            .map((st: any) => st.tool)
+        : [];
       throw err;
     }
     return hash;

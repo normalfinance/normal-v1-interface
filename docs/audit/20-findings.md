@@ -3355,3 +3355,37 @@ feat/better-ramps:
    time. RULE for the bank: a failure surface's actions must never depend on
    state the failure path itself already cleared — capture ids at failure
    time, not at click time.
+
+
+### 2026-08-26 — FORENSIC: the pivot reverts were never the bridges — a fake token inside LI.FI's DEX step
+
+eth_call replay of all four reverted pivots (Mayan x3, Relay x1) at their
+historic blocks decodes to the SAME failure:
+
+    WrappedError target=0x030B6C444B1074Fce5112839b3613a6Efb52F784
+                 selector=0xa9059cbb (transfer)
+                 details=0xf27f64e4 (ERC20TransferFailed())
+
+0x030B6C44… is an UNVERIFIED contract named "Tesla (TSLA)" on Base — a fake
+token whose transfer() reverts. It sits inside the route's DEX swap step
+(LI.FI exchange tool "fly": USDC→ETH pre-swap for Mayan), and today's Relay
+route embedded the same poisoned path. Live-quote reproduction confirms: a
+fresh fee-less Mayan quote's calldata contains the TSLA address; a NEAR-route
+quote (no swap step) does not. CORRECTION to the earlier finding: 0x030B6C44
+is NOT "Mayan's forwarder" — that conclusion was wrong; the bridge was never
+the problem.
+
+Consequences shipped (same day):
+1. Failover and retries now deny the failed EXCHANGES too (denyExchanges),
+   parsed from the quote's includedSteps and recorded in errorDetail as
+   "via <bridge> through <dex1>+<dex2>" — grammar + parsers + tests in
+   lib/cctp/failure-class.ts. Denying only bridges provably cannot fix a
+   poisoned swap step (nonce 46: different bridge, same TSLA, same revert).
+2. Banner retries read the row FRESH before quoting and accumulate all
+   session-failed bridges/DEXes per transfer (stale in-memory detail made
+   Try-again #2 re-pick Mayan at 14:14:03).
+3. The failure now paints on the swap step, not "Covering network fees".
+
+ACTION (team): report the poisoned "fly" USDC→ETH path / TSLA pool on Base
+to LI.FI support so they de-list it — every LI.FI integrator routing through
+it is currently broken the same way.

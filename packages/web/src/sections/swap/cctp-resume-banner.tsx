@@ -29,9 +29,9 @@ import { wireToUsdc } from '@/lib/cctp/decimals';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
-import { parseFailedTool } from '@/lib/cctp/failure-class';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { parseFailedTool, parseFailedExchanges } from '@/lib/cctp/failure-class';
 import { getActiveCctpTransfer, ACTIVE_CCTP_TRANSFER_EVENT } from '@/lib/cctp/active-transfer';
 
 import Box from '@mui/material/Box';
@@ -121,6 +121,10 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   const transfersRef = useRef<TransferRow[]>([]);
   const recoverRef = useRef<((tr: TransferRow, ph: Phase) => void) | null>(null);
   const refundRef = useRef<((tr: TransferRow) => void) | null>(null);
+  // Per-transfer memory of route elements that already reverted THIS session —
+  // merged with the row's recorded detail so consecutive retries accumulate
+  // exclusions instead of ping-ponging between two broken routes.
+  const deniedRef = useRef(new Map<string, { bridges: Set<string>; exchanges: Set<string> }>());
   // While set in the future, phase checks skip the freshness grace — armed by
   // the failure modal so a halted transfer surfaces INSTANTLY (2026-08-26).
   const graceOffUntilRef = useRef(0);
@@ -336,16 +340,41 @@ export function CctpRecoveryBanner({ addresses }: Props) {
           const bal = await readBaseUsdc(network, tr.destAddress);
           if (bal === 0n)
             throw new Error(t('No USDC found on Base — it may already be on its way.'));
-          // Bridge failover on retry (2026-08-26): if the last attempt
-          // recorded a reverted bridge on the row ("via <tool>"), exclude it
-          // from THIS quote only — LI.FI then routes over a different bridge.
-          const failedTool = parseFailedTool(tr.errorDetail);
+          // Deny list for THIS retry (2026-08-26 forensic): the recorded
+          // bridge AND the recorded DEX steps — the poisoned element can be
+          // either (today's reverts died in a fake token inside the "fly"
+          // swap step, not in any bridge). Read the row FRESH first: the
+          // cached copy went stale mid-session and re-picked the exact
+          // route that had just reverted.
+          let detail = tr.errorDetail ?? null;
+          try {
+            const fres = await fetch(`/api/cctp/transfers/${tr.id}`, {
+              headers,
+              credentials: 'include',
+            });
+            const fdata = await fres.json().catch(() => null);
+            if (fdata?.transfer) detail = fdata.transfer.errorDetail ?? detail;
+          } catch {
+            /* stale detail is still better than none */
+          }
+          const remembered = deniedRef.current.get(tr.id);
+          const denyBridges = [
+            ...new Set(
+              [parseFailedTool(detail), ...(remembered?.bridges ?? [])].filter(
+                (x): x is string => !!x
+              )
+            ),
+          ];
+          const denyExchanges = [
+            ...new Set([...parseFailedExchanges(detail), ...(remembered?.exchanges ?? [])]),
+          ];
           const result = await executePivotSwap({
             evmAddress: tr.destAddress,
             toSymbol,
             toAddress,
             amountWire: bal,
-            denyBridges: failedTool ? [failedTool] : undefined,
+            denyBridges: denyBridges.length ? denyBridges : undefined,
+            denyExchanges: denyExchanges.length ? denyExchanges : undefined,
           });
           const dstAmount = BigNumber(result.toAmountMin)
             .dividedBy(BigNumber(10).pow(NATIVE_DECIMALS[toSymbol]))
@@ -361,9 +390,18 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         // A classified revert records the failed bridge so the NEXT retry
         // quotes without it (failover applies here too, not just in-run).
         if (e?.__pivotRevert) {
+          const entry = deniedRef.current.get(tr.id) ?? {
+            bridges: new Set<string>(),
+            exchanges: new Set<string>(),
+          };
+          if (typeof e.tool === 'string' && e.tool) entry.bridges.add(e.tool);
+          for (const x of Array.isArray(e.exchanges) ? e.exchanges : [])
+            if (typeof x === 'string' && x) entry.exchanges.add(x);
+          deniedRef.current.set(tr.id, entry);
           await patch(tr.id, await buildAuthHeaders(), {
             pivotRevertTool: e.tool ?? '',
             pivotRevertTxHash: e.txHash ?? '',
+            pivotRevertExchanges: Array.isArray(e.exchanges) ? e.exchanges.join('+') : '',
           }).catch(() => {});
         }
         enqueueSnackbar(

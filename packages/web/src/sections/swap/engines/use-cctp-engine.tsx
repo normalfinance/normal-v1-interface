@@ -529,7 +529,12 @@ export function useCctpEngine({
         // prompt (the live incident's "biometrics then failure" loop). The
         // failed bridge rides along for the failover retry.
         if (data?.failureClass === 'reverted') {
-          return { __reverted: true, tool: data.tool ?? null, txHash: data.txHash ?? null };
+          return {
+            __reverted: true,
+            tool: data.tool ?? null,
+            txHash: data.txHash ?? null,
+            exchanges: Array.isArray(data.exchanges) ? data.exchanges : [],
+          };
         }
         return null;
       } catch {
@@ -750,6 +755,7 @@ export function useCctpEngine({
             await patch({
               pivotRevertTool: e.tool ?? '',
               pivotRevertTxHash: e.txHash ?? '',
+              pivotRevertExchanges: Array.isArray(e.exchanges) ? e.exchanges.join('+') : '',
             }).catch(() => {});
           }
           setStageError(
@@ -829,9 +835,17 @@ export function useCctpEngine({
           // this retry ("i dont want to remove the bridge" — this is not
           // removal).
           const firstFail = autoPivot;
-          autoPivot = firstFail.tool
-            ? await tryAutopilot('pivot', transferId, { denyBridges: [firstFail.tool] })
-            : null;
+          autoPivot =
+            firstFail.tool || firstFail.exchanges?.length
+              ? await tryAutopilot('pivot', transferId, {
+                  denyBridges: firstFail.tool ? [firstFail.tool] : undefined,
+                  // 2026-08-26 forensic: the poisoned element was a fake token
+                  // pool inside the DEX step ("fly"), not the bridge — deny
+                  // the swap tools too, or "a different bridge" still gets the
+                  // same broken swap path.
+                  denyExchanges: firstFail.exchanges?.length ? firstFail.exchanges : undefined,
+                })
+              : null;
           if (!autoPivot || autoPivot.__reverted) {
             // Two on-chain reverts (or no alternative route): STOP. Falling
             // back to a passkey prompt would sign the same reverting route —
@@ -844,6 +858,13 @@ export function useCctpEngine({
             err.__pivotRevert = true;
             err.tool = last.tool ?? firstFail.tool ?? null;
             err.txHash = last.txHash ?? firstFail.txHash ?? null;
+            err.exchanges = [
+              ...new Set([...(firstFail.exchanges ?? []), ...(last.exchanges ?? [])]),
+            ];
+            // Paint the failure on the step that actually failed — the swap —
+            // not on "Covering network fees" (stage was still 'topup' here;
+            // live 2026-08-26 screenshot showed the red icon one step early).
+            setStage('pivot-swap');
             throw err;
           }
         }
@@ -930,6 +951,7 @@ export function useCctpEngine({
             await patch({
               pivotRevertTool: e.tool ?? '',
               pivotRevertTxHash: e.txHash ?? '',
+              pivotRevertExchanges: Array.isArray(e.exchanges) ? e.exchanges.join('+') : '',
             }).catch(() => {});
           }
           setStageError(
