@@ -242,7 +242,28 @@ something false about your money. Every one now either retries, blocks, or says 
   "Turnkey wallet not found".</li>
 </ul>
 
-<h2>8 · What's next</h2>
+<h2>8 · Honest errors, wave 3 — unknown is never zero <span class="qa">(QA R37–R39)</span></h2>
+<p>The worst error message in existence is money that looks gone. Wave 3 makes every outage
+render as an outage:</p>
+<ul>
+  <li><strong>Portfolio</strong> — a failed balance load shows "Couldn't load your balances —
+  Retry", never <em>"Total portfolio value $0.00 / No holdings yet"</em>. BTC gained the same
+  failure surface the other chains had; the companion Normal wallet keeps a last-good copy so
+  one Horizon blip can't erase it everywhere.</li>
+  <li><strong>Prices</strong> — a CoinGecko outage serves the last-good prices (up to a week
+  old) instead of valuing real holdings at $0; charts serve their older series instead of going
+  blank; a truly unknown price renders as "—".</li>
+  <li><strong>Savings</strong> — "we don't know" became its own state: a Horizon blip no longer
+  nags a set-up account to "Activate", never silently disarms the XLM fee guard, and never
+  auto-opens setup; stats say "Unavailable — retrying…" instead of skeleton-forever; the
+  earnings chart and history say they failed instead of drawing $0.00.</li>
+  <li><strong>The DeFindex 429 bursts</strong> (the oldest open backlog item) — every call now
+  rides a shared gate: two at a time, 300&nbsp;ms apart, jittered retries. The cold-load burst
+  that tripped their limit every time is gone. The gate's tests caught a real concurrency race
+  while being written.</li>
+</ul>
+
+<h2>9 · What's next</h2>
 <ul>
   <li><strong>Wave 3 — unknown ≠ zero</strong>: outages render as "—" with a retry, never as
   $0.00; the DeFindex rate-limit backoff.</li>

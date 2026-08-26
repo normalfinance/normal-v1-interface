@@ -47,6 +47,7 @@ interface UseDefindexSavingsReturn {
   loading: boolean;
   fetching: boolean;
   positionFetching: boolean;
+  positionError: unknown;
   vaultInfo: VaultInfo | null;
   userPosition: SavingsPosition | null;
   needsTrustline: boolean;
@@ -139,6 +140,8 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
   // Companion loading included on purpose: a loading flag must cover EVERY
   // source a display derives from (false for single-wallet users anyway).
   const positionFetching = savings.positionLoading || savings.companionPositionLoading;
+  // Doc 90 W3: the error must follow the same wallet the DISPLAY follows.
+  const positionError = overrideActive ? savings.companionPositionError : savings.positionError;
   const fetchError = savings.vaultError
     ? ((savings.vaultError as Error)?.message ?? 'Failed to fetch vault info')
     : null;
@@ -670,6 +673,7 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
     loading,
     fetching,
     positionFetching,
+    positionError,
     vaultInfo,
     userPosition,
     needsTrustline,

@@ -167,7 +167,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         ? sol.solanaAddress
         : null;
   const nativeLoading = isBtc ? btc.loading : isEth ? eth.loading : isSol ? sol.loading : false;
-  const nativeError = isEth ? eth.error : isSol ? sol.error : false;
+  const nativeError = isEth ? eth.error : isSol ? sol.error : isBtc ? btc.error : false;
   const refetchNative = isBtc ? btc.refetch : isEth ? eth.refetch : sol.refetch;
 
   const [sendOpen, setSendOpen] = useState(false);
@@ -474,11 +474,11 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                   {fTokenAmount(balance)} {token.symbol}
                 </Box>
                 <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
-                  {fCurrencyTwoDecimals(value.toNumber())}
+                  {price.isZero() ? '—' : fCurrencyTwoDecimals(value.toNumber())}
                   <Box component="span" sx={{ mx: '8px', color: 'rgba(10,10,15,0.2)' }}>
                     ·
                   </Box>
-                  {fCurrency(price.toNumber())} / {token.symbol}
+                  {price.isZero() ? '—' : fCurrency(price.toNumber())} / {token.symbol}
                 </Box>
                 {/* #75 2b: per-wallet split — the big number is the account
                     total, this line says who holds what. */}

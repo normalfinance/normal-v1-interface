@@ -145,6 +145,36 @@ Server logs keep the detail (+ traceId); responses carry a code + friendly text:
 
 ## Wave 3 — Unknown ≠ zero (balances, prices, savings honesty)
 
+> **STATUS: SHIPPED 2026-08-26** (branch feat/honest-errors). What landed:
+> - **DeFindex 429 (the oldest backlog item)**: every call rides a shared
+>   request gate (`server/request-gate.ts`, jest-covered — the spacing test
+>   caught a real reservation race): concurrency 2, 300ms spaced starts, and
+>   retries grew to 3 attempts with jitter so parallel retries stop landing
+>   on the same instant. user-position's null answer now names its reason.
+> - **Prices**: a long-TTL last-good spot copy — a CoinGecko outage serves
+>   week-old prices with a server warning instead of valuing BTC/ETH/SOL at
+>   $0; price-history serves a stale series (marked) instead of an empty
+>   chart; the asset page renders '—' instead of "$0.00 / BTC" when the
+>   price is unknown.
+> - **Portfolio**: hero shows "Couldn't load your balances — Retry" instead
+>   of "Total $0.00"; Holdings shows an outage row instead of "No holdings
+>   yet"; BTC finally exports `error` (its retry branch was unreachable);
+>   the companion Normal wallet gets its own last-good snapshot so one
+>   Horizon blip cannot erase it from every surface.
+> - **Savings**: accountExists is tri-state (null = unknown) — a Horizon
+>   blip no longer flips a set-up account into the "Activate your account"
+>   nag, silently disarms the XLM fee semaphore, or auto-opens the setup
+>   dialog; deriveWalletReadiness answers 'unknown' for null; position stats
+>   show "Unavailable — retrying…" instead of a forever-skeleton; the
+>   earnings chart says it failed instead of drawing a flat $0 curve; the
+>   history card says "Couldn't load — retrying…" instead of "No
+>   transactions yet".
+> Consciously deferred (small visual polish, unchanged data machinery):
+> stale-marker dots on holdings rows, the APY-chip error/stale flag, the
+> XLM-fees-card tri-state row (the aggregate's stale snapshot already covers
+> the realistic case), the drawer error row, and native-token null-balance
+> typing (per-chain `error` surfaces carry the honesty instead).
+
 - `use-wallet-balances.ts:138` — portfolio fetch failure renders "Total $0.00 / No holdings yet"; `error` exported, read by NOBODY → error state + retry in portfolio hero, drawer, asset pages
 - `lib/portfolio/native-token.ts:52` — `balance ?? '0'`: outage renders confident zeros → null balance + skeleton
 - `use-btc-portfolio.ts:36` — BTC is the only chain with NO failure surface (the retry branch is unreachable) → export `error` like ETH/SOL

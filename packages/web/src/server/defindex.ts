@@ -1,3 +1,5 @@
+import { createRequestGate } from './request-gate';
+
 // ---------------------------------------------------------------------------
 // Shared DeFindex rate-limit handling.
 //
@@ -55,6 +57,9 @@ export function inspectRateLimit(error: unknown): RateLimitInfo {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Shared across every DeFindex call in this server process (doc 90 W3).
+const defindexGate = createRequestGate({ concurrency: 2, minGapMs: 300 });
+
 /**
  * Runs `fn`, and on a 429 waits the interval DeFindex asked for and tries
  * ONCE more.
@@ -68,14 +73,22 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  *   request budget for the rest.
  */
 export async function withRateLimitRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    const { isRateLimited, retryAfterMs } = inspectRateLimit(error);
-    if (!isRateLimited) throw error;
-
-    console.warn(`[defindex] ${label} rate-limited, retrying once in ${retryAfterMs}ms`);
-    await sleep(retryAfterMs);
-    return fn();
+  // Doc 90 W3 (the long-standing 429 bursts): every DeFindex call now rides a
+  // shared gate — bounded concurrency + spaced starts — so a cold savings
+  // load queues politely instead of firing ~5 calls in one second. Retries
+  // gained one attempt and JITTER, so parallel retries stop landing on the
+  // same instant and re-tripping the limit.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await defindexGate.run(fn);
+    } catch (error) {
+      const { isRateLimited, retryAfterMs } = inspectRateLimit(error);
+      if (!isRateLimited || attempt >= 2) throw error;
+      const jitter = Math.floor(Math.random() * 400);
+      console.warn(
+        `[defindex] ${label} rate-limited (attempt ${attempt + 1}/3), retrying in ${retryAfterMs + jitter}ms`
+      );
+      await sleep(retryAfterMs + jitter);
+    }
   }
 }

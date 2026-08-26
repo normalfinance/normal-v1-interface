@@ -187,6 +187,7 @@ export interface UseSavingsPositionResult {
   isValidating: boolean;
   vaultError: unknown;
   positionError: unknown;
+  companionPositionError: unknown;
   refresh: () => void;
   refreshVault: () => void;
   refreshPosition: () => void;
@@ -355,6 +356,7 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
     isValidating: vault.isValidating || pos.isValidating,
     vaultError: vault.error,
     positionError: pos.error,
+    companionPositionError: companionPos.error,
     refresh: () => {
       vault.mutate();
       pos.mutate();

@@ -355,7 +355,11 @@ export async function GET(request: NextRequest) {
         '[user-position] getVaultBalance failed, preserving client cache for',
         userAddress
       );
-      return NextResponse.json({ success: true, userPosition: null });
+      return NextResponse.json({
+        success: true,
+        userPosition: null,
+        reason: 'upstream_unavailable',
+      });
     }
 
     const effectiveCurrentValue = underlyingValue > 0 ? underlyingValue : totalDeposited;

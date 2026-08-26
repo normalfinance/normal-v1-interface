@@ -314,6 +314,8 @@ export default function PortfolioView() {
         // before XLM/USDC landed, so the number visibly jumped a beat later.
         loading={savingsLoading || balancesLoading}
         holdingsData={holdingsData}
+        balancesError={!!walletBalances.error}
+        onRetry={() => walletBalances.refresh()}
       />
 
       <Box
@@ -328,6 +330,8 @@ export default function PortfolioView() {
           holdingsData={holdingsData}
           sections={holdingsSections}
           totalBalance={totalBalance}
+          error={!!walletBalances.error}
+          onRetry={() => walletBalances.refresh()}
           // Savings is one of the holdings rows, so the card must wait for it
           // too — otherwise the coins paint and the savings row drops in a
           // couple of seconds later. Only on the FIRST paint: once real data

@@ -37,6 +37,10 @@ export function useBtcPortfolio(enabled = true) {
     btcToken,
     bitcoinAddress: address,
     hasWallet,
+    // Doc 90 W3: BTC was the only chain with NO failure surface — an outage
+    // rendered as a confident 0 and the asset page's retry branch was
+    // unreachable. Same meaning as useEthPortfolio/useSolPortfolio.
+    error: asset?.status === 'error',
     loading: walletLoading || balances.isLoading,
     refetch,
     refetchBalance: balances.refreshFresh,

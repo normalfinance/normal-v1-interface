@@ -113,11 +113,23 @@ export async function GET(request: NextRequest) {
     : await fetchCoinGecko(symbol, RANGE_TO_DAYS[range]);
 
   if (!prices) {
+    // Doc 90 W3: a 429 burst used to empty the chart although an older
+    // series existed — serve it, marked stale.
+    try {
+      const stale = await redis.get<[number, number][]>(`stale:${cacheKey}`);
+      if (stale?.length) {
+        console.warn('[prices/history] serving stale series for', symbol, range);
+        return NextResponse.json({ success: true, prices: stale, stale: true });
+      }
+    } catch {
+      /* no stale copy */
+    }
     return NextResponse.json({ success: false, error: 'Price provider error' }, { status: 502 });
   }
 
   try {
     await redis.set(cacheKey, prices, { ex: RANGE_TO_TTL_SECONDS[range] ?? 600 });
+    await redis.set(`stale:${cacheKey}`, prices, { ex: 7 * 24 * 3600 });
   } catch {
     // Cache write failure is non-fatal
   }

@@ -81,12 +81,28 @@ export async function getSpotPrices(): Promise<SpotData> {
       changes.USDC = d['usd-coin']?.usd_24h_change ?? 0;
       try {
         await redis.set(key, { prices, changes }, { ex: SPOT_TTL_SECONDS });
+        // Doc 90 W3: long-TTL last-good copy — an outage serves week-old
+        // prices with a warning instead of pricing real holdings at $0.
+        await redis.set('prices:spot:lastgood', { prices, changes }, { ex: 7 * 24 * 3600 });
       } catch {
         /* non-fatal */
       }
     }
   } catch {
-    /* upstream failed — return what we have (USDC=1) */
+    /* upstream failed — fall through to last-good below */
+  }
+  if (!prices.BTC) {
+    // Doc 90 W3: a CoinGecko outage must not make BTC/ETH/SOL holdings read
+    // as worth $0 — serve the last-good spot set instead.
+    try {
+      const lastGood = await redis.get<SpotData>('prices:spot:lastgood');
+      if (lastGood?.prices?.BTC) {
+        console.warn('[prices] CoinGecko unavailable — serving last-good spot prices');
+        return lastGood;
+      }
+    } catch {
+      /* nothing cached either */
+    }
   }
   return { prices, changes };
 }

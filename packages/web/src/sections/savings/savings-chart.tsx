@@ -109,7 +109,7 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
   const [filter, setFilter] = useState<TimeFilter>('1W');
   // #53: REAL history — the DeFindex events this wallet actually produced
   // (authoritative, full, cached), not horizon-parsed recent activity.
-  const { events, isLoading } = useSavingsHistory(walletAddress);
+  const { events, isLoading, error: historyError } = useSavingsHistory(walletAddress);
 
   const now = useMemo(() => Date.now(), []);
 
@@ -224,6 +224,18 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
       </Typography>
     </Box>
   );
+
+  if (historyError && events.length === 0 && !isLoading) {
+    // Doc 90 W3: a failed history fetch used to render a flat "$0.00" curve
+    // presented as the user's real earnings. Say it instead.
+    return (
+      <Box sx={{ mt: '20px', pt: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <Typography sx={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>
+          {`Couldn't load your earnings history — it retries automatically.`}
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ mt: '20px', pt: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
