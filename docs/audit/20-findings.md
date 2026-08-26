@@ -3465,3 +3465,14 @@ null-baseline rows — a CONFIRMED incoming transfer newer than the row
 Ethereum has no indexer-free tx list, so its null-baseline rows fall to the
 45-minute abandonment). Helpers live in server/ramp-chain.ts; null never
 claims arrival.
+
+
+### 2026-08-26 — Native activity rows wore the external wallet's name
+
+With Lobstr connected, SOL/ETH/BTC Sent/Received rows were tagged "Lobstr" —
+the slot feed carries the native-chain rows, and rows without an explicit
+funding declaration inherited the feed's fallback label. Factually
+impossible: external wallets are Stellar-only. Fix in bySource(): an
+explicit fundedFrom still wins (swaps paid by Lobstr stay honest), otherwise
+any row whose symbol maps to a non-Stellar chain (registry chainForSymbol,
+never hardcoded) is tagged "Normal wallet"; Stellar rows keep the fallback.
