@@ -63,8 +63,6 @@ interface TransferRow {
 
 type Phase = 'hidden' | 'auto' | 'halt-receive' | 'halt-finish';
 
-const GRACE_MS = 120_000; // don't flag a halt while a normal in-session swap runs
-
 function rawPhase(tr: TransferRow): Phase {
   if (tr.status === 'REFUNDED') return 'hidden';
   const outbound = tr.direction === 'stellar_to_crosschain';
@@ -85,11 +83,13 @@ function rawPhase(tr: TransferRow): Phase {
 }
 
 function phaseOf(tr: TransferRow, now: number): Phase {
-  const p = rawPhase(tr);
-  if ((p === 'halt-receive' || p === 'halt-finish') && now - Date.parse(tr.updatedAt) < GRACE_MS) {
-    return 'hidden'; // too fresh — the in-session flow is still handling it
-  }
-  return p;
+  // No freshness grace (2026-08-26, second bite): hiding a "too fresh" halt
+  // made the banner empty right after a reload, which also blinded the
+  // resume/refund handlers that look rows up in the banner's list. The
+  // in-session duplication the grace guarded against is already prevented by
+  // the activeId filter, which tracks the ACTUAL open modal.
+  void now;
+  return rawPhase(tr);
 }
 
 async function readBaseUsdc(network: NetworkType, address: string): Promise<bigint> {
@@ -123,7 +123,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   // the failure modal so a halted transfer surfaces INSTANTLY (2026-08-26).
   const graceOffUntilRef = useRef(0);
   const phaseFor = (tr: TransferRow, now: number): Phase =>
-    now < graceOffUntilRef.current ? rawPhase(tr) : phaseFor(tr, now);
+    now < graceOffUntilRef.current ? rawPhase(tr) : phaseOf(tr, now);
   const [busyId, setBusyId] = useState<string | null>(null);
   // "Safe in your Base account" is only said once we've SEEN the balance —
   // an undelivered (later refunded) leg was described as safely arrived
@@ -209,16 +209,20 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     const onResume = (e: Event) => {
       const id2 = (e as CustomEvent<{ id?: string }>).detail?.id;
       if (!id2) return;
-      const tr = transfersRef.current.find((x) => x.id === id2);
-      if (tr) {
-        // rawPhase, not phaseOf: the grace window exists to avoid duplicating
-        // an in-session flow, but an EXPLICIT click is the user telling us the
-        // in-session flow is gone — honoring the grace here silently swallowed
-        // the click (live 2026-08-26).
+      const runResume = () => {
+        const tr = transfersRef.current.find((x) => x.id === id2);
+        if (!tr) return false;
         const ph = rawPhase(tr);
         // recoverRef: `recover` is declared below this effect; the ref keeps
         // the listener stable without a TDZ/order problem.
         if (ph === 'halt-receive' || ph === 'halt-finish') recoverRef.current?.(tr, ph);
+        return true;
+      };
+      if (!runResume()) {
+        // The list may still be loading (fresh navigation) — re-read and try
+        // once more; a user's click must never be a silent no-op.
+        refresh();
+        setTimeout(runResume, 1500);
       }
     };
     // Failure modal on screen → surface the halt NOW, grace off for 5 min.

@@ -3266,3 +3266,25 @@ CRON_SECRET and re-reading the heartbeat.
 The vindication: the heartbeats have existed since #64 and nobody ever read
 them — "recording is not monitoring" (doc 84). The autopilot-watch alert job
 (feat/autopilot-monitoring) is exactly what would have paged this on day one.
+
+**Round 2 of the recovery-UX fixes was itself broken by my own patch
+(2026-08-26, fixed):** the blanket string replace that switched the banner's
+phase checks to the grace-aware helper ALSO rewrote the fallback call INSIDE
+the helper's own definition — `phaseFor` called `phaseFor`, infinite
+recursion whenever the grace was not armed. The banner's refresh() swallowed
+the crash in its transient-error catch, silently leaving an EMPTY transfer
+list: no banner after reload, and both "Finish" and "Bring back as USDC"
+look rows up in that same list, so every click was a silent no-op. One bug,
+every symptom of the user's second failed session.
+FIXES: the fallback calls the original phaseOf; the 2-minute freshness grace
+is DELETED outright (second time it hid in-flight money — its purpose, not
+duplicating the in-session modal, is already served by the activeId filter,
+which tracks the actual open modal); onResume gained the same
+refresh-and-retry as onRefund so a click survives a still-loading list; and
+the detail modal shows an amber attention icon instead of a spinner when a
+transfer is waiting on the USER — a spinner promises progress that is not
+happening.
+RULES: never blanket-replace a symbol in the same patch that defines it —
+the definition's internals are part of the match set; and a catch that
+swallows render-path errors turns a crash into silent wrong behavior, which
+is strictly worse.

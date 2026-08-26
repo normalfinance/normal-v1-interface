@@ -231,6 +231,14 @@ export function SwapDetailModal({
     transfer?.status === 'COMPLETED' &&
     (transfer.direction !== 'stellar_to_crosschain' || !!transfer.dstSwapTxHash);
   const isFailed = transfer?.status === 'FAILED';
+  // Waiting on the USER, not on the chain — the icon must say "your move",
+  // never spin (Niko 2026-08-26: "the loading stuff that is not correct").
+  const needsAction =
+    !!transfer &&
+    transfer.direction === 'stellar_to_crosschain' &&
+    (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
+    !transfer.dstSwapTxHash &&
+    transfer.status !== 'REFUNDED';
   const activeIdx = isDone ? -1 : steps.findIndex((s) => !(s.done || !!s.hash));
   const chip = transfer
     ? transfer.direction === 'stellar_to_crosschain' &&
@@ -335,6 +343,12 @@ export function SwapDetailModal({
                         icon="eva:alert-triangle-fill"
                         width={18}
                         sx={{ color: '#DC2626' }}
+                      />
+                    ) : isActive && needsAction ? (
+                      <Iconify
+                        icon="eva:alert-triangle-fill"
+                        width={18}
+                        sx={{ color: '#B45309' }}
                       />
                     ) : isActive ? (
                       <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />
