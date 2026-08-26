@@ -80,6 +80,9 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
     return NextResponse.json({ transactions });
   } catch (err: any) {
     logger.error('[coinbase/offramp-status] exception:', err);
-    return NextResponse.json({ error: err?.message ?? 'Internal error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Coinbase is temporarily unavailable — please try again.' },
+      { status: 500 }
+    );
   }
 });

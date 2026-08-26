@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>QA Round 2 — Failover, Sends, Ramps, Honest Errors</title>
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --muted: #5a5a66;
+    --line: #e6e6ea;
+    --soft: #f6f6f8;
+    --green: #0a6649;
+    --amber: #7a4a00;
+    --red: #991b1b;
+    --blue: #1d4ed8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    max-width: 940px;
+    padding: 48px 32px 96px;
+    font: 15px/1.65 "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: #fff;
+  }
+  h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 30px; }
+  h2 {
+    font-size: 20px; letter-spacing: -0.01em;
+    margin: 40px 0 10px; padding-top: 16px;
+    border-top: 2px solid var(--ink);
+  }
+  h3 { font-size: 15.5px; margin: 22px 0 6px; }
+  p, li { color: #23232b; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 5px 0; }
+  strong { color: var(--ink); }
+  code {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 12.5px; background: var(--soft);
+    padding: 1px 5px; border-radius: 5px;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0 18px; font-size: 13px; }
+  th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td.id { font-weight: 700; white-space: nowrap; font-family: "Consolas", monospace; }
+  td.chk { text-align: center; width: 34px; font-size: 16px; color: #bbb; }
+  .box {
+    border: 1px solid var(--line); border-left: 4px solid var(--ink);
+    background: var(--soft); border-radius: 8px; padding: 14px 18px; margin: 16px 0;
+  }
+  .box.warn { border-left-color: #d97706; }
+  .box.good { border-left-color: #1ab37d; }
+  .box .label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px;
+  }
+  .kv { color: var(--muted); font-size: 13px; }
+  .ok { color: var(--green); font-weight: 700; }
+  .no { color: var(--red); font-weight: 700; }
+  .tag {
+    display: inline-block; font-size: 10.5px; font-weight: 700; padding: 1px 7px;
+    border-radius: 999px; letter-spacing: 0.03em; white-space: nowrap;
+  }
+  .tag.pass { background: rgba(26,179,125,0.14); color: #0a6649; }
+  .tag.pend { background: rgba(10,10,15,0.06); color: #6b6b76; }
+  .tag.prod { background: rgba(122,74,0,0.12); color: #7a4a00; }
+  .toc { columns: 2; gap: 30px; font-size: 13.5px; }
+  .toc a { color: var(--blue); text-decoration: none; }
+  @media print {
+    body { padding: 0 8px; font-size: 12px; max-width: none; }
+    h2 { break-after: avoid; page-break-after: avoid; }
+    h3 { break-after: avoid; }
+    tr { break-inside: avoid; page-break-inside: avoid; }
+    .box { break-inside: avoid; }
+    .pagebreak { break-before: page; page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+<h1>QA Round 2 — Failover, Sends, Ramps, Honest Errors</h1>
+<p class="subtitle">Rows R25–R32, moved out of the master checklist (doc 80) on 2026-08-26.
+Covers: <strong>feat/better-ramps</strong> (CCTP failure-class + bridge/DEX failover, exact-unit
+send MAX + dust guards, in-card ramp indicators, wallet tags) and
+<strong>feat/honest-errors</strong> wave 1 (error classifier, session-expired banner).
+Convention going forward: every new QA round gets its own numbered doc — doc 80 stays frozen at R24.</p>
+
+<table>
+  <tr><th>✓</th><th class="id">#</th><th>Do</th><th>Expect</th><th>Status</th></tr>
+  <tr><td class="chk">☐</td><td class="id">R25</td><td>Outbound swap whose Base pivot REVERTS on-chain (cannot be forced — observe when it occurs naturally)</td><td>NO biometric prompt after the automatic step fails; one silent autopilot retry runs with the failed bridge excluded (network tab: second /api/cctp/autopilot/pivot call with denyBridges); if that also fails the failure popup shows the friendly route-failed copy + tx hash and BOTH buttons act (Try again hands off to the banner, Bring back as USDC starts the return bridge); a later banner "Finish" quotes WITHOUT the recorded bridge (/api/lifi/quote body has denyBridges)</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R26</td><td>After a pivot revert, click Try again twice in a row</td><td>Each retry quotes with BOTH the failed bridge and the failed DEX excluded (network tab: /api/lifi/quote body has denyBridges AND denyExchanges), and the exclusions ACCUMULATE across retries (second retry lists everything that failed so far — no ping-pong back to a route that already reverted); the red failure icon sits on the "Swapping USDC to …" step, not "Covering network fees"</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R27</td><td>Send MAX SOL to an external address; then try sending an amount that would leave ~0.0005 SOL</td><td>MAX sends the FULL balance (wallet goes to exactly 0 SOL) and succeeds; the dust-leaving amount is blocked BEFORE the passkey prompt with the "leave at least 0.001 SOL" message; if a rent rejection ever slips through, the toast explains the minimum-balance rule instead of "network rejected"</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R28</td><td>Send MAX BTC; try sending 0.000003 BTC; send Stellar USDC from a wallet whose XLM sits at the reserve floor</td><td>BTC MAX equals balance minus a real network fee and builds successfully (no "Insufficient Bitcoin balance"); the 300-sat send is blocked pre-passkey with the 546-sat dust message; the USDC send is blocked pre-passkey with the "add a little XLM" message</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R29</td><td>Buy SOL (or any asset) via Coinbase; also open the Coinbase dialog twice in a row</td><td>ONE "on the way" indicator appears INSIDE the balance card on the asset page (not above Activity); opening the checkout twice never creates a second row; when the asset lands on-chain the indicator disappears within ~10s WITHOUT any cron; an abandoned checkout clears by itself after 45 minutes on next page load</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R30</td><td>With Lobstr connected, view SOL/ETH/BTC activity rows on the asset pages and portfolio</td><td>Native-chain Sent/Received rows are tagged "Normal wallet" (never "Lobstr" — external wallets are Stellar-only and cannot sign these); swap rows funded FROM Lobstr keep their truthful "Lobstr" tag; Stellar rows keep the per-wallet tags unchanged</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R31</td><td>Force representative failures: cancel a passkey prompt mid-send; type an amount that triggers tx_insufficient_balance on savings; retry a send 30x to trip the rate limit; fail a MoneyGram start (e.g. below-minimum amount)</td><td>Every toast/modal shows a plain-English sentence — NO raw codes, JSON, stacks, hex hashes, org/credential ids, env-var names, or HTTP statuses; MoneyGram’s clean below-minimum message passes through verbatim; rate limits all say "Too many requests. Please wait a moment and try again."</td><td><span class="tag pend">not yet run</span></td></tr>
+  <tr><td class="chk">☐</td><td class="id">R32</td><td>Let the session expire (or revoke it in Supabase) with the app open, then click anything authed (in-flight banner refresh, MGI deposit, ramp dialog)</td><td>ONE black top banner appears: "Your session expired — please sign in again" with a Sign in button; no cryptic per-surface failures ("challenge failed: 401"), and the in-flight ramp banner keeps its last data instead of silently vanishing</td><td><span class="tag pend">not yet run</span></td></tr>
+</table>
+
+</body>
+</html>

@@ -19,6 +19,7 @@ import { bumpSavingsReadEpoch } from '@/lib/savings-read-guard';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { FEE_PAIR_TIMEOUT_SECONDS } from '@/lib/build-fee-payment';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
 import { submitFeePair, getTransactionSequence } from '@/lib/stellar/fee-pair';
@@ -407,8 +408,9 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
       } catch (err: any) {
         if (err instanceof WalletSessionExpiredError) return '';
         console.error('Error depositing:', err);
-        const errorMessage = err.message || 'Deposit failed';
-        if (errorMessage.toLowerCase().includes('trustline')) {
+        const rawMessage = String(err?.message ?? '');
+        const errorMessage = friendlyAppError(err);
+        if (rawMessage.toLowerCase().includes('trustline')) {
           setNeedsTrustline(true);
         }
         setError(errorMessage);
@@ -628,8 +630,9 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
       } catch (err: any) {
         if (err instanceof WalletSessionExpiredError) return '';
         console.error('Error withdrawing:', err);
-        const errorMessage = err.message || 'Withdraw failed';
-        if (errorMessage.toLowerCase().includes('trustline')) {
+        const rawMessage = String(err?.message ?? '');
+        const errorMessage = friendlyAppError(err);
+        if (rawMessage.toLowerCase().includes('trustline')) {
           setNeedsTrustline(true);
         }
         setError(errorMessage);

@@ -31,7 +31,9 @@ import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
+import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
@@ -141,9 +143,9 @@ async function pollPivotDelivery(
 }
 
 async function readBaseUsdc(address: string): Promise<bigint> {
-  const { http, erc20Abi, createPublicClient } = await import('viem');
+  const { erc20Abi, createPublicClient } = await import('viem');
   const { base } = await import('viem/chains');
-  const client = createPublicClient({ chain: base, transport: http() });
+  const client = createPublicClient({ chain: base, transport: await baseFallbackTransport() });
   return client.readContract({
     address: EVM_USDC.base.mainnet,
     abi: erc20Abi,
@@ -293,7 +295,8 @@ export function useCctpEngine({
         });
         const data = await res.json();
         if (stale) return;
-        if (!res.ok || !data.success) setQuoteError(data.error ?? t('Failed to fetch quote'));
+        if (!res.ok || !data.success)
+          setQuoteError(friendlyAppError(data.error ?? t('Failed to fetch quote')));
         else {
           setQuote(data.quote);
           setFeePercent(typeof data.feePercent === 'number' ? data.feePercent : 0);
@@ -761,7 +764,7 @@ export function useCctpEngine({
           setStageError(
             isInsufficientGasError(e)
               ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
-              : String(e?.message ?? e)
+              : friendlyAppError(e)
           );
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
@@ -957,7 +960,7 @@ export function useCctpEngine({
           setStageError(
             isInsufficientGasError(e)
               ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
-              : String(e?.message ?? e)
+              : friendlyAppError(e)
           );
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
@@ -1055,7 +1058,7 @@ export function useCctpEngine({
       setStageError(
         isInsufficientGasError(e)
           ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
-          : String(e?.message ?? e)
+          : friendlyAppError(e)
       );
       setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }

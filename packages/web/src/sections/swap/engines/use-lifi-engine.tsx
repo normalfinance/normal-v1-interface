@@ -11,6 +11,7 @@ import { MONO } from '@/sections/portfolio/_shared';
 import { executeLifiSwap } from '@/lib/lifi/execute';
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -190,7 +191,7 @@ export function useLifiEngine({
         const data = await res.json();
         if (stale) return;
         if (!res.ok || !data.success) {
-          setQuoteError(data.error ?? t('Failed to fetch quote'));
+          setQuoteError(friendlyAppError(data.error ?? t('Failed to fetch quote')));
         } else {
           setQuote(data.quote);
           setFeePercent(typeof data.feePercent === 'number' ? data.feePercent : 0);
@@ -293,7 +294,7 @@ export function useLifiEngine({
       enqueueSnackbar(
         isInsufficientGasError(err)
           ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
-          : (err?.message ?? t('Swap failed')),
+          : friendlyAppError(err),
         { variant: 'error' }
       );
     } finally {

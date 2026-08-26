@@ -10,6 +10,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { reportMgiStatus, refreshMgiStatus } from '@/lib/mgi/db';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
@@ -385,7 +386,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
       popup?.close();
       // Session expiry already surfaced its own reconnect snackbar.
       if (!(e instanceof WalletSessionExpiredError)) {
-        enqueueSnackbar(e?.message || 'MoneyGram deposit failed', { variant: 'error' });
+        enqueueSnackbar(friendlyAppError(e), { variant: 'error' });
       }
     } finally {
       setMgiLoading(false);

@@ -10,6 +10,7 @@
 
 import { signEvmTxWithTurnkey } from '@/lib/turnkey/evm-signer';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 
 import { EVM_USDC } from './config';
 
@@ -44,10 +45,11 @@ export async function executePivotSwap(params: {
   const info = await getTurnkeyWalletInfo();
   if (!info?.subOrgId) throw new Error('Turnkey wallet not found');
 
-  const { http, erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } =
-    await import('viem');
+  const { erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } = await import(
+    'viem'
+  );
   const { base } = await import('viem/chains');
-  const client = createPublicClient({ chain: base, transport: http() });
+  const client = createPublicClient({ chain: base, transport: await baseFallbackTransport() });
   const from = params.evmAddress as `0x${string}`;
   const usdc = EVM_USDC.base.mainnet;
 

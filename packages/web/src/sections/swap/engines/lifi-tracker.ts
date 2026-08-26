@@ -4,7 +4,7 @@ import type { ChainId } from '@/lib/chains/registry';
 
 import { buildAuthHeaders } from '@/utils/http';
 import { useRef, useState, useEffect } from 'react';
-import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
+import { ETH_RPC_URLS, SOL_RPC_URLS } from '@/lib/chains/rpc-fallback';
 import { clearSwapOutflow, registerSwapOutflow } from '@/lib/spendable';
 import { registerLifiStatusOverride } from '@/lib/lifi/status-overrides';
 
@@ -60,6 +60,20 @@ function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// Doc 90 1d: one flaky public node must not turn a delivered swap into a
+// reported failure — try each URL in order before giving up.
+async function rpcMulti(urls: string[], method: string, params: unknown[]): Promise<any> {
+  let lastErr: unknown;
+  for (const url of urls) {
+    try {
+      return await rpc(url, method, params);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr;
+}
+
 async function rpc(url: string, method: string, params: unknown[]): Promise<any> {
   const res = await fetch(url, {
     method: 'POST',
@@ -84,7 +98,7 @@ async function confirmSource(
   if (fromChainId === CHAIN.ETH) {
     for (let i = 0; i < 45 && !stop(); i++) {
       try {
-        const receipt = await rpc(ETH_RPC_URL, 'eth_getTransactionReceipt', [txHash]);
+        const receipt = await rpcMulti(ETH_RPC_URLS, 'eth_getTransactionReceipt', [txHash]);
         if (receipt) {
           log('ETH receipt status', receipt.status);
           return receipt.status === '0x1' ? 'confirmed' : 'reverted';
@@ -100,7 +114,7 @@ async function confirmSource(
   if (fromChainId === CHAIN.SOL) {
     for (let i = 0; i < 30 && !stop(); i++) {
       try {
-        const res = await rpc(SOL_RPC_URL, 'getSignatureStatuses', [[txHash]]);
+        const res = await rpcMulti(SOL_RPC_URLS, 'getSignatureStatuses', [[txHash]]);
         const st = res?.value?.[0];
         if (st) {
           if (st.err) return 'reverted';

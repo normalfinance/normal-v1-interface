@@ -5,6 +5,7 @@ import type { Token } from '@normalfinance/types';
 import { BigNumber } from 'bignumber.js';
 import { buildAuthHeaders } from '@/utils/http';
 import { announceTransaction } from '@/lib/tx-events';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 import { BTC_DUST_MESSAGE, BTC_DUST_LIMIT_SAT } from '@/lib/send/native-dust';
 
@@ -163,7 +164,7 @@ export function createBitcoinAdapter(
 
         return txid;
       } catch (err: any) {
-        const msg: string = err?.message ?? 'Bitcoin transaction failed';
+        const msg: string = friendlyAppError(err);
         onError?.(msg);
         return '';
       }

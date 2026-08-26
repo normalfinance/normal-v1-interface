@@ -1,0 +1,26 @@
+// Doc 90 Wave 1d: fallback RPC lists for money-moving legs. A single flaky
+// public node must never strand minted funds or report a delivered swap as
+// failed. URL arrays are pure (importable anywhere); the viem transport is
+// built via dynamic import to respect the bundle-size pattern.
+
+export const BASE_RPC_URLS: string[] = [
+  ...(process.env.NEXT_PUBLIC_BASE_RPC_URL ? [process.env.NEXT_PUBLIC_BASE_RPC_URL] : []),
+  'https://mainnet.base.org',
+  'https://base-rpc.publicnode.com',
+];
+
+export const ETH_RPC_URLS: string[] = [
+  process.env.NEXT_PUBLIC_ETH_RPC_URL ?? 'https://ethereum-rpc.publicnode.com',
+  'https://eth.llamarpc.com',
+];
+
+export const SOL_RPC_URLS: string[] = [
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://solana-rpc.publicnode.com',
+  'https://api.mainnet-beta.solana.com',
+];
+
+/** viem fallback transport over the Base list (mainnet only). */
+export async function baseFallbackTransport() {
+  const { http, fallback } = await import('viem');
+  return fallback(BASE_RPC_URLS.map((u) => http(u)));
+}

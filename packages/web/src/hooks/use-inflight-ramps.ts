@@ -18,6 +18,7 @@
 import useSWR from 'swr';
 import { buildAuthHeaders } from '@/utils/http';
 import { useRef, useMemo, useEffect } from 'react';
+import { authedFetch } from '@/utils/authed-fetch';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import {
   isTerminal,
@@ -35,7 +36,12 @@ interface ApiRow extends RampTransferRow {
 }
 
 async function fetchTransfers(url: string): Promise<ApiRow[]> {
-  const res = await fetch(url, { headers: await buildAuthHeaders(), credentials: 'include' });
+  // authedFetch (doc 90 1a): a 401 refreshes+retries once, then raises the
+  // session banner. THROWING on failure keeps SWR's previous data on screen
+  // — an outage must not silently report "nothing pending" while money is
+  // in flight.
+  const res = await authedFetch(url);
+  if (!res.ok) throw new Error(`ramp transfers fetch failed (${res.status})`);
   const data = await res.json().catch(() => null);
   return Array.isArray(data?.transfers) ? data.transfers : [];
 }

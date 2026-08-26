@@ -31,6 +31,7 @@ import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { parseFailedTool, parseFailedExchanges } from '@/lib/cctp/failure-class';
 import { getActiveCctpTransfer, ACTIVE_CCTP_TRANSFER_EVENT } from '@/lib/cctp/active-transfer';
 
@@ -409,7 +410,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
             ? t(
                 'The exchange route failed on the provider side — your USDC is safe. Try again to use a different route.'
               )
-            : (e?.message ?? t('Recovery failed — your funds are safe; please try again.')),
+            : friendlyAppError(e),
           { variant: 'error' }
         );
       } finally {
@@ -481,7 +482,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         refresh();
       } catch (e: any) {
         console.error('[cctp refund] failed:', e); // surface stack
-        enqueueSnackbar(e?.message ?? t('Refund failed — your funds are safe; please try again.'), {
+        enqueueSnackbar(friendlyAppError(e), {
           variant: 'error',
         });
       } finally {

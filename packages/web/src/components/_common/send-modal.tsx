@@ -398,8 +398,10 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     if (!isBtc) return;
     fetch('https://mempool.space/api/v1/fees/recommended')
       .then((r) => r.json())
-      .then((data) => setBtcFeeRateSatPerVbyte(data.halfHourFee ?? null))
-      .catch(() => setBtcFeeRateSatPerVbyte(null));
+      .then((data) => setBtcFeeRateSatPerVbyte(data.halfHourFee ?? 15))
+      // Doc 90 1d: a fee-API outage must not leave "Fetching fee estimate…"
+      // forever over an enabled Review — fall back to the builder's default.
+      .catch(() => setBtcFeeRateSatPerVbyte(15));
   }, [isBtc]);
 
   // Build the active adapter based on selected token
