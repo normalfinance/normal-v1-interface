@@ -8,7 +8,12 @@ import { autopilotEnabled } from '@/server/autopilot-signer';
 import { autopilotPivotSwap } from '@/server/autopilot-pivot';
 import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
 import { ensureTransferGas } from '@/server/cctp-transfer-gas';
-import { sanitizeTool, sanitizeTxHash, sanitizeToolList, pivotRevertDetail } from '@/lib/cctp/failure-class';
+import {
+  sanitizeTool,
+  sanitizeTxHash,
+  sanitizeToolList,
+  pivotRevertDetail,
+} from '@/lib/cctp/failure-class';
 
 // #33 Stage 3 payoff — the server-side outbound pivot. Called by the engine
 // (or cron) once the CCTP mint lands USDC on the user's Base address, INSTEAD
@@ -170,7 +175,14 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
           .catch(() => {});
       }
       return NextResponse.json(
-        { success: false, failureClass: 'reverted', tool, txHash, exchanges, error: String(e?.message ?? e) },
+        {
+          success: false,
+          failureClass: 'reverted',
+          tool,
+          txHash,
+          exchanges,
+          error: String(e?.message ?? e),
+        },
         { status: 502 }
       );
     }

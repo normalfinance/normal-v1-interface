@@ -30,7 +30,10 @@ export type SolRemainderVerdict = 'ok' | 'insufficient' | 'rent-dust';
 /** Classify what a send would leave behind: 'insufficient' (amount + fee
  *  over balance), 'rent-dust' (the forbidden 0 < r < rent-min zone the
  *  network hard-rejects), or 'ok' (exactly zero, or rent-exempt). */
-export function checkSolRemainder(balanceLamports: bigint, sendLamports: bigint): SolRemainderVerdict {
+export function checkSolRemainder(
+  balanceLamports: bigint,
+  sendLamports: bigint
+): SolRemainderVerdict {
   const remainder = balanceLamports - sendLamports - SOL_FEE_LAMPORTS;
   if (remainder < 0n) return 'insufficient';
   if (remainder === 0n) return 'ok';

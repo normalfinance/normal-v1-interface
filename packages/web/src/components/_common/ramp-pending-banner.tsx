@@ -46,7 +46,9 @@ export default function RampPendingBanner({ symbol }: Props) {
   // dismiss affordance and more room to explain themselves.
   const visible = inFlight.filter(
     (r) =>
-      r.failed && !dismissed.has(r.id) && (!symbol || r.asset.toUpperCase() === symbol.toUpperCase())
+      r.failed &&
+      !dismissed.has(r.id) &&
+      (!symbol || r.asset.toUpperCase() === symbol.toUpperCase())
   );
   if (visible.length === 0) return null;
 
@@ -115,7 +117,6 @@ export default function RampPendingBanner({ symbol }: Props) {
   );
 }
 
-
 // ---------------------------------------------------------------------------
 // The in-card variant (Niko 2026-08-26: "show inside the top left block so
 // its more clear that assets are on the way"). Renders the ACTIVE in-flight
@@ -153,7 +154,9 @@ export function RampInflightInline({ symbol }: Props) {
             sx={{ color: '#1D4ED8', flexShrink: 0 }}
           />
           <Box sx={{ minWidth: 0 }}>
-            <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: '#1E3A8A', lineHeight: 1.35 }}>
+            <Typography
+              sx={{ fontSize: '12.5px', fontWeight: 600, color: '#1E3A8A', lineHeight: 1.35 }}
+            >
               {r.message}
             </Typography>
             <Typography sx={{ fontSize: '11px', color: 'rgba(30,58,138,0.65)', lineHeight: 1.35 }}>

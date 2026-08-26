@@ -135,12 +135,14 @@ export async function hasIncomingSince(
       });
       if (!res.ok) return null;
       const txs: any[] = await res.json();
-      return txs.slice(0, 10).some(
-        (tx) =>
-          tx?.status?.confirmed &&
-          (tx.status.block_time ?? 0) * 1000 > sinceMs &&
-          (tx.vout ?? []).some((o: any) => o?.scriptpubkey_address === address && o?.value > 0)
-      );
+      return txs
+        .slice(0, 10)
+        .some(
+          (tx) =>
+            tx?.status?.confirmed &&
+            (tx.status.block_time ?? 0) * 1000 > sinceMs &&
+            (tx.vout ?? []).some((o: any) => o?.scriptpubkey_address === address && o?.value > 0)
+        );
     }
   } catch {
     return null;

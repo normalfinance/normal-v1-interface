@@ -6,7 +6,13 @@ import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsAnyWalletAddress } from '@/lib/wallet-ownership';
 import { liveChainBalance, hasIncomingSince } from '@/server/ramp-chain';
-import { RAMP_STATUSES, type RampStatus, ABANDON_AFTER_MS, TERMINAL_STATUSES, balanceShowsArrival } from '@/lib/ramp/status';
+import {
+  RAMP_STATUSES,
+  type RampStatus,
+  ABANDON_AFTER_MS,
+  TERMINAL_STATUSES,
+  balanceShowsArrival,
+} from '@/lib/ramp/status';
 
 // Ramp transfers (doc 89 F2): one record per handoff to a ramp provider,
 // written BEFORE the user leaves our app so a closed tab cannot lose it.
@@ -76,7 +82,8 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
 
     // Arrival baseline for EVERY chain: use the client's number when it sent
     // one (Stellar knows its per-wallet balance), otherwise read the chain.
-    const baseline = baselineBalance ?? (await liveChainBalance(chain, network, walletAddress, asset));
+    const baseline =
+      baselineBalance ?? (await liveChainBalance(chain, network, walletAddress, asset));
 
     const row = await prisma.rampTransfer.create({
       data: {

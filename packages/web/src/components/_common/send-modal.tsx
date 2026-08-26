@@ -24,7 +24,12 @@ import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react'
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import { knownMemoRequirement, fetchMemoRequirement } from '@/lib/stellar/memo-required';
 import { getMaxAmount, getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
-import { SAVINGS_XLM_BUFFER, STELLAR_TX_FEE_XLM, xlmAvailableForFees, spendableXlmForOutflow } from '@/utils/stellar-reserve';
+import {
+  SAVINGS_XLM_BUFFER,
+  STELLAR_TX_FEE_XLM,
+  xlmAvailableForFees,
+  spendableXlmForOutflow,
+} from '@/utils/stellar-reserve';
 
 import {
   Box,
@@ -1408,9 +1413,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                 const acc = await server.loadAccount(effectiveSenderAddress);
                 const nativeBal =
                   acc.balances.find((b) => b.asset_type === 'native')?.balance ?? '0';
-                if (
-                  xlmAvailableForFees(nativeBal, acc.subentry_count).lt(STELLAR_TX_FEE_XLM)
-                ) {
+                if (xlmAvailableForFees(nativeBal, acc.subentry_count).lt(STELLAR_TX_FEE_XLM)) {
                   enqueueSnackbar(
                     t(
                       'Sending {{sym}} needs a small XLM network fee, and your XLM is at the reserve minimum. Add a little XLM first.',
