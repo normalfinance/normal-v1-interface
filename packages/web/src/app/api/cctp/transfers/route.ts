@@ -55,7 +55,30 @@ export const POST = withAuth(async (req: Request, { user }) => {
   // Refunds (recovering already-bridged funds back to Stellar) bypass both —
   // they're not new swaps, and blocking a small refund would strand the funds.
   const amount = BigInt(amountWire);
-  if (!refund) {
+  // Doc 95 Wave 2: `refund` came straight from the request body and skipped
+  // BOTH the minimum and the cap — any client could open unlimited dust
+  // transfers the relayer pays gas for. A refund must now name the failed
+  // outbound transfer it is recovering, and that transfer must be the
+  // caller's own and actually in a refundable state.
+  let refundApproved = false;
+  if (refund) {
+    const originalId = typeof body?.refundOfTransferId === 'string' ? body.refundOfTransferId : '';
+    const original = originalId
+      ? await prisma.cctpTransfer.findUnique({ where: { id: originalId } })
+      : null;
+    refundApproved =
+      !!original &&
+      original.userId === user.id &&
+      original.direction === 'stellar_to_crosschain' &&
+      !original.dstSwapTxHash;
+    if (!refundApproved) {
+      return NextResponse.json(
+        { error: 'Refunds must reference one of your unfinished swaps' },
+        { status: 403 }
+      );
+    }
+  }
+  if (!refundApproved) {
     const MIN_WIRE = 10_000_000n; // $10
     if (amount < MIN_WIRE) {
       return NextResponse.json({ error: 'Minimum swap is $10' }, { status: 400 });
@@ -63,8 +86,20 @@ export const POST = withAuth(async (req: Request, { user }) => {
     // Pilot cap removed (Niko, 2026-08-20): the relayer is production-proven.
     // CCTP_PILOT_MAX_USD re-enables a cap in an emergency without a deploy.
     if (network === 'mainnet' && process.env.CCTP_PILOT_MAX_USD) {
+      // Doc 95 Wave 2: a non-numeric value yielded NaN, `capUsd > 0` was
+      // false, and the emergency cap was silently OFF. Fail LOUD instead.
       const capUsd = Number(process.env.CCTP_PILOT_MAX_USD);
-      if (capUsd > 0 && amount > BigInt(Math.round(capUsd * 1_000_000))) {
+      if (!Number.isFinite(capUsd) || capUsd <= 0) {
+        console.error(
+          '[cctp/transfers] CCTP_PILOT_MAX_USD is set but not a positive number — cap ignored:',
+          process.env.CCTP_PILOT_MAX_USD
+        );
+      }
+      if (
+        Number.isFinite(capUsd) &&
+        capUsd > 0 &&
+        amount > BigInt(Math.round(capUsd * 1_000_000))
+      ) {
         return NextResponse.json(
           { error: `Swaps are temporarily capped at $${capUsd}` },
           { status: 400 }

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Run Explainer — Verify Before You Sign</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .bad { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Verify Before You Sign</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 2 (2026-08-27) — doc 95
+Wave 2. Five places where we broadcast or signed something nobody had checked.</p>
+
+<h2>1 · The idea in one sentence</h2>
+<p>A signature is a promise you can't take back. Every place in the app where the user (or our
+server) signs or broadcasts <em>something built by someone else</em> — Soroswap's transaction,
+LI.FI's Bitcoin PSBT, Circle's attestation message — we were taking it on trust. Wave 2 checks
+each one against what we asked for, and refuses when it doesn't match.</p>
+
+<h2>2 · What changed, one by one</h2>
+
+<h3>2.1 The single-signature swap route was missing its guards</h3>
+<p><code>/api/swap/submit-single</code> broadcasts a signed Stellar transaction and writes a money
+row. It <strong>did</strong> require login — but unlike its sibling <code>execute-pair</code>, it
+never checked that the wallet inside the transaction actually belongs to the caller, had no rate
+limit, and used a hardcoded Horizon URL instead of the network config.</p>
+<ul>
+  <li><span class="ok">Now</span>: rate-limited; the transaction's source must be a wallet you own
+  (403 otherwise); Horizon/passphrase come from the shared config like everywhere else.</li>
+  <li><span class="ok">Now</span>: it verifies our 0.5% fee is genuinely inside the transaction
+  before broadcasting — this route exists <em>only</em> for the embedded-fee flow, and nothing
+  checked the fee was there.</li>
+</ul>
+<div class="box good"><div class="label">Verified, not assumed</div>
+Before writing that fee check I called Soroswap's live build API and inspected the bytes it
+returns: the fee address is embedded as its raw 32-byte key (<code>platformFee: {feeBps: 50,
+feeAmount: "50000"}</code>). That's why the check can be enforced immediately instead of shipped
+in "log only" mode.</div>
+
+<h3>2.2 The aggregator's transaction is checked before you're asked to sign it</h3>
+<p>Soroswap builds the swap transaction; we passed it straight to your wallet. Now, before it ever
+reaches you, we verify (a) the transaction spends <em>your</em> account — not someone else's — and
+(b) when we asked for the embedded fee, the fee address is actually in it. If either fails, the
+app falls back to the standard two-signature flow instead of signing something unverified.</p>
+
+<h3>2.3 The Bitcoin PSBT is inspected before the passkey prompt</h3>
+<p>This is the highest-stakes one. A PSBT is a pre-built Bitcoin transaction: whoever builds it
+decides where your coins go. We signed LI.FI's without looking at the outputs. Now, before
+signing, we refuse if:</p>
+<table>
+  <tr><th>check</th><th>what it prevents</th></tr>
+  <tr><td>the transaction may not <strong>spend</strong> more than the quoted amount plus fee
+  headroom (25%, or 10,000 sats on small swaps)</td><td>a route burning most of your BTC as fee,
+  or one that keeps your change</td></tr>
+  <tr><td>an input that's ours but unsignable → error, not skipped</td><td>a half-signed
+  transaction that dies at broadcast <em>after</em> your passkey</td></tr>
+  <tr><td>honour the input's declared signature type</td><td>a signature that looks valid locally
+  and is rejected by the network — "sent but never arrived"</td></tr>
+</table>
+<div class="box warn"><div class="label">Corrected same day — my bug, and how it was found</div>
+The first version of this check also demanded "exactly one payment output", which
+<strong>refused every real BTC swap</strong> (live error: "found 3"). That assumption was wrong:
+decoding an actual LI.FI transaction shows <strong>five</strong> outputs — the bridge deposit, an
+OP_RETURN memo, your change, the route's protocol fee, and <em>our own</em> 0.5% integrator-fee
+wallet — and the shape differs per bridge. Nothing was at risk (it refused <em>before</em>
+signing), but BTC swaps were blocked until the fix. The replacement assumes no structure at all,
+and the real transaction's numbers are now pinned in
+<code>btc-spend-verdict.test.ts</code> so the check can never be tightened back into a shape
+assumption without a failing test.</div>
+<p class="box warn"><span class="label">Unchanged on purpose</span>
+We still never <em>modify</em> the PSBT — altering a Chainflip deposit can make it unrefundable.
+We only refuse to sign it.</p>
+
+<h3>2.4 Circle's message must belong to your transfer</h3>
+<p>To finish a bridge we fetch the "attestation" for your burn transaction and mint with it. We
+used to take the <em>first</em> message in Circle's reply. A transaction can carry more than one
+CCTP message — minting the wrong one would strand the other. Now we decode each message's own
+header (source and destination domains) and use only the one matching your transfer; if none
+matches, we mint nothing and log it. Covered by 6 new tests.</p>
+
+<h3>2.5 Refunds must name the swap they're recovering</h3>
+<p>The refund path bypasses the $10 minimum and the emergency cap — correctly, since it recovers
+money that already moved. But <code>refund: true</code> came from the request body with nothing
+behind it, so a crafted request could open unlimited tiny transfers that our relayer pays gas for.
+Now a refund must reference one of <em>your own</em> unfinished outbound swaps, verified
+server-side. Also fixed: a non-numeric emergency cap silently disabled the cap — it now logs
+loudly instead.</p>
+
+<h2>3 · How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1</td><td>Run a normal XLM↔USDC swap (single-signature path)</td>
+      <td>Works exactly as before — the new checks pass silently. If the console/server log shows
+      "fee address absent", tell me: that means Soroswap changed their encoding and the app
+      correctly fell back to the two-signature flow</td></tr>
+  <tr><td>2</td><td>Run a BTC-source swap (e.g. BTC→USDC)</td>
+      <td>Passkey prompt appears and the swap proceeds as before; the PSBT checks run silently
+      ahead of it. Any refusal message starts with "Refusing to sign:" and says exactly why</td></tr>
+  <tr><td>3</td><td>Trigger a refund via "Bring back as USDC"</td>
+      <td>Works as before (the client now sends the original swap's id). A refund request without a
+      valid original swap is rejected with "Refunds must reference one of your unfinished swaps"</td></tr>
+  <tr><td>4</td><td>Complete any CCTP bridge end-to-end</td>
+      <td>Mint still happens normally; server logs show no "none targets domain" warnings</td></tr>
+</table>
+
+<h2>4 · Commit</h2>
+<p><code>fix(swap): verify aggregator, PSBT, attestation and refunds before signing</code>
+(full message in chat). New tests: <code>lib/cctp/iris-message.test.ts</code> (6).</p>
+
+</body>
+</html>

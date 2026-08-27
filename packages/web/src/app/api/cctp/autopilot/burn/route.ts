@@ -33,9 +33,13 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     if (!tr || tr.userId !== user.id) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
     }
+    // Doc 93 0b: REFUND rows (pure USDC→USDC returns) have no source-swap
+    // leg by construction — srcSwapTxHash is only required for real inbound
+    // swaps. The custody pin below still verifies the recipient.
+    const isPureUsdcReturn = tr.srcAsset === 'USDC' && tr.dstAsset === 'USDC';
     if (
       tr.direction !== 'crosschain_to_stellar' ||
-      !tr.srcSwapTxHash ||
+      (!tr.srcSwapTxHash && !isPureUsdcReturn) ||
       tr.burnTxHash ||
       tr.status === 'COMPLETED' ||
       tr.status === 'FAILED' ||

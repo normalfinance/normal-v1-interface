@@ -4,6 +4,7 @@ import type { TurnkeyClient } from '@turnkey/http';
 
 import { buildAuthHeaders } from '@/utils/http';
 import { secp256k1 } from '@noble/curves/secp256k1';
+import { psbtSpendVerdict } from '@/lib/lifi/btc-spend-verdict';
 import { Psbt, script, networks, payments, Transaction } from 'bitcoinjs-lib';
 
 // ---------------------------------------------------------------------------
@@ -74,7 +75,11 @@ export async function signLifiBtcPsbt(
   psbtHex: string,
   bitcoinAddress: string,
   subOrgId: string,
-  turnkeyClient: TurnkeyClient
+  turnkeyClient: TurnkeyClient,
+  /** Doc 95 Wave 2: the swap amount (sats) from the quote. When provided, the
+   *  transaction may not SPEND materially more than this — refused before the
+   *  passkey. Output structure is never assumed (it varies per bridge). */
+  expectedDepositSat?: bigint
 ): Promise<string> {
   const network = networks.bitcoin;
   const psbt = Psbt.fromHex(psbtHex, { network });
@@ -111,20 +116,76 @@ export async function signLifiBtcPsbt(
   const scriptCode = payments.p2pkh({ pubkey: publicKey, network }).output;
   if (!scriptCode) throw new Error('Could not derive the script code');
 
-  const toSign: { index: number; sighash: Uint8Array }[] = [];
+  // ------------------------------------------------------------------
+  // Doc 95 Wave 2: verify the transaction BEFORE signing it. We still never
+  // modify it (altering a Chainflip PSBT can make a deposit unrefundable) —
+  // we refuse to sign one that does not look like the swap we quoted.
+  // ------------------------------------------------------------------
+  const isOurs = (script_: Uint8Array) => bytesEqual(script_, ourScript);
+
+  // What leaves THIS wallet: everything we put in, minus everything that comes
+  // back to us. Deliberately structure-agnostic — decoding a real LI.FI PSBT
+  // (2026-08-27) showed FIVE outputs: the bridge deposit, an OP_RETURN memo,
+  // our change, the route's protocol fee AND our own integrator-fee wallet,
+  // and the shape differs per bridge. Counting outputs is not a safe
+  // invariant; "do not spend more than the quote said" is.
+  const allInputsOurs = psbt.data.inputs.every(
+    (i) => i.witnessUtxo && isOurs(i.witnessUtxo.script)
+  );
+  if (allInputsOurs && expectedDepositSat !== undefined && expectedDepositSat > 0n) {
+    const inTotal = psbt.data.inputs.reduce((sum, i) => sum + BigInt(i.witnessUtxo!.value), 0n);
+    const backToUs = unsignedTx.outs.reduce(
+      (sum, o) => (isOurs(o.script) ? sum + BigInt(o.value) : sum),
+      0n
+    );
+    const verdict = psbtSpendVerdict({
+      inputsTotalSat: inTotal,
+      backToUsSat: backToUs,
+      quotedSat: expectedDepositSat,
+    });
+    if (!verdict.ok) {
+      throw new Error(
+        `Refusing to sign: this transaction spends ${verdict.spent} sats but the quote was ` +
+          `${expectedDepositSat} sats (limit ${verdict.limit})`
+      );
+    }
+    console.info(
+      `[btc-sign] spending ${verdict.spent} sats for a ${expectedDepositSat} sat swap ` +
+        `(${unsignedTx.outs.length} outputs, ${backToUs} back to us)`
+    );
+  }
+
+  const toSign: { index: number; sighash: Uint8Array; sighashType: number }[] = [];
   psbt.data.inputs.forEach((input, index) => {
     const witnessUtxo = input.witnessUtxo;
+    if (!witnessUtxo) {
+      // An input we cannot read is an input we cannot classify. If it is ours
+      // we would silently skip it and hand back a PARTIALLY signed PSBT that
+      // fails at broadcast — say so instead (doc 95 Wave 2).
+      const prev = input.nonWitnessUtxo;
+      if (prev) {
+        const prevTx = Transaction.fromBuffer(prev);
+        const vout = unsignedTx.ins[index]?.index ?? -1;
+        const prevOut = prevTx.outs[vout];
+        if (prevOut && isOurs(prevOut.script)) {
+          throw new Error(
+            `Refusing to sign: input ${index} is ours but carries no witness_utxo — ` +
+              `this wallet can only sign segwit (P2WPKH) inputs`
+          );
+        }
+      }
+      return;
+    }
     // Only sign what is ours. LI.FI may combine UTXOs from several addresses,
     // and signing another party's input is neither possible nor our business.
-    if (!witnessUtxo || !bytesEqual(witnessUtxo.script, ourScript)) return;
+    if (!isOurs(witnessUtxo.script)) return;
 
-    const sighash = unsignedTx.hashForWitnessV0(
-      index,
-      scriptCode,
-      witnessUtxo.value,
-      Transaction.SIGHASH_ALL
-    );
-    toSign.push({ index, sighash });
+    // Honour a declared sighash type instead of assuming SIGHASH_ALL: signing
+    // the wrong hash produces a signature that validates locally (we verify
+    // against our own hash) and is rejected at consensus (doc 95 Wave 2).
+    const sighashType = input.sighashType ?? Transaction.SIGHASH_ALL;
+    const sighash = unsignedTx.hashForWitnessV0(index, scriptCode, witnessUtxo.value, sighashType);
+    toSign.push({ index, sighash, sighashType });
   });
 
   if (toSign.length === 0) {
@@ -154,7 +215,7 @@ export async function signLifiBtcPsbt(
     );
   }
 
-  toSign.forEach(({ index }, i) => {
+  toSign.forEach(({ index, sighashType }, i) => {
     const sig = signatures[i];
     if (!sig?.r || !sig?.s) throw new Error(`Missing r/s in signature ${i}`);
     const compact = normaliseLowS(sig.r, sig.s);
@@ -162,8 +223,8 @@ export async function signLifiBtcPsbt(
       partialSig: [
         {
           pubkey: publicKey,
-          // DER encoding + the SIGHASH_ALL byte, as Bitcoin expects.
-          signature: script.signature.encode(compact, Transaction.SIGHASH_ALL),
+          // DER encoding + the sighash byte the input actually declared.
+          signature: script.signature.encode(compact, sighashType),
         },
       ],
     });

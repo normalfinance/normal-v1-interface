@@ -217,6 +217,8 @@ export function useCctpEngine({
   // with its own checklist instead of closing it and delegating invisibly.
   const [refundStage, setRefundStage] = useState<'topup' | 'burn' | 'done' | null>(null);
   const [refundError, setRefundError] = useState<string | null>(null);
+  // Doc 93 0b: WHY a refund started by itself — shown above the steps.
+  const [refundNotice, setRefundNotice] = useState<string | null>(null);
   // #32 chunk 4b: whether THIS run started with the external→Normal funding
   // move (drives the extra step in the progress modal).
   const [usedFunding, setUsedFunding] = useState(false);
@@ -533,6 +535,7 @@ export function useCctpEngine({
           network,
           baseAddress: evmAddress!,
           stellarAddress: stellarAddress!,
+          tryAutopilotFirst: true,
           onStage: (s) => setRefundStage(s),
         });
         setRefundStage('done');
@@ -874,6 +877,19 @@ export function useCctpEngine({
               : friendlyAppError(e)
           );
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
+          if (e?.__optionsExhausted) {
+            // Doc 93 0b: no dead-end errors — options are exhausted, so the
+            // refund starts ITSELF and the modal explains why. Autopilot
+            // users see zero prompts; others get the one burn confirmation.
+            const exhaustedId = lastFailedRunIdRef.current;
+            if (exhaustedId) {
+              setRefundNotice(
+                t('The exchange route kept failing — bringing your USDC back automatically.')
+              );
+              setRefundStage('topup');
+              void runRefund(exhaustedId);
+            }
+          }
         }
         if (!broadcastStarted) {
           // Server re-checks the precondition (CREATED + no tx hashes), so a
@@ -909,13 +925,16 @@ export function useCctpEngine({
       let broadcastStarted = false;
 
       try {
-        setStage('burn');
+        // Doc 93 0a: 'burn-prepare' covers the silent prepare/simulate window;
+        // onSigning flips to 'burn' the moment the prompt actually appears.
+        setStage('burn-prepare');
         const { burnTxHash } = await burnUsdcOnStellar({
           network,
           stellarAddress: stellarAddress!,
           amountWire,
           destinationDomain: CCTP_DOMAIN.base,
           mintRecipient: evmAddressToBytes(evmAddress!),
+          onSigning: () => setStage('burn'),
         });
         broadcastStarted = true;
         if (!(await patch({ burnTxHash }))) {
@@ -978,6 +997,9 @@ export function useCctpEngine({
             err.exchanges = [
               ...new Set([...(firstFail.exchanges ?? []), ...(last.exchanges ?? [])]),
             ];
+            // Doc 93 0b: both automatic attempts failed — no options left
+            // that don't need the user; the catch auto-starts the refund.
+            err.__optionsExhausted = true;
             // Paint the failure on the step that actually failed — the swap —
             // not on "Covering network fees" (stage was still 'topup' here;
             // live 2026-08-26 screenshot showed the red icon one step early).
@@ -1089,6 +1111,19 @@ export function useCctpEngine({
               : friendlyAppError(e)
           );
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
+          if (e?.__optionsExhausted) {
+            // Doc 93 0b: no dead-end errors — options are exhausted, so the
+            // refund starts ITSELF and the modal explains why. Autopilot
+            // users see zero prompts; others get the one burn confirmation.
+            const exhaustedId = lastFailedRunIdRef.current;
+            if (exhaustedId) {
+              setRefundNotice(
+                t('The exchange route kept failing — bringing your USDC back automatically.')
+              );
+              setRefundStage('topup');
+              void runRefund(exhaustedId);
+            }
+          }
         }
         if (!broadcastStarted) {
           await patch({ markFailed: true }).catch(() => {});
@@ -1109,6 +1144,7 @@ export function useCctpEngine({
     setStageError(null);
     setRefundStage(null);
     setRefundError(null);
+    setRefundNotice(null);
     setModalOpen(true);
     // Display-truth refresh for the modal (copy + in-wait Enable offer);
     // never blocks the run — the signing branch re-checks live.
@@ -1597,6 +1633,7 @@ export function useCctpEngine({
             process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY ? () => setConsentOpen(true) : undefined
           }
           refundStage={refundStage}
+          refundNotice={refundNotice}
           onTryAgain={
             refundStage
               ? refundError
@@ -1634,6 +1671,7 @@ export function useCctpEngine({
                   const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
                   if (!failedId) return;
                   setActiveCctpTransfer(null);
+                  setRefundNotice(null); // user-chosen: no explanation needed
                   setRefundStage('topup');
                   void runRefund(failedId);
                 }

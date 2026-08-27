@@ -21,6 +21,10 @@ export async function runCctpRefund(args: {
   baseAddress: string;
   /** User's Stellar account (outbound srcAddress) — the refund recipient. */
   stellarAddress: string;
+  /** Doc 93 0b: try the server-side autopilot burn first — the policy
+   *  allowlist already covers depositForBurn, so autopilot users get a
+   *  signature-less refund; any failure falls through to the passkey burn. */
+  tryAutopilotFirst?: boolean;
   onStage?: (s: 'topup' | 'burn') => void;
 }): Promise<{ newId: string; burnTxHash: string }> {
   const { transferId, network, baseAddress, stellarAddress, onStage } = args;
@@ -57,6 +61,9 @@ export async function runCctpRefund(args: {
       srcAddress: baseAddress,
       destAddress: stellarAddress,
       refund: true,
+      // Doc 95 Wave 2: the server verifies this is the caller's own
+      // unfinished outbound swap before allowing the min/cap bypass.
+      refundOfTransferId: transferId,
     }),
   });
   const createData = await createRes.json().catch(() => null);
@@ -74,6 +81,31 @@ export async function runCctpRefund(args: {
   await new Promise((r) => setTimeout(r, 6000));
 
   onStage?.('burn');
+  if (args.tryAutopilotFirst) {
+    try {
+      const apRes = await fetch('/api/cctp/autopilot/burn', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ transferId: newId }),
+        signal: AbortSignal.timeout(300_000),
+      });
+      const apData = await apRes.json().catch(() => null);
+      if (apRes.ok && apData?.success && apData?.burnTxHash) {
+        // Server already patched burnTxHash + BURN_SUBMITTED on the new row.
+        const patchOriginal = await fetch(`/api/cctp/transfers/${transferId}`, {
+          method: 'PATCH',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ markRefunded: 'true' }),
+        });
+        void patchOriginal;
+        return { newId, burnTxHash: apData.burnTxHash };
+      }
+    } catch {
+      /* autopilot unavailable — fall through to the passkey burn */
+    }
+  }
   const { burnTxHash } = await burnUsdcOnEvm({
     network,
     chain: 'base',

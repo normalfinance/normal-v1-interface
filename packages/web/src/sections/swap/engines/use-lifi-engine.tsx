@@ -137,7 +137,13 @@ export function useLifiEngine({
           { variant: 'warning' }
         );
       else
-        enqueueSnackbar(t('Cross-chain swap failed — no funds were moved.'), { variant: 'error' });
+        enqueueSnackbar(
+          t(
+            'The swap did not complete. If your {{symbol}} left the wallet, the bridge returns it automatically — check Activity for the final state.',
+            { symbol: statusTx?.fromSymbol ?? fromSymbol }
+          ),
+          { variant: 'error' }
+        );
     },
   });
 

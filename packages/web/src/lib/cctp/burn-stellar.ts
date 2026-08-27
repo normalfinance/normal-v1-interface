@@ -80,6 +80,10 @@ export interface StellarBurnParams {
   mintRecipient: Uint8Array;
   /** Progress callback: 'approve' before signature 1, 'burn' before signature 2. */
   onStep?: (step: 'approve' | 'burn') => void;
+  /** Doc 93 0a: fires right before EACH signature prompt appears — the
+   *  caller flips its step to "approve in your wallet" exactly then, never
+   *  during the silent prepare/simulate window. */
+  onSigning?: () => void;
 }
 
 async function submitSigned(
@@ -113,6 +117,7 @@ async function submitSigned(
 }
 
 async function invokeAsUser(params: {
+  onSigning?: () => void;
   server: rpc.Server;
   passphrase: string;
   source: string;
@@ -133,6 +138,9 @@ async function invokeAsUser(params: {
   // Simulation surfaces arg/balance errors BEFORE asking for a passkey prompt.
   tx = await params.server.prepareTransaction(tx);
   // Universal signer: Turnkey passkey / local Normal wallet / external kit.
+  // The prompt appears NOW — everything above (getAccount, simulation) was
+  // the silent prepare window (doc 93 0a).
+  params.onSigning?.();
   const signed = await signStellarTxForMgi(tx.toXDR(), params.passphrase, params.source);
   return submitSigned(params.server, signed, params.passphrase, params.label);
 }
@@ -186,6 +194,7 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
         nativeToScVal(APPROVE_AMOUNT_7, { type: 'i128' }),
         nativeToScVal(sequence + APPROVE_EXPIRY_LEDGERS, { type: 'u32' }),
       ],
+      onSigning: params.onSigning,
       label: 'approve',
     });
   }
@@ -208,6 +217,7 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
       nativeToScVal(CCTP_MAX_FEE, { type: 'i128' }),
       nativeToScVal(CCTP_MIN_FINALITY_THRESHOLD, { type: 'u32' }),
     ],
+    onSigning: params.onSigning,
     label: 'deposit_for_burn',
   });
 

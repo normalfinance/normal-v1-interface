@@ -289,7 +289,20 @@ async function executeBtc(
     const { signLifiBtcPsbt } = await import('@/lib/lifi/btc-sign');
     // One ceremony (batched raw-payload signing) — guarded like all others (#51).
     signedTx = await runWebauthnCeremony(() =>
-      signLifiBtcPsbt(psbtHex, bitcoinAddress, subOrgId, turnkey)
+      signLifiBtcPsbt(
+        psbtHex,
+        bitcoinAddress,
+        subOrgId,
+        turnkey,
+        // Doc 95 Wave 2: the PSBT must pay the bridge at least what we quoted.
+        (() => {
+          try {
+            return BigInt(quote.action.fromAmount);
+          } catch {
+            return undefined;
+          }
+        })()
+      )
     );
   } catch (err: any) {
     // Keep the decode attached: any Bitcoin signing failure should say what was
