@@ -6,6 +6,7 @@ import { useStellarConfig } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { useDebounce } from '@/hooks/use-debounce';
 import { usePersistStore } from '@normalfinance/state';
+import { awaitTxVisible } from '@/lib/stellar/await-tx-visible';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
@@ -187,6 +188,16 @@ export function useSoroswapEngine({
     // a refresh hiccup can never make a successful swap look stuck.
     window.dispatchEvent(new Event('nf:activity-updated'));
     setSwapStage('refetch');
+    // Wait for the LEDGER before reading balances (Niko, 2026-08-28 — the
+    // balance still lagged the popup after two rounds of cache fixes). The
+    // old gate asked "did a balance change?", which cannot distinguish a
+    // stale cached read from a Horizon that has not ingested the swap yet.
+    // The transaction hash makes that a definite question, asked straight at
+    // Horizon with no cache, no bypass floor and no SWR in the way — so the
+    // refresh below happens at a moment the ledger provably contains the
+    // swap. Normally answered on the first poll; bounded so a Horizon blip
+    // can never hold up a swap that already succeeded.
+    await awaitTxVisible(config.HORIZON_URL, hash).catch(() => false);
     await Promise.race([
       refreshAggregate?.().catch(() => {}),
       new Promise((r) => {
@@ -196,7 +207,16 @@ export function useSoroswapEngine({
     setDoneHash(hash);
     setSwapStage('done');
     resetInput();
-  }, [quote, executeSwap, fromSymbol, toSymbol, resetInput, refreshAggregate, setError]);
+  }, [
+    quote,
+    executeSwap,
+    fromSymbol,
+    toSymbol,
+    resetInput,
+    refreshAggregate,
+    setError,
+    config.HORIZON_URL,
+  ]);
 
   const handleAddTrustline = useCallback(async () => {
     const usdcIssuer = config.USDC_ISSUER;

@@ -339,15 +339,35 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   // lib/portfolio/refresh-retry.ts.
   const refreshUntilFresh = useCallback(
     async (
+      label: string,
       read: () => Promise<FreshRead>,
       valueOf: (assets: PortfolioAsset[] | null | undefined) => string | null,
       before: string | null
     ) => {
       const startedAt = Date.now();
       for (let attempt = 1; attempt <= MAX_REFRESH_ATTEMPTS; attempt += 1) {
-        const res = await read();
+        // A read that THROWS used to abort this whole loop: fetchPayload
+        // rejects on any non-ok response (a 429, an auth blip), the rejection
+        // travelled out through the engine's `.catch(() => {})`, and Done
+        // appeared having refreshed nothing at all. More attempts meant more
+        // chances to hit it. A failed read is simply "not fresh" — retry.
+        let res: FreshRead;
+        try {
+          res = await read();
+        } catch (err) {
+          console.info(`[balance-gate:${label}] attempt ${attempt} FAILED`, err);
+          res = { assets: null, floored: false };
+        }
         const after = valueOf(res.assets);
         const changed = after !== null && after !== before;
+        // One line per attempt, on purpose: when a balance looks stale after a
+        // swap this says immediately WHICH layer was stale — whether the read
+        // was floored, what the server returned, and how long it took.
+        console.info(
+          `[balance-gate:${label}] attempt ${attempt} floored=${res.floored} ` +
+            `changed=${changed} before=${before} after=${after} ` +
+            `retryAfterMs=${res.retryAfterMs ?? '-'} elapsed=${Date.now() - startedAt}ms`
+        );
         if (!shouldRetryPortfolioRead({ floored: res.floored, changed, attempt })) return;
 
         const delay = nextReadDelayMs({
@@ -358,7 +378,10 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         // cap would show Done with the balance still catching up — exactly
         // the symptom being fixed. Stop instead and let the background poll
         // finish the job.
-        if (!canAffordAnotherRead(Date.now() - startedAt, delay)) return;
+        if (!canAffordAnotherRead(Date.now() - startedAt, delay)) {
+          console.info(`[balance-gate:${label}] out of budget — deferring to the background poll`);
+          return;
+        }
 
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
@@ -396,6 +419,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
       }
       const before = balancesRef.current[symbol as SwapSymbol]?.balance;
       await refreshUntilFresh(
+        symbol,
         () => hook.refetchBalance(),
         (assets) => assets?.find((a) => a.symbol === symbol)?.balance ?? null,
         before ?? null
@@ -411,17 +435,29 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   // floor and pull once more. Refs keep the callback stable and un-stale.
   const aggAssetsRef = useRef(aggAssets);
   aggAssetsRef.current = aggAssets;
-  const stellarToSymbolRef = useRef(toSymbol);
-  stellarToSymbolRef.current = toSymbol;
+  const stellarPairRef = useRef<[SwapSymbol, SwapSymbol]>([fromSymbol, toSymbol]);
+  stellarPairRef.current = [fromSymbol, toSymbol];
   const refetchStellarAfterSwap = useCallback(async () => {
-    const sym = stellarToSymbolRef.current;
-    const total = (assets: { symbol: string; balance: string | null }[] | null | undefined) =>
-      String(
-        (assets ?? [])
-          .filter((a) => a.symbol === sym)
-          .reduce((sum, a) => sum + (Number(a.balance) || 0), 0)
-      );
-    await refreshUntilFresh(refreshFresh, total, total(aggAssetsRef.current));
+    // Watch BOTH sides of the swap, not just the destination. A swap moves two
+    // balances, so either one moving proves the read is post-swap — and the
+    // pair is also what the card actually displays. Watching one halved the
+    // evidence available for no benefit.
+    const [fromSym, toSym] = stellarPairRef.current;
+    const totalOf = (
+      assets: { symbol: string; balance: string | null }[] | null | undefined,
+      sym: string
+    ) =>
+      (assets ?? [])
+        .filter((a) => a.symbol === sym)
+        .reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+    const signature = (assets: { symbol: string; balance: string | null }[] | null | undefined) =>
+      `${fromSym}:${totalOf(assets, fromSym)}|${toSym}:${totalOf(assets, toSym)}`;
+    await refreshUntilFresh(
+      `${fromSym}->${toSym}`,
+      refreshFresh,
+      signature,
+      signature(aggAssetsRef.current)
+    );
   }, [refreshFresh, refreshUntilFresh]);
 
   // Records a COMPLETED external→companion move for the amount currently
