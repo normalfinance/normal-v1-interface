@@ -20,6 +20,7 @@ import { Iconify } from '@/components/template/iconify';
 
 export type CctpStage =
   | 'funding'
+  | 'burn-prepare'
   | 'lifi'
   | 'arriving'
   | 'topup'
@@ -72,6 +73,8 @@ interface Props {
   /** Bring-back-in-modal (Niko 2026-08-27): when set, the popup stays open
    *  and shows the REFUND checklist instead of the swap steps. */
   refundStage?: 'topup' | 'burn' | 'done' | null;
+  /** Doc 93 0b: why a refund started automatically. */
+  refundNotice?: string | null;
 }
 
 const TX_HASH_RE = /0x[0-9a-fA-F]{64}/;
@@ -113,6 +116,7 @@ export function CctpProgressModal({
   onTryAgain,
   onBringBack,
   refundStage = null,
+  refundNotice = null,
 }: Props) {
   const { t } = useTranslate();
   // Refund mode reuses the whole step machinery below unchanged.
@@ -188,6 +192,11 @@ export function CctpProgressModal({
                 },
               ]
             : []),
+          {
+            id: 'burn-prepare',
+            label: t('Preparing the bridge transaction'),
+            sub: t('A few seconds — no action needed yet'),
+          },
           {
             id: 'burn',
             label: t('Starting the Circle bridge'),
@@ -283,6 +292,23 @@ export function CctpProgressModal({
       </Stack>
 
       <Stack spacing={0}>
+        {refundNotice && (
+          <Box
+            sx={{
+              display: 'flex',
+              gap: '8px',
+              p: '10px 12px',
+              borderRadius: '10px',
+              bgcolor: 'rgba(37,99,235,0.07)',
+              border: '1px solid rgba(37,99,235,0.18)',
+              mb: '10px',
+            }}
+          >
+            <Typography sx={{ fontSize: '12.5px', color: '#1E3A8A', lineHeight: 1.45 }}>
+              {refundNotice}
+            </Typography>
+          </Box>
+        )}
         {steps.map((s, idx) => {
           const isDone = stage === 'done' ? s.id !== 'done' || true : idx < activeIdx;
           const isActive = stage === s.id && stage !== 'done';

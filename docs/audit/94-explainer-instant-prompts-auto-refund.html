@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Run Explainer — Instant Prompts & Auto-Refund</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .bad { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Instant Prompts &amp; Auto-Refund</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 1 (2026-08-27) — doc 93
+Phase 0a + 0b. What changed, why, and how to test it.</p>
+
+<h2>1 · "Approve in your wallet" now means the prompt is on screen (0a)</h2>
+
+<h3>What you saw</h3>
+<p>After "Moving USDC from Lobstr" turned green, "Starting the Circle bridge" said
+<em>Approve in your wallet</em> — but nothing appeared for several seconds. You correctly guessed
+a hidden wait was living inside the wrong step.</p>
+
+<h3>What was actually happening</h3>
+<p>Interesting detail: step 1's checkmark was already honest — it only turns green once the moved
+USDC is <em>verified visible</em> on your Normal wallet. The hidden wait was <strong>after</strong>
+that: before Stellar can ask for your signature, the app must fetch your account, check the USDC
+allowance, and run a <em>simulation</em> of the transaction on the Soroban network (that's what
+catches errors before you sign). Those seconds of silent preparation were happening under a step
+whose label promised a signature prompt.</p>
+
+<h3>Now</h3>
+<table>
+  <tr><th>step</th><th>what it covers</th></tr>
+  <tr><td>Moving USDC from Lobstr</td><td>the transfer <em>and</em> waiting until it is visible (unchanged)</td></tr>
+  <tr><td class="ok">Preparing the bridge transaction — NEW</td><td>"A few seconds — no action needed yet": account fetch, allowance check, simulation</td></tr>
+  <tr><td>Starting the Circle bridge</td><td>flips active at the exact moment the signature prompt appears (a new <code>onSigning</code> callback fires right before the passkey/wallet popup)</td></tr>
+</table>
+<div class="box good"><div class="label">The principle (now a standing rule)</div>
+Waiting is its own honest step. Any step that names a signature means the prompt is already on
+screen — for every engine, on the future run page too.</div>
+
+<h2>2 · No dead-end errors — the app makes the next move itself (0b)</h2>
+
+<h3>Before</h3>
+<p>When a swap's exchange leg failed twice (original route + automatic failover), you got a red
+box and two buttons — the system <em>knew</em> there were no more automatic options, but made you
+figure that out and click "Bring back as USDC" yourself.</p>
+
+<h3>Now</h3>
+<ul>
+  <li>When options are exhausted, the popup switches to the refund checklist <strong>by
+  itself</strong>, with a blue explanation above the steps: <em>"The exchange route kept failing —
+  bringing your USDC back automatically."</em></li>
+  <li><strong>Autopilot users: zero signatures.</strong> The refund's burn is a
+  <code>depositForBurn</code> on Base — the same operation the autopilot signing policy already
+  allows — so the refund now tries the server-side signer first. If that works, your USDC heads
+  home without a single prompt.</li>
+  <li>Everyone else gets exactly <strong>one</strong> prompt ("Sending your USDC back — approve in
+  your wallet") instead of a decision.</li>
+  <li>Manual "Bring back as USDC" still exists and also benefits from the signature-less path.</li>
+  <li>LI.FI direct swaps: the failure message no longer claims "no funds were moved" when the app
+  cannot know that — it now says what happens next ("the bridge returns it automatically — check
+  Activity").</li>
+</ul>
+
+<h3>One server-side change to know about</h3>
+<p>The autopilot burn endpoint used to require a source-swap transaction on the row (true for all
+real inbound swaps). Refund rows are pure USDC→USDC returns with no swap leg, so the endpoint now
+recognizes that exact shape — and its existing custody check (recipient must be one of YOUR
+wallets) still applies unchanged.</p>
+
+<h2>3 · How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1</td><td>Start a USDC→ETH/SOL swap funded from Lobstr; watch the steps</td>
+      <td>"Preparing the bridge transaction" shows for a few seconds after the funding step; the
+      moment "Starting the Circle bridge" becomes the active step, the signature prompt is
+      already on screen — zero silent gap</td></tr>
+  <tr><td>2</td><td>Get a pivot to fail twice (or block /api/lifi/quote after the mint to force
+      exhaustion)</td>
+      <td>No dead-end: the popup switches to the refund checklist by itself with the blue "kept
+      failing — bringing your USDC back automatically" notice; with autopilot enabled the whole
+      refund completes with NO prompts; without it, exactly one "approve in your wallet"</td></tr>
+  <tr><td>3</td><td>Click Bring back as USDC manually (any outbound failure)</td>
+      <td>Same refund checklist, no explanation banner (you chose it), and — with autopilot on —
+      no signature</td></tr>
+</table>
+
+<h2>4 · Commit</h2>
+<p><code>feat(swap): instant signature prompts + automatic refund on exhausted options</code>
+(full message in chat). Files: burn-stellar (onSigning), cctp-progress-modal (burn-prepare step +
+notice box), use-cctp-engine (prepare stage, auto-refund trigger), lib/cctp/refund
+(autopilot-first), autopilot/burn route (refund rows burnable), use-lifi-engine (honest terminal
+copy).</p>
+
+</body>
+</html>
