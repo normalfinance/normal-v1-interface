@@ -121,6 +121,36 @@ The tab must never be required after signing.
 - positive-slippage left on Base (`use-cctp-engine.tsx:725`); 7dp-vs-6dp funding dust (`:1130`); `swap_logs.amountOut` stores the estimate not the realized (`use-swap.tsx:393`); embedded fee `NaN`/0 accounting (`quote/route.ts:246`, `use-swap.tsx:323`).
 
 ## Wave 6 — Guards & quotes that fail open (money/UX)
+
+> **STATUS: SHIPPED 2026-08-27, run 7** — explainer `102-explainer-guards-that-fail-open.html`.
+> Theme: every one of these answered "I cannot tell" with YES. Fixed:
+> (1) **quote expiry** — `lib/lifi/quote-freshness.ts` (9 tests): quotes stamped at build,
+> re-fetched on execute past 10 min, >1% worse output requires a second explicit press; unknown
+> age counts as STALE. This is the only Wave 6 item that can lose coins (stale BTC quote pays into
+> an expired Chainflip deposit channel — no failover, no auto-refund, outside our state machine).
+> (2) **XLM Soroban fee gate** — `canPaySorobanFee` + `maxXlmForSorobanSwap` (6 tests): Soroban
+> fees are 0.05–0.5+ XLM but only the 0.0002 classic fee was held back, so MAX-XLM and low-XLM
+> USDC swaps failed on-chain AFTER two signatures. Button now blocks with "Add XLM to cover the
+> network fee"; the check counts the XLM the swap itself sends, so it is right in both directions.
+> (3) **zero-fee EIP-1559 refused** — quoted fee missing + estimateFeesPerGas failed = both sides
+> of the max() are 0; that tx never mines AND never errors (the worst of the three outcomes).
+> (4) **BTC spend cap is mandatory** — the caller's `catch { return undefined }` disabled the cap,
+> so an unparseable quote was the off switch for the Bitcoin spend limit; caller and signer both
+> throw now. The `allInputsOurs === false` skip STAYS (legitimate: LI.FI may combine another
+> party's UTXOs, so the arithmetic would be wrong, not lenient — the per-input loop still refuses
+> anything it cannot classify).
+> (5) **gas-shortfall guard retries** the balance read instead of skipping on one failure.
+> (6) **typed full balance** now honours the BTC/SOL fee reserve (was MAX-only) — one `spendable`
+> expression shared by the guard and MAX. **ROUND_DOWN** on the quote amount (BigNumber's default
+> ROUND_HALF_UP could ask for one wire unit more than the wallet holds).
+> (7) **`ensureChainAccount` strict lookup** — best-effort returned null on a failed request, which
+> that function reads as "user has no wallet yet" → new passkey + NEW sub-org beside the existing
+> wallet. Now `getTurnkeyWalletInfoStrict` (throws), so a blip is a retryable failure.
+> **CHECKED, NOT CHANGED:** `fees/execute-pair` 15-min window. It already refuses a pair with <60s
+> runway, and the built XDR carries Soroswap's `otherAmountThreshold` (min-out) — VERIFIED: the
+> build payload passes the whole quote object, not just the amounts. So a late broadcast at a moved
+> price FAILS on-chain rather than filling badly; exposure is a wasted network fee, not a bad fill.
+> Shortening the window would refuse more legitimate swaps to save a rare fee — the worse trade.
 - `lifi/execute.ts:130,143,267` — zero-fee EIP-1559 signed (fees rejected → 0), gas-shortfall guard skipped on RPC hiccup, PSBT rule-check passes on a parse failure.
 - `use-lifi-engine.tsx:222` + `:146,191` — **no quote expiry** (stale quote → closed Chainflip channel / reverting deadline); typed full-balance BTC/SOL bypasses the reserve guard; `ROUND_HALF_UP` can quote 1 unit over balance.
 - `use-soroswap-engine.tsx:138` + `stellar-reserve.ts:14` — no XLM-for-fees gate on Stellar swaps; MAX XLM holds back only 0.0002 XLM, not the real Soroban fee → guaranteed fail after two signatures.

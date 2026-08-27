@@ -12,6 +12,7 @@ import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { useSwap, type SoroswapStage } from '@/hooks/stellar/use-swap';
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
+import { canPaySorobanFee, maxXlmForSorobanSwap } from '@/utils/stellar-reserve';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -115,6 +116,7 @@ export function useSoroswapEngine({
     isLoading: isCheckingAccount,
     accountExists,
     hasUsdcTrustline,
+    xlmBalance,
     refetch: refetchAccountStatus,
   } = useAccountStatus(stellarAddressOverride ?? wallet.address);
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
@@ -136,6 +138,20 @@ export function useSoroswapEngine({
 
   const toAmount = quote?.amountOut ? BigNumber(quote.amountOut) : null;
   const insufficient = amount.gt(0) && amount.gt(fromBalance);
+  // ------------------------------------------------------------------------
+  // Doc 95 Wave 6: a Soroswap swap is a SOROBAN transaction — its fee is
+  // 0.05–0.5+ XLM, not the 0.0002 XLM classic fee that `spendableXlm` holds
+  // back. Nothing checked that the account could pay it, so the swap failed
+  // ON-CHAIN with tx_insufficient_balance AFTER the user had signed (twice,
+  // on the fee-pair path). Both directions are covered: an XLM source also
+  // spends the amount itself, so that comes off the balance first.
+  // ------------------------------------------------------------------------
+  const xlmSpentByThisSwap = fromSymbol === 'XLM' ? amount : BigNumber(0);
+  const cannotPayFee =
+    amount.gt(0) &&
+    !isCheckingAccount &&
+    accountExists &&
+    !canPaySorobanFee(xlmBalance, 1, xlmSpentByThisSwap);
   const needsAccountActivation = toSymbol === 'USDC' && !isCheckingAccount && !accountExists;
   const needsTrustline =
     toSymbol === 'USDC' && !isCheckingAccount && accountExists && !hasUsdcTrustline;
@@ -148,7 +164,12 @@ export function useSoroswapEngine({
   // #67: XLM's reserve (network minimum + savings buffer) is already inside
   // the fromBalance the swap card passes in — subtracting an ad-hoc 1 XLM
   // again here would double-count it.
-  const getMaxToken = async (): Promise<BigNumber> => fromBalance;
+  //
+  // Doc 95 Wave 6: what it does NOT contain is the Soroban fee this very swap
+  // has to pay. MAX therefore offered an amount that spent the fee money, and
+  // the swap was guaranteed to fail on-chain after two signatures.
+  const getMaxToken = async (): Promise<BigNumber> =>
+    fromSymbol === 'XLM' ? maxXlmForSorobanSwap(fromBalance) : fromBalance;
 
   const handleSwap = useCallback(async () => {
     if (!quote) return;
@@ -247,6 +268,14 @@ export function useSoroswapEngine({
       };
     if (amount.lte(0)) return { label: t('Enter an amount'), action: null, loading: false };
     if (insufficient) return { label: t('Insufficient balance'), action: null, loading: false };
+    // Ahead of the quote gates on purpose: this one is knowable immediately
+    // and never resolves by waiting.
+    if (cannotPayFee)
+      return {
+        label: t('Add XLM to cover the network fee'),
+        action: null,
+        loading: false,
+      };
     if (loading) return { label: t('Swapping...'), action: null, loading: true };
     if (isCheckingAccount) return { label: t('Checking account…'), action: null, loading: false };
     if (quoteLoading) return { label: t('Fetching quote…'), action: null, loading: false };
@@ -264,6 +293,7 @@ export function useSoroswapEngine({
     handleAddTrustline,
     amount,
     insufficient,
+    cannotPayFee,
     loading,
     isCheckingAccount,
     quoteLoading,

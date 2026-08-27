@@ -10,8 +10,12 @@ import { pickAddresses, getChainAddress } from '@/lib/chains/registry';
 import { createPasskeyRegistration } from './passkey';
 import { markWalletNeedsBackup } from './wallet-backup';
 import { isPathAlreadyExistsError } from './turnkey-error-codes';
-import { getTurnkeyWalletInfo, invalidateTurnkeyWalletInfo } from './wallet-info';
 import { XLM_ACCOUNT, SOLANA_ACCOUNT, BITCOIN_ACCOUNT, ETHEREUM_ACCOUNT } from './account-specs';
+import {
+  getTurnkeyWalletInfo,
+  getTurnkeyWalletInfoStrict,
+  invalidateTurnkeyWalletInfo,
+} from './wallet-info';
 import {
   readPendingRegistration,
   writePendingRegistration,
@@ -113,7 +117,14 @@ export async function ensureChainAccount(
   userEmail?: string | null
 ): Promise<ChainAddresses> {
   const spec = CHAIN_ACCOUNT_SPECS[chain];
-  const existing = await getTurnkeyWalletInfo();
+  // Doc 95 Wave 6: this was the BEST-EFFORT lookup, which returns null when
+  // the request fails. Here null does not mean "no wallet yet" — it falls
+  // through to the branch that registers a NEW passkey and creates a NEW
+  // sub-org. So a dropped request during setup asked the user for another
+  // passkey and started building a second wallet beside the one they already
+  // had. The strict variant throws instead, and the caller reports a failure
+  // the user can retry.
+  const existing = await getTurnkeyWalletInfoStrict();
 
   // Already provisioned
   if (existing) {

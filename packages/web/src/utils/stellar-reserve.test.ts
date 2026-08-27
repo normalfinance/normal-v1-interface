@@ -6,10 +6,12 @@
 import {
   xlmFeeStatus,
   spendableXlm,
+  canPaySorobanFee,
   stellarMinReserve,
   SAVINGS_XLM_BUFFER,
   STELLAR_TX_FEE_XLM,
   xlmAvailableForFees,
+  maxXlmForSorobanSwap,
   spendableXlmForOutflow,
   MIN_XLM_FOR_SAVINGS_TX,
 } from './stellar-reserve';
@@ -92,5 +94,44 @@ describe('xlmFeeStatus (#67 semaphore)', () => {
       .toNumber();
     expect(xlmFeeStatus(balanceLeft, 1)).toBe('ok');
     expect(xlmAvailableForFees(balanceLeft, 1).gte(SAVINGS_XLM_BUFFER)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Doc 95 Wave 6 — the Soroban fee is not the classic fee.
+// ---------------------------------------------------------------------------
+describe('canPaySorobanFee', () => {
+  // subentryCount 1 (one trustline) => min reserve 1.5 XLM.
+  it('allows a swap when there is fee money above the reserve', () => {
+    expect(canPaySorobanFee(3, 1, 0)).toBe(true); // 1.5 free, needs 0.5
+  });
+
+  it('blocks a USDC swap on an account sitting at its reserve', () => {
+    // The exact live failure: plenty of USDC, no XLM to pay Soroban with.
+    expect(canPaySorobanFee(1.5, 1, 0)).toBe(false);
+    expect(canPaySorobanFee(1.9, 1, 0)).toBe(false); // 0.4 free < 0.5
+  });
+
+  it('counts the XLM the swap itself sends', () => {
+    // 3 XLM balance looks fine — until this swap sends 2 of it.
+    expect(canPaySorobanFee(3, 1, 0)).toBe(true);
+    expect(canPaySorobanFee(3, 1, 2)).toBe(false); // 1 left, under the 1.5 reserve
+  });
+
+  it('accounts for extra subentries raising the reserve', () => {
+    expect(canPaySorobanFee(2.5, 1, 0)).toBe(true); // reserve 1.5, free 1.0
+    expect(canPaySorobanFee(2.5, 3, 0)).toBe(false); // reserve 2.5, free 0
+  });
+});
+
+describe('maxXlmForSorobanSwap', () => {
+  it('keeps the Soroban fee back from MAX', () => {
+    expect(maxXlmForSorobanSwap(10).toFixed()).toBe('9.5');
+  });
+
+  it('never returns a negative amount', () => {
+    // A dust balance offers nothing rather than a negative MAX.
+    expect(maxXlmForSorobanSwap(0.2).toFixed()).toBe('0');
+    expect(maxXlmForSorobanSwap(0).toFixed()).toBe('0');
   });
 });

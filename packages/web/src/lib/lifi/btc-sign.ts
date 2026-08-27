@@ -76,9 +76,14 @@ export async function signLifiBtcPsbt(
   bitcoinAddress: string,
   subOrgId: string,
   turnkeyClient: TurnkeyClient,
-  /** Doc 95 Wave 2: the swap amount (sats) from the quote. When provided, the
-   *  transaction may not SPEND materially more than this — refused before the
-   *  passkey. Output structure is never assumed (it varies per bridge). */
+  /** Doc 95 Wave 2: the swap amount (sats) from the quote. The transaction may
+   *  not SPEND materially more than this — refused before the passkey. Output
+   *  structure is never assumed (it varies per bridge).
+   *
+   *  Wave 6: still typed optional so existing callers compile, but a missing
+   *  or zero value now THROWS rather than skipping the check. Optional used to
+   *  mean "cap disabled", which made a malformed quote the one input that
+   *  could switch off the Bitcoin spend limit. */
   expectedDepositSat?: bigint
 ): Promise<string> {
   const network = networks.bitcoin;
@@ -132,7 +137,16 @@ export async function signLifiBtcPsbt(
   const allInputsOurs = psbt.data.inputs.every(
     (i) => i.witnessUtxo && isOurs(i.witnessUtxo.script)
   );
-  if (allInputsOurs && expectedDepositSat !== undefined && expectedDepositSat > 0n) {
+  // Doc 95 Wave 6: the cap is the only thing standing between a malformed
+  // PSBT and our own coins, so a missing cap is a hard stop rather than a
+  // silently skipped check. (`allInputsOurs === false` is a different case
+  // and legitimately skips: LI.FI may combine another party's UTXOs, and
+  // then "what left THIS wallet" is not the inputs total. The per-input loop
+  // below still refuses to sign anything we cannot classify.)
+  if (expectedDepositSat === undefined || expectedDepositSat <= 0n) {
+    throw new Error('Refusing to sign: no quoted amount to check this transaction against');
+  }
+  if (allInputsOurs) {
     const inTotal = psbt.data.inputs.reduce((sum, i) => sum + BigInt(i.witnessUtxo!.value), 0n);
     const backToUs = unsignedTx.outs.reduce(
       (sum, o) => (isOurs(o.script) ? sum + BigInt(o.value) : sum),

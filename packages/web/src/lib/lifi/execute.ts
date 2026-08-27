@@ -136,6 +136,17 @@ async function executeEvm(
     : null;
   const maxFeePerGas = max(BigInt(tx.maxFeePerGas ?? '0'), liveFees?.maxFeePerGas ?? 0n);
 
+  // Doc 95 Wave 6: if LI.FI omitted a fee AND estimateFeesPerGas failed, both
+  // sides of that max() are 0 — and we would sign a transaction offering the
+  // network nothing. It never mines and never fails either: it just sits,
+  // which is the worst outcome of the three, because no error is raised for
+  // anything to react to. Refuse instead, and say which side is missing.
+  if (!legacyPrice && maxFeePerGas === 0n) {
+    throw new Error(
+      'Could not determine a network fee for this swap — the network did not respond with a gas price. Nothing was signed; please try again.'
+    );
+  }
+
   // Dynamic-gas layer 2 (Niko GO 2026-08-21): run the node's own admission
   // rule (balance ≥ value + gas×price) LOCALLY, before the passkey ceremony.
   // A gas spike between quote and now used to surface as the node's raw
@@ -144,9 +155,17 @@ async function executeEvm(
   // offer the affordable amount instead of an error. Balance-read failure
   // skips the check (the node still enforces it — this is UX, not custody).
   const { computeAffordability, GasShortfallError } = await import('@/lib/lifi/gas-shortfall');
-  const balanceWei = await client
-    .getBalance({ address: ethereumAddress as `0x${string}` })
-    .catch(() => null);
+  // Doc 95 Wave 6: one failed read used to skip the whole check, so a gas
+  // spike surfaced as the node's raw "insufficient funds" dump AFTER the
+  // passkey. The transport is already a fallback pool (Wave 4), so a second
+  // attempt costs little and usually lands on a different provider.
+  let balanceWei: bigint | null = null;
+  for (let attempt = 0; attempt < 2 && balanceWei === null; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 400));
+    balanceWei = await client
+      .getBalance({ address: ethereumAddress as `0x${string}` })
+      .catch(() => null);
+  }
   if (balanceWei !== null) {
     const check = computeAffordability({
       balanceWei,
@@ -333,13 +352,27 @@ async function executeBtc(
         bitcoinAddress,
         subOrgId,
         turnkey,
-        // Doc 95 Wave 2: the PSBT must pay the bridge at least what we quoted.
+        // Doc 95 Wave 2: the PSBT may not spend materially more than we
+        // quoted. Wave 6: this used to fall back to `undefined` on a parse
+        // failure — and `undefined` SKIPS the cap entirely, so the one input
+        // that could disable the Bitcoin spend limit was a malformed quote.
+        // A cap we cannot compute is a reason to stop, not to sign.
         (() => {
+          const raw = quote.action?.fromAmount;
+          let sat: bigint;
           try {
-            return BigInt(quote.action.fromAmount);
+            sat = BigInt(raw as string);
           } catch {
-            return undefined;
+            throw new Error(
+              `Refusing to sign: the quote's amount (${String(raw)}) is unreadable, so the spend limit cannot be checked`
+            );
           }
+          if (sat <= 0n) {
+            throw new Error(
+              'Refusing to sign: the quote reports a zero amount, so the spend limit cannot be checked'
+            );
+          }
+          return sat;
         })()
       )
     );
