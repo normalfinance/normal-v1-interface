@@ -1,0 +1,127 @@
+# External cron scheduler (doc 98).
+#
+# WHY THIS EXISTS
+# Vercel only runs cron jobs on PRODUCTION deployments. Our staging site is a
+# preview deployment of the `develop` branch, so the crons listed in
+# packages/web/vercel.json have never run there — verified 2026-08-27 via the
+# Upstash heartbeat keys (cctp-advance / fee-escrow-sweep / ramp-reconcile:
+# NEVER RUN). Without a scheduler, every CCTP bridge on staging depends on the
+# user keeping a browser tab open.
+#
+# This workflow pokes the same endpoints on a schedule, from outside Vercel.
+# The routes are idempotent and secret-protected, so calling them repeatedly —
+# or in parallel with Vercel's own crons — is safe.
+#
+# COST NOTE (read before enabling on a private repo): GitHub bills Actions by
+# the minute and rounds each run UP to a full minute. Every 5 minutes ≈ 8,600
+# minutes/month, well past the free allowance on private repos. Cheaper
+# alternatives that do the same job: cron-job.org (free, 1-minute granularity,
+# supports the Authorization header), Upstash QStash schedules (we already use
+# Upstash), or a second Vercel project whose Production Branch is `develop`.
+# Raise SCHEDULE below to every 15-30 minutes if minutes are a concern —
+# bridges will simply settle a little later.
+#
+# SETUP (repo → Settings → Secrets and variables → Actions):
+#   CRON_SECRET       - same value as the Vercel env var
+#   STAGING_BASE_URL  - e.g. https://staging.normalfinance.io   (optional)
+#   PROD_BASE_URL     - e.g. https://normalfinance.io           (optional)
+# A target with no URL secret is skipped, so you can run staging-only.
+
+name: Cron scheduler
+
+on:
+  schedule:
+    # GitHub's minimum interval is 5 minutes, and runs can be delayed under
+    # load — treat this as "at least every 5 minutes", not a hard guarantee.
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which environment to poke'
+        required: true
+        default: both
+        type: choice
+        options: [staging, production, both]
+
+permissions:
+  contents: read
+
+concurrency:
+  # Never stack runs: a delayed run must not pile onto the next one.
+  group: cron-scheduler
+  cancel-in-progress: false
+
+jobs:
+  poke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Poke cron endpoints
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+          PROD_BASE_URL: ${{ secrets.PROD_BASE_URL }}
+          TARGET: ${{ github.event.inputs.target || 'both' }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::CRON_SECRET is not set — add it in repo Settings → Secrets → Actions"
+            exit 1
+          fi
+
+          # cctp-advance first: it is the one that finishes bridges.
+          JOBS="cctp-advance fee-escrow-sweep ramp-reconcile"
+
+          failures=0
+          called=0
+
+          poke () {
+            local label="$1" base="$2" job="$3"
+            called=$((called+1))
+            local url="${base%/}/api/cron/${job}/"
+            local body status
+            body=$(curl -sS -m 110 -w '\n%{http_code}' \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              "$url" 2>&1) || { echo "::warning::${label} ${job}: request failed"; failures=$((failures+1)); return; }
+            status=$(printf '%s' "$body" | tail -n1)
+            body=$(printf '%s' "$body" | sed '$d')
+            if [ "$status" = "200" ]; then
+              # The routes echo their heartbeat stamp — surface it so a glance
+              # at the run log answers "did it actually work?".
+              echo "✅ ${label} ${job}: ${body:0:300}"
+            else
+              echo "::warning::${label} ${job}: HTTP ${status} — ${body:0:300}"
+              failures=$((failures+1))
+            fi
+          }
+
+          run_target () {
+            local label="$1" base="$2"
+            if [ -z "$base" ]; then
+              echo "⏭️  ${label}: no base URL secret set, skipping"
+              return
+            fi
+            for job in $JOBS; do
+              poke "$label" "$base" "$job"
+            done
+          }
+
+          if [ "$TARGET" = "staging" ] || [ "$TARGET" = "both" ]; then
+            run_target "staging" "${STAGING_BASE_URL:-}"
+          fi
+          if [ "$TARGET" = "production" ] || [ "$TARGET" = "both" ]; then
+            run_target "production" "${PROD_BASE_URL:-}"
+          fi
+
+          if [ "$called" -eq 0 ]; then
+            # Silence is not success: with no base URL configured this workflow
+            # does nothing, and reporting "all good" would be a lie.
+            echo "::error::No target was called — set STAGING_BASE_URL and/or PROD_BASE_URL in repo secrets"
+            exit 1
+          fi
+          if [ "$failures" -gt 0 ]; then
+            echo "::error::${failures} of ${called} cron call(s) did not return 200 — see warnings above"
+            exit 1
+          fi
+          echo "All ${called} cron calls returned 200."
