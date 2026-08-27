@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Balance That Would Not Move</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>The Balance That Would Not Move</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 9 &mdash; the stale balance
+you hit after two Stellar swaps in a row.</p>
+
+<h2>1 &middot; First: this was not one of my changes</h2>
+<p>You asked directly, so the answer first, with how I checked it.</p>
+<p>The refresh after a swap runs through exactly three places:</p>
+<pre>refetchStellarAfterSwap  (swap-card.tsx)
+   → refreshFresh()      (use-wallet-balances.ts)
+      → GET /api/wallet/portfolio?refresh=1</pre>
+<p>Against <code>develop</code>, this branch changed <strong>none of them</strong>.
+<code>use-wallet-balances.ts</code> and the portfolio route have no diff at all;
+<code>swap-card.tsx</code> was edited, but only the double-funding guard and the amount input
+&mdash; not the refresh. My Stellar-side work this week was the XLM fee gate and MAX.</p>
+<p>The bug is older than the branch. It is also real, and now fixed.</p>
+
+<h2>2 &middot; Why it happened</h2>
+
+<h3>The floor</h3>
+<p>When a swap finishes, the app asks the server for balances with <code>refresh=1</code>, meaning
+&ldquo;skip your cache, go and read the chains.&rdquo; That bypass is <strong>floored to once every
+5 seconds per user</strong>, so it cannot be used to hammer the chain providers. Sensible.</p>
+<p>But look at what happens to a request that arrives inside those 5 seconds:</p>
+<pre>if (!wantsFresh || withinFloor) {
+  const cached = await redis.get(cacheKey);   // ← the 15-second cache
+  if (cached) return NextResponse.json({ success: true, ...cached });
+}</pre>
+<p>It does not wait, and it does not say no. It <strong>silently returns the 15-second cache</strong>
+&mdash; which can easily be from before your swap. And the response looks exactly like a fresh one.
+The client had no way to tell them apart.</p>
+
+<h3>The guess</h3>
+<p>Not being able to tell, the client guessed &mdash; by checking whether the number had moved:</p>
+<pre>const before = total(currentAssets);
+const fresh  = await refreshFresh();
+if (fresh &amp;&amp; total(fresh) === before) {      // "unchanged? then it must have been stale"
+  await sleep(5600);                        // wait past the floor
+  await refreshFresh();                     // and try once more
+}</pre>
+<p>That asks <em>&ldquo;did the number change?&rdquo;</em> as a stand-in for
+<em>&ldquo;was that read fresh?&rdquo;</em> Usually the same. Not always &mdash; and the case where
+they differ is precisely two swaps in a row.</p>
+
+<h3>Your two swaps, step by step</h3>
+<table>
+  <tr><th>#</th><th>what happened</th></tr>
+  <tr><td>1</td><td>USDC → XLM finishes. Several <code>refresh=1</code> calls fire within a second
+      of each other (the activity-feed handler, plus the swap's own). One does the real read; the
+      others land inside its floor and get the cache. The screen ends up still showing the
+      <strong>pre-swap-1</strong> figure.</td></tr>
+  <tr><td>2</td><td>You immediately run XLM → USDC. Its <code>before</code> is read from the
+      screen &mdash; so <code>before</code> is that stale pre-swap-1 number.</td></tr>
+  <tr><td>3</td><td>Swap 2 finishes, its read is floored, and the cache it gets back holds
+      <strong>post-swap-1</strong> data. Compared with <code>before</code>, the number
+      <em>has</em> changed.</td></tr>
+  <tr><td>4</td><td><span class="no">So the retry never runs.</span> The balance moves to
+      post-swap-1 and stops there. Nothing else asks again for 30 seconds, and the value it would
+      find is already cached &mdash; so it stays wrong until you reload the page.</td></tr>
+</table>
+<div class="box bad"><div class="label">The one-line version</div>
+The retry existed and was correct for one swap. Two swaps made the &ldquo;did it change?&rdquo;
+signal <em>lie</em> &mdash; it changed to the wrong number, which the code read as success.</div>
+
+<h2>3 &middot; The fix: stop guessing, ask</h2>
+<p>The server always knew whether it served a real read or its cache. It simply never said so. Now
+it does:</p>
+<pre>return NextResponse.json({
+  success: true,
+  ...cached,
+  floored: !!(wantsFresh &amp;&amp; withinFloor),   // "you asked for fresh; you got the cache"
+});</pre>
+<p>And the client asks the real question instead of the proxy one. The decision is a pure, tested
+function:</p>
+<pre>if (attempt &gt;= max)  return false;   // bounded — never loop at the chain sources
+if (floored)         return true;    // we read nothing new; this attempt proved nothing
+return !changed;                     // fresh, but the chain's replicas can lag a moment</pre>
+<p>Note the ordering. <code>floored</code> is checked <em>before</em> the number is considered at
+all &mdash; because a floored response tells you nothing about anything, whatever its contents
+say. That is the exact mistake being repaired.</p>
+
+<h3>Three attempts, not one</h3>
+<p>One retry was enough when only one read could be floored. Now the loop runs up to three reads,
+waiting 5.6 seconds (just past the floor) between them, and stops the moment it gets a genuinely
+fresh read showing the new value. Worst case is about 11 seconds; after that it defers to the
+normal 30-second background refresh rather than hammering the chains.</p>
+
+<div class="box good"><div class="label">Both paths, one rule</div>
+The identical guess existed in <code>refetchChain</code> &mdash; the BTC/ETH/SOL version, used
+after cross-chain swaps and wallet setup. Both now call the same tested helper, so they cannot
+drift apart. Bitcoin and Ethereum swaps take minutes, so their reads are naturally spaced past the
+floor and this was much harder to hit there &mdash; but the flaw was the same, and it is fixed in
+both.</div>
+
+<h3>One smaller thing</h3>
+<p>A floored response was also being written into the browser's stored snapshot as though it were
+current. The transport flag is now stripped before that write, so a stale copy can never be read
+back later as if it described fresh data.</p>
+
+<h2>4 &middot; So — is it broken for all swaps?</h2>
+<p>It was the same code path for every swap, because there is one shared balance refresh. But how
+easily you hit it depended entirely on timing:</p>
+<table>
+  <tr><th>swap type</th><th>exposure</th></tr>
+  <tr><td>Two Stellar swaps back to back</td>
+      <td class="no">Very likely &mdash; they finish in seconds, so their reads land inside one
+      another's 5-second floor. This is what you hit.</td></tr>
+  <tr><td>A single Stellar swap</td>
+      <td>Usually self-healed: the number was genuinely unchanged, so the one retry fired.</td></tr>
+  <tr><td>CCTP / LI.FI swaps</td>
+      <td>Rarely &mdash; they take minutes, so consecutive reads are far outside the floor.</td></tr>
+</table>
+
+<h2>5 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R64</span></td>
+      <td><strong>Your exact sequence.</strong> Swap USDC → XLM, and as soon as it says Done, swap
+      XLM → USDC. Watch the balance on the swap card and in the drawer.</td>
+      <td>Both settle on the correct post-swap-2 figures within a few seconds, with
+      <span class="no">no page refresh</span>. Previously they stuck on the post-swap-1 numbers
+      until a full reload.</td></tr>
+  <tr><td>2</td>
+      <td>Do a single Stellar swap and watch it.</td>
+      <td>Unchanged from before &mdash; balances update as they always did. The fix only adds
+      reads when a response was actually floored.</td></tr>
+  <tr><td>3</td>
+      <td>Optional, in the network tab: run two quick swaps and look at the
+      <code>/api/wallet/portfolio?...&amp;refresh=1</code> responses.</td>
+      <td>Some carry <code>"floored": true</code> &mdash; and each of those is followed by another
+      read ~5.6s later, until one comes back without the flag.</td></tr>
+</table>
+
+<h2>6 &middot; Commit</h2>
+<p><code>fix(portfolio): a floored refresh is not a fresh read</code> (full message in chat). New
+tests: <code>lib/portfolio/refresh-retry.test.ts</code> (7). Suite: <strong>444 passing, 53
+suites</strong>; lint, prettier, tsc and build all clean.</p>
+
+</body>
+</html>

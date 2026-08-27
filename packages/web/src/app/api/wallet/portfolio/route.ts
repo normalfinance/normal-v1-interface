@@ -81,7 +81,17 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
       const withinFloor = wantsFresh ? await redis.get(floorKey) : null;
       if (!wantsFresh || withinFloor) {
         const cached = await redis.get<PortfolioPayload>(cacheKey);
-        if (cached) return NextResponse.json({ success: true, ...cached });
+        // `floored` = "you asked for fresh and we gave you the cache anyway".
+        // Without it the client could only GUESS whether a response was fresh,
+        // by checking whether a number had moved — and that guess is wrong
+        // exactly when two actions land inside the same floor window (live
+        // 2026-08-27: two Stellar swaps, balances stuck until a page reload).
+        if (cached)
+          return NextResponse.json({
+            success: true,
+            ...cached,
+            floored: !!(wantsFresh && withinFloor),
+          });
       }
       if (wantsFresh && !withinFloor) await redis.set(floorKey, 1, { ex: 5 });
     } catch {

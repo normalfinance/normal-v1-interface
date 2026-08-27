@@ -23,6 +23,13 @@ import {
 // pre-flight) must keep its own direct live read.
 // ---------------------------------------------------------------------------
 
+/** What an awaitable refresh actually achieved. `floored` means the server
+ *  served its cache despite the bypass, so the read proved nothing. */
+export interface FreshRead {
+  assets: PortfolioAsset[] | null;
+  floored: boolean;
+}
+
 export interface UseWalletBalancesResult {
   assets: PortfolioAsset[];
   getAsset: (symbol: string) => PortfolioAsset | undefined;
@@ -37,8 +44,9 @@ export interface UseWalletBalancesResult {
    *  when the promise resolves, the shared data is genuinely fresh. Returns
    *  the fresh assets so callers can verify a specific balance moved (the
    *  #66 arrival race: a refresh fired the instant a bridge delivers can
-   *  read the pre-delivery balance and lock it into the server cache). */
-  refreshFresh: () => Promise<PortfolioAsset[] | null>;
+   *  read the pre-delivery balance and lock it into the server cache) —
+   *  AND whether the server actually honoured the bypass (`floored`). */
+  refreshFresh: () => Promise<FreshRead>;
   /** #32 chunk 2: the companion Normal wallet's Stellar balances, when the
    *  connected wallet is external; null otherwise. Displayed as its own
    *  drawer section — never merged into `assets`. */
@@ -66,30 +74,33 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
       if (!res.ok) throw new Error(`portfolio ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error ?? 'portfolio error');
-      const payload: PortfolioPayload = {
+      const payload: PortfolioPayload & { floored?: boolean } = {
         updatedAt: json.updatedAt,
         assets: json.assets,
+        // Transport-only: whether the server served us its cache despite the
+        // bypass. Stripped before the snapshot is written, so it can never be
+        // read back from localStorage as if it described stored data.
+        floored: json.floored === true,
         // #32 chunk 2: the companion Normal wallet's Stellar balances (only
         // present when the connected wallet is external).
         companionStellar: json.companionStellar ?? null,
       };
-      writeCachedPortfolio(cacheKey, payload);
+      const { floored: _floored, ...snapshot } = payload;
+      writeCachedPortfolio(cacheKey, snapshot);
       return payload;
     },
     [stellar, network]
   );
 
-  const { data, error, isLoading, isValidating, mutate } = useSWR<PortfolioPayload>(
-    swrKey,
-    (key: string) => fetchPayload(key, false),
-    {
-      fallbackData: swrKey ? readCachedPortfolio(swrKey) : undefined,
-      revalidateOnFocus: true,
-      dedupingInterval: 10_000,
-      refreshInterval: 30_000,
-      keepPreviousData: true,
-    }
-  );
+  const { data, error, isLoading, isValidating, mutate } = useSWR<
+    PortfolioPayload & { floored?: boolean }
+  >(swrKey, (key: string) => fetchPayload(key, false), {
+    fallbackData: swrKey ? readCachedPortfolio(swrKey) : undefined,
+    revalidateOnFocus: true,
+    dedupingInterval: 10_000,
+    refreshInterval: 30_000,
+    keepPreviousData: true,
+  });
 
   // Refresh promptly after a send/swap/off-ramp settles — with `refresh=1`, so
   // the server's 15s response cache is skipped for this one fetch and the new
@@ -140,9 +151,11 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
       mutate();
     },
     refreshFresh: async () => {
-      if (!swrKey) return null;
+      if (!swrKey) return { assets: null, floored: false };
       const payload = await mutate(fetchPayload(swrKey, true), { revalidate: false });
-      return payload?.assets ?? null;
+      // `floored` rides on the payload only so it can be read back here; it is
+      // NOT part of the stored snapshot (see fetchPayload).
+      return { assets: payload?.assets ?? null, floored: !!payload?.floored };
     },
   };
 }

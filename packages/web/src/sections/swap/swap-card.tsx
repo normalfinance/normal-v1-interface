@@ -2,6 +2,8 @@
 
 import type { Token } from '@normalfinance/types';
 import type { ChainId } from '@/lib/chains/registry';
+import type { PortfolioAsset } from '@/types/portfolio';
+import type { FreshRead } from '@/hooks/use-wallet-balances';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
 import { BigNumber } from 'bignumber.js';
@@ -23,6 +25,11 @@ import React, { useRef, useMemo, useState, useCallback } from 'react';
 import { getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
+import {
+  FLOOR_WAIT_MS,
+  MAX_REFRESH_ATTEMPTS,
+  shouldRetryPortfolioRead,
+} from '@/lib/portfolio/refresh-retry';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -320,6 +327,33 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     () => ({ BTC: btc.bitcoinAddress, ETH: eth.ethereumAddress, SOL: sol.solanaAddress }),
     [btc.bitcoinAddress, eth.ethereumAddress, sol.solanaAddress]
   );
+  // Doc 95 follow-up (Niko live 2026-08-27, two Stellar swaps back to back):
+  // both post-action reads below used to decide they were done by asking
+  // "did the number change?" — a PROXY for "was that read fresh?". The two
+  // come apart inside the route's 5s bypass floor, where a `refresh=1` request
+  // is handed the 15s cache instead: swap 2's floored response carried swap
+  // 1's data, the number HAD moved, so no retry ran and the balance sat on the
+  // wrong figure until a full page reload. The route now reports `floored`, so
+  // this asks the real question. Decision + bounds are tested in
+  // lib/portfolio/refresh-retry.ts.
+  const refreshUntilFresh = useCallback(
+    async (
+      read: () => Promise<FreshRead>,
+      valueOf: (assets: PortfolioAsset[] | null | undefined) => string | null,
+      before: string | null
+    ) => {
+      for (let attempt = 1; attempt <= MAX_REFRESH_ATTEMPTS; attempt += 1) {
+        const res = await read();
+        const after = valueOf(res.assets);
+        const changed = after !== null && after !== before;
+        if (!shouldRetryPortfolioRead({ floored: res.floored, changed, attempt })) return;
+
+        await new Promise((resolve) => setTimeout(resolve, FLOOR_WAIT_MS));
+      }
+    },
+    []
+  );
+
   // #66: refetchBalance, not refetch — refetch reloads Turnkey ADDRESSES,
   // which is what the #62 arrival gate was accidentally awaiting before.
   // refetchBalance is the awaitable, server-cache-bypassing refresh of the
@@ -349,14 +383,13 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         /* transient — balances below still refresh */
       }
       const before = balancesRef.current[symbol as SwapSymbol]?.balance;
-      const fresh = await hook.refetchBalance();
-      const after = fresh?.find((a) => a.symbol === symbol)?.balance;
-      if (after !== undefined && after === before) {
-        await new Promise((resolve) => setTimeout(resolve, 5_600)); // past the 5s server floor
-        await hook.refetchBalance();
-      }
+      await refreshUntilFresh(
+        () => hook.refetchBalance(),
+        (assets) => assets?.find((a) => a.symbol === symbol)?.balance ?? null,
+        before ?? null
+      );
     },
-    [btc, eth, sol]
+    [btc, eth, sol, refreshUntilFresh]
   );
   // Same verify-and-retry for STELLAR swaps (Niko live 2026-08-21: the
   // modal said Done but the drawer needed 2-3s — the gate's single refresh
@@ -371,16 +404,13 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const refetchStellarAfterSwap = useCallback(async () => {
     const sym = stellarToSymbolRef.current;
     const total = (assets: { symbol: string; balance: string | null }[] | null | undefined) =>
-      (assets ?? [])
-        .filter((a) => a.symbol === sym)
-        .reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
-    const before = total(aggAssetsRef.current);
-    const fresh = await refreshFresh();
-    if (fresh && total(fresh) === before) {
-      await new Promise((resolve) => setTimeout(resolve, 5_600)); // past the 5s server floor
-      await refreshFresh();
-    }
-  }, [refreshFresh]);
+      String(
+        (assets ?? [])
+          .filter((a) => a.symbol === sym)
+          .reduce((sum, a) => sum + (Number(a.balance) || 0), 0)
+      );
+    await refreshUntilFresh(refreshFresh, total, total(aggAssetsRef.current));
+  }, [refreshFresh, refreshUntilFresh]);
 
   // Records a COMPLETED external→companion move for the amount currently
   // being swapped, so a retry after a rejected burn doesn't move twice.
