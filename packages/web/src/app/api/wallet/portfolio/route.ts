@@ -86,12 +86,25 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
         // by checking whether a number had moved — and that guess is wrong
         // exactly when two actions land inside the same floor window (live
         // 2026-08-27: two Stellar swaps, balances stuck until a page reload).
-        if (cached)
+        if (cached) {
+          // ...and how long it has left. Without this the client had to
+          // assume a FULL floor window (5.6s) before asking again, so a read
+          // that arrived 4.5s into the window still waited the whole 5.6s —
+          // which is the 5-10s lag Niko saw at "Updating balances" even once
+          // the retry itself was working. `ttl` is seconds remaining; -1/-2
+          // mean "no expiry"/"gone", both of which fall back client-side.
+          let retryAfterMs: number | undefined;
+          if (wantsFresh && withinFloor) {
+            const ttl = await redis.ttl(floorKey).catch(() => -2);
+            if (typeof ttl === 'number' && ttl > 0) retryAfterMs = ttl * 1000 + 300;
+          }
           return NextResponse.json({
             success: true,
             ...cached,
             floored: !!(wantsFresh && withinFloor),
+            ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
           });
+        }
       }
       if (wantsFresh && !withinFloor) await redis.set(floorKey, 1, { ex: 5 });
     } catch {

@@ -110,10 +110,10 @@ all &mdash; because a floored response tells you nothing about anything, whateve
 say. That is the exact mistake being repaired.</p>
 
 <h3>Three attempts, not one</h3>
-<p>One retry was enough when only one read could be floored. Now the loop runs up to three reads,
-waiting 5.6 seconds (just past the floor) between them, and stops the moment it gets a genuinely
-fresh read showing the new value. Worst case is about 11 seconds; after that it defers to the
-normal 30-second background refresh rather than hammering the chains.</p>
+<p>One retry was enough when only one read could be floored. The loop now runs up to three reads
+and stops the moment it gets a genuinely fresh read showing the new value &mdash; which, in the
+common case, is the very first one. How long it waits between reads, and the ceiling on the whole
+loop, are covered in &sect;6: both had to change once this was in real use.</p>
 
 <div class="box good"><div class="label">Both paths, one rule</div>
 The identical guess existed in <code>refetchChain</code> &mdash; the BTC/ETH/SOL version, used
@@ -161,9 +161,44 @@ easily you hit it depended entirely on timing:</p>
       read ~5.6s later, until one comes back without the flag.</td></tr>
 </table>
 
-<h2>6 &middot; Commit</h2>
+<h2>6 &middot; Follow-up: it was correct but slow</h2>
+<p>You came back with: the balance still lagged, about 5&ndash;10 seconds. That was the retry
+working &mdash; and waiting far longer than it needed to.</p>
+
+<h3>Why it waited so long</h3>
+<p>The client waited a flat <strong>5.6 seconds</strong> before reading again, because that is a
+whole floor window plus a margin. But a whole window is only the right guess when <em>we</em> just
+claimed the floor. If the read was floored, the window is already part-spent &mdash; possibly
+almost over:</p>
+<pre>floor claimed by something else at 0.0s
+our read arrives at            4.5s   → floored, 0.5s of the window left
+old behaviour: wait            5.6s   → next read at 10.1s  <span class="no">(5.1s wasted)</span>
+now:           wait            0.8s   → next read at  5.3s  <span class="ok">(as soon as allowed)</span></pre>
+<p>The server always knew the remaining time &mdash; it is the TTL on the floor key. It now sends
+it as <code>retryAfterMs</code>, and the client waits exactly that, clamped so a wrong or stale
+hint can neither spin the loop nor strand you.</p>
+
+<h3>And a risk I had introduced</h3>
+<p>Worth stating plainly, because it is the more likely cause of &ldquo;Done, then the balance
+moved&rdquo;. The modal's Done waits on this loop, but under its own 15-second cap:</p>
+<pre>await Promise.race([refreshAggregate(), timeout(15_000)]);</pre>
+<p>My change raised the loop from one retry to three. Three flat 5.6-second waits plus the reads
+themselves is 13&ndash;15 seconds &mdash; which can <em>outlive that cap</em>. Done would then
+appear while the last read was still in flight, and the balance would land a moment later. Exactly
+what you described.</p>
+<div class="box good"><div class="label">Now guaranteed, not hoped for</div>
+The loop has an explicit <strong>12-second budget</strong> and stops rather than starting a read
+that would cross it. It is under the modal's 15-second cap by construction, so
+<strong>&ldquo;Done&rdquo; means the balance on screen is the balance after this swap</strong>
+&mdash; and if the loop ever ran out of budget it would hand over to the background poll instead of
+racing the popup. Pinned by tests, including one that simply asserts the budget stays below the
+cap, so moving one without the other fails the suite.</div>
+<p>In practice the common path is now a single read: attempt 1 is usually neither floored nor
+stale, and returns immediately.</p>
+
+<h2>7 &middot; Commit</h2>
 <p><code>fix(portfolio): a floored refresh is not a fresh read</code> (full message in chat). New
-tests: <code>lib/portfolio/refresh-retry.test.ts</code> (7). Suite: <strong>444 passing, 53
+tests: <code>lib/portfolio/refresh-retry.test.ts</code> (17). Suite: <strong>454 passing, 53
 suites</strong>; lint, prettier, tsc and build all clean.</p>
 
 </body>

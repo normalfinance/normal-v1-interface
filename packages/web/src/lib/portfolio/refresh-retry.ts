@@ -27,6 +27,51 @@ export const FLOOR_WAIT_MS = 5_600;
  *  the 30s background poll rather than looping against the chain sources. */
 export const MAX_REFRESH_ATTEMPTS = 3;
 
+/** Never re-read faster than this, however small the server's hint. */
+export const MIN_RETRY_WAIT_MS = 300;
+
+/**
+ * Total time the retry loop may spend, and why the number matters.
+ *
+ * The swap modal's Done is gated on this loop with its own 15s cap:
+ *
+ *   await Promise.race([refreshAggregate(), timeout(15_000)])
+ *
+ * If the loop can outlive that cap, Done appears while a read is still in
+ * flight — the balance then lands a second or two AFTER the popup says the
+ * swap is finished, which is the very thing this work is meant to stop.
+ * Keeping the budget under the cap makes "Done" mean "the balance on screen
+ * is the balance after this swap", by construction rather than by luck.
+ */
+export const REFRESH_BUDGET_MS = 12_000;
+
+/** Is there room for another read plus the wait in front of it? */
+export function canAffordAnotherRead(elapsedMs: number, delayMs: number): boolean {
+  if (!Number.isFinite(elapsedMs) || !Number.isFinite(delayMs)) return false;
+  // Allow for the read itself, not just the wait.
+  return elapsedMs + delayMs + MIN_RETRY_WAIT_MS <= REFRESH_BUDGET_MS;
+}
+
+/**
+ * How long to wait before reading again.
+ *
+ * A flat FLOOR_WAIT_MS assumes a whole floor window is left, which is only
+ * true when WE just claimed it. For a floored response the server tells us
+ * what is actually left, and using it is the difference between a ~0.5s pause
+ * and a needless 5.6s one — the lag still visible at "Updating balances"
+ * after the freshness fix (Niko, 2026-08-28).
+ */
+export function nextReadDelayMs(args: { floored: boolean; retryAfterMs?: number | null }): number {
+  // Not floored: the read was real, so the floor is one we just set — the
+  // whole window is ahead of us.
+  if (!args.floored) return FLOOR_WAIT_MS;
+  const hint = args.retryAfterMs;
+  if (typeof hint !== 'number' || !Number.isFinite(hint) || hint <= 0) return FLOOR_WAIT_MS;
+  // Clamp: a hint can never make us poll faster than MIN, nor wait longer
+  // than a full window (a bad or stale hint must not strand the user).
+  return Math.min(Math.max(hint, MIN_RETRY_WAIT_MS), FLOOR_WAIT_MS);
+}
+
 export function shouldRetryPortfolioRead(args: {
   /** The route served a cached copy despite `refresh=1`. */
   floored: boolean;

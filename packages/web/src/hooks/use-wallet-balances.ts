@@ -28,6 +28,8 @@ import {
 export interface FreshRead {
   assets: PortfolioAsset[] | null;
   floored: boolean;
+  /** Milliseconds until the server's bypass floor lifts, when it told us. */
+  retryAfterMs?: number;
 }
 
 export interface UseWalletBalancesResult {
@@ -74,18 +76,19 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
       if (!res.ok) throw new Error(`portfolio ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error ?? 'portfolio error');
-      const payload: PortfolioPayload & { floored?: boolean } = {
+      const payload: PortfolioPayload & { floored?: boolean; retryAfterMs?: number } = {
         updatedAt: json.updatedAt,
         assets: json.assets,
         // Transport-only: whether the server served us its cache despite the
         // bypass. Stripped before the snapshot is written, so it can never be
         // read back from localStorage as if it described stored data.
         floored: json.floored === true,
+        ...(typeof json.retryAfterMs === 'number' ? { retryAfterMs: json.retryAfterMs } : {}),
         // #32 chunk 2: the companion Normal wallet's Stellar balances (only
         // present when the connected wallet is external).
         companionStellar: json.companionStellar ?? null,
       };
-      const { floored: _floored, ...snapshot } = payload;
+      const { floored: _floored, retryAfterMs: _retryAfterMs, ...snapshot } = payload;
       writeCachedPortfolio(cacheKey, snapshot);
       return payload;
     },
@@ -93,7 +96,7 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
   );
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<
-    PortfolioPayload & { floored?: boolean }
+    PortfolioPayload & { floored?: boolean; retryAfterMs?: number }
   >(swrKey, (key: string) => fetchPayload(key, false), {
     fallbackData: swrKey ? readCachedPortfolio(swrKey) : undefined,
     revalidateOnFocus: true,
@@ -155,7 +158,11 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
       const payload = await mutate(fetchPayload(swrKey, true), { revalidate: false });
       // `floored` rides on the payload only so it can be read back here; it is
       // NOT part of the stored snapshot (see fetchPayload).
-      return { assets: payload?.assets ?? null, floored: !!payload?.floored };
+      return {
+        assets: payload?.assets ?? null,
+        floored: !!payload?.floored,
+        retryAfterMs: payload?.retryAfterMs,
+      };
     },
   };
 }

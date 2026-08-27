@@ -26,8 +26,9 @@ import { getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import {
-  FLOOR_WAIT_MS,
+  nextReadDelayMs,
   MAX_REFRESH_ATTEMPTS,
+  canAffordAnotherRead,
   shouldRetryPortfolioRead,
 } from '@/lib/portfolio/refresh-retry';
 
@@ -342,13 +343,24 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
       valueOf: (assets: PortfolioAsset[] | null | undefined) => string | null,
       before: string | null
     ) => {
+      const startedAt = Date.now();
       for (let attempt = 1; attempt <= MAX_REFRESH_ATTEMPTS; attempt += 1) {
         const res = await read();
         const after = valueOf(res.assets);
         const changed = after !== null && after !== before;
         if (!shouldRetryPortfolioRead({ floored: res.floored, changed, attempt })) return;
 
-        await new Promise((resolve) => setTimeout(resolve, FLOOR_WAIT_MS));
+        const delay = nextReadDelayMs({
+          floored: res.floored,
+          retryAfterMs: res.retryAfterMs,
+        });
+        // The modal's Done awaits this loop under a 15s cap. Outliving that
+        // cap would show Done with the balance still catching up — exactly
+        // the symptom being fixed. Stop instead and let the background poll
+        // finish the job.
+        if (!canAffordAnotherRead(Date.now() - startedAt, delay)) return;
+
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     },
     []

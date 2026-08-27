@@ -1,4 +1,12 @@
-import { FLOOR_WAIT_MS, MAX_REFRESH_ATTEMPTS, shouldRetryPortfolioRead } from './refresh-retry';
+import {
+  FLOOR_WAIT_MS,
+  nextReadDelayMs,
+  REFRESH_BUDGET_MS,
+  MIN_RETRY_WAIT_MS,
+  canAffordAnotherRead,
+  MAX_REFRESH_ATTEMPTS,
+  shouldRetryPortfolioRead,
+} from './refresh-retry';
 
 const at = (attempt: number, floored: boolean, changed: boolean) =>
   shouldRetryPortfolioRead({ attempt, floored, changed });
@@ -40,5 +48,64 @@ describe('shouldRetryPortfolioRead', () => {
   it('waits past the server floor, not up to it', () => {
     // A wait equal to the floor races the expiry and gets floored again.
     expect(FLOOR_WAIT_MS).toBeGreaterThan(5_000);
+  });
+});
+
+describe('nextReadDelayMs', () => {
+  it('waits a full window when WE just claimed the floor', () => {
+    // A real read sets a fresh 5s floor, so the whole window is ahead of us.
+    expect(nextReadDelayMs({ floored: false })).toBe(FLOOR_WAIT_MS);
+    expect(nextReadDelayMs({ floored: false, retryAfterMs: 400 })).toBe(FLOOR_WAIT_MS);
+  });
+
+  it('waits only what the floor has left when the server told us', () => {
+    // The 5-10s lag: a read arriving 4.5s into the window used to wait the
+    // whole 5.6s again instead of the ~0.8s actually remaining.
+    expect(nextReadDelayMs({ floored: true, retryAfterMs: 800 })).toBe(800);
+    expect(nextReadDelayMs({ floored: true, retryAfterMs: 2_300 })).toBe(2_300);
+  });
+
+  it('never polls faster than the minimum', () => {
+    expect(nextReadDelayMs({ floored: true, retryAfterMs: 10 })).toBe(MIN_RETRY_WAIT_MS);
+  });
+
+  it('never waits longer than a full window, whatever the hint claims', () => {
+    // A stale or wrong hint must not strand the user on an old balance.
+    expect(nextReadDelayMs({ floored: true, retryAfterMs: 60_000 })).toBe(FLOOR_WAIT_MS);
+  });
+
+  it('falls back to the full window when the hint is missing or junk', () => {
+    expect(nextReadDelayMs({ floored: true })).toBe(FLOOR_WAIT_MS);
+    expect(nextReadDelayMs({ floored: true, retryAfterMs: null })).toBe(FLOOR_WAIT_MS);
+    expect(nextReadDelayMs({ floored: true, retryAfterMs: NaN })).toBe(FLOOR_WAIT_MS);
+    expect(nextReadDelayMs({ floored: true, retryAfterMs: -1 })).toBe(FLOOR_WAIT_MS);
+  });
+});
+
+describe('canAffordAnotherRead', () => {
+  it('allows a read that fits inside the budget', () => {
+    expect(canAffordAnotherRead(0, 5_600)).toBe(true);
+    expect(canAffordAnotherRead(5_600, 800)).toBe(true);
+  });
+
+  it('refuses one that would outlive the modal Done gate', () => {
+    // Three flat 5.6s waits would exceed the 15s cap the swap modal races
+    // this loop against — Done would appear with the balance still catching
+    // up, which is the exact symptom this work exists to remove.
+    expect(canAffordAnotherRead(11_200, 5_600)).toBe(false);
+    expect(canAffordAnotherRead(REFRESH_BUDGET_MS, 0)).toBe(false);
+  });
+
+  it('leaves room for the read itself, not just the wait', () => {
+    expect(canAffordAnotherRead(REFRESH_BUDGET_MS - 5_600, 5_600)).toBe(false);
+  });
+
+  it('refuses on junk timings rather than looping', () => {
+    expect(canAffordAnotherRead(NaN, 100)).toBe(false);
+    expect(canAffordAnotherRead(0, Infinity)).toBe(false);
+  });
+
+  it('stays under the modal cap it exists to respect', () => {
+    expect(REFRESH_BUDGET_MS).toBeLessThan(15_000);
   });
 });
