@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Run Explainer — The Crons Never Ran</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>The Crons Never Ran</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 3 (2026-08-27). The
+scheduled jobs that finish bridges and collect fees have never executed — here's the evidence,
+the cause, and the fix.</p>
+
+<h2>1 · What a cron is, and why we have four</h2>
+<p>A cron is just "run this code every N minutes". Blockchain work needs it because steps can't
+all happen at once: you burn on one chain, <em>wait</em> for the network to confirm, then mint on
+the other. Something has to be awake to do the second half.</p>
+<table>
+  <tr><th>job</th><th>every</th><th>what it does</th><th>without it</th></tr>
+  <tr><td><code>cctp-advance</code></td><td>2 min</td>
+      <td>Drives the bridge: burn confirmed → get Circle's attestation → mint → complete</td>
+      <td class="no">The bridge stalls. Only your open browser tab does this today</td></tr>
+  <tr><td><code>fee-escrow-sweep</code></td><td>2 min</td>
+      <td>Submits the 0.5% fee held in escrow when it couldn't go out inline</td>
+      <td class="no">Our fees are never collected — silent revenue loss</td></tr>
+  <tr><td><code>ramp-reconcile</code></td><td>5 min</td>
+      <td>Clears abandoned Buy/Sell checkouts, detects arrivals with no tab open</td>
+      <td>Pending banners linger (already worked around in the read path)</td></tr>
+  <tr><td><code>dune-sync</code></td><td>4 h</td>
+      <td>Pushes metrics to the Dune dashboard</td><td>Stale analytics only</td></tr>
+</table>
+
+<h2>2 · The evidence</h2>
+<p>Every cron stamps a heartbeat into Redis when it finishes. Reading those keys directly:</p>
+<pre>cctp-advance       NEVER RUN
+fee-escrow-sweep   NEVER RUN
+ramp-reconcile     NEVER RUN
+dune-sync          2026-08-24T21:13:03Z   (2.7 days ago)</pre>
+<div class="box bad"><div class="label">What this means</div>
+Three of the four jobs have <strong>never executed once, in any environment</strong>. Every CCTP
+bridge this app has ever completed was finished by a user's browser tab staying open — which is
+exactly why the 12 USDC had to be minted by hand, and why doc 95's "the tab is load-bearing"
+finding is the operating reality rather than a theoretical risk.</div>
+
+<h2>3 · Two independent causes</h2>
+<table>
+  <tr><th>environment</th><th>branch</th><th>cron config there</th><th>why nothing runs</th></tr>
+  <tr><td>Production (normalfinance.io)</td><td><code>master</code></td>
+      <td><strong>only <code>dune-sync</code></strong></td>
+      <td>Last deployed 2026-07-23 — 267 commits behind. The other three crons were added to
+      <code>develop</code> afterwards and never reached master</td></tr>
+  <tr><td>Staging</td><td><code>develop</code></td><td>all four</td>
+      <td>Vercel runs crons <strong>only on Production deployments</strong>. <code>develop</code>
+      gets a Preview deployment, so its cron list is registered nowhere</td></tr>
+</table>
+
+<h2>4 · The discovery that changes the plan</h2>
+<div class="box good"><div class="label">Production's cron would cover staging too</div>
+The cron reads <strong>the database</strong>, not the deployment. <code>advancePendingTransfers()</code>
+selects every pending transfer with no environment filter, and each row carries its own
+<code>network</code> field which the code follows. Since staging and production share one
+Supabase database, <strong>merging <code>develop</code> → <code>master</code> gives both
+environments working crons</strong> — production's scheduler would pick up and finish
+staging-created bridges.
+<br><br>
+The catch: production's cron runs <em>production's code</em>. Any NEW cron logic — like Wave 1's
+server-side pivot — only takes effect once it is on master. So merging fixes today's stalling;
+it does not let you test tomorrow's cron changes on staging first.</div>
+
+<h2>5 · What shipped: an external scheduler</h2>
+<p><code>.github/workflows/cron-scheduler.yml</code> — a GitHub Actions workflow that calls the
+same endpoints on a schedule, from outside Vercel. It works for staging <em>and</em> production,
+independent of Vercel's preview limitation and of whatever silenced <code>dune-sync</code>.</p>
+<ul>
+  <li>Runs every 5 minutes (GitHub's minimum), plus a manual "Run workflow" button with a
+  staging / production / both selector.</li>
+  <li>Prints each job's heartbeat stamp in the run log, so one glance answers "did it work?".</li>
+  <li><strong>Fails loudly when it does nothing.</strong> If no base URL is configured it errors
+  instead of reporting success — silence must never look like health (that rule cost us a week
+  of ghost banners).</li>
+  <li>The endpoints are idempotent and secret-protected, so running alongside Vercel's own crons
+  is safe.</li>
+</ul>
+
+<h3>Setup — repo → Settings → Secrets and variables → Actions</h3>
+<table>
+  <tr><th>secret</th><th>value</th></tr>
+  <tr><td><code>CRON_SECRET</code></td><td>the same value as the Vercel env var</td></tr>
+  <tr><td><code>STAGING_BASE_URL</code></td><td><code>https://staging.normalfinance.io</code></td></tr>
+  <tr><td><code>PROD_BASE_URL</code></td><td><code>https://normalfinance.io</code> (optional)</td></tr>
+</table>
+
+<div class="box warn"><div class="label">Cost — read before enabling on a private repo</div>
+GitHub bills Actions per minute and rounds each run up to a whole minute. Every 5 minutes is
+~8,600 minutes/month, well past the free allowance on a private repo. If that matters, either
+raise the interval to 15–30 minutes (bridges settle a little later) or use a free HTTP scheduler
+instead — <strong>cron-job.org</strong> (1-minute granularity, supports the Authorization
+header), Upstash QStash schedules (we already use Upstash), or a second Vercel project whose
+Production Branch is <code>develop</code>. The workflow is the fastest path; it is not the only
+one.</div>
+
+<h2>6 · How to verify it's alive</h2>
+<ol>
+  <li>Add the secrets, then Actions → "Cron scheduler" → <strong>Run workflow</strong> → target
+  <code>staging</code>. The log should show three ✅ lines with fresh heartbeat timestamps.</li>
+  <li>Wait ~10 minutes without touching anything, then re-read the heartbeats. If the timestamps
+  moved on their own, the schedule is live.</li>
+  <li>The real proof: start a CCTP swap on staging, <strong>close the tab</strong> after signing,
+  and come back later. The transfer should have completed without you.</li>
+</ol>
+
+<h2>7 · Commit</h2>
+<p><code>ci: external cron scheduler — the Vercel crons have never run</code> (full message in
+chat). Files: <code>.github/workflows/cron-scheduler.yml</code>, this doc.</p>
+
+</body>
+</html>
