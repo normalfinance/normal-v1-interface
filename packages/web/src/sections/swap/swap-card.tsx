@@ -384,11 +384,19 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
 
   // Records a COMPLETED external→companion move for the amount currently
   // being swapped, so a retry after a rejected burn doesn't move twice.
-  // In-memory only, and cleared the moment a swap completes (resetInput).
+  //
+  // Doc 95 Wave 3: `resetInput` is handed to ALL THREE engines, so finishing
+  // any unrelated swap used to clear this guard — fund 100 USDC from Lobstr,
+  // have the CCTP swap fail, do a Soroswap swap, retry, and the money moved
+  // a SECOND time. The guard now clears only when the amount itself changes,
+  // which is the real "this is a different swap" signal.
   const movedForAmount = useRef<string | null>(null);
   const resetInput = useCallback(() => {
-    movedForAmount.current = null;
     setAmountIn('');
+  }, []);
+  const setAmountAndClearMove = useCallback((v: string) => {
+    movedForAmount.current = null;
+    setAmountIn(v);
   }, []);
   // Dynamic-gas write-back is a TOKEN amount — flip fiat mode off so the
   // field can't reinterpret 0.0085 ETH as $0.0085 (sweep 2026-08-21).
@@ -477,16 +485,32 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                 );
                 return true;
               }
+              // Doc 95 Wave 3: read the companion BEFORE sending. The old
+              // check asked "does the companion now hold >= the amount?",
+              // which is true on the first probe whenever it already held
+              // enough — the same "a BALANCE can never prove a move" mistake
+              // the comment above warns about, one level down. Only a RISE of
+              // the amount proves this payment landed.
+              let baselineUsdc = BigNumber(0);
+              try {
+                baselineUsdc = BigNumber(
+                  (await probeCompanion(companionStellar.address, config)).usdcBalance
+                );
+              } catch {
+                /* unreadable baseline — fall back to the absolute test below */
+              }
               const hash = await stellarSend({
                 destination: companionStellar.address,
                 token: tokenBySymbol.USDC,
                 amount: amountUsdc,
               });
               if (!hash) return false;
+              // Horizon lags by a fraction; allow a hair of tolerance.
+              const arrivalTarget = baselineUsdc.plus(amountUsdc).minus(0.0000001);
               for (let i = 0; i < 10; i += 1) {
                 try {
                   const probe = await probeCompanion(companionStellar.address, config);
-                  if (BigNumber(probe.usdcBalance).gte(amountUsdc)) {
+                  if (BigNumber(probe.usdcBalance).gte(arrivalTarget)) {
                     // Verified visible on the companion — a retry may skip it.
                     movedForAmount.current = amountUsdc;
                     return true;
@@ -585,9 +609,9 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const handleMax = async () => {
     const maxToken = await engine.getMaxToken();
     if (isFiatMode && fromPrice.gt(0)) {
-      setAmountIn(maxToken.multipliedBy(fromPrice).toFixed(2, BigNumber.ROUND_DOWN));
+      setAmountAndClearMove(maxToken.multipliedBy(fromPrice).toFixed(2, BigNumber.ROUND_DOWN));
     } else {
-      setAmountIn(maxToken.toFixed(Math.min(fromDecimals, 8), BigNumber.ROUND_DOWN));
+      setAmountAndClearMove(maxToken.toFixed(Math.min(fromDecimals, 8), BigNumber.ROUND_DOWN));
     }
   };
 
@@ -841,7 +865,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               value={amountIn}
               placeholder="0"
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setAmountIn(sanitizeAmountInput(e.target.value))
+                setAmountAndClearMove(sanitizeAmountInput(e.target.value))
               }
               onKeyDown={(e: React.KeyboardEvent) => e.key === '-' && e.preventDefault()}
               sx={{

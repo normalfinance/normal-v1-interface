@@ -29,6 +29,7 @@ import { buildAuthHeaders } from '@/utils/http';
 import { wireToUsdc } from '@/lib/cctp/decimals';
 import { runCctpRefund } from '@/lib/cctp/refund';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
+import { scopedAmountWire } from '@/lib/cctp/amounts';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
@@ -321,14 +322,17 @@ export function CctpRecoveryBanner({ addresses }: Props) {
           // INBOUND: burn whatever USDC actually landed on the user's Base address.
           const bal = await readBaseUsdc(network, tr.srcAddress);
           if (bal === 0n) throw new Error(t('No USDC found on Base — it may already be bridging.'));
+          // Doc 95 Wave 3: burn this row's share, not the whole address —
+          // a sibling transfer's USDC may be sitting here too.
+          const burnWire = scopedAmountWire(bal, BigInt(tr.amountWire ?? '0'));
           const { burnTxHash } = await burnUsdcOnEvm({
             network,
             chain: 'base',
             evmAddress: tr.srcAddress,
-            amountWire: bal,
+            amountWire: burnWire,
             stellarRecipient: tr.destAddress,
           });
-          await patch(tr.id, headers, { burnTxHash, dstAmount: wireToUsdc(bal) });
+          await patch(tr.id, headers, { burnTxHash, dstAmount: wireToUsdc(burnWire) });
           enqueueSnackbar(t('Bridging your USDC to Stellar — completes automatically (~20 min).'), {
             variant: 'info',
           });

@@ -156,51 +156,83 @@ async function executeEvm(
     }
   }
 
-  const unsigned = legacyPrice
-    ? serializeTransaction({
-        ...common,
-        type: 'legacy',
-        gasPrice: legacyPrice,
-      })
-    : serializeTransaction({
-        ...common,
-        type: 'eip1559',
-        maxFeePerGas,
-        maxPriorityFeePerGas: max(
-          BigInt(tx.maxPriorityFeePerGas ?? '0'),
-          liveFees?.maxPriorityFeePerGas ?? 0n
-        ),
-      });
+  const buildUnsigned = (useNonce: number) =>
+    legacyPrice
+      ? serializeTransaction({
+          ...common,
+          nonce: useNonce,
+          type: 'legacy',
+          gasPrice: legacyPrice,
+        })
+      : serializeTransaction({
+          ...common,
+          nonce: useNonce,
+          type: 'eip1559',
+          maxFeePerGas,
+          maxPriorityFeePerGas: max(
+            BigInt(tx.maxPriorityFeePerGas ?? '0'),
+            liveFees?.maxPriorityFeePerGas ?? 0n
+          ),
+        });
 
   const turnkey = await getTurnkeyClient();
-  log('ETH: requesting passkey signature');
-  // Serialized + fast-fail-retried like every other passkey ceremony (#51 —
-  // this path was missed in the original guard rollout and failed live with
-  // WebAuthn NotAllowedError, 2026-08-14).
-  const signResult = await runWebauthnCeremony(() =>
-    turnkey.signTransaction({
-      type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
-      timestampMs: String(Date.now()),
-      organizationId: subOrgId,
-      parameters: {
-        signWith: ethereumAddress,
-        unsignedTransaction: unsigned.startsWith('0x') ? unsigned.slice(2) : unsigned,
-        type: 'TRANSACTION_TYPE_ETHEREUM',
-      },
-    })
-  );
-  const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
-  if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
 
-  log('ETH: broadcasting');
-  // Return as soon as the tx is broadcast — the status modal tracks the
-  // receipt + bridge non-blockingly (a dropped/underpriced tx surfaces there
-  // as "Failed", not as a frozen button).
-  const hash = await client.sendRawTransaction({
-    serializedTransaction: (signedTx.startsWith('0x')
-      ? signedTx
-      : `0x${signedTx}`) as `0x${string}`,
-  });
+  // Doc 95 Wave 3: the nonce is read up here, then gas/balance checks and a
+  // 10-30s passkey ceremony happen before the broadcast. Anything else this
+  // wallet sends meanwhile (a CCTP leg, a second tab) claims it first and the
+  // swap dies with "nonce too low". Rebuild with a fresh nonce and re-sign —
+  // the extra prompt is unavoidable, because the signature covers the nonce.
+  let hash: `0x${string}` | null = null;
+  for (let attempt = 0; hash === null; attempt++) {
+    const useNonce =
+      attempt === 0
+        ? nonce
+        : await client.getTransactionCount({
+            address: ethereumAddress as `0x${string}`,
+            blockTag: 'pending',
+          });
+    const unsigned = buildUnsigned(useNonce);
+
+    log(attempt === 0 ? 'ETH: requesting passkey signature' : 'ETH: nonce race — re-signing');
+    // Serialized + fast-fail-retried like every other passkey ceremony (#51 —
+    // this path was missed in the original guard rollout and failed live with
+    // WebAuthn NotAllowedError, 2026-08-14).
+    const signResult = await runWebauthnCeremony(() =>
+      turnkey.signTransaction({
+        type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
+        timestampMs: String(Date.now()),
+        organizationId: subOrgId,
+        parameters: {
+          signWith: ethereumAddress,
+          unsignedTransaction: unsigned.startsWith('0x') ? unsigned.slice(2) : unsigned,
+          type: 'TRANSACTION_TYPE_ETHEREUM',
+        },
+      })
+    );
+    const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
+    if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
+
+    log('ETH: broadcasting');
+    // Return as soon as the tx is broadcast — the status modal tracks the
+    // receipt + bridge non-blockingly (a dropped/underpriced tx surfaces there
+    // as "Failed", not as a frozen button).
+    try {
+      hash = await client.sendRawTransaction({
+        serializedTransaction: (signedTx.startsWith('0x')
+          ? signedTx
+          : `0x${signedTx}`) as `0x${string}`,
+      });
+    } catch (sendErr: any) {
+      const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
+      if (
+        attempt === 0 &&
+        /nonce too low|already known|replacement transaction underpriced/i.test(m)
+      ) {
+        continue;
+      }
+      throw sendErr;
+    }
+  }
   log('ETH: broadcast hash', hash);
   return hash;
 }

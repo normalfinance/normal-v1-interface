@@ -50,6 +50,24 @@ The tab must never be required after signing.
 - `app/api/cctp/transfers/route.ts:58` — `refund:true` from the body skips the min + cap; cap parse `NaN`-fails open. Validate refund server-side; harden the cap parse.
 
 ## Wave 3 — Broadcast races (money: double-spend / stranded / bad-seq)
+
+> **STATUS: SHIPPED 2026-08-27, run 4** — explainer `99-explainer-broadcast-races.html`;
+> 7 new tests (`lib/cctp/amounts.test.ts`) built from the LIVE incident numbers.
+> The whole-balance bug was caught in production data, not just in review: two BTC swaps
+> 30 min apart, row B's burn took row A's 15.59 USDC, row C's took 32.40 (~2 transfers),
+> and row A (`cmtakn7t00`) is permanently stuck in CREATED with nothing left to burn. No
+> funds lost — same user, same destination — but one transfer can never complete and the
+> feed misreports amounts. Fixed by one shared rule (`lib/cctp/amounts.ts`):
+> `take = min(available, quoted + 5% slippage headroom)`, which ALSO fixes the opposite
+> client-side bug (clamping to the quoted minimum stranded positive slippage on Base).
+> Also landed: hash persisted on broadcast (a receipt-wait failure used to discard a real
+> burn and trigger a second one); nonce rebuild ported to BOTH server signers and the
+> LI.FI ETH leg; BTC broadcast made idempotent by txid; funding guard no longer wiped by
+> unrelated engines and now verifies baseline+delta; Stellar relayer retries a sequence
+> collision.
+> **Not yet done in this wave:** the setup-dialog's second funding path
+> (`normal-wallet-setup.ts:48` — balance-based readiness) still needs unifying with the
+> engine's guard; tracked into Wave 4.
 - `server/autopilot-burn.ts:96` + `autopilot-pivot.ts:78` — server signers lack the nonce-rebuild the client twins have (my own gap). Port it.
 - `server/autopilot-burn.ts:119` + `burn/route.ts` — receipt-wait throws after a successful broadcast → hash discarded → 502 → engine does a SECOND burn. Persist the hash before the receipt wait.
 - `autopilot/pivot/route.ts:139` / `burn/route.ts` — balance read then whole-balance pivot minutes later sweeps a *second* transfer's minted USDC into this row. Scope to the row's amount, not the address balance.

@@ -27,6 +27,7 @@ import { runCctpRefund } from '@/lib/cctp/refund';
 import { useDebounce } from '@/hooks/use-debounce';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executeLifiSwap } from '@/lib/lifi/execute';
+import { scopedAmountWire } from '@/lib/cctp/amounts';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
@@ -725,7 +726,11 @@ export function useCctpEngine({
             /* transient RPC hiccup — retry next interval */
           }
           if (bal >= baseline + (target * 95n) / 100n) {
-            arrivedWire = bal - baseline > target ? target : bal - baseline;
+            // Doc 95 Wave 3: one shared rule. The old clamp to `target`
+            // stranded positive slippage on Base forever; the server's
+            // whole-balance read swept siblings. scopedAmountWire does both
+            // correctly: own share + slippage headroom, never more.
+            arrivedWire = scopedAmountWire(bal - baseline, target);
             break;
           }
           // Refund honesty (live 2026-08-20: a refunded bridge leg polled a
@@ -907,6 +912,10 @@ export function useCctpEngine({
       addresses,
       amount,
       makePatcher,
+      // Doc 95 Wave 3: runRefund closes over the wallet addresses. Omitting
+      // it here let a stale copy be captured, so an auto-refund could target
+      // a previous session's addresses — a money path, so it is a real dep.
+      runRefund,
       autopilotActive,
       tryAutopilot,
       finish,

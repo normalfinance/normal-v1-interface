@@ -18,8 +18,8 @@
 # alternatives that do the same job: cron-job.org (free, 1-minute granularity,
 # supports the Authorization header), Upstash QStash schedules (we already use
 # Upstash), or a second Vercel project whose Production Branch is `develop`.
-# Raise SCHEDULE below to every 15-30 minutes if minutes are a concern —
-# bridges will simply settle a little later.
+# The schedule below is already set to a cheap, realistic 15 minutes; see the
+# comment there for the measurements behind that choice.
 #
 # SETUP (repo → Settings → Secrets and variables → Actions):
 #   CRON_SECRET       - same value as the Vercel env var
@@ -31,9 +31,21 @@ name: Cron scheduler
 
 on:
   schedule:
-    # GitHub's minimum interval is 5 minutes, and runs can be delayed under
-    # load — treat this as "at least every 5 minutes", not a hard guarantee.
-    - cron: '*/5 * * * *'
+    # 15 minutes, deliberately — NOT 5.
+    #
+    # Two reasons, both measured rather than assumed (2026-08-27):
+    #  1. Punctuality: GitHub does not honour short intervals. A '*/5' schedule
+    #     had produced ZERO automatic runs 20 minutes after merging, because
+    #     GitHub delays `schedule` under load. Asking for 5 buys nothing.
+    #  2. Cost: every run is billed as a whole minute even though the job takes
+    #     ~8 seconds. '*/5' ≈ 8,600 min/month; this ≈ 2,900.
+    #
+    # Consequence to accept: a bridge can sit up to ~15 minutes before the
+    # scheduler advances it. It still completes with nobody watching, which is
+    # the point. For faster settlement use the "Run workflow" button, an
+    # Upstash QStash schedule (same account as our Redis), or — the real fix —
+    # merge develop into master so Vercel's own 2-minute crons take over.
+    - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       target:

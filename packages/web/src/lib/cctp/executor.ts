@@ -189,12 +189,38 @@ export async function executeStellarMintAndForward(params: {
     .setTimeout(120)
     .build();
 
-  tx = await server.prepareTransaction(tx);
-  tx.sign(keypair);
-  const sent = await server.sendTransaction(tx);
-  if (sent.status === 'ERROR') {
-    throw new Error(`mint_and_forward submit failed: ${JSON.stringify(sent.errorResult ?? sent)}`);
+  // Doc 95 Wave 3: two mints for DIFFERENT rows can be submitted at once (a
+  // client poke racing the cron, or two cron instances), and they share one
+  // relayer keypair — the loser gets tx_bad_seq. The row itself is already
+  // claim-guarded against double-minting, so the only thing needed here is
+  // to rebuild on a stale sequence and try again.
+  let sent: Awaited<ReturnType<typeof server.sendTransaction>> | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      const fresh = await server.getAccount(keypair.publicKey());
+      tx = new TransactionBuilder(fresh, { fee: '10000000', networkPassphrase: passphrase })
+        .addOperation(
+          contract.call(
+            'mint_and_forward',
+            xdr.ScVal.scvBytes(Buffer.from(hexToBytes(params.message))),
+            xdr.ScVal.scvBytes(Buffer.from(hexToBytes(params.attestation)))
+          )
+        )
+        .setTimeout(120)
+        .build();
+    }
+    tx = await server.prepareTransaction(tx);
+    tx.sign(keypair);
+    sent = await server.sendTransaction(tx);
+    if (sent.status !== 'ERROR') break;
+    const reason = JSON.stringify(sent.errorResult ?? sent);
+    if (!/tx_bad_seq|txBadSeq/i.test(reason) || attempt === 2) {
+      throw new Error(`mint_and_forward submit failed: ${reason}`);
+    }
+    console.warn(`[cctp relayer] sequence collision, rebuilding (attempt ${attempt + 1}/3)`);
+    await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
   }
+  if (!sent) throw new Error('mint_and_forward submit failed: no response');
   return sent.hash;
 }
 

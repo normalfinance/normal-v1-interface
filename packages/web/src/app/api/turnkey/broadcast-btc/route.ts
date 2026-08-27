@@ -42,16 +42,50 @@ export const POST = withAuth(async (request: NextRequest) => {
     return NextResponse.json({ error: 'Failed to finalize signed transaction' }, { status: 400 });
   }
 
+  // Doc 95 Wave 3: the txid is a property of the SIGNED transaction, so we
+  // can compute it before broadcasting. That makes the broadcast idempotent:
+  // if the network accepted it but we never saw the response (timeout, socket
+  // reset), we can ask whether the txid exists rather than reporting a
+  // failure for a transaction that is already in the mempool — which used to
+  // send users back to re-sign and risk a double spend of the same UTXOs.
+  let expectedTxid = '';
+  try {
+    expectedTxid = Psbt.fromHex(signedTxHex, { network: networks.bitcoin })
+      .extractTransaction()
+      .getId();
+  } catch {
+    /* non-fatal: we simply lose the idempotency check below */
+  }
+
+  const alreadyBroadcast = async (): Promise<boolean> => {
+    if (!expectedTxid) return false;
+    try {
+      const probe = await fetch(`https://mempool.space/api/tx/${expectedTxid}`, {
+        signal: AbortSignal.timeout(8000),
+      });
+      return probe.ok;
+    } catch {
+      return false;
+    }
+  };
+
   try {
     const res = await fetch('https://mempool.space/api/tx', {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: rawTxHex,
+      signal: AbortSignal.timeout(20000),
     });
 
     const responseText = await res.text();
 
     if (!res.ok) {
+      // Already in the mempool? Then this is a success we simply didn't hear
+      // about — most often a retry of a request whose response was lost.
+      if (await alreadyBroadcast()) {
+        logger.log('[broadcast-btc] already in mempool, treating as success:', expectedTxid);
+        return NextResponse.json({ txid: expectedTxid });
+      }
       logger.error('[broadcast-btc] Mempool rejected tx:', responseText);
       return NextResponse.json(
         { error: responseText || `Broadcast failed (${res.status})` },
@@ -65,6 +99,11 @@ export const POST = withAuth(async (request: NextRequest) => {
 
     return NextResponse.json({ txid });
   } catch (error) {
+    // Same rule on a thrown request: the transaction may well be live.
+    if (await alreadyBroadcast()) {
+      logger.log('[broadcast-btc] request failed but tx is in mempool:', expectedTxid);
+      return NextResponse.json({ txid: expectedTxid });
+    }
     logger.error('[broadcast-btc] Error:', error);
     return NextResponse.json({ error: 'Failed to broadcast transaction' }, { status: 500 });
   }

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { BigNumber } from 'bignumber.js';
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/with-auth';
+import { scopedAmountWire } from '@/lib/cctp/amounts';
 import { autopilotEnabled } from '@/server/autopilot-signer';
 import { autopilotPivotSwap } from '@/server/autopilot-pivot';
 import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
@@ -115,6 +116,12 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     if (bal === 0n) {
       return NextResponse.json({ success: false, error: 'No USDC on Base yet' }, { status: 409 });
     }
+    // Doc 95 Wave 3: pivot only this row's share — the whole-balance read
+    // could sweep a sibling transfer's freshly minted USDC into this swap.
+    const pivotWire = scopedAmountWire(bal as bigint, BigInt(tr.amountWire));
+    if (pivotWire === 0n) {
+      return NextResponse.json({ success: false, error: 'No USDC on Base yet' }, { status: 409 });
+    }
 
     // Dust gas for the approve + pivot — same locked core as /api/cctp/gas-topup,
     // with a real receipt wait instead of the banner's blind sleep.
@@ -136,9 +143,20 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       evmAddress: tr.destAddress,
       toSymbol,
       toAddress,
-      amountWire: bal,
+      amountWire: pivotWire,
       denyBridges,
       denyExchanges: denyExchanges.length ? denyExchanges : undefined,
+      // Doc 95 Wave 3: record the pivot hash on broadcast, before the
+      // receipt wait can lose it.
+      onBroadcast: async (hash, label) => {
+        if (label !== 'pivot') return;
+        await prisma.cctpTransfer
+          .updateMany({
+            where: { id: tr.id, dstSwapTxHash: null },
+            data: { dstSwapTxHash: hash },
+          })
+          .catch(() => {});
+      },
     });
 
     // Mirror the PATCH route: hash + delivered amount land once; a racing
