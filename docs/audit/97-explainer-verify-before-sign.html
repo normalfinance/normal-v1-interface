@@ -68,12 +68,24 @@ decides where your coins go. We signed LI.FI's without looking at the outputs. N
 signing, we refuse if:</p>
 <table>
   <tr><th>check</th><th>what it prevents</th></tr>
-  <tr><td>exactly one real payment output (ignoring the OP_RETURN memo)</td><td>change or a slice being routed to an address that isn't the bridge or you</td></tr>
-  <tr><td>that output pays at least the quoted amount</td><td>depositing less than the swap you agreed to</td></tr>
-  <tr><td>miner fee ≤ 25% of the amount (when all inputs are yours)</td><td>a malformed route burning most of your BTC as fee</td></tr>
-  <tr><td>an input that's ours but unsignable → error, not skipped</td><td>a half-signed transaction that dies at broadcast <em>after</em> your passkey</td></tr>
-  <tr><td>honour the input's declared signature type</td><td>a signature that looks valid locally and is rejected by the network — "sent but never arrived"</td></tr>
+  <tr><td>the transaction may not <strong>spend</strong> more than the quoted amount plus fee
+  headroom (25%, or 10,000 sats on small swaps)</td><td>a route burning most of your BTC as fee,
+  or one that keeps your change</td></tr>
+  <tr><td>an input that's ours but unsignable → error, not skipped</td><td>a half-signed
+  transaction that dies at broadcast <em>after</em> your passkey</td></tr>
+  <tr><td>honour the input's declared signature type</td><td>a signature that looks valid locally
+  and is rejected by the network — "sent but never arrived"</td></tr>
 </table>
+<div class="box warn"><div class="label">Corrected same day — my bug, and how it was found</div>
+The first version of this check also demanded "exactly one payment output", which
+<strong>refused every real BTC swap</strong> (live error: "found 3"). That assumption was wrong:
+decoding an actual LI.FI transaction shows <strong>five</strong> outputs — the bridge deposit, an
+OP_RETURN memo, your change, the route's protocol fee, and <em>our own</em> 0.5% integrator-fee
+wallet — and the shape differs per bridge. Nothing was at risk (it refused <em>before</em>
+signing), but BTC swaps were blocked until the fix. The replacement assumes no structure at all,
+and the real transaction's numbers are now pinned in
+<code>btc-spend-verdict.test.ts</code> so the check can never be tightened back into a shape
+assumption without a failing test.</div>
 <p class="box warn"><span class="label">Unchanged on purpose</span>
 We still never <em>modify</em> the PSBT — altering a Chainflip deposit can make it unrefundable.
 We only refuse to sign it.</p>

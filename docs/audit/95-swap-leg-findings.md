@@ -36,6 +36,13 @@ The tab must never be required after signing.
 > Key de-risking step: the fee-in-XDR check was verified against the LIVE Soroswap build API
 > before shipping (the referral address is embedded as its raw 32-byte key), so it enforces
 > from day one instead of running log-only.
+> **Same-day regression + fix:** the PSBT check initially demanded "exactly one payment output"
+> and refused every real BTC swap (live). Decoding an actual LI.FI PSBT showed five outputs
+> (deposit, OP_RETURN, our change, route protocol fee, our own integrator-fee wallet). Replaced
+> with a structure-agnostic overspend bound in `lib/lifi/btc-spend-verdict.ts`, pinned by 7 tests
+> built from the real transaction's numbers. Lesson recorded: verify provider data shapes
+> empirically BEFORE constraining them — the Soroswap fee check was verified first and shipped
+> clean; the PSBT shape was assumed and broke a live flow.
 - `app/api/swap/submit-single/route.ts:24,42,15` — **open relay**: no rate limit, no `userOwnsWallet`, no fee-embed check, hardcoded Horizon; broadcasts arbitrary signed XDR + writes swap_logs. Add the guards `execute-pair` already has (or retire the route).
 - `app/api/swap/quote/route.ts:228` + `use-swap.tsx` — Soroswap `built.xdr` signed with zero verification (ops/assets/amount/destination). Cross-check the built tx against the quote before returning it.
 - `lib/lifi/btc-sign.ts:115,121,119` — PSBT signed without checking outputs/amounts/change/fee against the quote; `sighashType` ignored (always SIGHASH_ALL); non-witness inputs silently skipped. Validate the PSBT shape; honor declared sighash; refuse unknown input types.

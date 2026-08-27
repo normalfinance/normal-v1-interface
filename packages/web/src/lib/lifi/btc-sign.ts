@@ -4,6 +4,7 @@ import type { TurnkeyClient } from '@turnkey/http';
 
 import { buildAuthHeaders } from '@/utils/http';
 import { secp256k1 } from '@noble/curves/secp256k1';
+import { psbtSpendVerdict } from '@/lib/lifi/btc-spend-verdict';
 import { Psbt, script, networks, payments, Transaction } from 'bitcoinjs-lib';
 
 // ---------------------------------------------------------------------------
@@ -75,9 +76,9 @@ export async function signLifiBtcPsbt(
   bitcoinAddress: string,
   subOrgId: string,
   turnkeyClient: TurnkeyClient,
-  /** Doc 95 Wave 2: the amount (sats) the quote says we are depositing. When
-   *  provided, the deposit output must cover it — a PSBT that pays the bridge
-   *  less than quoted is refused BEFORE the passkey. */
+  /** Doc 95 Wave 2: the swap amount (sats) from the quote. When provided, the
+   *  transaction may not SPEND materially more than this — refused before the
+   *  passkey. Output structure is never assumed (it varies per bridge). */
   expectedDepositSat?: bigint
 ): Promise<string> {
   const network = networks.bitcoin;
@@ -121,40 +122,37 @@ export async function signLifiBtcPsbt(
   // we refuse to sign one that does not look like the swap we quoted.
   // ------------------------------------------------------------------
   const isOurs = (script_: Uint8Array) => bytesEqual(script_, ourScript);
-  const isOpReturn = (script_: Uint8Array) => script_.length > 0 && script_[0] === 0x6a;
 
-  const external = unsignedTx.outs.filter((o) => !isOurs(o.script) && !isOpReturn(o.script));
-  if (external.length !== 1) {
-    throw new Error(
-      `Refusing to sign: expected exactly one payment output, found ${external.length} — ` +
-        `the transaction does not match a single-destination swap`
-    );
-  }
-  const depositSat = BigInt(external[0].value);
-  if (expectedDepositSat !== undefined && depositSat < expectedDepositSat) {
-    throw new Error(
-      `Refusing to sign: the transaction pays ${depositSat} sats but the quote said ` +
-        `${expectedDepositSat} sats`
-    );
-  }
-
-  // Fee sanity — only computable when every input is ours (the normal case:
-  // LI.FI spends our UTXO set). A route that burns most of the amount as a
-  // miner fee is refused rather than signed.
+  // What leaves THIS wallet: everything we put in, minus everything that comes
+  // back to us. Deliberately structure-agnostic — decoding a real LI.FI PSBT
+  // (2026-08-27) showed FIVE outputs: the bridge deposit, an OP_RETURN memo,
+  // our change, the route's protocol fee AND our own integrator-fee wallet,
+  // and the shape differs per bridge. Counting outputs is not a safe
+  // invariant; "do not spend more than the quote said" is.
   const allInputsOurs = psbt.data.inputs.every(
     (i) => i.witnessUtxo && isOurs(i.witnessUtxo.script)
   );
-  if (allInputsOurs) {
+  if (allInputsOurs && expectedDepositSat !== undefined && expectedDepositSat > 0n) {
     const inTotal = psbt.data.inputs.reduce((sum, i) => sum + BigInt(i.witnessUtxo!.value), 0n);
-    const outTotal = unsignedTx.outs.reduce((sum, o) => sum + BigInt(o.value), 0n);
-    const fee = inTotal - outTotal;
-    if (fee < 0n) throw new Error('Refusing to sign: outputs exceed inputs');
-    if (depositSat > 0n && fee * 4n > depositSat) {
+    const backToUs = unsignedTx.outs.reduce(
+      (sum, o) => (isOurs(o.script) ? sum + BigInt(o.value) : sum),
+      0n
+    );
+    const verdict = psbtSpendVerdict({
+      inputsTotalSat: inTotal,
+      backToUsSat: backToUs,
+      quotedSat: expectedDepositSat,
+    });
+    if (!verdict.ok) {
       throw new Error(
-        `Refusing to sign: the miner fee (${fee} sats) is more than 25% of the ` +
-          `${depositSat} sats being sent`
+        `Refusing to sign: this transaction spends ${verdict.spent} sats but the quote was ` +
+          `${expectedDepositSat} sats (limit ${verdict.limit})`
       );
     }
+    console.info(
+      `[btc-sign] spending ${verdict.spent} sats for a ${expectedDepositSat} sat swap ` +
+        `(${unsignedTx.outs.length} outputs, ${backToUs} back to us)`
+    );
   }
 
   const toSign: { index: number; sighash: Uint8Array; sighashType: number }[] = [];
