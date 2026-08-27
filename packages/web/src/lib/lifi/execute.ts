@@ -3,10 +3,11 @@
 import type { ChainAddresses } from '@/lib/chains/registry';
 
 import { describePsbt } from '@/lib/lifi/psbt-debug';
+import { SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { runWebauthnCeremony } from '@/lib/turnkey/webauthn-guard';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
-import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 
 // ---------------------------------------------------------------------------
 // Executes a LI.FI quote's transactionRequest on the source chain, signed by
@@ -86,11 +87,17 @@ async function executeEvm(
   ethereumAddress: string,
   subOrgId: string
 ): Promise<string> {
-  const { http, createPublicClient, serializeTransaction } = await import('viem');
+  const { createPublicClient, serializeTransaction } = await import('viem');
   const { mainnet } = await import('viem/chains');
 
   const tx = quote.transactionRequest;
-  const client = createPublicClient({ chain: mainnet, transport: http(ETH_RPC_URL) });
+  // Doc 95 Wave 4: nonce, gas, balance AND the broadcast all ran through one
+  // endpoint — an outage there killed every ETH-source swap, some of them
+  // after the user had already signed.
+  const client = createPublicClient({
+    chain: mainnet,
+    transport: await evmFallbackTransport('ethereum', 'mainnet'),
+  });
   log('ETH: fetching nonce + gas');
   const nonce = await client.getTransactionCount({
     address: ethereumAddress as `0x${string}`,

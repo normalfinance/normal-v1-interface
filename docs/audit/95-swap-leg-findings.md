@@ -77,6 +77,17 @@ The tab must never be required after signing.
 - `broadcast-btc/route.ts:46` — mempool accepts but response lost → reported failure while BTC is in mempool → double-broadcast on retry. Idempotency by txid.
 
 ## Wave 4 — Single-provider on money paths (money: outage = stranded)
+
+> **STATUS: SHIPPED 2026-08-27, run 5** — explainer `100-explainer-no-single-provider.html`.
+> Every money path is pooled: both server signers, both autopilot routes, the balance reads
+> that size a burn/pivot, the relayer transport (keyed URL first, then public fallbacks), the
+> LI.FI ETH leg, the BTC broadcast (mempool.space → Blockstream), and the Horizon read that
+> verifies a funding move (2 retries with backoff — a rate-limit blip used to report a
+> COMPLETED move as failed, causing a double move). Verified structurally: no bare
+> `transport: http()` remains under server/, lib/ or the API routes.
+> **Deliberately deferred:** `normal-wallet-setup.ts` still derives "ready" from an absolute
+> balance (the second funding entry point). Not patched here on purpose — phase 0c's run page
+> folds wallet setup into the swap's own step list and removes that path entirely.
 - `server/autopilot-*.ts`, `autopilot/*/route.ts`, `executor.ts:53` — server CCTP paths use viem default `http()` (no key, no fallback) while client paths use fallback lists. Route them through `evmFallbackTransport`/`baseFallbackTransport`.
 - `lifi/execute.ts:93,303` + `broadcast-btc` — LI.FI ETH leg + BTC broadcast are single-endpoint. Add fallbacks / a second BTC relay.
 - `normal-wallet-setup.ts:57` + `use-send-token.ts` — funding move + verification on one Horizon, no retry. Add retry/fallback.

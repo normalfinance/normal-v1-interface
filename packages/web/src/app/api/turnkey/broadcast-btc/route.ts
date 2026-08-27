@@ -57,40 +57,68 @@ export const POST = withAuth(async (request: NextRequest) => {
     /* non-fatal: we simply lose the idempotency check below */
   }
 
+  // Doc 95 Wave 4: mempool.space was the ONLY way a signed Bitcoin
+  // transaction could reach the network. A rate-limit or outage there
+  // stranded an already-signed transaction, and the user had to re-sign
+  // against a quote whose deposit channel may have expired. Blockstream
+  // serves the same purpose and is an independent operator.
+  const RELAYS = [
+    {
+      name: 'mempool.space',
+      post: 'https://mempool.space/api/tx',
+      tx: 'https://mempool.space/api/tx/',
+    },
+    {
+      name: 'blockstream',
+      post: 'https://blockstream.info/api/tx',
+      tx: 'https://blockstream.info/api/tx/',
+    },
+  ];
+
   const alreadyBroadcast = async (): Promise<boolean> => {
     if (!expectedTxid) return false;
-    try {
-      const probe = await fetch(`https://mempool.space/api/tx/${expectedTxid}`, {
-        signal: AbortSignal.timeout(8000),
-      });
-      return probe.ok;
-    } catch {
-      return false;
+    for (const relay of RELAYS) {
+      try {
+        const probe = await fetch(`${relay.tx}${expectedTxid}`, {
+          signal: AbortSignal.timeout(8000),
+        });
+        if (probe.ok) return true;
+      } catch {
+        /* try the next relay */
+      }
     }
+    return false;
   };
 
   try {
-    const res = await fetch('https://mempool.space/api/tx', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: rawTxHex,
-      signal: AbortSignal.timeout(20000),
-    });
+    let res: Response | null = null;
+    let responseText = '';
+    for (const relay of RELAYS) {
+      try {
+        res = await fetch(relay.post, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: rawTxHex,
+          signal: AbortSignal.timeout(20000),
+        });
+        responseText = await res.text();
+        if (res.ok) break;
+        logger.warn(`[broadcast-btc] ${relay.name} rejected:`, responseText.slice(0, 200));
+      } catch (relayErr) {
+        logger.warn(`[broadcast-btc] ${relay.name} unreachable:`, relayErr);
+        res = null;
+      }
+    }
 
-    const responseText = await res.text();
-
-    if (!res.ok) {
+    if (!res || !res.ok) {
       // Already in the mempool? Then this is a success we simply didn't hear
       // about — most often a retry of a request whose response was lost.
       if (await alreadyBroadcast()) {
         logger.log('[broadcast-btc] already in mempool, treating as success:', expectedTxid);
         return NextResponse.json({ txid: expectedTxid });
       }
-      logger.error('[broadcast-btc] Mempool rejected tx:', responseText);
-      return NextResponse.json(
-        { error: responseText || `Broadcast failed (${res.status})` },
-        { status: 502 }
-      );
+      logger.error('[broadcast-btc] every relay rejected the tx:', responseText);
+      return NextResponse.json({ error: responseText || 'Broadcast failed' }, { status: 502 });
     }
 
     // mempool.space returns the txid as a plain text string

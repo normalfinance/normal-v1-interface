@@ -10,7 +10,8 @@
 
 import { privateKeyToAccount } from 'viem/accounts';
 import { base, mainnet, sepolia, baseSepolia } from 'viem/chains';
-import { http, createWalletClient, createPublicClient } from 'viem';
+import { ETH_RPC_URLS, BASE_RPC_URLS } from '@/lib/chains/rpc-fallback';
+import { http, fallback, createWalletClient, createPublicClient } from 'viem';
 import { type NetworkType, getStellarConfigForNetwork } from '@normalfinance/utils';
 import { rpc, xdr, Keypair, Contract, Networks, TransactionBuilder } from '@stellar/stellar-sdk';
 
@@ -49,8 +50,13 @@ function evmChain(network: NetworkType, chain: 'base' | 'ethereum') {
  *   CCTP_RPC_URL_ETHEREUM   keyed Ethereum RPC
  */
 function relayerTransport(chain: 'base' | 'ethereum') {
+  // Doc 95 Wave 4: a single endpoint (keyed if configured, viem's public
+  // default otherwise) carried every relayer mint. Now the keyed URL leads a
+  // fallback list, so one provider outage cannot stall settlement.
   const url = chain === 'base' ? process.env.CCTP_RPC_URL_BASE : process.env.CCTP_RPC_URL_ETHEREUM;
-  return http(url || undefined);
+  const pool = chain === 'base' ? BASE_RPC_URLS : ETH_RPC_URLS;
+  const urls = [...(url ? [url] : []), ...pool.filter((u) => u !== url)];
+  return urls.length > 1 ? fallback(urls.map((u) => http(u))) : http(urls[0] || undefined);
 }
 
 /** MetaMask & co. export private keys without the 0x prefix — accept both. */

@@ -9,6 +9,7 @@ import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { autopilotBurnUsdc } from '@/server/autopilot-burn';
 import { autopilotEnabled } from '@/server/autopilot-signer';
 import { ensureTransferGas } from '@/server/cctp-transfer-gas';
+import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 
 // #33 Stage 3 payoff — the server-side inbound burn. Called by the engine
 // (or cron) once USDC lands on the user's Base address, INSTEAD of prompting
@@ -78,12 +79,14 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     }
 
     // Burn whatever actually landed (mirrors the banner's recover()).
-    const { http, erc20Abi, createPublicClient } = await import('viem');
+    const { erc20Abi, createPublicClient } = await import('viem');
     const { base, baseSepolia } = await import('viem/chains');
     const network = tr.network === 'mainnet' ? 'mainnet' : 'testnet';
     const client = createPublicClient({
       chain: network === 'mainnet' ? base : baseSepolia,
-      transport: http(),
+      // Doc 95 Wave 4: fallback list, not viem's default public RPC — this
+      // read decides how much money the leg moves.
+      transport: await evmFallbackTransport('base', network),
     });
     const { EVM_USDC } = await import('@/lib/cctp/config');
     const bal = await client.readContract({

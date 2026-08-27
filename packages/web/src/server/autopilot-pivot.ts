@@ -13,6 +13,7 @@
 // this layer's job). Mainnet-only Base, same as the client version.
 
 import { EVM_USDC } from '@/lib/cctp/config';
+import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 
 import { getLifiQuote } from './lifi-quote';
 import { signWithAutopilot } from './autopilot-signer';
@@ -50,10 +51,12 @@ export async function autopilotPivotSwap(params: {
    *  is awaited, so a real hash is never lost to a receipt-wait failure. */
   onBroadcast?: (hash: `0x${string}`, label: string) => Promise<void> | void;
 }): Promise<AutopilotPivotResult> {
-  const { http, erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } =
-    await import('viem');
+  const { erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } = await import(
+    'viem'
+  );
   const { base } = await import('viem/chains');
-  const client = createPublicClient({ chain: base, transport: http() });
+  // Doc 95 Wave 4: fallback list instead of viem's default public RPC.
+  const client = createPublicClient({ chain: base, transport: await baseFallbackTransport() });
   const from = params.evmAddress as `0x${string}`;
   const usdc = EVM_USDC.base.mainnet;
 

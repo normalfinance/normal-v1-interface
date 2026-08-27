@@ -11,6 +11,7 @@
 
 import { type NetworkType } from '@normalfinance/utils';
 import { stellarContractToBytes32 } from '@/lib/cctp/addresses';
+import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { bytesToHex, encodeStellarHookData } from '@/lib/cctp/hookdata';
 import {
   EVM_CCTP,
@@ -73,15 +74,23 @@ export async function autopilotBurnUsdc(params: AutopilotBurnParams): Promise<{
     throw new Error('refusing to burn: invalid Stellar recipient address');
   }
 
-  const { http, erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } =
-    await import('viem');
+  const { erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } = await import(
+    'viem'
+  );
   const { base, mainnet, sepolia, baseSepolia } = await import('viem/chains');
   const chains = {
     mainnet: { base, ethereum: mainnet },
     testnet: { base: baseSepolia, ethereum: sepolia },
   } as const;
   const chain = chains[params.network][params.chain];
-  const client = createPublicClient({ chain, transport: http() });
+  // Doc 95 Wave 4: this was viem's DEFAULT public RPC — no key, no fallback —
+  // on a leg that signs and broadcasts real money, while the client twins
+  // already used fallback lists. One bad hour on that endpoint stalled every
+  // server-side burn.
+  const client = createPublicClient({
+    chain,
+    transport: await evmFallbackTransport(params.chain, params.network),
+  });
 
   const usdc = EVM_USDC[params.chain][params.network];
   const tokenMessenger = EVM_CCTP[params.network].tokenMessengerV2;

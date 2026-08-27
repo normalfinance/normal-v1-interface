@@ -9,6 +9,7 @@ import { autopilotEnabled } from '@/server/autopilot-signer';
 import { autopilotPivotSwap } from '@/server/autopilot-pivot';
 import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
 import { ensureTransferGas } from '@/server/cctp-transfer-gas';
+import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 import {
   sanitizeTool,
   sanitizeTxHash,
@@ -99,12 +100,14 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     }
 
     // Pivot whatever actually landed (mirrors the banner's recover()).
-    const { http, erc20Abi, createPublicClient } = await import('viem');
+    const { erc20Abi, createPublicClient } = await import('viem');
     const { base, baseSepolia } = await import('viem/chains');
     const network = tr.network === 'mainnet' ? 'mainnet' : 'testnet';
     const client = createPublicClient({
       chain: network === 'mainnet' ? base : baseSepolia,
-      transport: http(),
+      // Doc 95 Wave 4: fallback list, not viem's default public RPC — this
+      // read decides how much money the leg moves.
+      transport: await evmFallbackTransport('base', network),
     });
     const { EVM_USDC } = await import('@/lib/cctp/config');
     const bal = await client.readContract({
