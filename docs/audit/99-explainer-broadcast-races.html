@@ -110,25 +110,51 @@ with a sequence error. The row itself was already protected from double-minting,
 missing was a retry: it now rebuilds with a fresh sequence and tries up to three times.</p>
 
 <h2>7 · How to test</h2>
+
+<div class="box good"><div class="label">You do NOT need the cron for this — on localhost or anywhere</div>
+Leave the <strong>/swap page open</strong>. The recovery banner above the swap card refreshes
+every 30 seconds and pokes each in-flight transfer, which advances it server-side (attestation →
+mint). That is what carries a bridge forward while the popup is closed. The cron is the safety net
+for when <em>nobody</em> has the app open at all.</div>
+
+<h3>Test A — the headline: two swaps must not eat each other <span class="qa">(QA R47)</span></h3>
+<p>Any pair of swaps that puts USDC on your Base address twice will do. Two variants:</p>
 <table>
   <tr><th>#</th><th>do</th><th>expect</th></tr>
-  <tr><td>1</td><td><strong>The headline test:</strong> start two BTC→USDC (or ETH→USDC) swaps a
-      few minutes apart, so both deliver to Base around the same time</td>
-      <td>Both complete. Each row's burn moves roughly its own amount — neither takes the other's,
-      and neither ends up stuck in CREATED with nothing to burn</td></tr>
-  <tr><td>2</td><td>Any single swap where the route delivers slightly more than quoted</td>
-      <td>The extra is bridged too, not left behind on Base (check the delivered amount against
-      the quote — it should be a little higher, not exactly the minimum)</td></tr>
-  <tr><td>3</td><td>Fund a CCTP swap from Lobstr, let it fail, then do <em>any</em> unrelated swap,
-      then retry the first one</td>
-      <td>The USDC is <strong>not</strong> moved from Lobstr a second time — the guard survives the
-      unrelated swap</td></tr>
-  <tr><td>4</td><td>A normal BTC send/swap</td>
-      <td>Unchanged. If the broadcast response is ever lost, you get the txid instead of a failure
-      (server log: "already in mempool, treating as success")</td></tr>
-  <tr><td>5</td><td>Watch server logs during any autopilot swap</td>
-      <td>No "nonce too low" hard failures; if a race occurs you'll see a silent rebuild instead</td></tr>
+  <tr><td>1</td>
+      <td><strong>Outbound variant.</strong> Swap 15 USDC → ETH. After signing, <em>close the
+      popup</em>. Leave the /swap page open and watch the banner appear — it advances the bridge
+      on its own (~1–2 min to mint). Then swap 15 USDC → BTC and let that one finish in the
+      popup. Finally click <strong>Finish transfer</strong> on the ETH row in the banner.</td>
+      <td>The BTC swap delivers about <strong>$15</strong> of BTC — not ~$30. Then the ETH row's
+      Finish still works and delivers ETH.
+      <br><br><span class="no">The old bug's fingerprint:</span> the BTC swap delivering roughly
+      double, and Finish on the ETH row then failing with <em>"No USDC found on Base"</em> —
+      because its money had been swallowed.</td></tr>
+  <tr><td>2</td>
+      <td><strong>Inbound variant</strong> (closer to the original incident, no Finish click
+      needed): start BTC → USDC, then a few minutes later ETH → USDC, so both bridges deliver
+      USDC to Base around the same time.</td>
+      <td>Both complete. Neither is left stuck in <code>CREATED</code> with nothing to burn.</td></tr>
 </table>
+<p><strong>Expect amounts to be approximate.</strong> The row that goes second takes its own
+share plus 5% slippage headroom, so the first one delivers slightly under its quote (e.g. ~14.25
+instead of ~15). Nothing is lost and nothing is orphaned — that is the trade-off on purpose.</p>
+
+<h3>Test B — the funding guard <span class="qa">(QA R48)</span></h3>
+<p>Fund a CCTP swap from Lobstr, let it fail, then run <em>any</em> unrelated swap (a Stellar
+USDC↔XLM one is quickest), then retry the first swap. The USDC must <strong>not</strong> leave
+Lobstr a second time.</p>
+
+<h3>Test C — slippage and nonces <span class="qa">(QA R49)</span></h3>
+<p>On any completed swap, compare the delivered amount to the quote: it should be a little
+<em>above</em> the quoted minimum, not exactly equal (positive slippage is now bridged instead of
+stranded on Base). In the server logs during an autopilot leg there should be no "nonce too low"
+failure — a race shows up as a silent rebuild.</p>
+
+<h3>If something looks wrong</h3>
+<p>The database is the source of truth: send the transfer rows and I will read the on-chain
+reality against them, the way the original bug was found.</p>
 
 <h2>8 · Commit</h2>
 <p><code>fix(cctp): move only this transfer's share, and never lose a broadcast</code> (full

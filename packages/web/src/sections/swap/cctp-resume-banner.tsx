@@ -191,10 +191,13 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       ).then((ids) => {
         setVerifiedIds(new Set(ids.filter((x): x is string => !!x)));
       });
-      // Poke any 'auto' (post-burn) transfer so its status advances between cron ticks.
-      const auto = shown.find((tr) => phaseFor(tr, now) === 'auto');
-      if (auto) {
-        fetch(`/api/cctp/transfers/${auto.id}`, { headers, credentials: 'include' }).catch(
+      // Poke EVERY 'auto' (post-burn) transfer so each advances between cron
+      // ticks. This used to poke only the first match, so with two bridges in
+      // flight the second made no progress until the first finished — which
+      // is exactly the situation the Wave 3 fixes are tested in.
+      const autoRows = shown.filter((tr) => phaseFor(tr, now) === 'auto');
+      for (const auto of autoRows) {
+        void fetch(`/api/cctp/transfers/${auto.id}`, { headers, credentials: 'include' }).catch(
           () => {}
         );
       }
@@ -324,7 +327,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
           if (bal === 0n) throw new Error(t('No USDC found on Base — it may already be bridging.'));
           // Doc 95 Wave 3: burn this row's share, not the whole address —
           // a sibling transfer's USDC may be sitting here too.
-          const burnWire = scopedAmountWire(bal, BigInt(tr.amountWire ?? '0'));
+          const burnWire = scopedAmountWire(bal, BigInt(tr.amountWire));
           const { burnTxHash } = await burnUsdcOnEvm({
             network,
             chain: 'base',
@@ -375,11 +378,16 @@ export function CctpRecoveryBanner({ addresses }: Props) {
           const denyExchanges = [
             ...new Set([...parseFailedExchanges(detail), ...(remembered?.exchanges ?? [])]),
           ];
+          // Doc 95 Wave 3: pivot this row's share only. The banner is the
+          // very path a user reaches when a second swap is already in
+          // flight, so a whole-balance pivot here would swallow the other
+          // transfer's minted USDC.
+          const pivotWire = scopedAmountWire(bal, BigInt(tr.amountWire));
           const result = await executePivotSwap({
             evmAddress: tr.destAddress,
             toSymbol,
             toAddress,
-            amountWire: bal,
+            amountWire: pivotWire,
             denyBridges: denyBridges.length ? denyBridges : undefined,
             denyExchanges: denyExchanges.length ? denyExchanges : undefined,
           });
