@@ -23,6 +23,7 @@ import { useStellarConfig } from '@/hooks';
 import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { fCurrency } from '@/utils/format-number';
+import { runCctpRefund } from '@/lib/cctp/refund';
 import { useDebounce } from '@/hooks/use-debounce';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executeLifiSwap } from '@/lib/lifi/execute';
@@ -212,6 +213,10 @@ export function useCctpEngine({
   const [stage, setStage] = useState<CctpStage | null>(null);
   const [stageError, setStageError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  // Bring-back-in-modal (Niko 2026-08-27): the refund runs INSIDE the popup
+  // with its own checklist instead of closing it and delegating invisibly.
+  const [refundStage, setRefundStage] = useState<'topup' | 'burn' | 'done' | null>(null);
+  const [refundError, setRefundError] = useState<string | null>(null);
   // #32 chunk 4b: whether THIS run started with the external→Normal funding
   // move (drives the extra step in the progress modal).
   const [usedFunding, setUsedFunding] = useState(false);
@@ -518,6 +523,27 @@ export function useCctpEngine({
   // "this swap finishes by itself" box) must count for THIS swap, not just
   // the next one. See autopilot-gate.ts.
   const autopilotGate = useRef(createAutopilotGate(() => autopilotActive()));
+
+  const runRefund = useCallback(
+    async (transferId: string) => {
+      setRefundError(null);
+      try {
+        await runCctpRefund({
+          transferId,
+          network,
+          baseAddress: evmAddress!,
+          stellarAddress: stellarAddress!,
+          onStage: (s) => setRefundStage(s),
+        });
+        setRefundStage('done');
+        window.dispatchEvent(new Event('nf:activity-updated'));
+      } catch (e: any) {
+        console.error('[cctp refund] failed:', e);
+        setRefundError(friendlyAppError(e));
+      }
+    },
+    [network, evmAddress, stellarAddress]
+  );
 
   // The consent offer itself — at swap start (Niko's final call 2026-08-21;
   // the earlier post-swap move was reacting to the ceremony BREAKING, not
@@ -1081,6 +1107,8 @@ export function useCctpEngine({
     // ceremony is idempotent; "Not now" is remembered and never re-asks.
     await maybeOfferConsent();
     setStageError(null);
+    setRefundStage(null);
+    setRefundError(null);
     setModalOpen(true);
     // Display-truth refresh for the modal (copy + in-wait Enable offer);
     // never blocks the run — the signing branch re-checks live.
@@ -1559,7 +1587,7 @@ export function useCctpEngine({
           open={modalOpen}
           direction={direction}
           stage={stage}
-          error={stageError}
+          error={refundStage ? refundError : stageError}
           fromSymbol={fromSymbol}
           toSymbol={toSymbol}
           includeFunding={usedFunding}
@@ -1568,42 +1596,46 @@ export function useCctpEngine({
           onEnableAutopilot={
             process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY ? () => setConsentOpen(true) : undefined
           }
+          refundStage={refundStage}
           onTryAgain={
-            stageError
-              ? () => {
-                  // Clear the failed RUN, then hand the transfer to the
-                  // recovery banner's ONE handler — a bare reset read as
-                  // "nothing happened" when the failure was mid-flight
-                  // (funds already on Base, live 2026-08-26).
-                  const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
-                  setStageError(null);
-                  setStage(null);
-                  setModalOpen(false);
-                  if (failedId) {
-                    setActiveCctpTransfer(null);
-                    window.dispatchEvent(
-                      new CustomEvent('nf:cctp-resume', { detail: { id: failedId } })
-                    );
+            refundStage
+              ? refundError
+                ? () => {
+                    const failedId = lastFailedRunIdRef.current;
+                    setRefundError(null);
+                    if (failedId) void runRefund(failedId);
                   }
-                }
-              : undefined
+                : undefined
+              : stageError
+                ? () => {
+                    // Clear the failed RUN, then hand the transfer to the
+                    // recovery banner's ONE handler — a bare reset read as
+                    // "nothing happened" when the failure was mid-flight
+                    // (funds already on Base, live 2026-08-26).
+                    const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
+                    setStageError(null);
+                    setStage(null);
+                    setModalOpen(false);
+                    if (failedId) {
+                      setActiveCctpTransfer(null);
+                      window.dispatchEvent(
+                        new CustomEvent('nf:cctp-resume', { detail: { id: failedId } })
+                      );
+                    }
+                  }
+                : undefined
           }
           onBringBack={
-            stageError && direction === 'out'
+            stageError && direction === 'out' && !refundStage
               ? () => {
-                  // The exit, offered where the failure is: abandon the swap
-                  // and bridge the minted USDC back to Stellar via the
-                  // banner's refund handler.
+                  // Niko 2026-08-27: the refund runs IN this popup — the
+                  // steps update in place instead of the modal closing and
+                  // delegating to the banner invisibly.
                   const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
-                  setStageError(null);
-                  setStage(null);
-                  setModalOpen(false);
-                  if (failedId) {
-                    setActiveCctpTransfer(null);
-                    window.dispatchEvent(
-                      new CustomEvent('nf:cctp-refund', { detail: { id: failedId } })
-                    );
-                  }
+                  if (!failedId) return;
+                  setActiveCctpTransfer(null);
+                  setRefundStage('topup');
+                  void runRefund(failedId);
                 }
               : undefined
           }

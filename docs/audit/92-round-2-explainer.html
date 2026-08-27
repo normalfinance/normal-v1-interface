@@ -282,7 +282,25 @@ remaining surprise gets announced:</p>
   copy: "the network was mid-update — try again, it usually works immediately."</li>
 </ul>
 
-<h2>10 · Project status</h2>
+<h2>10 · Post-round live fixes (2026-08-27) <span class="qa">(QA R42, R43)</span></h2>
+<ul>
+  <li><strong>Refund runs inside the popup</strong> — clicking "Bring back as USDC" no longer
+  closes the modal and delegates invisibly: the same checklist switches to refund steps (network
+  fees → sending back → "returning to Stellar, safe to close"), sharing one refund engine with
+  the banner (<code>lib/cctp/refund.ts</code>).</li>
+  <li><strong>Nonce races self-heal</strong> — when a just-reverted attempt consumes the account
+  nonce mid-recovery ("nonce too low", seen live), the app rebuilds with a fresh nonce and asks
+  for one more confirmation instead of dead-ending. The extra prompt is unavoidable: the
+  signature covers the nonce.</li>
+  <li><strong>The poisoned "fly" DEX step is denied by default</strong> on every LI.FI quote
+  (<code>LIFI_DENY_EXCHANGES</code>, override-able) after it burned a third bridge (Across) — a
+  DEX exclusion, not a bridge removal. Removed the day LI.FI fixes their routing.</li>
+  <li><strong>Copy collision fixed</strong> — an on-chain revert briefly read as "The signature
+  was declined" (two mappers in a row, the second mistranslating the first). Reverts now always
+  read as route failures.</li>
+</ul>
+
+<h2>11 · Project status</h2>
 <p><strong>All four waves of the honest-errors audit shipped on 2026-08-26.</strong> ~102 findings
 from four parallel code sweeps: raw machine text eliminated at 18 funnels through one classifier,
 every silent money-path failure now retries or speaks, every outage renders as an outage, and pure

@@ -91,26 +91,45 @@ export async function executePivotSwap(params: {
     value: bigint,
     gasHint?: bigint
   ) => {
-    const [nonce, fees, gas] = await Promise.all([
-      client.getTransactionCount({ address: from, blockTag: 'pending' }),
-      client.estimateFeesPerGas(),
-      gasHint
-        ? Promise.resolve(gasHint)
-        : client.estimateGas({ account: from, to, data: dataHex, value }),
-    ]);
-    const unsigned = serializeTransaction({
-      chainId: base.id,
-      type: 'eip1559',
-      nonce,
-      to,
-      data: dataHex,
-      value,
-      gas: (gas * 12n) / 10n,
-      maxFeePerGas: fees.maxFeePerGas,
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
-    });
-    const raw = await signEvmTxWithTurnkey(unsigned, info.subOrgId!, params.evmAddress);
-    const hash = await client.sendRawTransaction({ serializedTransaction: raw });
+    // Nonce race (live 2026-08-27): a just-reverted attempt consumed our
+    // nonce between the read and the broadcast ("nonce too low") — rebuild
+    // with a fresh nonce and ONE more signature instead of dead-ending the
+    // recovery. The extra prompt is the signature's price: it covers the
+    // nonce, so a silent retry is impossible.
+    let hash: `0x${string}` | null = null;
+    for (let attempt = 0; hash === null; attempt++) {
+      const [nonce, fees, gas] = await Promise.all([
+        client.getTransactionCount({ address: from, blockTag: 'pending' }),
+        client.estimateFeesPerGas(),
+        gasHint
+          ? Promise.resolve(gasHint)
+          : client.estimateGas({ account: from, to, data: dataHex, value }),
+      ]);
+      const unsigned = serializeTransaction({
+        chainId: base.id,
+        type: 'eip1559',
+        nonce,
+        to,
+        data: dataHex,
+        value,
+        gas: (gas * 12n) / 10n,
+        maxFeePerGas: fees.maxFeePerGas,
+        maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+      });
+      const raw = await signEvmTxWithTurnkey(unsigned, info.subOrgId!, params.evmAddress);
+      try {
+        hash = await client.sendRawTransaction({ serializedTransaction: raw });
+      } catch (sendErr: any) {
+        const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
+        if (
+          attempt === 0 &&
+          /nonce too low|already known|replacement transaction underpriced/i.test(m)
+        ) {
+          continue;
+        }
+        throw sendErr;
+      }
+    }
     const receipt = await client.waitForTransactionReceipt({ hash });
     if (receipt.status !== 'success') {
       // Classified failure (2026-08-26): a revert is an ON-CHAIN outcome, not
