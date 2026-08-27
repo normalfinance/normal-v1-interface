@@ -321,7 +321,9 @@ export function useSwap(
         }
 
         const feeAmount = parseFloat(swapQuote.fee || '0');
-        if (feeAmount <= 0) {
+        // Doc 95 Wave 5: `NaN <= 0` is FALSE, so a non-numeric fee sailed
+        // straight through this guard and became `amount: "NaN"` on the wire.
+        if (!Number.isFinite(feeAmount) || feeAmount <= 0) {
           throw new Error('Swap fee was not computed — please refresh the quote');
         }
 
@@ -390,6 +392,12 @@ export function useSwap(
             tokenInSymbol: display?.tokenInSymbol,
             tokenOutSymbol: display?.tokenOutSymbol,
             amountIn: netAmountIn.toFixed(7),
+            // Doc 95 Wave 5 — KNOWN GAP, deliberately not faked: this is the
+            // QUOTED output, not the realized one. Reading the true figure
+            // means parsing the Soroban invocation's return value, which
+            // differs per protocol (soroswap/phoenix/aqua/sdex); the CCTP
+            // paths get real amounts because LI.FI reports them. Tracked for
+            // a later wave rather than guessed at here.
             amountOut: swapQuote.amountOut,
             feeAmount: feeAmount.toFixed(7),
           },

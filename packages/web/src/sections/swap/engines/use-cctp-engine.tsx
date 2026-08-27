@@ -36,6 +36,7 @@ import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
+import { parseDeliveredAmount } from '@/lib/cctp/delivered-amount';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
@@ -119,7 +120,7 @@ async function pollPivotDelivery(
   // BTC payouts are mined Bitcoin txs — allow up to ~60 min (Niko 2026-08-19:
   // the modal now tracks BTC to true delivery like SOL/ETH).
   maxPolls = 60
-): Promise<'DONE' | 'REFUNDED' | 'FAILED' | null> {
+): Promise<{ verdict: 'DONE' | 'REFUNDED' | 'FAILED' | null; deliveredAmount: string | null }> {
   for (let i = 0; i < maxPolls; i++) {
     if (cancelledRef.current) throw new Error('cancelled');
     try {
@@ -131,17 +132,30 @@ async function pollPivotDelivery(
         const data = await res.json();
         const s = data?.status?.status as string | undefined;
         const sub = String(data?.status?.substatus ?? '').toUpperCase();
+        // Doc 95 Wave 5: LI.FI reports what the destination ACTUALLY received.
+        // We used to record the quoted MINIMUM and guard it against being
+        // replaced, so every swap under-reported delivery by its slippage in
+        // Activity and in the Dune dashboard.
+        // Pure + tested (lib/cctp/delivered-amount): returns null rather than
+        // a guess, so a bad payload leaves the quoted figure in place instead
+        // of writing junk into the activity feed.
+        const deliveredAmount = parseDeliveredAmount(data?.status?.receiving);
         // A refund is reported as DONE+REFUNDED (or PARTIAL) — funds returned,
         // destination not delivered.
-        if (s === 'DONE') return sub === 'REFUNDED' || sub === 'PARTIAL' ? 'REFUNDED' : 'DONE';
-        if (s === 'FAILED' || s === 'INVALID') return 'FAILED';
+        if (s === 'DONE') {
+          return {
+            verdict: sub === 'REFUNDED' || sub === 'PARTIAL' ? 'REFUNDED' : 'DONE',
+            deliveredAmount,
+          };
+        }
+        if (s === 'FAILED' || s === 'INVALID') return { verdict: 'FAILED', deliveredAmount: null };
       }
     } catch {
       /* transient — retry next interval */
     }
     await new Promise((r) => setTimeout(r, 10_000));
   }
-  return null;
+  return { verdict: null, deliveredAmount: null };
 }
 
 async function readBaseUsdc(address: string): Promise<bigint> {
@@ -1073,15 +1087,22 @@ export function useCctpEngine({
               10
           )
         );
-        if (delivery === 'FAILED' || delivery === 'REFUNDED') {
+        if (delivery.verdict === 'FAILED' || delivery.verdict === 'REFUNDED') {
           throw new Error(
             t(
               'The final swap leg did not deliver — your USDC is at your own Base address, untouched by anyone else. Contact support to recover it.'
             )
           );
         }
-        await patch({ dstAmount });
-        if (delivery === null) {
+        // Doc 95 Wave 5: prefer the amount the destination actually received
+        // over the quote's guaranteed minimum. `dstAmountFinal` is allowed to
+        // OVERWRITE, unlike the set-once `dstAmount`.
+        if (delivery.deliveredAmount) {
+          await patch({ dstAmountFinal: delivery.deliveredAmount });
+        } else {
+          await patch({ dstAmount });
+        }
+        if (delivery.verdict === null) {
           // Timed out (~10 min) still bridging: rare, and the funds are in
           // flight to the user's own address. Documented trade-off (Niko's
           // #62 rule — a successful swap must never look stuck): close out
@@ -1172,7 +1193,11 @@ export function useCctpEngine({
       if (direction === 'out' && fundFromExternal) {
         setUsedFunding(true);
         setStage('funding');
-        const funded = await fundFromExternal.execute(amount.toFixed(7, BigNumber.ROUND_DOWN));
+        // Doc 95 Wave 5: move exactly what the burn will spend. The move used
+        // to send 7 decimals (Stellar precision) while the burn takes 6 (CCTP
+        // wire units), so the 7th decimal was carried to the Normal wallet and
+        // then never swapped — a silent dust leak on every MAX-style amount.
+        const funded = await fundFromExternal.execute(amount.toFixed(6, BigNumber.ROUND_DOWN));
         if (!funded) {
           throw new Error(
             t('The USDC transfer from {{wallet}} was not completed — nothing was swapped.', {

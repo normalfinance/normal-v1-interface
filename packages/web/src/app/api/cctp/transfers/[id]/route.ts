@@ -54,6 +54,14 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   if (body.dstAmount && !transfer!.dstAmount) {
     data.dstAmount = String(body.dstAmount);
   }
+  // Doc 95 Wave 5: the CONFIRMED delivered amount, read from the bridge's own
+  // status once the destination has it. This one overwrites on purpose — the
+  // earlier value is the quote's guaranteed minimum, written before anyone
+  // could know the truth, and the set-once rule was freezing that estimate
+  // into the activity feed and the Dune dashboard forever.
+  if (body.dstAmountFinal && /^\d+(\.\d+)?$/.test(String(body.dstAmountFinal))) {
+    data.dstAmount = String(body.dstAmountFinal);
+  }
   // A reverted pivot (interactive path) records WHICH bridge failed so the
   // next retry can exclude it — server-formatted from validated slugs, never
   // raw client text. Overwrite is deliberate: the LATEST revert wins.

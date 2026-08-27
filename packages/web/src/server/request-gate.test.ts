@@ -20,15 +20,30 @@ describe('createRequestGate', () => {
   });
 
   it('spaces call starts by minGapMs', async () => {
-    const gate = createRequestGate({ concurrency: 4, minGapMs: 30 });
-    const starts: number[] = [];
-    const job = async () => {
-      starts.push(Date.now());
+    // Deterministic on purpose. The first version measured the WALL CLOCK and
+    // went flaky on a loaded machine (asserted >=20ms, observed 16). The gate
+    // takes its clock and sleep as parameters precisely so the spacing rule
+    // can be proven exactly instead of timed.
+    //
+    // The fake sleep RECORDS the wait without advancing the clock: concurrent
+    // sleeps overlap in real time, so a shared clock advanced by each sleep
+    // would model something that never happens.
+    const waits: number[] = [];
+    const sleep = async (ms: number) => {
+      waits.push(ms);
     };
-    await Promise.all([gate.run(job), gate.run(job), gate.run(job)]);
-    starts.sort((a, b) => a - b);
-    expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(20);
-    expect(starts[2] - starts[1]).toBeGreaterThanOrEqual(20);
+    const now = () => 1_000_000; // realistic epoch — a 0 clock is never real
+    const gate = createRequestGate({ concurrency: 4, minGapMs: 30 }, sleep, now);
+
+    await Promise.all([
+      gate.run(async () => 'a'),
+      gate.run(async () => 'b'),
+      gate.run(async () => 'c'),
+    ]);
+
+    // The first call is not held at all (the gate skips sleep when the wait
+    // is zero), so only the 2nd and 3rd record a wait — one full gap apart.
+    expect(waits).toEqual([30, 60]);
   });
 
   it('propagates results and errors, and keeps serving after a failure', async () => {

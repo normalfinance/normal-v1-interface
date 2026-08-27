@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>What Actually Arrived</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>What Actually Arrived</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 6 (2026-08-27) &mdash; doc 95
+Wave 5: the app must report the amount that <em>really</em> landed, not the amount we promised.</p>
+
+<h2>1 &middot; The idea, in one sentence</h2>
+<p>Every quote contains two different numbers, and we were storing the wrong one.</p>
+<table>
+  <tr><th>number</th><th>what it means</th><th>known when?</th></tr>
+  <tr><td><code>toAmountMin</code> &mdash; the <strong>guaranteed minimum</strong></td>
+      <td>&ldquo;you will get <em>at least</em> this much&rdquo; &mdash; the worst case the route promises</td>
+      <td>Before the swap. It is a <em>promise</em>.</td></tr>
+  <tr><td><code>receiving.amount</code> &mdash; the <strong>delivered amount</strong></td>
+      <td>what the destination wallet actually received</td>
+      <td>After the swap. It is a <em>fact</em>.</td></tr>
+</table>
+<p>Routes almost always deliver a bit <em>more</em> than the minimum (that gap is the slippage
+buffer going unused). We recorded the promise and then <strong>guarded it against being
+replaced</strong> &mdash; so the Activity feed and the Dune dashboard under-reported every single swap,
+permanently, by whatever the route beat its own promise by.</p>
+
+<h2>2 &middot; Why the guard existed, and why it was wrong here</h2>
+<p>The rule in the PATCH route was <em>set-once</em>: <code>if (body.dstAmount &amp;&amp;
+!transfer.dstAmount)</code> &mdash; &ldquo;write it only if it isn&rsquo;t already written.&rdquo; That rule is
+genuinely good, and it is there for a reason: several things can report on the same swap (your tab,
+the recovery banner, the server), and without it a late straggler could overwrite a good value with
+a stale one.</p>
+<p>But the guard couldn&rsquo;t tell the difference between <em>two reports of the same kind</em> and
+<em>an estimate being corrected by a fact</em>. The estimate always arrives first &mdash; so the fact
+was always the one rejected.</p>
+
+<div class="box"><div class="label">The fix &mdash; a second, deliberately different door</div>
+The set-once <code>dstAmount</code> field is untouched. A new field, <code>dstAmountFinal</code>,
+writes the same column but is <strong>allowed to overwrite</strong>, and it is only ever sent from
+one place: after the bridge itself has reported the destination as delivered. Estimates still
+can&rsquo;t fight each other; a confirmed fact now wins over an estimate.
+<pre>if (body.dstAmountFinal &amp;&amp; /^\d+(\.\d+)?$/.test(String(body.dstAmountFinal))) {
+  data.dstAmount = String(body.dstAmountFinal);   // overwrite on purpose
+}</pre>
+The regex isn&rsquo;t decoration &mdash; it is the reason a hostile or broken client can&rsquo;t put
+<code>"abc"</code> or <code>"-5"</code> into a money column.</div>
+
+<h3>Reading the money out of the payload is its own tested module</h3>
+<p>Turning <code>{ amount: "15173420", token: { decimals: 6 } }</code> into <code>15.17342</code>
+is exactly the kind of small conversion that silently produces garbage &mdash; a missing
+<code>decimals</code> field would have divided by 10<sup>NaN</sup> and written
+<code>"NaN"</code> into your accounting. It now lives in
+<code>lib/cctp/delivered-amount.ts</code> with <strong>8 tests</strong>, and its rule is:</p>
+<div class="box good"><div class="label">Rule</div>
+If the payload is anything other than a clean whole number of wire units with sane decimals,
+return <span class="ok">null</span> &mdash; and <code>null</code> means <em>keep the quoted figure</em>.
+Never write a guess into a money column. A slightly pessimistic number is a much smaller problem
+than a nonsense one.</div>
+
+<h2>3 &middot; The funding move sent more decimals than the swap could spend</h2>
+<p>When you fund a CCTP swap from Lobstr, the app moves USDC into your Normal wallet and then
+burns it. Those two steps disagreed about precision:</p>
+<pre>the move sent   amount.toFixed(<span class="no">7</span>)   &larr; Stellar's precision (7 decimals)
+the burn spends amount.toFixed(<span class="ok">6</span>)   &larr; CCTP's wire precision (6 decimals)</pre>
+<p>So the 7th decimal was carried across and then left behind, every time. Both are now
+6 decimals: <strong>the amount moved is exactly the amount burned.</strong></p>
+<div class="box warn"><div class="label">Honest sizing &mdash; this one is small</div>
+The stranded amount is at most <strong>0.0000009 USDC</strong> per swap. That is a rounding
+artefact, not lost money, and I am not going to dress it up as a leak. It is worth fixing for a
+different reason: when the moved amount and the burned amount are the <em>same number</em>, the
+&ldquo;did the funding land?&rdquo; check is exact arithmetic instead of an approximate comparison
+&mdash; and that check is the one that, when it got the answer wrong, caused a real double-move.</div>
+
+<h2>4 &middot; A fee of &ldquo;NaN&rdquo;</h2>
+<p>Two ends of the same problem.</p>
+
+<h3>The client&rsquo;s guard didn&rsquo;t catch it</h3>
+<pre>const feeAmount = parseFloat(swapQuote.fee || '0');
+if (feeAmount &lt;= 0) throw new Error('Swap fee was not computed');</pre>
+<p>This looks airtight and isn&rsquo;t. <code>parseFloat("abc")</code> is <code>NaN</code>, and in
+JavaScript <strong>every comparison with NaN is false</strong> &mdash; including <code>NaN &lt;= 0</code>.
+So a non-numeric fee walked straight past the guard and became <code>amount: "NaN"</code> on the
+wire. The guard now asks <code>Number.isFinite(feeAmount)</code> first, which is the only reliable
+way to ask &ldquo;is this actually a number?&rdquo;</p>
+
+<h3>The server was quietly reporting a fee of nothing</h3>
+<p>The quote route sent the fee as <code>String(quote.platformFee?.feeAmount ?? '')</code>. If
+that field was missing the result was an empty string, the client read it as 0, and the swap was
+recorded as <strong>fee-free while Soroswap still took its cut</strong> &mdash; books that disagree
+with reality, with nothing in the logs. Now a single helper decides whether the figure is usable,
+and if it isn&rsquo;t, the server <em>refuses the single-signature path</em> and returns
+<code>409 embedded_unavailable</code> so the app falls back to the ordinary two-signature flow.</p>
+<div class="box"><div class="label">The pattern in all three fixes</div>
+When we can&rsquo;t state a number truthfully, <strong>take a slower path that we can</strong> &mdash;
+never substitute a convenient zero. A wrong number is worse than a slow one, because a wrong number
+never announces itself.</div>
+
+<h2>5 &middot; What I checked and deliberately did NOT change</h2>
+<p>Two items on the Wave 5 list turned out not to need code. Recording why, so nobody re-opens
+them:</p>
+<table>
+  <tr><th>flagged item</th><th>verdict</th></tr>
+  <tr><td>Inbound rows record <code>dstAmount</code> from the burned amount
+      (<code>state.ts</code>)</td>
+      <td><span class="ok">Not a bug &mdash; already the truth.</span> We burn with
+      <code>CCTP_MAX_FEE = 0n</code> and finality threshold 2000, i.e. Circle&rsquo;s <em>standard</em>
+      transfer, which mints <strong>1:1</strong>. There is no slippage on that leg to under-report.
+      Verified in <code>lib/cctp/config.ts</code> rather than assumed.</td></tr>
+  <tr><td><code>swap_logs.amountOut</code> stores the quoted output, not the realized one</td>
+      <td><span class="no">Real gap, left open on purpose.</span> Getting the true figure means
+      parsing the Soroban call&rsquo;s return value, which is shaped differently for each protocol
+      (soroswap / phoenix / aqua / sdex). That is a genuine piece of work, not a one-liner &mdash; so
+      the code now carries a comment saying plainly that the number is an estimate, and it is
+      tracked for a later wave. The CCTP paths get real numbers because LI.FI reports them; the
+      Stellar path doesn&rsquo;t yet, and pretending otherwise would be the exact sin this wave is
+      about.</td></tr>
+</table>
+
+<h2>6 &middot; A test that lied about being green</h2>
+<p>The full run turned up one failure that had nothing to do with this wave &mdash; my own test for
+the request gate, from the honest-errors work:</p>
+<pre>expect(starts[2] - starts[1]).toBeGreaterThanOrEqual(20);
+  Expected: &gt;= 20    Received: 16</pre>
+<p>The gate was fine. The <em>test</em> measured the real wall clock, and on a loaded machine the
+operating system delivered a timer late. A test like that fails at random, and a suite that fails
+at random gets ignored &mdash; which is how a real failure eventually slips through.</p>
+<p>The gate already accepts its clock and its sleep as parameters, precisely so this can be
+proven instead of timed. It now asserts the exact waits the gate hands out
+(<code>[30, 60]</code> &mdash; the first call isn&rsquo;t held at all), with no reliance on real time.</p>
+<div class="box good"><div class="label">A trap worth knowing</div>
+My first attempt at the fake clock advanced a shared counter inside <code>sleep</code>. That
+models something that never happens: three concurrent 30ms sleeps take 30ms in the real world,
+not 90. <strong>A fake clock that models the wrong physics is worse than a real one</strong> &mdash;
+it fails confidently. Ran it 5&times; to confirm it&rsquo;s stable.</div>
+
+<h2>7 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R51</span></td>
+      <td><strong>The headline.</strong> Run an outbound swap (USDC &rarr; ETH / SOL / BTC) and
+      <em>leave the popup open</em> until it reports delivered. Then open the Activity row and
+      compare its figure to the quote you accepted.</td>
+      <td>The row shows what actually arrived &mdash; normally a little <strong>above</strong> the
+      quoted minimum, and matching the increase in your destination wallet.
+      <br><br><span class="no">The old behaviour:</span> the row showed the quoted minimum
+      exactly, forever, no matter what landed.</td></tr>
+  <tr><td>2<br><span class="qa">QA R52</span></td>
+      <td>Fund a CCTP swap from Lobstr (any amount with lots of decimals &mdash; a MAX is ideal).
+      After it completes, look at the Normal wallet&rsquo;s USDC balance.</td>
+      <td>No leftover dust from the funding move: the amount moved in equals the amount burned.
+      Cosmetic-scale, but it should be exactly zero, not 0.0000007.</td></tr>
+  <tr><td>3<br><span class="qa">QA R53</span></td>
+      <td>Run an ordinary Stellar swap (USDC &harr; XLM), the single-signature path.</td>
+      <td>Behaves exactly as before &mdash; one passkey, fee charged normally. In the server log
+      there is no <code>embedded fee amount unusable</code> line. If that line ever <em>does</em>
+      appear, the swap must fall back to the two-signature flow and still succeed &mdash; it must
+      never go through with a fee it cannot state.</td></tr>
+</table>
+<div class="box"><div class="label">What &ldquo;wrong&rdquo; looks like here</div>
+This wave is about numbers in the database, so the failure mode is quiet. If an Activity row shows
+a delivered amount that is <em>not</em> a number (blank, <code>NaN</code>, <code>0</code>) after a
+swap that clearly succeeded, that is a Wave 5 regression &mdash; send me the row and I will read it
+against the chain.</div>
+
+<h2>8 &middot; Where this leaves Wave 5</h2>
+<p>Closed: the delivered-amount truth (outbound), the precision mismatch, both fee-accounting
+holes, plus the flaky test. Still open by choice: <code>swap_logs.amountOut</code> on the Stellar
+path (&sect;5), and one narrow residue &mdash; if you close the tab in the window <em>between</em> the
+final leg broadcasting and the bridge confirming delivery, that row keeps the quoted minimum,
+because only your browser is watching that particular moment. The run-page work (doc 93 phase 0c)
+is where that stops being true.</p>
+
+<h2>9 &middot; Commit</h2>
+<p><code>fix(accounting): record what was delivered, not what was quoted</code> (full message in
+chat). New tests: <code>lib/cctp/delivered-amount.test.ts</code> (8). Suite: <strong>408 passing,
+48 suites</strong>; lint, prettier, tsc and build all clean.</p>
+
+</body>
+</html>

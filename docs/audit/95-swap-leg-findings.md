@@ -93,6 +93,30 @@ The tab must never be required after signing.
 - `normal-wallet-setup.ts:57` + `use-send-token.ts` — funding move + verification on one Horizon, no retry. Add retry/fallback.
 
 ## Wave 5 — Amount & accounting truth (money-low, silent)
+
+> **STATUS: SHIPPED 2026-08-27, run 6** — explainer `101-explainer-accounting-truth.html`.
+> Outbound rows now record LI.FI's REPORTED delivered amount via a new `dstAmountFinal` PATCH
+> field that is allowed to OVERWRITE (the set-once `dstAmount` guard stays for estimate-vs-estimate
+> races; it was rejecting fact-corrects-estimate). Parsing lives in `lib/cctp/delivered-amount.ts`
+> (8 tests) and returns `null` — keep the quoted figure — rather than ever writing a guess.
+> Funding move now `toFixed(6)` to match CCTP wire precision (was 7 → ≤0.0000009 USDC stranded;
+> the real value is that "did the funding land?" becomes exact arithmetic). Embedded-fee accounting
+> closed at both ends: `Number.isFinite` on the client (`NaN <= 0` is FALSE, so a non-numeric fee
+> sailed through and became `amount: "NaN"`), and server-side `embeddedFeeAmount()` — an unusable
+> figure now returns 409 `embedded_unavailable` and falls back to the fee pair instead of recording
+> the swap as fee-free while Soroswap still took its cut.
+> **Checked, NOT a bug:** `state.ts` inbound `dstAmount = wireToUsdc(amountWire)` is already the
+> truth — `CCTP_MAX_FEE = 0n` + finality 2000 is Circle's STANDARD transfer, which mints 1:1
+> (verified in `lib/cctp/config.ts`, not assumed).
+> **Left open on purpose:** `swap_logs.amountOut` stays the QUOTED output on the Stellar path —
+> the realized figure means parsing the Soroban return value, shaped differently per protocol
+> (soroswap/phoenix/aqua/sdex). Code now says so in a comment; tracked for a later wave.
+> **Residue:** closing the tab between the final leg broadcasting and the bridge confirming
+> delivery leaves that row on the quoted minimum (only the browser watches that window) — phase 0c's
+> run page removes it.
+> **Also:** `server/request-gate.test.ts` spacing case was wall-clock-timed and went flaky
+> (expected >=20ms, got 16 under load). Rewritten against the gate's injectable clock to assert the
+> exact waits `[30, 60]`; 5 consecutive green runs.
 - dstAmount written from the *quoted min* and set-once-guarded so the real delivered amount never replaces it (`state.ts:145`, `autopilot/pivot/route.ts:148`) — Activity + Dune under-report every swap by the slippage.
 - positive-slippage left on Base (`use-cctp-engine.tsx:725`); 7dp-vs-6dp funding dust (`:1130`); `swap_logs.amountOut` stores the estimate not the realized (`use-swap.tsx:393`); embedded fee `NaN`/0 accounting (`quote/route.ts:246`, `use-swap.tsx:323`).
 

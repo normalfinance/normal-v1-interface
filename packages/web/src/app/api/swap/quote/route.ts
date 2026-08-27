@@ -28,6 +28,18 @@ const XLM_CONTRACT: Record<'mainnet' | 'testnet', string> = {
   testnet: 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCN4',
 };
 
+// Doc 95 Wave 5: the embedded fee is what we BILL. It used to be forwarded as
+// `String(platformFee?.feeAmount ?? '')`, so a missing field became an empty
+// string, the client parsed it as 0, and the swap was recorded as fee-free
+// while Soroswap still took its cut — silently wrong accounting. An
+// unusable figure now returns '' and the caller treats the embedded path as
+// unavailable (falling back to the two-signature flow) rather than guessing.
+function embeddedFeeAmount(quote: any): string {
+  const raw = quote?.platformFee?.feeAmount;
+  const asString = typeof raw === 'number' ? String(raw) : String(raw ?? '');
+  return /^\d+$/.test(asString) && BigInt(asString) > 0n ? asString : '';
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Unauthenticated by design, but this proxies a service we pay for, so it
@@ -174,9 +186,7 @@ export async function POST(request: NextRequest) {
         amount_out: amountOut,
         min_amount_out: minAmountOut,
         xdr: '',
-        ...(embeddedFee
-          ? { embedded_fee: { feeBps, feeAmount: String(quote.platformFee?.feeAmount ?? '') } }
-          : {}),
+        ...(embeddedFee ? { embedded_fee: { feeBps, feeAmount: embeddedFeeAmount(quote) } } : {}),
       });
     }
 
@@ -258,6 +268,18 @@ export async function POST(request: NextRequest) {
           { status: 502 }
         );
       }
+      if (embeddedFee && !embeddedFeeAmount(built?.quote ?? {}) && !embeddedFeeAmount(quote)) {
+        console.error('[swap/quote] embedded fee amount unusable — falling back to the fee pair');
+        embeddedBrokenUntil = Date.now() + EMBEDDED_BREAKER_MS;
+        return NextResponse.json(
+          {
+            success: false,
+            embedded_unavailable: true,
+            error: 'Single-signature swap unavailable right now — using the standard flow',
+          },
+          { status: 409 }
+        );
+      }
       if (embeddedFee) {
         const feeKey = Buffer.from(StrKey.decodeEd25519PublicKey(getFeesDepositAddress()));
         if (!Buffer.from(xdr, 'base64').includes(feeKey)) {
@@ -288,9 +310,7 @@ export async function POST(request: NextRequest) {
       amount_out: amountOut,
       min_amount_out: minAmountOut,
       xdr,
-      ...(embeddedFee
-        ? { embedded_fee: { feeBps, feeAmount: String(quote.platformFee?.feeAmount ?? '') } }
-        : {}),
+      ...(embeddedFee ? { embedded_fee: { feeBps, feeAmount: embeddedFeeAmount(quote) } } : {}),
     });
   } catch (error) {
     console.error('Swap quote error:', error);
