@@ -2,7 +2,6 @@
 
 import type { Token } from '@normalfinance/types';
 import type { ChainId } from '@/lib/chains/registry';
-import type { PortfolioAsset } from '@/types/portfolio';
 import type { FreshRead } from '@/hooks/use-wallet-balances';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
@@ -27,6 +26,7 @@ import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import {
   nextReadDelayMs,
+  balanceSignature,
   MAX_REFRESH_ATTEMPTS,
   canAffordAnotherRead,
   shouldRetryPortfolioRead,
@@ -341,7 +341,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     async (
       label: string,
       read: () => Promise<FreshRead>,
-      valueOf: (assets: PortfolioAsset[] | null | undefined) => string | null,
+      valueOf: (read: FreshRead) => string | null,
       before: string | null
     ) => {
       const startedAt = Date.now();
@@ -356,9 +356,9 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           res = await read();
         } catch (err) {
           console.info(`[balance-gate:${label}] attempt ${attempt} FAILED`, err);
-          res = { assets: null, floored: false };
+          res = { assets: null, companionAssets: null, floored: false };
         }
-        const after = valueOf(res.assets);
+        const after = valueOf(res);
         const changed = after !== null && after !== before;
         // One line per attempt, on purpose: when a balance looks stale after a
         // swap this says immediately WHICH layer was stale — whether the read
@@ -421,7 +421,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
       await refreshUntilFresh(
         symbol,
         () => hook.refetchBalance(),
-        (assets) => assets?.find((a) => a.symbol === symbol)?.balance ?? null,
+        (read) => read.assets?.find((a) => a.symbol === symbol)?.balance ?? null,
         before ?? null
       );
     },
@@ -437,26 +437,31 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   aggAssetsRef.current = aggAssets;
   const stellarPairRef = useRef<[SwapSymbol, SwapSymbol]>([fromSymbol, toSymbol]);
   stellarPairRef.current = [fromSymbol, toSymbol];
+  const companionAssetsRef = useRef(companionStellar?.assets ?? null);
+  companionAssetsRef.current = companionStellar?.assets ?? null;
   const refetchStellarAfterSwap = useCallback(async () => {
-    // Watch BOTH sides of the swap, not just the destination. A swap moves two
-    // balances, so either one moving proves the read is post-swap — and the
-    // pair is also what the card actually displays. Watching one halved the
-    // evidence available for no benefit.
-    const [fromSym, toSym] = stellarPairRef.current;
-    const totalOf = (
-      assets: { symbol: string; balance: string | null }[] | null | undefined,
-      sym: string
-    ) =>
-      (assets ?? [])
-        .filter((a) => a.symbol === sym)
-        .reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
-    const signature = (assets: { symbol: string; balance: string | null }[] | null | undefined) =>
-      `${fromSym}:${totalOf(assets, fromSym)}|${toSym}:${totalOf(assets, toSym)}`;
+    // ------------------------------------------------------------------
+    // Watch BOTH sides of the swap AND BOTH wallets.
+    //
+    // Both sides, because a swap moves two balances and either one moving
+    // proves the read is post-swap.
+    //
+    // Both wallets, because of the live 2026-08-28 failure: an external
+    // (Lobstr) user swapping FROM their Normal wallet moves the COMPANION's
+    // balances, which live in `companionStellar` and never appear in
+    // `assets` at all. The gate was watching the connected Lobstr wallet's
+    // untouched 0.00, so "did it change?" was permanently false — it waited
+    // out its whole budget and gave up, every time, no matter how many
+    // caching bugs underneath it got fixed. Only one of these four numbers
+    // moves on any given swap; including all four means we never have to
+    // know in advance which wallet paid.
+    // ------------------------------------------------------------------
+    const pair = stellarPairRef.current;
     await refreshUntilFresh(
-      `${fromSym}->${toSym}`,
+      `${pair[0]}->${pair[1]}`,
       refreshFresh,
-      signature,
-      signature(aggAssetsRef.current)
+      (read) => balanceSignature(pair, read.assets, read.companionAssets),
+      balanceSignature(pair, aggAssetsRef.current, companionAssetsRef.current)
     );
   }, [refreshFresh, refreshUntilFresh]);
 

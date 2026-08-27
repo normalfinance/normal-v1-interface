@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Watching The Wrong Wallet</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Watching The Wrong Wallet</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 11 &mdash; found it. Your
+screenshot had the answer in it.</p>
+
+<h2>1 &middot; The answer to &ldquo;what's the point of the step?&rdquo;</h2>
+<p>Fair question, and the honest answer is that the step was doing its job perfectly &mdash; it was
+just <strong>watching a wallet that the swap never touches</strong>. So it waited, saw nothing
+move, waited some more, ran out of patience and ticked itself green. Every time. No number of
+fixes to the caching underneath could ever have helped, which is why my last three attempts kept
+missing.</p>
+
+<h2>2 &middot; What your screenshot showed</h2>
+<pre>[ Normal wallet · 28.70 ]  [ Lobstr · 0.00 ]
+                 28.706530 USDC · <span class="ok">Normal wallet</span></pre>
+<p>You are signed in with an <strong>external wallet (Lobstr)</strong>, and you chose to swap from
+your <strong>Normal wallet</strong> &mdash; the companion. That distinction is the whole bug.</p>
+<p>The app keeps those two wallets' balances in two separate places, deliberately:</p>
+<table>
+  <tr><th>field</th><th>holds</th></tr>
+  <tr><td><code>assets</code></td><td>the <strong>connected</strong> wallet &mdash; Lobstr, 0.00</td></tr>
+  <tr><td><code>companionStellar.assets</code></td><td>the <strong>Normal</strong> wallet &mdash; the 28.70 that actually swapped</td></tr>
+</table>
+<p>The gate compared only <code>assets</code>. So it sat there asking &ldquo;has the Lobstr
+balance changed?&rdquo; about a swap that moved the Normal wallet:</p>
+<pre>before:  USDC 0.00, XLM 0.00      (Lobstr)
+after:   USDC 0.00, XLM 0.00      (Lobstr — <span class="no">of course it didn't change</span>)
+verdict: <span class="no">not fresh yet</span> → wait → ask again → wait → give up → tick Done</pre>
+<div class="box bad"><div class="label">Permanently false, not intermittently</div>
+This was not a race or a timing window. For an external-wallet user swapping from their Normal
+wallet, the condition the gate waits on <strong>can never become true</strong>. It always burned
+its full budget and always gave up &mdash; and then Done ticked, with the balance updating whenever
+the ordinary background refresh next came round. That is the 5&ndash;10 seconds you kept seeing.</div>
+
+<h2>3 &middot; The fix</h2>
+<p>The gate now watches <strong>both wallets and both sides</strong> of the swap &mdash; four
+numbers:</p>
+<pre>USDC:slot=0,normal=28.706530 | XLM:slot=0,normal=5.1
+                    ↓ after the swap
+USDC:slot=0,normal=27.701530 | XLM:slot=0,normal=10.397652   <span class="ok">← changed</span></pre>
+<p>Only one of the four moves on any given swap, so including all of them means the gate never has
+to work out in advance which wallet is paying. It just notices that something moved.</p>
+<p>That fingerprint is now a tested function rather than a line buried in the card, and the tests
+include your exact case &mdash; Lobstr flat at 0.00 while the companion swaps &mdash; so this
+particular blindness cannot come back. One test also checks the two wallets are kept
+<em>separate</em> rather than added together, since summing them would let a rise in one hide a
+fall in the other.</p>
+
+<h2>4 &middot; What the earlier rounds were worth</h2>
+<p>Three of my attempts did not fix your problem. They were real bugs and they stay fixed, but I
+want to be straight about which one actually mattered:</p>
+<table>
+  <tr><th>round</th><th>what it fixed</th><th>was it your bug?</th></tr>
+  <tr><td>1</td><td>A cached response being mistaken for a fresh read</td>
+      <td class="no">No &mdash; real, but not this</td></tr>
+  <tr><td>2</td><td>Waiting a full 5.6s when the cache window had almost expired</td>
+      <td class="no">No &mdash; real, but not this</td></tr>
+  <tr><td>3</td><td>One failed request skipping the wait entirely; waiting for the ledger before
+      reading</td>
+      <td class="no">No &mdash; real, and it made the symptom <em>worse</em> before this fix</td></tr>
+  <tr><td>4</td><td><strong>Watching the wallet that actually swapped</strong></td>
+      <td class="ok">Yes</td></tr>
+</table>
+<div class="box warn"><div class="label">The mistake I kept making</div>
+Each round I confirmed the gate's <em>plumbing</em> was sound and went looking one layer deeper.
+What I never checked until your screenshot was the most basic thing of all: <strong>whether the
+number the gate watches is the number on your screen.</strong> It wasn't. The screenshot showed
+two wallet chips and I should have asked that question in round one.</div>
+
+<h2>5 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R67</span></td>
+      <td><strong>Your exact case.</strong> Signed in with Lobstr, source set to
+      <strong>Normal wallet</strong>, swap 1 USDC → XLM. Keep the console open (F12).</td>
+      <td>&ldquo;Updating balances&rdquo; resolves in about a second and Done appears with the
+      balance <strong>already correct</strong>. The console line reads
+      <code>changed=true</code> with <code>normal=</code> values that differ before and after.</td></tr>
+  <tr><td>2<br><span class="qa">QA R66</span></td>
+      <td>Switch the source to <strong>Lobstr</strong> and swap from there instead.</td>
+      <td>Same behaviour &mdash; now the <code>slot=</code> values are the ones that move. Both
+      wallets work because both are watched.</td></tr>
+  <tr><td>3<br><span class="qa">QA R64</span></td>
+      <td>Two swaps back to back, either wallet.</td>
+      <td>Both land correctly with no page refresh.</td></tr>
+</table>
+<div class="box good"><div class="label">If it is still wrong</div>
+Send me the <code>[balance-gate:...]</code> console lines. They now print all four numbers before
+and after, so any remaining case is readable at a glance rather than another round of guessing.</div>
+
+<h2>6 &middot; Commit</h2>
+<p><code>fix(swap): the balance gate was watching the wrong wallet</code> (full message in chat).
+New tests: 6 added to <code>lib/portfolio/refresh-retry.test.ts</code>, including the live case.
+Suite: <strong>467 passing, 54 suites</strong>; lint, prettier, tsc and build all clean.</p>
+
+</body>
+</html>

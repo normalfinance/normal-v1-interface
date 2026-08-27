@@ -1,6 +1,7 @@
 import {
   FLOOR_WAIT_MS,
   nextReadDelayMs,
+  balanceSignature,
   REFRESH_BUDGET_MS,
   MIN_RETRY_WAIT_MS,
   canAffordAnotherRead,
@@ -107,5 +108,55 @@ describe('canAffordAnotherRead', () => {
 
   it('stays under the modal cap it exists to respect', () => {
     expect(REFRESH_BUDGET_MS).toBeLessThan(15_000);
+  });
+});
+
+describe('balanceSignature', () => {
+  const PAIR = ['USDC', 'XLM'] as const;
+  const a = (symbol: string, balance: string | null) => ({ symbol, balance });
+
+  it('changes when the CONNECTED wallet moves', () => {
+    const before = balanceSignature(PAIR, [a('USDC', '28.7'), a('XLM', '5')], null);
+    const after = balanceSignature(PAIR, [a('USDC', '27.7'), a('XLM', '10.3')], null);
+    expect(after).not.toBe(before);
+  });
+
+  it('changes when the COMPANION wallet moves — the live 2026-08-28 bug', () => {
+    // The exact shape from the screenshot: the connected Lobstr wallet holds
+    // 0.00 and never moves, while the Normal (companion) wallet does the swap.
+    // Watching only the first array made "did anything change?" permanently
+    // false, so the gate gave up on every swap.
+    const lobstr = [a('USDC', '0'), a('XLM', '0')];
+    const before = balanceSignature(PAIR, lobstr, [a('USDC', '28.706530'), a('XLM', '5.1')]);
+    const after = balanceSignature(PAIR, lobstr, [a('USDC', '27.701530'), a('XLM', '10.397652')]);
+    expect(after).not.toBe(before);
+  });
+
+  it('is stable when nothing moved', () => {
+    const slot = [a('USDC', '1'), a('XLM', '2')];
+    const comp = [a('USDC', '3'), a('XLM', '4')];
+    expect(balanceSignature(PAIR, slot, comp)).toBe(balanceSignature(PAIR, slot, comp));
+  });
+
+  it('keeps the two wallets distinct rather than summing them', () => {
+    // Summing would let a rise in one wallet hide a fall in the other.
+    const left = balanceSignature(PAIR, [a('USDC', '10')], [a('USDC', '0')]);
+    const right = balanceSignature(PAIR, [a('USDC', '0')], [a('USDC', '10')]);
+    expect(left).not.toBe(right);
+  });
+
+  it('treats missing, null and unreadable balances as zero rather than throwing', () => {
+    expect(balanceSignature(PAIR, null, undefined)).toBe(
+      'USDC:slot=0,normal=0|XLM:slot=0,normal=0'
+    );
+    expect(balanceSignature(PAIR, [a('USDC', null)], [a('XLM', 'not-a-number')])).toBe(
+      'USDC:slot=0,normal=0|XLM:slot=0,normal=0'
+    );
+  });
+
+  it('sums rows that share a symbol', () => {
+    expect(balanceSignature(['USDC'], [a('USDC', '1'), a('USDC', '2')], null)).toBe(
+      'USDC:slot=3,normal=0'
+    );
   });
 });

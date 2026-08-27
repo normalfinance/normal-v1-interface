@@ -27,6 +27,15 @@ import {
  *  served its cache despite the bypass, so the read proved nothing. */
 export interface FreshRead {
   assets: PortfolioAsset[] | null;
+  /**
+   * The companion Normal wallet's Stellar balances, when the connected wallet
+   * is external. Kept SEPARATE from `assets` everywhere in this app — and the
+   * reason a post-swap gate must be handed both: an external-wallet user
+   * swapping from their Normal wallet moves balances that never appear in
+   * `assets` at all (live 2026-08-28: the gate watched the connected Lobstr
+   * wallet's untouched 0.00 while the companion did the swap).
+   */
+  companionAssets: PortfolioAsset[] | null;
   floored: boolean;
   /** Milliseconds until the server's bypass floor lifts, when it told us. */
   retryAfterMs?: number;
@@ -154,12 +163,13 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
       mutate();
     },
     refreshFresh: async () => {
-      if (!swrKey) return { assets: null, floored: false };
+      if (!swrKey) return { assets: null, companionAssets: null, floored: false };
       const payload = await mutate(fetchPayload(swrKey, true), { revalidate: false });
       // `floored` rides on the payload only so it can be read back here; it is
       // NOT part of the stored snapshot (see fetchPayload).
       return {
         assets: payload?.assets ?? null,
+        companionAssets: payload?.companionStellar?.assets ?? null,
         floored: !!payload?.floored,
         retryAfterMs: payload?.retryAfterMs,
       };

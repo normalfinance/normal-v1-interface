@@ -72,6 +72,40 @@ export function nextReadDelayMs(args: { floored: boolean; retryAfterMs?: number 
   return Math.min(Math.max(hint, MIN_RETRY_WAIT_MS), FLOOR_WAIT_MS);
 }
 
+interface BalanceLike {
+  symbol: string;
+  balance: string | null;
+}
+
+/**
+ * The fingerprint a post-swap read is compared against.
+ *
+ * It covers BOTH sides of the swap and BOTH wallets, and the second half is
+ * the one that was missing (live 2026-08-28). An external-wallet user swapping
+ * from their Normal wallet moves the COMPANION's balances — which the app
+ * keeps in a separate `companionStellar` array that never appears in `assets`.
+ * The gate compared only `assets`, i.e. the connected wallet's untouched
+ * 0.00, so "did anything change?" was permanently false: it waited out its
+ * entire budget and gave up on every single swap, and no amount of fixing the
+ * caches underneath it could have helped.
+ *
+ * Only one of these numbers moves on a given swap. Including them all means
+ * the gate never has to know in advance which wallet paid.
+ */
+export function balanceSignature(
+  symbols: readonly string[],
+  slot: BalanceLike[] | null | undefined,
+  companion: BalanceLike[] | null | undefined
+): string {
+  const totalOf = (assets: BalanceLike[] | null | undefined, sym: string) =>
+    (assets ?? [])
+      .filter((a) => a.symbol === sym)
+      .reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+  return symbols
+    .map((s) => `${s}:slot=${totalOf(slot, s)},normal=${totalOf(companion, s)}`)
+    .join('|');
+}
+
 export function shouldRetryPortfolioRead(args: {
   /** The route served a cached copy despite `refresh=1`. */
   floored: boolean;
