@@ -7,6 +7,7 @@
 // packages/web/vercel.json. Same auth pattern as cctp-advance.
 import { NextResponse } from 'next/server';
 import { sweepFeeEscrow } from '@/server/fee-escrow';
+import { cronAuthVerdict } from '@/server/cron-auth';
 import { reconcileSendRecords } from '@/server/send-records';
 import { recordCronHeartbeat } from '@/server/cron-heartbeat';
 import {
@@ -22,11 +23,16 @@ export const maxDuration = 120;
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(req: Request) {
-  if (CRON_SECRET) {
-    const auth = req.headers.get('authorization');
-    if (auth !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Doc 95 Wave 7: an UNSET secret used to skip this check entirely, leaving
+  // a money-moving endpoint public. cronAuthVerdict fails closed instead.
+  const auth = cronAuthVerdict(
+    CRON_SECRET,
+    req.headers.get('authorization'),
+    process.env.NODE_ENV === 'development'
+  );
+  if (!auth.ok) {
+    console.error('[cron] refused:', auth.error);
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   // 1. Complete/kill dead fee pairs (#26)...

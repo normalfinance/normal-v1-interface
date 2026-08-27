@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { redis } from '@/server/rateLimiter';
 import { withRateLimitRetry } from '@/server/defindex';
+import { networkFromCookie } from '@/server/network-cookie';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import { eventTxId, reconcileTotalDeposited } from '@/server/savings-deposits';
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies();
     const { searchParams } = new URL(request.url);
     const networkOverride = searchParams.get('network');
-    const network = networkOverride ?? cookieStore.get('normal-network')?.value ?? 'testnet';
+    const network = networkFromCookie(cookieStore, networkOverride);
     const isMainnet = network === 'mainnet';
 
     const userAddress = searchParams.get('user');

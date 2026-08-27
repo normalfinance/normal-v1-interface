@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Saying The Right Thing</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Saying The Right Thing</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 8 (2026-08-27) &mdash; doc 95
+Wave 7, the last one: nothing here loses money, but the app was telling people things that were
+not true.</p>
+
+<h2>1 &middot; The headline: a message that rewrote itself into bad advice</h2>
+<p>You run out of ETH for gas. The app works that out correctly and says:</p>
+<pre class="ok">"Not enough ETH left to pay the network fee — try a slightly smaller amount."</pre>
+<p>That sentence is right and it is actionable. Then the progress popup ran <em>its own</em>
+second classifier over it, and one of that classifier's patterns was the bare word
+<code>network</code>:</p>
+<pre>if (/timeout|timed out|<span class="no">network</span>|fetch/i.test(raw)) {
+  return t('The network did not answer in time. Nothing is lost — try again in a moment.');
+}</pre>
+<p>So what you actually saw was:</p>
+<pre class="no">"The network did not answer in time. Nothing is lost — try again in a moment."</pre>
+<div class="box bad"><div class="label">Why this is worse than showing nothing</div>
+It tells you to <strong>retry</strong>. Retrying cannot possibly work &mdash; you still do not have
+the ETH. So the user tries again, fails again, and now distrusts the app rather than topping up
+their gas. A wrong message does not just fail to help; it actively sends someone down a road with
+no end.</div>
+
+<h3>The real cause: the same job done twice</h3>
+<p>The engine <em>already</em> turns errors into human sentences before the popup ever sees them
+(the shared classifier in <code>utils/errors/error-classifier.ts</code>). The popup then did the
+job again with a sloppier copy of the rules. The shared one gets this right &mdash; its
+connectivity pattern requires actual failure words (<code>timed out</code>,
+<code>failed to fetch</code>), never the word &ldquo;network&rdquo; on its own.</p>
+<p>So the popup now does <strong>not re-classify at all</strong>. It keeps exactly one rule, the
+only thing the shared classifier cannot know:</p>
+<pre>on-chain rejection  →  "The exchange route failed on the provider side — your USDC is
+                        safe in your own account. You can retry, or bring it back as USDC."
+everything else     →  shown exactly as written</pre>
+<p>That decision is now a tested module (<code>cctp-failure-copy.ts</code>, 5 tests), and one test
+is the exact sentence from this bug &mdash; so this specific collision cannot come back.</p>
+
+<h2>2 &middot; A step that succeeded, marked with a red error</h2>
+<p>When you fund a swap from Lobstr, the popup lists the steps and marks the failing one in red.
+The code set the stage to <code>funding</code>, moved your USDC&hellip; and then <strong>left the
+stage on <code>funding</code></strong> while it created the swap record on our server.</p>
+<p>If anything in <em>that</em> step failed &mdash; a dropped request, a rejected record &mdash;
+the red marker landed on the funding step:</p>
+<pre>Moving USDC from Lobstr   <span class="no">✕  &lt;- this SUCCEEDED. Your USDC did move.</span>
+Preparing the bridge          (never reached)</pre>
+<div class="box warn"><div class="label">Why this matters more than it looks</div>
+The user is told the money did not leave their wallet, while it has. Anyone sensible then goes
+looking for missing funds, or funds it a second time. The fix is one line &mdash; advance the
+stage the moment funding succeeds &mdash; so the marker always lands on the step that actually
+broke, and the funding step keeps its green check.</div>
+
+<h2>3 &middot; A button that did nothing at all</h2>
+<p>&ldquo;Bring back as USDC&rdquo; returns USDC that is sitting at your own address on Base. It
+was offered on <strong>any</strong> outbound failure, including failures that happen before any
+USDC has reached Base &mdash; a funding failure, a failed record creation.</p>
+<p>In those cases there is nothing to bring back. Worse, when the swap had failed before its
+record existed, the handler hit this:</p>
+<pre>const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
+if (!failedId) return;   <span class="no">← click does nothing. No error, no feedback.</span></pre>
+<p>A dead control, on a failure screen, which is the worst possible place for one: the user is
+already worried, presses the button offering to recover their money, and <em>nothing happens</em>.
+It is now shown only when both things are true &mdash; the USDC has actually reached Base
+(stage <code>topup</code> onward), and a real transfer record exists for the refund to act on.</p>
+
+<h2>4 &middot; A missing setting that switched off the lock</h2>
+<p>All four scheduled jobs were written like this:</p>
+<pre>if (CRON_SECRET) {
+  ...check the Authorization header...
+}</pre>
+<p>Read it closely. If <code>CRON_SECRET</code> is <strong>not set</strong>, the check does not
+fail &mdash; it is <em>skipped</em>, and the endpoint is public. These jobs advance bridges, sweep
+escrowed fees and reconcile ramps. An absent environment variable silently turned money-moving
+endpoints into open ones, and nothing anywhere said so.</p>
+<div class="box bad"><div class="label">The pattern, one more time</div>
+This is the same shape as all of Wave 6: <strong>not knowing must not resolve to yes.</strong>
+Here the app did not know whether the caller was allowed, so it let them in.</div>
+<p>The decision is now a pure, tested function (<code>server/cron-auth.ts</code>, 6 tests):</p>
+<table>
+  <tr><th>situation</th><th>answer</th></tr>
+  <tr><td>Secret set, correct token</td><td class="ok">run</td></tr>
+  <tr><td>Secret set, wrong/missing token</td><td>401 Unauthorized</td></tr>
+  <tr><td><strong>Secret not set</strong>, in production</td>
+      <td class="no">503 &mdash; &ldquo;refusing to run an unauthenticated cron&rdquo;, logged</td></tr>
+  <tr><td>Secret not set, on a developer machine</td><td class="ok">run (localhost stays usable)</td></tr>
+</table>
+<p>503 rather than 401 on purpose: the caller did nothing wrong, the <em>deployment</em> is
+misconfigured, and that should be fixed rather than retried. Your scheduler already sends the
+secret, so nothing changes for it.</p>
+
+<h2>5 &middot; One cookie, sixteen routes, two different answers</h2>
+<p>Which network a request is on comes from a cookie called <code>normal-network</code>. Sixteen
+API routes read it, and each supplied its own fallback for when it is missing:</p>
+<pre>cctp/quote, cctp/transfers, send/execute   →  'mainnet'
+swap/quote, savings/*, fees/*, transaction →  'testnet'</pre>
+<p>The cookie is only written once the browser store loads or you toggle the network &mdash; so on
+a <strong>first visit</strong> it is absent, and the same user's swap quote was built on
+<em>testnet</em> while their CCTP transfer record was created on <em>mainnet</em>. That is not a
+cosmetic split; those two must agree or the swap is nonsense.</p>
+<p>The browser's own answer comes from one function, <code>getCurrentNetwork()</code>, which reads
+<code>NEXT_PUBLIC_NETWORK</code>. All sixteen routes now derive their fallback from that same
+function, so client and server agree <em>by construction</em> rather than by sixteen literals
+staying in step. It is the rule you already set for chain values, applied to the deployment's
+network.</p>
+<div class="box"><div class="label">A second thing that fixes</div>
+The old code also wrote <code>cookie.value as NetworkType</code> &mdash; a cast, which in
+TypeScript means &ldquo;trust me&rdquo;, not &ldquo;check this&rdquo;. A junk cookie value went
+straight through as if it were a real network. The shared parser validates instead, and returns
+null so the caller falls back deliberately (<code>utils/network-value.ts</code>, 3 tests).</div>
+
+<h2>6 &middot; An escape hatch that could be left open silently</h2>
+<p>The <code>fly</code> DEX blocklist &mdash; the one that stops quotes routing through the fake
+TSLA token that burned three bridges &mdash; is disabled by setting
+<code>LIFI_DENY_EXCHANGES=""</code>. That is a deliberate escape hatch and it stays.</p>
+<p>The problem was the silence. An empty string is also exactly what an environment dashboard
+produces when someone clears a field, and nothing anywhere would have said the protection was off.
+It now logs a warning naming what is unprotected, every time. The hatch is kept; the silence is
+not.</p>
+
+<h2>7 &middot; Checked, and doc 95 was wrong</h2>
+<p>Doc 95 listed the fee-pair flow's 40-second give-up as having &ldquo;no reconciliation&rdquo;
+&mdash; meaning that if we stop waiting for a transaction, nothing ever settles the record.</p>
+<p>I read the code rather than fixing it, and that is not the case. There is a reconciler:
+<code>reconcileTxRecords()</code> probes every non-terminal record and settles it as confirmed,
+failed or abandoned. It is called by the <code>fee-escrow-sweep</code> job.</p>
+<div class="box warn"><div class="label">But there is a real history here</div>
+<code>fee-escrow-sweep</code> is one of the jobs we proved had <strong>never run</strong>. So the
+reconciliation existed and simply never happened &mdash; which looks identical from the outside.
+That is fixed by the scheduler already on master, and by the crons that arrive when develop
+reaches master. No code change needed here; the correction is recorded in doc 95 so nobody
+re-opens it.</div>
+
+<h2>8 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R59</span></td>
+      <td><strong>The headline.</strong> Run an outbound CCTP swap on an account with almost no ETH
+      so the gas check fails, and read the popup.</td>
+      <td>It says <strong>&ldquo;Not enough ETH left to pay the network fee — try a slightly
+      smaller amount&rdquo;</strong>. It must <span class="no">never</span> say &ldquo;the network
+      did not answer in time&rdquo; &mdash; that told you to retry something that cannot
+      succeed.</td></tr>
+  <tr><td>2<br><span class="qa">QA R60</span></td>
+      <td>Fund a swap from Lobstr, then make the step after funding fail (block
+      <code>POST /api/cctp/transfers</code> in devtools once the funding prompt is approved).</td>
+      <td>&ldquo;Moving USDC from Lobstr&rdquo; keeps its <span class="ok">green check</span> and
+      the error marker sits on the next step. Previously the step that had succeeded was marked
+      failed, while the USDC had genuinely moved.</td></tr>
+  <tr><td>3<br><span class="qa">QA R61</span></td>
+      <td>Cause an early outbound failure (funding or record creation) and look at the buttons.
+      Then cause a late one (after the USDC reaches Base) and look again.</td>
+      <td>Early: <strong>no</strong> &ldquo;Bring back as USDC&rdquo; button &mdash; there is
+      nothing at Base to bring back. Late: the button appears and works. No button anywhere that
+      does nothing when pressed.</td></tr>
+  <tr><td>4<br><span class="qa">QA R62</span></td>
+      <td>On staging, call a cron endpoint by hand with no Authorization header, e.g.
+      <code>/api/cron/cctp-advance</code>. Then let the scheduler run normally.</td>
+      <td>The bare call is rejected (401 with the secret configured). The scheduler, which sends
+      the secret, still works. If a deployment ever has no <code>CRON_SECRET</code>, the endpoint
+      answers <strong>503</strong> and logs it &mdash; it must never run unauthenticated.</td></tr>
+  <tr><td>5<br><span class="qa">QA R63</span></td>
+      <td>In a fresh browser profile (no cookies), open the app and immediately do a swap and open
+      savings.</td>
+      <td>Everything is on the same network &mdash; the one this deployment is configured for. No
+      mixture of mainnet and testnet between the swap quote and the transfer record.</td></tr>
+</table>
+
+<h2>9 &middot; That is all seven waves</h2>
+<table>
+  <tr><th>wave</th><th>theme</th><th>doc</th></tr>
+  <tr><td>1&ndash;2</td><td>The server finishes the job; never sign what we did not verify</td><td>97, 98</td></tr>
+  <tr><td>3</td><td>Broadcast races &mdash; two swaps eating each other</td><td>99</td></tr>
+  <tr><td>4</td><td>No money path depends on one provider</td><td>100</td></tr>
+  <tr><td>5</td><td>Report what was delivered, not what was quoted</td><td>101</td></tr>
+  <tr><td>6</td><td>Guards that waved you through when they could not tell</td><td>102</td></tr>
+  <tr><td>7</td><td>Saying the right thing</td><td>this one</td></tr>
+</table>
+<p><strong>Next:</strong> merge to develop and run the staging QA sheet &mdash; it is now
+R25&ndash;R63. Then develop into master, which is also what finally gives production the scheduled
+jobs. After that, the run page (doc 93 phase 0c), which removes the last two things these waves
+deliberately left open: the wallet-setup double-funding path, and the quoted-minimum that sticks
+when you close the tab mid-delivery.</p>
+
+<h2>10 &middot; Commit</h2>
+<p><code>fix(ux): stop telling people things that are not true</code> (full message in chat). New
+tests: <code>cctp-failure-copy.test.ts</code> (5), <code>server/cron-auth.test.ts</code> (6),
+<code>utils/network-value.test.ts</code> (3). Suite: <strong>437 passing, 52 suites</strong>; lint,
+prettier, tsc and build all clean.</p>
+
+</body>
+</html>

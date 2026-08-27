@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
+import { networkFromCookie } from '@/server/network-cookie';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import { inspectRateLimit, withRateLimitRetry } from '@/server/defindex';
@@ -28,7 +29,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
 
   try {
     const cookieStore = await cookies();
-    const network = cookieStore.get('normal-network')?.value ?? 'testnet';
+    const network = networkFromCookie(cookieStore);
     const isMainnet = network === 'mainnet';
 
     const sdk = new DefindexSDK({

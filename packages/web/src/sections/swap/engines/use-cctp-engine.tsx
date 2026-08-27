@@ -541,6 +541,12 @@ export function useCctpEngine({
   // the next one. See autopilot-gate.ts.
   const autopilotGate = useRef(createAutopilotGate(() => autopilotActive()));
 
+  // Stages at which the outbound USDC has actually reached the Base address,
+  // i.e. the only ones where bringing it back is a thing that can happen.
+  // Before 'topup' the money is still in Stellar or mid-bridge; a failure
+  // there is recovered by Try again / the banner, not by a refund.
+  const BRING_BACK_STAGES: CctpStage[] = ['topup', 'pivot-swap', 'delivering'];
+
   const runRefund = useCallback(
     async (transferId: string) => {
       setRefundError(null);
@@ -1205,6 +1211,13 @@ export function useCctpEngine({
             })
           );
         }
+        // Doc 95 Wave 7: the stage used to stay on 'funding' through the row
+        // creation below, so ANY later failure (a 403, a dropped request)
+        // put the red error marker on the funding step — the one step that
+        // had genuinely SUCCEEDED. The user was told the move from their
+        // wallet failed while their USDC had, in fact, moved. Advance the
+        // moment it is done, so the marker lands where the failure is.
+        setStage('burn-prepare');
       } else {
         setUsedFunding(false);
       }
@@ -1604,6 +1617,14 @@ export function useCctpEngine({
     </Stack>
   ) : null;
 
+  // Doc 95 Wave 7: two conditions, both required — the USDC must have reached
+  // Base, AND a transfer row must exist for the refund to act on. Without the
+  // second, the handler returned early and the button did nothing at all.
+  const canBringBack =
+    !!stage &&
+    BRING_BACK_STAGES.includes(stage) &&
+    !!(getActiveCctpTransfer() ?? lastFailedRunIdRef.current);
+
   return {
     toAmount,
     quoteLoading: enabled ? quoteLoading : false,
@@ -1697,7 +1718,16 @@ export function useCctpEngine({
                 : undefined
           }
           onBringBack={
-            stageError && direction === 'out' && !refundStage
+            // Doc 95 Wave 7: this was offered on ANY outbound failure. But
+            // "bring back as USDC" returns USDC that is sitting at the user's
+            // own Base address — and before the bridge delivers there, there
+            // is nothing to return. Offered on a funding or burn failure it
+            // could only fail, and when no transfer row existed yet the
+            // handler hit `if (!failedId) return` and the button did
+            // NOTHING AT ALL: a dead control on a failure screen, which is
+            // the worst place to put one. Shown now only once the USDC has
+            // actually arrived on Base.
+            stageError && direction === 'out' && !refundStage && canBringBack
               ? () => {
                   // Niko 2026-08-27: the refund runs IN this popup — the
                   // steps update in place instead of the modal closing and

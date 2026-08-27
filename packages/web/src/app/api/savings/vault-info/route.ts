@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { redis } from '@/server/rateLimiter';
 import { withRateLimitRetry } from '@/server/defindex';
+import { networkFromCookie } from '@/server/network-cookie';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 
 export const dynamic = 'force-dynamic';
@@ -43,7 +44,7 @@ export async function GET(_request: NextRequest) {
   try {
     const cookieStore = await cookies();
     const networkOverride = _request.nextUrl.searchParams.get('network');
-    const network = networkOverride ?? cookieStore.get('normal-network')?.value ?? 'testnet';
+    const network = networkFromCookie(cookieStore, networkOverride);
     const isMainnet = network === 'mainnet';
 
     // Network belongs in the key: a testnet vault must never be served to a
@@ -128,10 +129,7 @@ export async function GET(_request: NextRequest) {
     // again here because the failure may have happened before it was resolved.
     try {
       const cookieStore = await cookies();
-      const network =
-        _request.nextUrl.searchParams.get('network') ??
-        cookieStore.get('normal-network')?.value ??
-        'testnet';
+      const network = networkFromCookie(cookieStore, _request.nextUrl.searchParams.get('network'));
       const stale = await redis.get<VaultInfoPayload>(`savings:vault:stale:${network}`);
       if (stale) {
         console.warn('[vault-info] serving stale vault info');

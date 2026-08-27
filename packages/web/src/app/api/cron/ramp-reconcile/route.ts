@@ -14,6 +14,7 @@ import { prisma } from '@/lib/prisma';
 // Same auth pattern as the other crons (CRON_SECRET), same heartbeat.
 import { NextResponse } from 'next/server';
 import { logger } from '@normalfinance/utils';
+import { cronAuthVerdict } from '@/server/cron-auth';
 import { recordCronHeartbeat } from '@/server/cron-heartbeat';
 import { ABANDON_AFTER_MS, balanceShowsArrival } from '@/lib/ramp/status';
 
@@ -56,11 +57,16 @@ async function stellarBalance(
 }
 
 export async function GET(req: Request) {
-  if (CRON_SECRET) {
-    const auth = req.headers.get('authorization');
-    if (auth !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Doc 95 Wave 7: an UNSET secret used to skip this check entirely, leaving
+  // a money-moving endpoint public. cronAuthVerdict fails closed instead.
+  const auth = cronAuthVerdict(
+    CRON_SECRET,
+    req.headers.get('authorization'),
+    process.env.NODE_ENV === 'development'
+  );
+  if (!auth.ok) {
+    console.error('[cron] refused:', auth.error);
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   let abandoned = 0;

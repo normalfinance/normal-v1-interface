@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/with-auth';
 import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
+import { networkFromCookie } from '@/server/network-cookie';
 import { getFeesDepositAddress } from '@/lib/build-fee-payment';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
 import { settleRecord, createPendingRecord } from '@/server/tx-records';
@@ -34,9 +35,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       return NextResponse.json({ success: false, error: 'Missing signedXdr' }, { status: 400 });
     }
     const cookieStore = await cookies();
-    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as
-      | 'mainnet'
-      | 'testnet';
+    const network = networkFromCookie(cookieStore);
     const config = getStellarConfigForNetwork(network);
 
     // The tx's own SOURCE is the wallet of record — never trust a client

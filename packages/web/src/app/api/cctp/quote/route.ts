@@ -1,5 +1,3 @@
-import type { NetworkType } from '@normalfinance/utils';
-
 // CCTP-leg quote + policy. The swap engine composes the full quote from three
 // sources: the Soroswap quote (existing route), THIS (the bridge leg — free at
 // protocol level, but carries ETA + relayer gas pricing + fee policy), and the
@@ -7,6 +5,7 @@ import type { NetworkType } from '@normalfinance/utils';
 import { cookies } from 'next/headers';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { networkFromCookie } from '@/server/network-cookie';
 import { CCTP_DOMAIN, CCTP_ETA_SECONDS } from '@/lib/cctp/config';
 
 export const dynamic = 'force-dynamic';
@@ -49,7 +48,7 @@ export const POST = withAuth(async (req: Request) => {
   }
 
   const cookieStore = await cookies();
-  const network = (cookieStore.get('normal-network')?.value ?? 'mainnet') as NetworkType;
+  const network = networkFromCookie(cookieStore);
   const maxWire = network === 'mainnet' ? pilotMaxWire() : null;
   if (maxWire && amount > maxWire) {
     return NextResponse.json(

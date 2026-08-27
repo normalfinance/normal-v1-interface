@@ -89,6 +89,16 @@ export async function getLifiQuote(input: {
     .split(',')
     .map((sVal) => sVal.trim())
     .filter(Boolean);
+  // Doc 95 Wave 7: `??` only falls back on undefined, so LIFI_DENY_EXCHANGES=""
+  // is a VALID value that empties this list — which is the documented escape
+  // hatch above, and also exactly what an env dashboard produces when someone
+  // clears a field. Keeping the hatch, removing the silence: an empty
+  // blocklist is now stated every time, so it can never be off by accident.
+  if (envDenyExchanges.length === 0) {
+    console.warn(
+      '[lifi] LIFI_DENY_EXCHANGES is empty — the "fly" DEX blocklist is OFF. Quotes may route through the reverting TSLA token (doc 92 §1).'
+    );
+  }
   for (const tool of [...envDenyExchanges, ...(input.denyExchanges ?? [])]) {
     params.append('denyExchanges', tool);
   }

@@ -77,6 +77,8 @@ interface Props {
   refundNotice?: string | null;
 }
 
+import { classifyCctpFailure } from './cctp-failure-copy';
+
 const TX_HASH_RE = /0x[0-9a-fA-F]{64}/;
 
 function extractTxHash(raw: string | null): string | null {
@@ -85,20 +87,21 @@ function extractTxHash(raw: string | null): string | null {
 }
 
 /** Raw chain errors are for explorers, not people (Niko 2026-08-26: "that
- *  error was not user friendly"). The hash still renders — small, below. */
+ *  error was not user friendly"). The hash still renders — small, below.
+ *
+ *  Doc 95 Wave 7: this used to be a SECOND classifier running over text the
+ *  engine had already made friendly, and its bare /network/ pattern rewrote
+ *  "Not enough ETH left to pay the NETWORK fee" into "the network did not
+ *  answer — try again" — advice for a retry that cannot succeed. The decision
+ *  now lives in cctp-failure-copy.ts, is pinned by tests, and only ever ADDS
+ *  the one thing the shared classifier cannot know: that on a CCTP swap the
+ *  money is safe at the user's own Base address. */
 function friendlyError(raw: string, t: (k: string) => string): string {
-  if (/reverted|WrappedError|rejected on-chain/i.test(raw)) {
-    return t(
-      'The exchange route failed on the provider side — your USDC is safe in your own account. You can retry, or bring it back as USDC.'
-    );
-  }
-  if (/NotAllowedError|not allowed|denied|declined/i.test(raw)) {
-    return t('The signature was declined. Nothing was sent — you can try again.');
-  }
-  if (/timeout|timed out|network|fetch/i.test(raw)) {
-    return t('The network did not answer in time. Nothing is lost — try again in a moment.');
-  }
-  return raw;
+  return classifyCctpFailure(raw) === 'route-failed'
+    ? t(
+        'The exchange route failed on the provider side — your USDC is safe in your own account. You can retry, or bring it back as USDC.'
+      )
+    : raw;
 }
 
 export function CctpProgressModal({

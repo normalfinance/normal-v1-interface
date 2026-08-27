@@ -1,5 +1,3 @@
-import type { NetworkType } from '@normalfinance/utils';
-
 import { prisma } from '@/lib/prisma';
 // CCTP transfers — create (persist burn intent BEFORE broadcasting the burn)
 // and list the caller's in-flight transfers (drives the recovery banner).
@@ -8,6 +6,7 @@ import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { CCTP_DOMAIN } from '@/lib/cctp/config';
 import { PENDING_STATUSES } from '@/lib/cctp/state';
+import { networkFromCookie } from '@/server/network-cookie';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +46,7 @@ export const POST = withAuth(async (req: Request, { user }) => {
   }
 
   const cookieStore = await cookies();
-  const network = (cookieStore.get('normal-network')?.value ?? 'mainnet') as NetworkType;
+  const network = networkFromCookie(cookieStore);
 
   // Product limits (authoritative here — quotes are advisory): min keeps the
   // fixed costs sane; the mainnet pilot cap bounds blast radius until the

@@ -158,6 +158,36 @@ The tab must never be required after signing.
 - `add-account.ts:116` — wallet setup uses best-effort info → transient blip loops a fresh passkey per lap (should use the Strict variant).
 
 ## Wave 7 — Copy collisions & honest failure (UX)
+
+> **STATUS: SHIPPED 2026-08-27, run 8 — ALL SEVEN WAVES NOW COMPLETE.** Explainer
+> `103-explainer-saying-the-right-thing.html`.
+> (1) **The copy collision** — the progress modal ran a SECOND classifier over text the engine had
+> already made friendly, and its bare `/network/` pattern rewrote "Not enough ETH left to pay the
+> NETWORK fee" into "the network did not answer — try again": advice for a retry that cannot
+> succeed. The modal no longer re-classifies; the decision is `sections/swap/cctp-failure-copy.ts`
+> (5 tests, one of them the exact live sentence) and keeps only the CCTP-specific upgrade (on-chain
+> rejection → "your USDC is safe at your own address, retry or bring it back").
+> (2) **Funding step painted red though it SUCCEEDED** — the stage stayed on 'funding' through the
+> row creation, so any later failure marked the step that had worked. `setStage('burn-prepare')`
+> the moment funding lands.
+> (3) **Dead Bring-back button** — offered on ANY outbound failure, including before any USDC
+> reached Base; with no row yet the handler hit `if (!failedId) return` and the click did NOTHING.
+> Now gated on stage ∈ {topup, pivot-swap, delivering} AND a real transfer id.
+> (4) **Cron auth failed open** — all four routes used `if (CRON_SECRET) { check }`, so an UNSET
+> secret skipped the check and left fee-sweep/bridge-advance publicly callable. `server/cron-auth.ts`
+> (6 tests): 401 on a bad token, **503 + log** when unconfigured in production, permissive only in
+> development.
+> (5) **One cookie, two defaults** — 16 routes each supplied their own fallback for `normal-network`
+> (cctp/quote, cctp/transfers, send/execute said 'mainnet'; the rest 'testnet'), and the cookie is
+> absent on a FIRST VISIT — so one user's swap quote was testnet while their CCTP row was mainnet.
+> All now derive from `getCurrentNetwork()` via `server/network-cookie.ts`; the junk-value `as
+> NetworkType` cast is replaced by a validating parser (`utils/network-value.ts`, 3 tests).
+> (6) **LIFI_DENY_EXCHANGES="" is no longer silent** — the escape hatch stays (it is documented),
+> but an empty blocklist now logs a warning naming what is unprotected.
+> **DOC 95 WAS WRONG on the fee-pair item:** the 40s give-up does NOT lack reconciliation —
+> `reconcileTxRecords()` probes every non-terminal record and settles it confirmed/failed/abandoned,
+> called by the `fee-escrow-sweep` cron. The real history is that that cron had NEVER RUN, which
+> looks identical from outside and is already fixed by the scheduler. No code change.
 - Triple `friendlyAppError` application collapsing our own messages to the generic; `cctp-progress-modal.tsx:98` re-maps "not enough ETH/XLM for the fee" into "network didn't answer — try again" (tells users to retry a guaranteed failure); `fee-pair.ts:143` 40s give-up with no reconciliation; funding-fail state paints the *succeeded* step red and offers a dead Bring-back button.
 - config doors: `LIFI_DENY_EXCHANGES=""` silently disables the fly blocklist; network-cookie default mismatch (testnet vs mainnet) on first visit; `CRON_SECRET` unset = open cron.
 
