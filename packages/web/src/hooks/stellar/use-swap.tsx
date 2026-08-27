@@ -11,6 +11,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { getSwapFeeAmount } from '@/utils/normal-fees';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { FEE_PAIR_TIMEOUT_SECONDS } from '@/lib/build-fee-payment';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import { submitFeePair, getTransactionSequence } from '@/lib/stellar/fee-pair';
 
@@ -347,9 +348,7 @@ export function useSwap(
         }
 
         if (!quoteData.xdr) {
-          throw new Error(
-            'Swap aggregator did not return a transaction. Ensure SOROSWAP_API_KEY is set on the server.'
-          );
+          throw new Error('The exchange route is unavailable right now — try again in a moment.');
         }
 
         // 2. Build the Normal fee payment directly behind the swap (#26:
@@ -429,9 +428,15 @@ export function useSwap(
         setQuote(null);
         return pair.serviceHash;
       } catch (err: any) {
-        if (err instanceof WalletSessionExpiredError) return '';
+        if (err instanceof WalletSessionExpiredError) {
+          // Doc 90 W2: the silent '' return left the progress modal spinning
+          // on "Preparing the swap" forever. Surface it — the modal shows
+          // this with Try again; the reconnect snackbar already fired.
+          setError('Your wallet session expired — reconnect your wallet and try again.');
+          return '';
+        }
         console.error('Error executing swap:', err);
-        const errorMessage = err.message || 'Swap failed';
+        const errorMessage = friendlyAppError(err);
         setError(errorMessage);
         enqueueSnackbar(errorMessage, { variant: 'error' });
         return '';

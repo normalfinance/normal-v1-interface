@@ -115,6 +115,20 @@ describe('runWebauthnCeremony', () => {
     expect(ceremony).toHaveBeenCalledTimes(1);
   });
 
+  it('retries once on a network-layer blip (doc 90 W4) — but still not on API errors', async () => {
+    const guard = freshGuard();
+    const ceremony = jest
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce('signed');
+
+    const result = guard.runWebauthnCeremony(ceremony);
+    await jest.advanceTimersByTimeAsync(5_000);
+
+    await expect(result).resolves.toBe('signed');
+    expect(ceremony).toHaveBeenCalledTimes(2);
+  });
+
   it('a failed ceremony does not wedge the queue for the next one', async () => {
     const guard = freshGuard();
     const first = guard.runWebauthnCeremony(() => Promise.reject(new Error('nope')));

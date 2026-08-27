@@ -108,11 +108,9 @@ export const POST = withAuth(async (req: Request, { user }) => {
       error: 'Unexpected response from anchor',
       status: r.status,
       contentType: ct || null,
-      bodySnippet: text.slice(0, 2000),
-      sentTo: endpoint,
-      sentBody: payload,
     });
   } catch (e: any) {
-    return j(500, { error: e?.message || 'Server error', stack: e?.stack });
+    console.error('[MGI] route crashed:', e); // detail stays in logs (doc 90 1c)
+    return j(500, { error: 'MoneyGram is temporarily unavailable — please try again.' });
   }
 });

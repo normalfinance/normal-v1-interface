@@ -43,7 +43,6 @@ export const POST = withAuth(async (req: Request) => {
         error: 'Fetching transaction failed',
         status: r.status,
         details: typeof data === 'string' ? { raw: data } : data,
-        sentTo: url,
       });
     }
 
@@ -55,6 +54,7 @@ export const POST = withAuth(async (req: Request) => {
 
     return j(200, { more_info_url: more });
   } catch (e: any) {
-    return j(500, { error: e?.message || 'Server error', stack: e?.stack });
+    console.error('[MGI] route crashed:', e); // detail stays in logs (doc 90 1c)
+    return j(500, { error: 'MoneyGram is temporarily unavailable — please try again.' });
   }
 });

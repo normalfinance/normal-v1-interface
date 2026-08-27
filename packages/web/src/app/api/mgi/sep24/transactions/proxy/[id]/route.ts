@@ -48,17 +48,14 @@ export const GET = withAuth(async (req: Request, { user, params }) => {
       return NextResponse.json(data, { status: 200 });
     }
 
-    const text = await r.text();
     return j(502, {
       error: 'Unexpected response from anchor (get)',
       status: r.status,
       contentType: ct || null,
-      bodySnippet: text.slice(0, 2000),
-      sentTo: endpoint,
       note: 'Should return JSON. If you see 401, ensure Authorization Bearer token is present. If HTML, re-check allowlist.',
     });
   } catch (e: any) {
     console.error('[MGI] /api/mgi/sep24/transaction/proxy/:id crashed:', e);
-    return j(500, { error: e?.message || 'Server error', stack: e?.stack });
+    return j(500, { error: 'MoneyGram is temporarily unavailable — please try again.' });
   }
 });

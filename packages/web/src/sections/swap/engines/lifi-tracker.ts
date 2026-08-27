@@ -2,9 +2,10 @@
 
 import type { ChainId } from '@/lib/chains/registry';
 
+import { useSnackbar } from 'notistack';
 import { buildAuthHeaders } from '@/utils/http';
 import { useRef, useState, useEffect } from 'react';
-import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
+import { ETH_RPC_URLS, SOL_RPC_URLS } from '@/lib/chains/rpc-fallback';
 import { clearSwapOutflow, registerSwapOutflow } from '@/lib/spendable';
 import { registerLifiStatusOverride } from '@/lib/lifi/status-overrides';
 
@@ -60,6 +61,20 @@ function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// Doc 90 1d: one flaky public node must not turn a delivered swap into a
+// reported failure — try each URL in order before giving up.
+async function rpcMulti(urls: string[], method: string, params: unknown[]): Promise<any> {
+  let lastErr: unknown;
+  for (const url of urls) {
+    try {
+      return await rpc(url, method, params);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr;
+}
+
 async function rpc(url: string, method: string, params: unknown[]): Promise<any> {
   const res = await fetch(url, {
     method: 'POST',
@@ -84,7 +99,7 @@ async function confirmSource(
   if (fromChainId === CHAIN.ETH) {
     for (let i = 0; i < 45 && !stop(); i++) {
       try {
-        const receipt = await rpc(ETH_RPC_URL, 'eth_getTransactionReceipt', [txHash]);
+        const receipt = await rpcMulti(ETH_RPC_URLS, 'eth_getTransactionReceipt', [txHash]);
         if (receipt) {
           log('ETH receipt status', receipt.status);
           return receipt.status === '0x1' ? 'confirmed' : 'reverted';
@@ -100,7 +115,7 @@ async function confirmSource(
   if (fromChainId === CHAIN.SOL) {
     for (let i = 0; i < 30 && !stop(); i++) {
       try {
-        const res = await rpc(SOL_RPC_URL, 'getSignatureStatuses', [[txHash]]);
+        const res = await rpcMulti(SOL_RPC_URLS, 'getSignatureStatuses', [[txHash]]);
         const st = res?.value?.[0];
         if (st) {
           if (st.err) return 'reverted';
@@ -179,6 +194,7 @@ const ARRIVAL_CAP_MS = 15_000;
 export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHandlers): Stage {
   const [stage, setStage] = useState<Stage>('confirming');
   const handlersRef = useRef(handlers);
+  const { enqueueSnackbar } = useSnackbar();
   handlersRef.current = handlers;
 
   useEffect(() => {
@@ -215,17 +231,22 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
       log('source confirmed');
 
       // 2) Record now (source landed) so it shows as one Swap row, then refresh.
-      try {
-        const headers = await buildAuthHeaders();
-        await fetch('/api/lifi/record', {
-          method: 'POST',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fromSymbol, toSymbol, amountIn, amountOut, txHash }),
-        });
-        log('recorded swap');
-      } catch (e) {
-        log('record failed (non-fatal)', (e as Error).message);
-      }
+      // Doc 90 W2: the record is the swap's ONLY activity row — funds left
+      // the wallet, so one failed POST must not erase it. Three attempts.
+      for (let recAttempt = 0; recAttempt < 3; recAttempt++)
+        try {
+          const headers = await buildAuthHeaders();
+          await fetch('/api/lifi/record', {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fromSymbol, toSymbol, amountIn, amountOut, txHash }),
+          });
+          log('recorded swap');
+          break;
+        } catch (e) {
+          log('record failed — retrying', (e as Error).message);
+          await delay(4000 * (recAttempt + 1));
+        }
       handlersRef.current.onActivity();
 
       // 3) Track the bridge until it delivers.
@@ -270,6 +291,17 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
       setStage(final);
       handlersRef.current.onActivity();
       if (final !== 'bridging') handlersRef.current.onTerminal(final);
+      else {
+        // Doc 90 W2: ~20 minutes without a terminal verdict — some routes
+        // (THORChain, Chainflip) legitimately take longer. Say so instead of
+        // spinning silently forever; the funds are in flight to the user's
+        // own address and the activity row keeps tracking delivery.
+        log('bridge still pending after poll budget — honest handoff');
+        enqueueSnackbar(
+          `Your ${toSymbol} is still on its way — this route can take a while. It arrives automatically; you can track it in Activity.`,
+          { variant: 'info', autoHideDuration: 12000 }
+        );
+      }
     })();
 
     return () => {

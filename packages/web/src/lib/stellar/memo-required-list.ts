@@ -18,6 +18,9 @@ export interface MemoRequirement {
   required: boolean;
   /** Exchange display name, when known. */
   name?: string;
+  /** true = the live check could not run — WARN, never silently pass
+   *  (doc 90 W2: a guard whose data source died must say so). */
+  unknown?: boolean;
 }
 
 export const KNOWN_MEMO_REQUIRED: ReadonlyMap<string, string> = new Map([

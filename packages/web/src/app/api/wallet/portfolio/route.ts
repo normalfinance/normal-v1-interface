@@ -91,9 +91,31 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
     const [fresh, companionAssets] = await Promise.all([
       aggregatePortfolio(addresses, network, Date.now()),
       includeCompanion
-        ? aggregateStellarOnly(turnkeyStellar!, network).catch(() => [] as PortfolioAsset[])
+        ? aggregateStellarOnly(turnkeyStellar!, network).catch(() => null)
         : Promise.resolve(null),
     ]);
+
+    // Doc 90 W3: one Horizon blip used to erase the companion Normal wallet
+    // from the drawer, Holdings and the savings deposit balance. Mirror the
+    // main assets' stale machinery with a last-good companion copy.
+    let companionFinal = companionAssets;
+    if (includeCompanion && turnkeyStellar) {
+      const companionKey = `portfolio:companion:${network}:${turnkeyStellar}`;
+      if (companionFinal && companionFinal.length > 0) {
+        try {
+          await redis.set(companionKey, companionFinal, { ex: SNAPSHOT_TTL_SECONDS });
+        } catch {
+          /* non-fatal */
+        }
+      } else {
+        try {
+          const saved = await redis.get<PortfolioAsset[]>(companionKey);
+          if (saved?.length) companionFinal = saved;
+        } catch {
+          /* no last-good copy */
+        }
+      }
+    }
 
     // Backfill any failed chains from the last-good snapshot (marked `stale`).
     let lastGood: Record<string, PortfolioAsset> | null = null;
@@ -112,7 +134,7 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
       ...merged,
       companionStellar:
         includeCompanion && turnkeyStellar
-          ? { address: turnkeyStellar, assets: companionAssets ?? [] }
+          ? { address: turnkeyStellar, assets: companionFinal ?? [] }
           : null,
     };
 

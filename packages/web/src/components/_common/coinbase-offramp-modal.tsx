@@ -3,9 +3,10 @@
 import type { Token } from '@normalfinance/types';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
+import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
-import { buildAuthHeaders } from '@/utils/http';
+import { authedFetch } from '@/utils/authed-fetch';
 import { useState, useEffect, useCallback } from 'react';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { fetchSolBalance, fetchEthBalance } from '@/hooks/use-chain-portfolio';
@@ -100,9 +101,11 @@ function clearFill(id: string) {
 }
 
 async function fetchTransactions(): Promise<PendingTxn[]> {
-  const headers = await buildAuthHeaders();
-  const r = await fetch('/api/coinbase/offramp-status', { headers });
-  if (!r.ok) return [];
+  // Doc 90 W2: a failed status fetch used to be indistinguishable from "no
+  // order" — the modal announced "No pending cash-out" right after a real
+  // sale. THROW so callers can tell outage from empty; 401 rides authedFetch.
+  const r = await authedFetch('/api/coinbase/offramp-status');
+  if (!r.ok) throw new Error(`offramp status ${r.status}`);
   const data = await r.json();
   return (data.transactions ?? []) as PendingTxn[];
 }
@@ -131,6 +134,7 @@ export function CoinbaseOfframpModal({
   token,
 }: CoinbaseOfframpModalProps) {
   const { t } = useTranslate();
+  const { enqueueSnackbar } = useSnackbar();
   const config = useStellarConfig();
   const { send: sendStellar } = useSendToken();
   // Stellar (USDC/XLM) balances live in the token store, which the chain-portfolio
@@ -174,7 +178,12 @@ export function CoinbaseOfframpModal({
   const pollSettle = useCallback(async (id: string) => {
     for (let i = 0; i < 30; i += 1) {
       await delay(10_000);
-      const list = await fetchTransactions();
+      let list: PendingTxn[];
+      try {
+        list = await fetchTransactions();
+      } catch {
+        continue; // outage tick — keep polling
+      }
       const found = list.find((x) => x.transactionId === id);
       if (found?.status === 'TRANSACTION_STATUS_SUCCESS') {
         setStage('done');
@@ -208,8 +217,16 @@ export function CoinbaseOfframpModal({
       // below decides which sales are already claimed/fulfilled (#24).
       await hydrateFills();
       if (cancelled) return;
+      let sawError = false;
       for (let i = 0; i < 10 && !cancelled; i += 1) {
-        const list = await fetchTransactions();
+        let list: PendingTxn[];
+        try {
+          list = await fetchTransactions();
+        } catch {
+          sawError = true;
+          await delay(3000);
+          continue;
+        }
         if (cancelled) return;
         const match = findPending(list);
         if (match) {
@@ -232,13 +249,23 @@ export function CoinbaseOfframpModal({
         }
         await delay(3000);
       }
-      if (!cancelled) setStage('none');
+      if (!cancelled) {
+        if (sawError) {
+          enqueueSnackbar(
+            t(
+              'Could not reach Coinbase to check for a pending cash-out — close this and try again.'
+            ),
+            { variant: 'warning' }
+          );
+        }
+        setStage('none');
+      }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [open, findPending, pollSettle, symbol]);
+  }, [open, findPending, pollSettle, symbol, enqueueSnackbar, t]);
 
   const handleSend = async () => {
     if (!txn) return;

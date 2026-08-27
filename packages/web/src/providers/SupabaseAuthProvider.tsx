@@ -31,18 +31,24 @@ type SupabaseAuthProviderProps = {
 export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     let active = true;
 
     const syncSession = async () => {
-      const {
-        data: { session: initialSession },
-      } = await supabase.auth.getSession();
-
-      if (!active) return;
-
-      setSession(initialSession ?? null);
+      try {
+        const {
+          data: { session: initialSession },
+        } = await supabase.auth.getSession();
+        if (!active) return;
+        setSession(initialSession ?? null);
+      } catch {
+        // A failed session read must not strand the app on a permanent
+        // loading state (doc 90 1a) — treat as signed-out and move on.
+        if (!active) return;
+        setSession(null);
+      }
       setIsLoading(false);
     };
 
@@ -57,9 +63,15 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
       setIsLoading(false);
     });
 
+    // Doc 90 1a: the ONE session-expired surface. authedFetch raises this
+    // after a silent refresh-and-retry still came back 401.
+    const onExpired = () => setSessionExpired(true);
+    window.addEventListener('nf:session-expired', onExpired);
+
     return () => {
       active = false;
       subscription.unsubscribe();
+      window.removeEventListener('nf:session-expired', onExpired);
     };
   }, []);
 
@@ -84,7 +96,64 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
     [session, isLoading, signOut]
   );
 
-  return <SupabaseAuthContext.Provider value={value}>{children}</SupabaseAuthContext.Provider>;
+  return (
+    <SupabaseAuthContext.Provider value={value}>
+      {sessionExpired && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 2000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            padding: '10px 16px',
+            background: '#0A0A0F',
+            color: '#fff',
+            fontSize: 13.5,
+            fontFamily: 'inherit',
+          }}
+        >
+          Your session expired — please sign in again to continue.
+          <button
+            type="button"
+            onClick={() => window.location.assign('/')}
+            style={{
+              border: '1px solid rgba(255,255,255,0.4)',
+              background: 'transparent',
+              color: '#fff',
+              borderRadius: 8,
+              padding: '4px 12px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: 12.5,
+            }}
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => setSessionExpired(false)}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: 'rgba(255,255,255,0.7)',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: 14,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      {children}
+    </SupabaseAuthContext.Provider>
+  );
 };
 
 export const useSupabaseAuth = (): SupabaseAuthContextValue => {

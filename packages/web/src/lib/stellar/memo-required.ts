@@ -55,12 +55,12 @@ export async function fetchMemoRequirement(address: string): Promise<MemoRequire
     const res = await fetch(`/api/stellar/memo-required?address=${encodeURIComponent(key)}`, {
       headers,
     });
-    if (!res.ok) return { required: false };
+    if (!res.ok) return { required: false, unknown: true };
     const data = (await res.json()) as MemoRequirement & { success?: boolean };
     const result: MemoRequirement = { required: !!data.required, name: data.name };
     sessionCache.set(key, result);
     return result;
   } catch {
-    return { required: false };
+    return { required: false, unknown: true };
   }
 }

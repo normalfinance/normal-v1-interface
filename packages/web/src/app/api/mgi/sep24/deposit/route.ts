@@ -120,13 +120,10 @@ export const POST = withAuth(async (req: Request, { user }) => {
       error: 'Unexpected response from anchor',
       status: r.status,
       contentType: ct || null,
-      bodySnippet: text.slice(0, 2000),
-      sentTo: endpoint,
-      sentBody: payload,
       note: 'The anchor should return JSON or a 302/303 redirect to the interactive UI. If HTML persists, re-check allowlisted client_domain and SEP-10 token scope.',
     });
   } catch (e: any) {
     console.error('[MGI] /api/mgi/sep24/deposit crashed:', e);
-    return j(500, { error: e?.message || 'Server error', stack: e?.stack });
+    return j(500, { error: 'MoneyGram is temporarily unavailable — please try again.' });
   }
 });

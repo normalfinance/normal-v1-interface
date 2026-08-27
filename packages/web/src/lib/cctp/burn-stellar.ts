@@ -98,9 +98,18 @@ async function submitSigned(
 
     const res = await server.getTransaction(sent.hash);
     if (res.status === 'SUCCESS') return sent.hash;
-    if (res.status === 'FAILED') throw new Error(`${label} failed on-chain (${sent.hash})`);
+    if (res.status === 'FAILED') {
+      const err: any = new Error(`${label} failed on-chain (${sent.hash})`);
+      err.txHash = sent.hash;
+      throw err;
+    }
   }
-  throw new Error(`${label} timed out (${sent.hash})`);
+  // The tx may STILL land after our polling window — hand the hash to the
+  // caller so the row keeps it (doc 90 W2: a lost hash strands funds).
+  const timeoutErr: any = new Error(`${label} timed out (${sent.hash})`);
+  timeoutErr.txHash = sent.hash;
+  timeoutErr.mayStillLand = true;
+  throw timeoutErr;
 }
 
 async function invokeAsUser(params: {

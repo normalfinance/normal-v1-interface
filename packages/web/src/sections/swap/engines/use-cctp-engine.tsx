@@ -23,6 +23,7 @@ import { useStellarConfig } from '@/hooks';
 import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { fCurrency } from '@/utils/format-number';
+import { runCctpRefund } from '@/lib/cctp/refund';
 import { useDebounce } from '@/hooks/use-debounce';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executeLifiSwap } from '@/lib/lifi/execute';
@@ -31,7 +32,9 @@ import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
+import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
@@ -141,9 +144,9 @@ async function pollPivotDelivery(
 }
 
 async function readBaseUsdc(address: string): Promise<bigint> {
-  const { http, erc20Abi, createPublicClient } = await import('viem');
+  const { erc20Abi, createPublicClient } = await import('viem');
   const { base } = await import('viem/chains');
-  const client = createPublicClient({ chain: base, transport: http() });
+  const client = createPublicClient({ chain: base, transport: await baseFallbackTransport() });
   return client.readContract({
     address: EVM_USDC.base.mainnet,
     abi: erc20Abi,
@@ -210,6 +213,10 @@ export function useCctpEngine({
   const [stage, setStage] = useState<CctpStage | null>(null);
   const [stageError, setStageError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  // Bring-back-in-modal (Niko 2026-08-27): the refund runs INSIDE the popup
+  // with its own checklist instead of closing it and delegating invisibly.
+  const [refundStage, setRefundStage] = useState<'topup' | 'burn' | 'done' | null>(null);
+  const [refundError, setRefundError] = useState<string | null>(null);
   // #32 chunk 4b: whether THIS run started with the external→Normal funding
   // move (drives the extra step in the progress modal).
   const [usedFunding, setUsedFunding] = useState(false);
@@ -285,15 +292,27 @@ export function useCctpEngine({
                 fromAddress: evmAddress,
                 toAddress: nativeAddress,
               };
-        const res = await fetch('/api/lifi/quote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify(body),
-        });
-        const data = await res.json();
-        if (stale) return;
-        if (!res.ok || !data.success) setQuoteError(data.error ?? t('Failed to fetch quote'));
+        // Doc 90 W4: 429/5xx quote failures are transient — one quiet retry
+        // before parking an error in the card.
+        let res: Response | null = null;
+        let data: any = null;
+        for (let qAttempt = 0; qAttempt < 2; qAttempt++) {
+          res = await fetch('/api/lifi/quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify(body),
+          }).catch(() => null);
+          data = res ? await res.json().catch(() => null) : null;
+          if (stale) return;
+          if (res && res.ok && data?.success) break;
+          const transient = !res || res.status === 429 || res.status >= 500;
+          if (!transient || qAttempt === 1) break;
+          await new Promise((r) => setTimeout(r, 6_000));
+          if (stale) return;
+        }
+        if (!res || !res.ok || !data?.success)
+          setQuoteError(friendlyAppError(data?.error ?? t('Failed to fetch quote')));
         else {
           setQuote(data.quote);
           setFeePercent(typeof data.feePercent === 'number' ? data.feePercent : 0);
@@ -379,13 +398,29 @@ export function useCctpEngine({
     // at "Bridging to Stellar" while the banner (fresh headers each poll)
     // already knew the swap was COMPLETED (finding #64).
     async (transferId: string) => ({
-      patch: async (body: Record<string, string | boolean>) =>
-        fetch(`/api/cctp/transfers/${transferId}`, {
-          method: 'PATCH',
-          headers: await buildAuthHeaders(),
-          credentials: 'include',
-          body: JSON.stringify(body),
-        }).catch(() => {}),
+      patch: async (body: Record<string, string | boolean>) => {
+        // Money-state writes never swallow (doc 90 W2): a lost burn hash
+        // strands funds invisibly — the cron can't advance the row and the
+        // recovery banner can't see it. Three attempts with backoff; the
+        // permanent-failure case returns undefined so critical call sites
+        // can SAY it instead of hiding it.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const res = await fetch(`/api/cctp/transfers/${transferId}`, {
+              method: 'PATCH',
+              headers: await buildAuthHeaders(),
+              credentials: 'include',
+              body: JSON.stringify(body),
+            });
+            if (res.ok) return res;
+          } catch {
+            /* retry below */
+          }
+          await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+        }
+        console.error('[cctp] PATCH permanently failed:', Object.keys(body).join(','));
+        return undefined;
+      },
       pollStatus: async (target: string, intervalMs: number) => {
         let misses = 0;
         for (;;) {
@@ -425,19 +460,46 @@ export function useCctpEngine({
         }
       },
       topUp: async () => {
-        const res = await fetch('/api/cctp/gas-topup', {
-          method: 'POST',
-          headers: await buildAuthHeaders(),
-          credentials: 'include',
-          body: JSON.stringify({ transferId }),
-          signal: AbortSignal.timeout(30_000),
-        });
-        if (!res.ok && res.status !== 409)
-          throw new Error(t('Gas top-up failed — try again in a moment.'));
-        await new Promise((r) => setTimeout(r, 8_000));
+        // Doc 90 W4: the relayer call is idempotent by design (409 = already
+        // running) — retry transients instead of failing a swap whose money
+        // is already mid-route, and verify by BALANCE instead of the blind
+        // 8-second guess.
+        let ok = false;
+        for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+          try {
+            const res = await fetch('/api/cctp/gas-topup', {
+              method: 'POST',
+              headers: await buildAuthHeaders(),
+              credentials: 'include',
+              body: JSON.stringify({ transferId }),
+              signal: AbortSignal.timeout(30_000),
+            });
+            ok = res.ok || res.status === 409;
+          } catch {
+            /* transient — retry below */
+          }
+          if (!ok) await new Promise((r) => setTimeout(r, 2_000 * (attempt + 1)));
+        }
+        if (!ok) throw new Error(t('Gas top-up failed — try again in a moment.'));
+        try {
+          const { createPublicClient } = await import('viem');
+          const { base } = await import('viem/chains');
+          const client = createPublicClient({
+            chain: base,
+            transport: await baseFallbackTransport(),
+          });
+          for (let i = 0; i < 10; i++) {
+            const bal = await client.getBalance({ address: evmAddress as `0x${string}` });
+            if (bal > 0n) return;
+            await new Promise((r) => setTimeout(r, 2_000));
+          }
+        } catch {
+          /* balance probe unavailable — proceed; the tx itself will tell */
+        }
       },
     }),
-    [t]
+
+    [t, evmAddress]
   );
 
   // #33 Stage 3: is the server-side signing delegation live for this user?
@@ -461,6 +523,27 @@ export function useCctpEngine({
   // "this swap finishes by itself" box) must count for THIS swap, not just
   // the next one. See autopilot-gate.ts.
   const autopilotGate = useRef(createAutopilotGate(() => autopilotActive()));
+
+  const runRefund = useCallback(
+    async (transferId: string) => {
+      setRefundError(null);
+      try {
+        await runCctpRefund({
+          transferId,
+          network,
+          baseAddress: evmAddress!,
+          stellarAddress: stellarAddress!,
+          onStage: (s) => setRefundStage(s),
+        });
+        setRefundStage('done');
+        window.dispatchEvent(new Event('nf:activity-updated'));
+      } catch (e: any) {
+        console.error('[cctp refund] failed:', e);
+        setRefundError(friendlyAppError(e));
+      }
+    },
+    [network, evmAddress, stellarAddress]
+  );
 
   // The consent offer itself — at swap start (Niko's final call 2026-08-21;
   // the earlier post-swap move was reacting to the ceremony BREAKING, not
@@ -617,7 +700,14 @@ export function useCctpEngine({
           solanaAddress: addresses.SOL,
         });
         broadcastStarted = true;
-        await patch({ srcSwapTxHash: srcTx });
+        if (!(await patch({ srcSwapTxHash: srcTx }))) {
+          enqueueSnackbar(
+            t(
+              'We could not record this step — your funds are safe. Keep this tab open until the swap completes.'
+            ),
+            { variant: 'warning' }
+          );
+        }
 
         setStage('arriving');
         const target = BigInt(lifiQuote.estimate.toAmountMin);
@@ -704,12 +794,19 @@ export function useCctpEngine({
         // rejection, timeout) falls through to the interactive path below;
         // autopilot never blocks a swap, it only removes prompts.
         setStage('topup');
-        const autoBurn = (await autopilotGate.current.isActive())
-          ? await tryAutopilot('burn', transferId)
-          : null;
+        const burnGateOn = await autopilotGate.current.isActive();
+        const autoBurn = burnGateOn ? await tryAutopilot('burn', transferId) : null;
         if (autoBurn) {
           setStage('burn'); // server patched burnTxHash + BURN_SUBMITTED already
         } else {
+          if (burnGateOn) {
+            // Doc 90 W4: the silent downgrade broke the "no signature needed"
+            // promise without a word — say it before the passkey appears.
+            enqueueSnackbar(
+              t('Autopilot could not finish this step — confirming with your passkey instead.'),
+              { variant: 'info' }
+            );
+          }
           await topUp();
 
           setStage('burn');
@@ -720,7 +817,14 @@ export function useCctpEngine({
             amountWire: arrivedWire,
             stellarRecipient: stellarAddress!,
           });
-          await patch({ burnTxHash });
+          if (!(await patch({ burnTxHash }))) {
+            enqueueSnackbar(
+              t(
+                'We could not record this step — your funds are safe. Keep this tab open until the swap completes.'
+              ),
+              { variant: 'warning' }
+            );
+          }
         }
 
         setStage('bridging');
@@ -749,6 +853,12 @@ export function useCctpEngine({
           // the failure popup's buttons resolve their id from this ref (the
           // marker is already null by the time they render; live 2026-08-26).
           lastFailedRunIdRef.current = getActiveCctpTransfer();
+          // A timed-out Stellar submit may still land on-chain — keep the
+          // hash on the row so the cron/banner can finish it instead of the
+          // run stranding an invisible burn (doc 90 W2).
+          if (e?.mayStillLand && e?.txHash) {
+            await patch({ burnTxHash: String(e.txHash) });
+          }
           // A classified revert records WHICH bridge failed on the row, so a
           // later "Try again" (banner recover) excludes that bridge.
           if (e?.__pivotRevert) {
@@ -761,7 +871,7 @@ export function useCctpEngine({
           setStageError(
             isInsufficientGasError(e)
               ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
-              : String(e?.message ?? e)
+              : friendlyAppError(e)
           );
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
@@ -775,6 +885,7 @@ export function useCctpEngine({
     },
     [
       evmAddress,
+      enqueueSnackbar,
       stellarAddress,
       network,
       addresses,
@@ -807,7 +918,14 @@ export function useCctpEngine({
           mintRecipient: evmAddressToBytes(evmAddress!),
         });
         broadcastStarted = true;
-        await patch({ burnTxHash });
+        if (!(await patch({ burnTxHash }))) {
+          enqueueSnackbar(
+            t(
+              'We could not record this step — your funds are safe. Keep this tab open until the swap completes.'
+            ),
+            { variant: 'warning' }
+          );
+        }
 
         setStage('bridging');
         await pollStatus('COMPLETED', 5_000); // Stellar-source attestation ≈ seconds
@@ -824,9 +942,8 @@ export function useCctpEngine({
           fromChainId?: number;
           toChainId?: number;
         };
-        let autoPivot = (await autopilotGate.current.isActive())
-          ? await tryAutopilot('pivot', transferId)
-          : null;
+        const pivotGateOn = await autopilotGate.current.isActive();
+        let autoPivot = pivotGateOn ? await tryAutopilot('pivot', transferId) : null;
         if (autoPivot?.__reverted) {
           // AUTOMATIC BRIDGE FAILOVER (Niko 2026-08-26): the tx reverted
           // on-chain INSIDE the quoted bridge — one silent autopilot retry
@@ -872,6 +989,12 @@ export function useCctpEngine({
           setStage('pivot-swap');
           result = autoPivot;
         } else {
+          if (pivotGateOn) {
+            enqueueSnackbar(
+              t('Autopilot could not finish this step — confirming with your passkey instead.'),
+              { variant: 'info' }
+            );
+          }
           await topUp();
 
           setStage('pivot-swap');
@@ -945,6 +1068,12 @@ export function useCctpEngine({
           // the failure popup's buttons resolve their id from this ref (the
           // marker is already null by the time they render; live 2026-08-26).
           lastFailedRunIdRef.current = getActiveCctpTransfer();
+          // A timed-out Stellar submit may still land on-chain — keep the
+          // hash on the row so the cron/banner can finish it instead of the
+          // run stranding an invisible burn (doc 90 W2).
+          if (e?.mayStillLand && e?.txHash) {
+            await patch({ burnTxHash: String(e.txHash) });
+          }
           // A classified revert records WHICH bridge failed on the row, so a
           // later "Try again" (banner recover) excludes that bridge.
           if (e?.__pivotRevert) {
@@ -957,7 +1086,7 @@ export function useCctpEngine({
           setStageError(
             isInsufficientGasError(e)
               ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
-              : String(e?.message ?? e)
+              : friendlyAppError(e)
           );
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
         }
@@ -978,6 +1107,8 @@ export function useCctpEngine({
     // ceremony is idempotent; "Not now" is remembered and never re-asks.
     await maybeOfferConsent();
     setStageError(null);
+    setRefundStage(null);
+    setRefundError(null);
     setModalOpen(true);
     // Display-truth refresh for the modal (copy + in-wait Enable offer);
     // never blocks the run — the signing branch re-checks live.
@@ -1055,7 +1186,7 @@ export function useCctpEngine({
       setStageError(
         isInsufficientGasError(e)
           ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
-          : String(e?.message ?? e)
+          : friendlyAppError(e)
       );
       setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
@@ -1456,7 +1587,7 @@ export function useCctpEngine({
           open={modalOpen}
           direction={direction}
           stage={stage}
-          error={stageError}
+          error={refundStage ? refundError : stageError}
           fromSymbol={fromSymbol}
           toSymbol={toSymbol}
           includeFunding={usedFunding}
@@ -1465,42 +1596,46 @@ export function useCctpEngine({
           onEnableAutopilot={
             process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY ? () => setConsentOpen(true) : undefined
           }
+          refundStage={refundStage}
           onTryAgain={
-            stageError
-              ? () => {
-                  // Clear the failed RUN, then hand the transfer to the
-                  // recovery banner's ONE handler — a bare reset read as
-                  // "nothing happened" when the failure was mid-flight
-                  // (funds already on Base, live 2026-08-26).
-                  const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
-                  setStageError(null);
-                  setStage(null);
-                  setModalOpen(false);
-                  if (failedId) {
-                    setActiveCctpTransfer(null);
-                    window.dispatchEvent(
-                      new CustomEvent('nf:cctp-resume', { detail: { id: failedId } })
-                    );
+            refundStage
+              ? refundError
+                ? () => {
+                    const failedId = lastFailedRunIdRef.current;
+                    setRefundError(null);
+                    if (failedId) void runRefund(failedId);
                   }
-                }
-              : undefined
+                : undefined
+              : stageError
+                ? () => {
+                    // Clear the failed RUN, then hand the transfer to the
+                    // recovery banner's ONE handler — a bare reset read as
+                    // "nothing happened" when the failure was mid-flight
+                    // (funds already on Base, live 2026-08-26).
+                    const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
+                    setStageError(null);
+                    setStage(null);
+                    setModalOpen(false);
+                    if (failedId) {
+                      setActiveCctpTransfer(null);
+                      window.dispatchEvent(
+                        new CustomEvent('nf:cctp-resume', { detail: { id: failedId } })
+                      );
+                    }
+                  }
+                : undefined
           }
           onBringBack={
-            stageError && direction === 'out'
+            stageError && direction === 'out' && !refundStage
               ? () => {
-                  // The exit, offered where the failure is: abandon the swap
-                  // and bridge the minted USDC back to Stellar via the
-                  // banner's refund handler.
+                  // Niko 2026-08-27: the refund runs IN this popup — the
+                  // steps update in place instead of the modal closing and
+                  // delegating to the banner invisibly.
                   const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
-                  setStageError(null);
-                  setStage(null);
-                  setModalOpen(false);
-                  if (failedId) {
-                    setActiveCctpTransfer(null);
-                    window.dispatchEvent(
-                      new CustomEvent('nf:cctp-refund', { detail: { id: failedId } })
-                    );
-                  }
+                  if (!failedId) return;
+                  setActiveCctpTransfer(null);
+                  setRefundStage('topup');
+                  void runRefund(failedId);
                 }
               : undefined
           }

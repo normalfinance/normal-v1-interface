@@ -10,6 +10,7 @@
 
 import { signEvmTxWithTurnkey } from '@/lib/turnkey/evm-signer';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 
 import { EVM_USDC } from './config';
 
@@ -42,33 +43,43 @@ export async function executePivotSwap(params: {
   onStep?: (step: 'quote' | 'approve' | 'swap') => void;
 }): Promise<PivotSwapResult> {
   const info = await getTurnkeyWalletInfo();
-  if (!info?.subOrgId) throw new Error('Turnkey wallet not found');
+  if (!info?.subOrgId)
+    throw new Error('Could not load your wallet just now — check your connection and try again.');
 
-  const { http, erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } =
-    await import('viem');
+  const { erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } = await import(
+    'viem'
+  );
   const { base } = await import('viem/chains');
-  const client = createPublicClient({ chain: base, transport: http() });
+  const client = createPublicClient({ chain: base, transport: await baseFallbackTransport() });
   const from = params.evmAddress as `0x${string}`;
   const usdc = EVM_USDC.base.mainnet;
 
   // --- 1. quote ---------------------------------------------------------------
+  // Doc 90 W4: the USDC is ALREADY minted on Base here — a transient quote
+  // failure must not dead-end it. Three attempts with backoff; the last one
+  // drops the deny lists (a previously-failed bridge beats no route at all).
   params.onStep?.('quote');
-  const res = await fetch('/api/lifi/quote', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      fromSymbol: 'USDC_BASE',
-      toSymbol: params.toSymbol,
-      fromAmount: params.amountWire.toString(),
-      fromAddress: params.evmAddress,
-      toAddress: params.toAddress,
-      denyBridges: params.denyBridges,
-      denyExchanges: params.denyExchanges,
-    }),
-  });
-  const data = await res.json();
-  if (!res.ok || !data.success)
-    throw new Error(data.error ?? 'No route from Base — try again shortly');
+  let data: any = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const lastResort = attempt === 2;
+    const res = await fetch('/api/lifi/quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fromSymbol: 'USDC_BASE',
+        toSymbol: params.toSymbol,
+        fromAmount: params.amountWire.toString(),
+        fromAddress: params.evmAddress,
+        toAddress: params.toAddress,
+        denyBridges: lastResort ? undefined : params.denyBridges,
+        denyExchanges: lastResort ? undefined : params.denyExchanges,
+      }),
+    }).catch(() => null);
+    data = res ? await res.json().catch(() => null) : null;
+    if (res?.ok && data?.success) break;
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 1_500 * (attempt + 1)));
+  }
+  if (!data?.success) throw new Error(data?.error ?? 'No route from Base — try again shortly');
   const quote = data.quote;
   const approvalAddress: `0x${string}` | undefined = quote.estimate?.approvalAddress;
   const txr = quote.transactionRequest;
@@ -80,26 +91,45 @@ export async function executePivotSwap(params: {
     value: bigint,
     gasHint?: bigint
   ) => {
-    const [nonce, fees, gas] = await Promise.all([
-      client.getTransactionCount({ address: from, blockTag: 'pending' }),
-      client.estimateFeesPerGas(),
-      gasHint
-        ? Promise.resolve(gasHint)
-        : client.estimateGas({ account: from, to, data: dataHex, value }),
-    ]);
-    const unsigned = serializeTransaction({
-      chainId: base.id,
-      type: 'eip1559',
-      nonce,
-      to,
-      data: dataHex,
-      value,
-      gas: (gas * 12n) / 10n,
-      maxFeePerGas: fees.maxFeePerGas,
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
-    });
-    const raw = await signEvmTxWithTurnkey(unsigned, info.subOrgId!, params.evmAddress);
-    const hash = await client.sendRawTransaction({ serializedTransaction: raw });
+    // Nonce race (live 2026-08-27): a just-reverted attempt consumed our
+    // nonce between the read and the broadcast ("nonce too low") — rebuild
+    // with a fresh nonce and ONE more signature instead of dead-ending the
+    // recovery. The extra prompt is the signature's price: it covers the
+    // nonce, so a silent retry is impossible.
+    let hash: `0x${string}` | null = null;
+    for (let attempt = 0; hash === null; attempt++) {
+      const [nonce, fees, gas] = await Promise.all([
+        client.getTransactionCount({ address: from, blockTag: 'pending' }),
+        client.estimateFeesPerGas(),
+        gasHint
+          ? Promise.resolve(gasHint)
+          : client.estimateGas({ account: from, to, data: dataHex, value }),
+      ]);
+      const unsigned = serializeTransaction({
+        chainId: base.id,
+        type: 'eip1559',
+        nonce,
+        to,
+        data: dataHex,
+        value,
+        gas: (gas * 12n) / 10n,
+        maxFeePerGas: fees.maxFeePerGas,
+        maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+      });
+      const raw = await signEvmTxWithTurnkey(unsigned, info.subOrgId!, params.evmAddress);
+      try {
+        hash = await client.sendRawTransaction({ serializedTransaction: raw });
+      } catch (sendErr: any) {
+        const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
+        if (
+          attempt === 0 &&
+          /nonce too low|already known|replacement transaction underpriced/i.test(m)
+        ) {
+          continue;
+        }
+        throw sendErr;
+      }
+    }
     const receipt = await client.waitForTransactionReceipt({ hash });
     if (receipt.status !== 'success') {
       // Classified failure (2026-08-26): a revert is an ON-CHAIN outcome, not

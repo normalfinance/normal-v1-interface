@@ -15,7 +15,7 @@ export type WalletReadiness =
 export interface ReadinessProbe {
   isLoading: boolean;
   error: unknown;
-  accountExists: boolean;
+  accountExists: boolean | null; // null = the check could not run (doc 90 W3)
   hasUsdcTrustline: boolean;
 }
 
@@ -28,6 +28,9 @@ export interface ReadinessProbe {
 export function deriveWalletReadiness(probe: ReadinessProbe): WalletReadiness {
   if (probe.isLoading) return 'checking';
   if (probe.error != null) return 'unknown';
+  // Doc 90 W3 tri-state: null means the Horizon check never answered — that
+  // is 'unknown', never 'not-activated' (the failure≠empty rule).
+  if (probe.accountExists == null) return 'unknown';
   if (!probe.accountExists) return 'not-activated';
   if (!probe.hasUsdcTrustline) return 'no-trustline';
   return 'ready';

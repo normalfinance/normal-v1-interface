@@ -8,6 +8,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { runWithdrawFlow, hasCachedMgiToken } from '@/lib/mgi/client';
 import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import { cdn, isTestnet, createCoinbasePayOfframpURL } from '@normalfinance/utils';
@@ -448,7 +449,9 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
       popup?.close();
       // Session expiry already surfaced its own reconnect snackbar.
       if (!(e instanceof WalletSessionExpiredError)) {
-        enqueueSnackbar(t('MoneyGram withdrawal failed'), { variant: 'error' });
+        // The anchor's clean rejections (e.g. below-minimum) pass through the
+        // classifier untouched; dumps collapse to the generic line.
+        enqueueSnackbar(friendlyAppError(e), { variant: 'error' });
       }
     } finally {
       setMgiLoading(false);

@@ -398,8 +398,10 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
     if (!isBtc) return;
     fetch('https://mempool.space/api/v1/fees/recommended')
       .then((r) => r.json())
-      .then((data) => setBtcFeeRateSatPerVbyte(data.halfHourFee ?? null))
-      .catch(() => setBtcFeeRateSatPerVbyte(null));
+      .then((data) => setBtcFeeRateSatPerVbyte(data.halfHourFee ?? 15))
+      // Doc 90 1d: a fee-API outage must not leave "Fetching fee estimate…"
+      // forever over an enabled Review — fall back to the builder's default.
+      .catch(() => setBtcFeeRateSatPerVbyte(15));
   }, [isBtc]);
 
   // Build the active adapter based on selected token
@@ -509,9 +511,10 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
 
     let cancelled = false;
     fetchMemoRequirement(destination).then((req) => {
-      if (cancelled || !req.required) return;
+      if (cancelled) return;
+      if (!req.required && !req.unknown) return;
       setMemoRequirement(req);
-      setShowMemo(true);
+      if (req.required) setShowMemo(true);
     });
     return () => {
       cancelled = true;
@@ -548,7 +551,15 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
           setMaxLoading(false);
         }
       }
-      setAmount(spendableBalance.toFixed(8, BigNumber.ROUND_DOWN));
+      // Doc 90 W4: for BTC the display fallback was the FULL balance — a
+      // guaranteed builder failure (inputs must cover amount + fee).
+      const fallbackMax = isBtc
+        ? BigNumber.max(
+            spendableBalance.minus(BigNumber((btcFeeRateSatPerVbyte ?? 15) * 141).div(1e8)),
+            0
+          )
+        : spendableBalance;
+      setAmount(fallbackMax.toFixed(8, BigNumber.ROUND_DOWN));
       return;
     }
     if (sendToken.symbol === 'XLM' && effectiveSenderAddress) {
@@ -574,7 +585,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
         const max = spendableXlmForOutflow(nativeBal, acc.subentry_count, holdBuffer);
         setAmount(max.toFixed(7, BigNumber.ROUND_DOWN));
       } catch {
+        // Doc 90 W4: the fresh-read invariant broke silently — say it.
         setAmount(spendableBalance.toFixed(7, BigNumber.ROUND_DOWN));
+        enqueueSnackbar(t('Could not read your live balance — MAX used the cached value.'), {
+          variant: 'warning',
+        });
       } finally {
         setMaxLoading(false);
       }
@@ -1102,6 +1117,31 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                 it cannot be dismissed, and Review stays disabled without it. */}
             {adapter?.hasMemo && (
               <Box>
+                {!!memoRequirement?.unknown && !memoRequirement?.required && (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      p: '12px 14px',
+                      borderRadius: '12px',
+                      bgcolor: 'rgba(245,158,11,0.08)',
+                      border: '1px solid rgba(245,158,11,0.35)',
+                      mb: '8px',
+                    }}
+                  >
+                    <Iconify
+                      icon="eva:alert-triangle-outline"
+                      width={18}
+                      sx={{ color: '#B45309', mt: '1px', flexShrink: 0 }}
+                    />
+                    <Typography sx={{ fontSize: '12.5px', color: '#78350F', lineHeight: 1.5 }}>
+                      {t(
+                        'We could not verify whether this address needs a memo. If you are sending to an exchange, double-check its deposit page — without a required memo the funds will not be credited.'
+                      )}
+                    </Typography>
+                  </Box>
+                )}
                 {memoRequirement?.required ? (
                   <Box
                     sx={{

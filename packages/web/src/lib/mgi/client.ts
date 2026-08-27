@@ -2,6 +2,7 @@
 
 import { enqueueSnackbar } from 'notistack';
 import { buildAuthHeaders } from '@/utils/http';
+import { authedFetch } from '@/utils/authed-fetch';
 
 import { getTransaction } from './history';
 import { signStellarTxForMgi } from './kit-signer';
@@ -89,22 +90,27 @@ function tryParseJwtExpMs(token: string): number | undefined {
 /* ------------------------ API wrappers ------------------------ */
 
 export async function fetchMgiChallenge(userAccount: string) {
-  const headers = await buildAuthHeaders();
-  const r = await fetch(`/api/mgi/sep10/challenge?account=${encodeURIComponent(userAccount)}`, {
-    headers,
-    credentials: 'include',
-  });
-  if (!r.ok) throw new Error(`challenge failed: ${r.status} ${r.statusText}`);
+  const r = await authedFetch(
+    `/api/mgi/sep10/challenge?account=${encodeURIComponent(userAccount)}`,
+    { signal: AbortSignal.timeout(15_000) }
+  );
+  if (!r.ok) {
+    // The route forwards the anchor's own (useful) text — show it, not the
+    // HTTP status (doc 90: the good message existed and was dropped here).
+    const body = await r.json().catch(() => null);
+    throw new Error(
+      (typeof body?.error === 'string' && body.error) ||
+        'MoneyGram sign-in failed — please try again.'
+    );
+  }
   return r.json() as Promise<{ transaction: string; network_passphrase?: string }>;
 }
 
 export async function completeMgiAuth(userSignedXDR: string): Promise<string> {
-  const headers = await buildAuthHeaders();
-  const r = await fetch(`/api/mgi/sep10/complete`, {
+  const r = await authedFetch(`/api/mgi/sep10/complete`, {
     method: 'POST',
-    headers,
-    credentials: 'include',
     body: JSON.stringify({ userSignedXDR }),
+    signal: AbortSignal.timeout(20_000),
   });
 
   const text = await r.text();
@@ -115,7 +121,11 @@ export async function completeMgiAuth(userSignedXDR: string): Promise<string> {
     data = text;
   }
 
-  if (!r.ok) throw new Error(typeof data === 'string' ? data : JSON.stringify(data));
+  if (!r.ok) {
+    // Never stringify diagnostics into a user-facing Error (doc 90 1c).
+    const clean = typeof data === 'object' && typeof data?.error === 'string' ? data.error : null;
+    throw new Error(clean || 'MoneyGram sign-in failed — please try again.');
+  }
 
   const token = (typeof data === 'string' ? undefined : data?.token) ?? data?.access_token ?? data;
   if (!token) throw new Error('MGI auth returned no token');
@@ -143,12 +153,10 @@ export async function getMgiAuthToken(userAccount: string) {
 }
 
 export async function startMgiDeposit(token: string, userAccount: string, amount: number) {
-  const headers = await buildAuthHeaders();
-  const r = await fetch(`/api/mgi/sep24/deposit`, {
+  const r = await authedFetch(`/api/mgi/sep24/deposit`, {
     method: 'POST',
-    headers,
-    credentials: 'include',
     body: JSON.stringify({ token, account: userAccount, amount }),
+    signal: AbortSignal.timeout(20_000),
   });
 
   const raw = await r.text();
@@ -163,8 +171,7 @@ export async function startMgiDeposit(token: string, userAccount: string, amount
     // Clean anchor rejection (e.g. amount below MoneyGram's minimum) — show
     // the message, not a JSON diagnostics dump.
     if (typeof data?.error === 'string' && data.error) throw new Error(data.error);
-    const pretty = JSON.stringify(data ?? { raw }, null, 2);
-    throw new Error(`Deposit start failed (HTTP ${r.status}): ${pretty}`);
+    throw new Error('MoneyGram is temporarily unavailable — please try again.');
   }
 
   return data as { url: string; id: string | null };
@@ -285,7 +292,8 @@ async function fetchMoreInfoUrlWithSep10(token: string, txId: string): Promise<s
   const data = await r.json();
   if (!r.ok || !data?.more_info_url) {
     throw new Error(
-      `more_info_url fetch failed (HTTP ${r.status}): ${JSON.stringify(data ?? {}, null, 2)}`
+      (typeof data?.error === 'string' && data.error) ||
+        'MoneyGram is temporarily unavailable — please try again.'
     );
   }
   return data.more_info_url as string;
@@ -339,5 +347,11 @@ export async function openTxInAnchorUI(
       // Some browsers block programmatic focus; safe to ignore.
       NOOP();
     }
+  }
+  if (tries >= maxTries) {
+    // Doc 90 W2: the poll used to exhaust in silence after ~3 minutes.
+    enqueueSnackbar?.('Still processing — check Activity for the latest MoneyGram status.', {
+      variant: 'info',
+    });
   }
 }

@@ -6,6 +6,7 @@ import { BigNumber } from 'bignumber.js';
 import { announceTransaction } from '@/lib/tx-events';
 import { SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 import {
   checkSolRemainder,
@@ -95,7 +96,10 @@ export function createSolanaAdapter(
     async send(params: SendParams): Promise<string> {
       try {
         const info = await getTurnkeyWalletInfo();
-        if (!info?.subOrgId) throw new Error('Turnkey wallet not found');
+        if (!info?.subOrgId)
+          throw new Error(
+            'Could not load your wallet just now — check your connection and try again.'
+          );
         const subOrgId = info.subOrgId;
 
         const { PublicKey, Connection, Transaction, SystemProgram } = await import(
@@ -111,7 +115,12 @@ export function createSolanaAdapter(
         const tx = new Transaction().add(
           SystemProgram.transfer({ fromPubkey, toPubkey, lamports })
         );
-        const { blockhash } = await connection.getLatestBlockhash('confirmed');
+        // Doc 90 1d: the public RPC 429s routinely — one quiet retry before a
+        // send-blocking failure.
+        const { blockhash } = await connection.getLatestBlockhash('confirmed').catch(async () => {
+          await new Promise((r) => setTimeout(r, 800));
+          return connection.getLatestBlockhash('confirmed');
+        });
         tx.recentBlockhash = blockhash;
         tx.feePayer = fromPubkey;
 
@@ -206,7 +215,7 @@ export function createSolanaAdapter(
 
         return txid;
       } catch (err: any) {
-        const msg: string = err?.message ?? 'Solana transaction failed';
+        const msg: string = friendlyAppError(err);
         onError?.(msg);
         return '';
       }

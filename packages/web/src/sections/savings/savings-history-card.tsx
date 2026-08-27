@@ -263,7 +263,8 @@ interface SavingsHistoryCardProps {
 }
 
 export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
-  const { recentActivity, isLoading } = useUserActivity(walletAddress);
+  const { recentActivity, isLoading, error: historyError } = useUserActivity(walletAddress);
+  const historyFailed = !!historyError && recentActivity.length === 0 && !isLoading;
   const [page, setPage] = useState(1);
 
   const savingsActivity = recentActivity.filter(
@@ -300,6 +301,11 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
         <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F' }}>
           Transaction History
         </Typography>
+        {historyFailed && (
+          <Typography sx={{ fontSize: '11.5px', color: '#B45309' }}>
+            {`Couldn't load — retrying…`}
+          </Typography>
+        )}
         {savingsActivity.length > 0 && (
           <Box sx={{ px: '8px', py: '2px', borderRadius: '20px', bgcolor: '#F4F4F7' }}>
             <Typography

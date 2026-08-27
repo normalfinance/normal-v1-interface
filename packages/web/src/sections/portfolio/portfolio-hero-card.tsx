@@ -109,6 +109,10 @@ interface HeroCardProps {
   earnings: number;
   loading: boolean;
   holdingsData: HoldingData[];
+  /** Doc 90 W3: balances failed with nothing cached — render the outage,
+   *  never a confident $0.00. */
+  balancesError?: boolean;
+  onRetry?: () => void;
 }
 
 export function HeroCard({
@@ -118,6 +122,8 @@ export function HeroCard({
   earnings,
   loading,
   holdingsData,
+  balancesError,
+  onRetry,
 }: HeroCardProps) {
   const { t } = useTranslate();
 
@@ -209,6 +215,43 @@ export function HeroCard({
                 height={72}
                 sx={{ bgcolor: 'rgba(255,255,255,0.08)', borderRadius: '8px' }}
               />
+            ) : balancesError && totalBalance === 0 ? (
+              <Box>
+                <Box
+                  sx={{
+                    ...MONO,
+                    fontSize: 'clamp(32px, 4vw, 48px)',
+                    fontWeight: 500,
+                    color: 'rgba(255,255,255,0.55)',
+                    lineHeight: 1.05,
+                  }}
+                >
+                  —
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px', mt: '8px' }}>
+                  <Box sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '13.5px' }}>
+                    {t("Couldn't load your balances — nothing is lost.")}
+                  </Box>
+                  <Box
+                    component="button"
+                    type="button"
+                    onClick={onRetry}
+                    sx={{
+                      border: '1px solid rgba(255,255,255,0.35)',
+                      background: 'transparent',
+                      color: '#fff',
+                      borderRadius: '8px',
+                      px: '10px',
+                      py: '3px',
+                      fontSize: '12.5px',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {t('Retry')}
+                  </Box>
+                </Box>
+              </Box>
             ) : (
               <Box
                 sx={{

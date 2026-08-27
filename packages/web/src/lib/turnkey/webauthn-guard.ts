@@ -60,6 +60,21 @@ async function attempt<T>(ceremony: () => Promise<T>): Promise<T> {
       await sleep(RETRY_DELAY_MS);
       return ceremony();
     }
+    // Doc 90 W4: a NETWORK-layer blip mid-ceremony (fetch died before Turnkey
+    // ever answered) is not a user decision either — same one quiet retry.
+    // Deliberately narrow: API errors (4xx/5xx bodies) still pass through
+    // untouched, per the "unrelated errors don't retry" contract.
+    const msg = String((error as { message?: string })?.message ?? '');
+    if (
+      !isNotAllowed(error) &&
+      /failed to fetch|networkerror|network request failed|load failed|the operation was aborted/i.test(
+        msg
+      )
+    ) {
+      console.warn('[webauthn-guard] network blip mid-ceremony — retrying once');
+      await sleep(RETRY_DELAY_MS);
+      return ceremony();
+    }
     throw error;
   }
 }

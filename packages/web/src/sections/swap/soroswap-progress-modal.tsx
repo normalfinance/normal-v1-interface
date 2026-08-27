@@ -9,6 +9,7 @@
 import type { SoroswapStage } from '@/hooks/stellar/use-swap';
 
 import { useTranslate } from '@/locales';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
 
 import Box from '@mui/material/Box';
@@ -233,7 +234,7 @@ export function SoroswapProgressModal({
           }}
         >
           <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.5 }}>
-            {error}
+            {friendlyAppError(error)}
           </Typography>
           <Typography
             sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '4px', lineHeight: 1.5 }}

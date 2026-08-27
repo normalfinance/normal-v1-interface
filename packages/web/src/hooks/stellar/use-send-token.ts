@@ -11,6 +11,7 @@ import { announceTransaction } from '@/lib/tx-events';
 import { detectMemoType } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { spendableXlm, stellarMinReserve } from '@/utils/stellar-reserve';
 import { planStellarSend, MIN_ACTIVATION_XLM } from '@/lib/stellar/send-plan';
 import { Memo, Asset, Horizon, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
@@ -263,7 +264,7 @@ export function useSendToken(): ReturnType {
       const stellarError = resultCodes
         ? `${resultCodes.transaction ?? ''} ${(resultCodes.operations ?? []).join(' ')}`.trim()
         : null;
-      const message = stellarError || err?.message || 'Transaction failed';
+      const message = friendlyAppError(stellarError ? new Error(stellarError) : err);
       console.error('[SEND TOKEN] Transaction failed:', err, resultCodes ?? '');
       enqueueSnackbar(t(message), { variant: 'error' });
       setError(message);

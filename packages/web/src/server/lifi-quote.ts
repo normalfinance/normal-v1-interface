@@ -80,7 +80,16 @@ export async function getLifiQuote(input: {
   for (const tool of ['gasZipBridge', ...(input.denyBridges ?? [])]) {
     params.append('denyBridges', tool);
   }
-  for (const tool of input.denyExchanges ?? []) {
+  // TEMPORARY (2026-08-27): LI.FI's "fly" DEX step on Base routes through a
+  // fake TSLA token whose transfer() always reverts — three bridges burned
+  // by it in two days (mayan/relay/across, doc 92 §1). Denied by default
+  // until LI.FI fixes it; set LIFI_DENY_EXCHANGES="" to re-enable, or list
+  // other tools comma-separated. This denies a DEX step, not a bridge.
+  const envDenyExchanges = (process.env.LIFI_DENY_EXCHANGES ?? 'fly')
+    .split(',')
+    .map((sVal) => sVal.trim())
+    .filter(Boolean);
+  for (const tool of [...envDenyExchanges, ...(input.denyExchanges ?? [])]) {
     params.append('denyExchanges', tool);
   }
 

@@ -13,6 +13,7 @@
 import { type NetworkType } from '@normalfinance/utils';
 import { signEvmTxWithTurnkey } from '@/lib/turnkey/evm-signer';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 
 import { stellarContractToBytes32 } from './addresses';
 import { bytesToHex, encodeStellarHookData } from './hookdata';
@@ -73,15 +74,19 @@ export async function burnUsdcOnEvm(params: EvmBurnParams): Promise<{
     throw new Error('refusing to burn: invalid Stellar recipient address');
   }
 
-  const { http, erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } =
-    await import('viem');
+  const { erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } = await import(
+    'viem'
+  );
   const { base, mainnet, sepolia, baseSepolia } = await import('viem/chains');
   const chains = {
     mainnet: { base, ethereum: mainnet },
     testnet: { base: baseSepolia, ethereum: sepolia },
   } as const;
   const chain = chains[params.network][params.chain];
-  const client = createPublicClient({ chain, transport: http() });
+  const client = createPublicClient({
+    chain,
+    transport: await evmFallbackTransport(params.chain, params.network),
+  });
 
   const usdc = EVM_USDC[params.chain][params.network];
   const tokenMessenger = EVM_CCTP[params.network].tokenMessengerV2;
@@ -92,23 +97,39 @@ export async function burnUsdcOnEvm(params: EvmBurnParams): Promise<{
     data: `0x${string}`,
     label: string
   ): Promise<`0x${string}`> => {
-    const [nonce, fees, gas] = await Promise.all([
-      client.getTransactionCount({ address: from, blockTag: 'pending' }),
-      client.estimateFeesPerGas(),
-      client.estimateGas({ account: from, to, data }),
-    ]);
-    const unsigned = serializeTransaction({
-      chainId: chain.id,
-      type: 'eip1559',
-      nonce,
-      to,
-      data,
-      gas: (gas * 12n) / 10n, // 20% headroom
-      maxFeePerGas: fees.maxFeePerGas,
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
-    });
-    const raw = await signEvmTxWithTurnkey(unsigned, info.subOrgId!, params.evmAddress);
-    const hash = await client.sendRawTransaction({ serializedTransaction: raw });
+    // Same nonce-race guard as pivot-swap (live 2026-08-27): rebuild with a
+    // fresh nonce + one more signature when a racing tx consumed ours.
+    let hash: `0x${string}` | null = null;
+    for (let attempt = 0; hash === null; attempt++) {
+      const [nonce, fees, gas] = await Promise.all([
+        client.getTransactionCount({ address: from, blockTag: 'pending' }),
+        client.estimateFeesPerGas(),
+        client.estimateGas({ account: from, to, data }),
+      ]);
+      const unsigned = serializeTransaction({
+        chainId: chain.id,
+        type: 'eip1559',
+        nonce,
+        to,
+        data,
+        gas: (gas * 12n) / 10n, // 20% headroom
+        maxFeePerGas: fees.maxFeePerGas,
+        maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+      });
+      const raw = await signEvmTxWithTurnkey(unsigned, info.subOrgId!, params.evmAddress);
+      try {
+        hash = await client.sendRawTransaction({ serializedTransaction: raw });
+      } catch (sendErr: any) {
+        const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
+        if (
+          attempt === 0 &&
+          /nonce too low|already known|replacement transaction underpriced/i.test(m)
+        ) {
+          continue;
+        }
+        throw sendErr;
+      }
+    }
     const receipt = await client.waitForTransactionReceipt({ hash });
     if (receipt.status !== 'success') throw new Error(`${label} reverted (${hash})`);
     return hash;

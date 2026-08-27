@@ -11,6 +11,7 @@ import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { getFeesDepositAddress } from '@/lib/build-fee-payment';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { settleRecord, createPendingRecord } from '@/server/tx-records';
 import { Horizon, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 import { resolveEscrow, escrowFeePair, submitSignedXdr } from '@/server/fee-escrow';
@@ -292,7 +293,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       return NextResponse.json(
         {
           success: false,
-          error: `Transaction failed: ${reason}`,
+          error: friendlyAppError(`Transaction failed: ${reason}`),
           resultCodes: serviceResult.resultCodes,
           serviceHash,
         },

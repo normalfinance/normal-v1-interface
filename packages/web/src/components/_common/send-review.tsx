@@ -9,6 +9,7 @@ import React, { useMemo, useState } from 'react';
 import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useStellarTokens } from '@/hooks/use-stellar-tokens';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 
 import { LoadingButton } from '@mui/lab';
 import {
@@ -124,7 +125,7 @@ const SendReview: React.FC<SendReviewProps> = ({
         }
       }
     } catch (err: any) {
-      enqueueSnackbar(err?.message ?? t('Transaction failed'), { variant: 'error' });
+      enqueueSnackbar(friendlyAppError(err), { variant: 'error' });
     } finally {
       setLoading(false);
     }

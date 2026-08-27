@@ -24,13 +24,16 @@ import type { NetworkType } from '@normalfinance/utils';
 
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { EVM_USDC } from '@/lib/cctp/config';
 import { buildAuthHeaders } from '@/utils/http';
 import { wireToUsdc } from '@/lib/cctp/decimals';
+import { runCctpRefund } from '@/lib/cctp/refund';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
-import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { useRef, useState, useEffect, useCallback } from 'react';
+import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { parseFailedTool, parseFailedExchanges } from '@/lib/cctp/failure-class';
 import { getActiveCctpTransfer, ACTIVE_CCTP_TRANSFER_EVENT } from '@/lib/cctp/active-transfer';
 
@@ -99,7 +102,7 @@ async function readBaseUsdc(network: NetworkType, address: string): Promise<bigi
   const { base, baseSepolia } = await import('viem/chains');
   const client = createPublicClient({
     chain: network === 'mainnet' ? base : baseSepolia,
-    transport: http(),
+    transport: network === 'mainnet' ? await baseFallbackTransport() : http(),
   });
   return client.readContract({
     address: EVM_USDC.base[network],
@@ -409,7 +412,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
             ? t(
                 'The exchange route failed on the provider side — your USDC is safe. Try again to use a different route.'
               )
-            : (e?.message ?? t('Recovery failed — your funds are safe; please try again.')),
+            : friendlyAppError(e),
           { variant: 'error' }
         );
       } finally {
@@ -428,52 +431,14 @@ export function CctpRecoveryBanner({ addresses }: Props) {
     async (tr: TransferRow) => {
       setBusyId(tr.id);
       try {
-        const network = tr.network as NetworkType;
-        const headers = await buildAuthHeaders();
-        // The user's own Base address (outbound destAddress) holds the minted USDC.
-        const bal = await readBaseUsdc(network, tr.destAddress);
-        if (bal === 0n) throw new Error(t('No USDC found on Base — it may already be moving.'));
-        // Fresh Base→Stellar bridge to the user's own Stellar account. `refund`
-        // bypasses the $10 min / cap — this recovers existing funds, not a new swap.
-        const createRes = await fetch('/api/cctp/transfers', {
-          method: 'POST',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify({
-            direction: 'crosschain_to_stellar',
-            sourceDomain: CCTP_DOMAIN.base,
-            destDomain: CCTP_DOMAIN.stellar,
-            amountWire: bal.toString(),
-            srcAsset: 'USDC',
-            dstAsset: 'USDC',
-            srcAmount: wireToUsdc(bal),
-            srcAddress: tr.destAddress, // user's Base (source of the re-bridge)
-            destAddress: tr.srcAddress, // user's Stellar (outbound srcAddress = Stellar)
-            refund: true,
-          }),
+        // Shared refund engine (lib/cctp/refund) — same flow the progress
+        // popup runs with live steps (Niko 2026-08-27).
+        await runCctpRefund({
+          transferId: tr.id,
+          network: tr.network as NetworkType,
+          baseAddress: tr.destAddress,
+          stellarAddress: tr.srcAddress,
         });
-        const createData = await createRes.json();
-        if (!createRes.ok || !createData.id)
-          throw new Error(createData.error ?? t('Could not start the refund.'));
-        const newId: string = createData.id;
-        // Relayer gas for the new burn (route tops up the Base address), then burn.
-        await fetch('/api/cctp/gas-topup', {
-          method: 'POST',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify({ transferId: newId }),
-        });
-        await new Promise((r) => setTimeout(r, 6000));
-        const { burnTxHash } = await burnUsdcOnEvm({
-          network,
-          chain: 'base',
-          evmAddress: tr.destAddress,
-          amountWire: bal,
-          stellarRecipient: tr.srcAddress,
-        });
-        await patch(newId, headers, { burnTxHash, dstAmount: wireToUsdc(bal) });
-        // Retire the original outbound swap as refunded.
-        await patch(tr.id, headers, { markRefunded: 'true' });
         enqueueSnackbar(
           t('Bringing your USDC back to Stellar — completes automatically (~20 min).'),
           { variant: 'info' }
@@ -481,14 +446,14 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         refresh();
       } catch (e: any) {
         console.error('[cctp refund] failed:', e); // surface stack
-        enqueueSnackbar(e?.message ?? t('Refund failed — your funds are safe; please try again.'), {
+        enqueueSnackbar(friendlyAppError(e), {
           variant: 'error',
         });
       } finally {
         setBusyId(null);
       }
     },
-    [t, enqueueSnackbar, patch, refresh]
+    [t, enqueueSnackbar, refresh]
   );
   refundRef.current = refundToStellar;
 

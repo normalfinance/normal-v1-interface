@@ -69,6 +69,9 @@ interface Props {
    *  usdc should be in that pop up") so the exit never requires finding the
    *  banner first. */
   onBringBack?: () => void;
+  /** Bring-back-in-modal (Niko 2026-08-27): when set, the popup stays open
+   *  and shows the REFUND checklist instead of the swap steps. */
+  refundStage?: 'topup' | 'burn' | 'done' | null;
 }
 
 const TX_HASH_RE = /0x[0-9a-fA-F]{64}/;
@@ -81,12 +84,12 @@ function extractTxHash(raw: string | null): string | null {
 /** Raw chain errors are for explorers, not people (Niko 2026-08-26: "that
  *  error was not user friendly"). The hash still renders — small, below. */
 function friendlyError(raw: string, t: (k: string) => string): string {
-  if (/reverted|WrappedError/i.test(raw)) {
+  if (/reverted|WrappedError|rejected on-chain/i.test(raw)) {
     return t(
       'The exchange route failed on the provider side — your USDC is safe in your own account. You can retry, or bring it back as USDC.'
     );
   }
-  if (/NotAllowedError|not allowed|rejected|denied/i.test(raw)) {
+  if (/NotAllowedError|not allowed|denied|declined/i.test(raw)) {
     return t('The signature was declined. Nothing was sent — you can try again.');
   }
   if (/timeout|timed out|network|fetch/i.test(raw)) {
@@ -98,7 +101,7 @@ function friendlyError(raw: string, t: (k: string) => string): string {
 export function CctpProgressModal({
   open,
   direction,
-  stage,
+  stage: runStage,
   error,
   fromSymbol,
   toSymbol,
@@ -109,8 +112,11 @@ export function CctpProgressModal({
   onClose,
   onTryAgain,
   onBringBack,
+  refundStage = null,
 }: Props) {
   const { t } = useTranslate();
+  // Refund mode reuses the whole step machinery below unchanged.
+  const stage = refundStage ?? runStage;
 
   // Instant recovery surface (Niko 2026-08-26: "that thing above the swap
   // card should also show instantly"): the moment a failure is on screen, the
@@ -119,8 +125,25 @@ export function CctpProgressModal({
     if (open && error) window.dispatchEvent(new Event('nf:cctp-halted'));
   }, [open, error]);
 
-  const steps: { id: CctpStage; label: string; sub: string }[] =
-    direction === 'in'
+  const steps: { id: CctpStage; label: string; sub: string }[] = refundStage
+    ? [
+        {
+          id: 'topup',
+          label: t('Covering network fees'),
+          sub: t('Normal sends gas to your address'),
+        },
+        {
+          id: 'burn',
+          label: t('Sending your USDC back'),
+          sub: t('Approve in your wallet'),
+        },
+        {
+          id: 'done',
+          label: t('Returning to Stellar'),
+          sub: t('Completes automatically (~20 min) — safe to close'),
+        },
+      ]
+    : direction === 'in'
       ? [
           {
             id: 'lifi',

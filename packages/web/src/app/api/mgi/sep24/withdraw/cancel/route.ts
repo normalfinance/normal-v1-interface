@@ -56,8 +56,6 @@ export const POST = withAuth(async (req: Request) => {
         return j(502, {
           error: 'Redirected without Location header',
           status: r.status,
-          sentTo: endpoint,
-          sentBody: payload,
         });
       }
       return NextResponse.json({ url: loc, id });
@@ -75,19 +73,16 @@ export const POST = withAuth(async (req: Request) => {
     }
 
     // Otherwise bubble diagnostics (helps a ton during allowlisting/config)
-    const text = await r.text();
     return j(502, {
       error: 'Unexpected response from anchor (cancel)',
       status: r.status,
       contentType: ct || null,
-      bodySnippet: text.slice(0, 2000),
-      sentTo: endpoint,
-      sentBody: payload,
       note:
         'The anchor should return JSON or a 302/303 redirect to the interactive UI. ' +
         'If HTML persists, re-check allowlisted client_domain and token scope.',
     });
   } catch (e: any) {
-    return j(500, { error: e?.message || 'Server error', stack: e?.stack });
+    console.error('[MGI] route crashed:', e); // detail stays in logs (doc 90 1c)
+    return j(500, { error: 'MoneyGram is temporarily unavailable — please try again.' });
   }
 });

@@ -55,6 +55,9 @@ interface HoldingsCardProps {
   totalBalance: number;
   /** Show skeleton rows while balances load with nothing cached yet. */
   loading?: boolean;
+  /** Doc 90 W3: balances failed — an outage must not read as owning nothing. */
+  error?: boolean;
+  onRetry?: () => void;
 }
 
 function HoldingsSkeleton() {
@@ -74,7 +77,14 @@ function HoldingsSkeleton() {
   );
 }
 
-export function HoldingsCard({ holdingsData, sections, totalBalance, loading }: HoldingsCardProps) {
+export function HoldingsCard({
+  holdingsData,
+  sections,
+  totalBalance,
+  loading,
+  error,
+  onRetry,
+}: HoldingsCardProps) {
   const { t } = useTranslate();
   const router = useRouter();
   const { startAction } = useAssetActionsContext();
@@ -200,6 +210,38 @@ export function HoldingsCard({ holdingsData, sections, totalBalance, loading }: 
       {rows.length === 0 ? (
         loading ? (
           <HoldingsSkeleton />
+        ) : error ? (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              py: '24px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <Box sx={{ color: 'rgba(10,10,15,0.55)', fontSize: '14px' }}>
+              {t("Couldn't load your holdings — your balances are safe.")}
+            </Box>
+            <Box
+              component="button"
+              type="button"
+              onClick={onRetry}
+              sx={{
+                border: '1px solid rgba(10,10,15,0.25)',
+                background: 'transparent',
+                borderRadius: '8px',
+                px: '10px',
+                py: '3px',
+                fontSize: '12.5px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                color: '#0A0A0F',
+              }}
+            >
+              {t('Retry')}
+            </Box>
+          </Box>
         ) : (
           <Box sx={{ color: 'rgba(10,10,15,0.4)', fontSize: '14px', py: '24px' }}>
             {t('No holdings yet')}

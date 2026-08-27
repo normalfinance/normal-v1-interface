@@ -19,6 +19,7 @@ import { bumpSavingsReadEpoch } from '@/lib/savings-read-guard';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { FEE_PAIR_TIMEOUT_SECONDS } from '@/lib/build-fee-payment';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import { getYieldCommission, getSavingsDepositFee } from '@/utils/normal-fees';
 import { submitFeePair, getTransactionSequence } from '@/lib/stellar/fee-pair';
@@ -46,6 +47,7 @@ interface UseDefindexSavingsReturn {
   loading: boolean;
   fetching: boolean;
   positionFetching: boolean;
+  positionError: unknown;
   vaultInfo: VaultInfo | null;
   userPosition: SavingsPosition | null;
   needsTrustline: boolean;
@@ -138,6 +140,8 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
   // Companion loading included on purpose: a loading flag must cover EVERY
   // source a display derives from (false for single-wallet users anyway).
   const positionFetching = savings.positionLoading || savings.companionPositionLoading;
+  // Doc 90 W3: the error must follow the same wallet the DISPLAY follows.
+  const positionError = overrideActive ? savings.companionPositionError : savings.positionError;
   const fetchError = savings.vaultError
     ? ((savings.vaultError as Error)?.message ?? 'Failed to fetch vault info')
     : null;
@@ -283,8 +287,15 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           ) {
             throw balanceErr;
           }
-          // Horizon load failure — proceed and let the tx surface the error naturally
+          // Doc 90 W4: proceeding costs the user TWO signatures before the
+          // failure — proceed, but SAY the pre-check could not run.
           console.warn('Could not pre-check USDC balance:', balanceErr.message);
+          enqueueSnackbar(
+            t(
+              'We could not pre-check your balance — the transaction may still fail after signing.'
+            ),
+            { variant: 'warning' }
+          );
         }
 
         // 1. Build the DeFindex deposit XDR for the NET amount. It carries
@@ -354,6 +365,16 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           t('Deposit successful!'),
           pair.serviceHash
         );
+        if (!pair.feeSubmitted) {
+          // Doc 90 W4: the 0.5% fee is escrowed and swept separately — a
+          // second small USDC debit minutes later must never be a surprise.
+          enqueueSnackbar(
+            t(
+              'Note: the 0.5% service fee settles as a separate small transaction in the next few minutes.'
+            ),
+            { variant: 'info' }
+          );
+        }
 
         // Optimistically update the shared savings cache so every view reflects
         // the deposit immediately (the events indexer lags 30-120s behind).
@@ -407,8 +428,9 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
       } catch (err: any) {
         if (err instanceof WalletSessionExpiredError) return '';
         console.error('Error depositing:', err);
-        const errorMessage = err.message || 'Deposit failed';
-        if (errorMessage.toLowerCase().includes('trustline')) {
+        const rawMessage = String(err?.message ?? '');
+        const errorMessage = friendlyAppError(err);
+        if (rawMessage.toLowerCase().includes('trustline')) {
           setNeedsTrustline(true);
         }
         setError(errorMessage);
@@ -628,8 +650,9 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
       } catch (err: any) {
         if (err instanceof WalletSessionExpiredError) return '';
         console.error('Error withdrawing:', err);
-        const errorMessage = err.message || 'Withdraw failed';
-        if (errorMessage.toLowerCase().includes('trustline')) {
+        const rawMessage = String(err?.message ?? '');
+        const errorMessage = friendlyAppError(err);
+        if (rawMessage.toLowerCase().includes('trustline')) {
           setNeedsTrustline(true);
         }
         setError(errorMessage);
@@ -667,6 +690,7 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
     loading,
     fetching,
     positionFetching,
+    positionError,
     vaultInfo,
     userPosition,
     needsTrustline,

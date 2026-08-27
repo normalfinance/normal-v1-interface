@@ -63,6 +63,9 @@ export const POST = withAuth(async (req: NextRequest) => {
     return NextResponse.json(data);
   } catch (err: any) {
     logger.error('Coinbase session exception:', err);
-    return NextResponse.json({ error: err?.message ?? 'Internal error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Coinbase is temporarily unavailable — please try again.' },
+      { status: 500 }
+    );
   }
 });

@@ -86,6 +86,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     loading,
     fetching,
     positionFetching,
+    positionError,
     error,
     needsTrustline,
     setNeedsTrustline,
@@ -205,9 +206,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const needsSetup =
     hasCheckedOnce &&
     !!wallet.address &&
-    (!accountExists || (trustlineRequired && !hasUsdcTrustline));
+    (accountExists === false || (accountExists === true && trustlineRequired && !hasUsdcTrustline));
   const setupComplete =
-    hasCheckedOnce && !!wallet.address && accountExists && (!trustlineRequired || hasUsdcTrustline);
+    hasCheckedOnce &&
+    !!wallet.address &&
+    accountExists === true &&
+    (!trustlineRequired || hasUsdcTrustline);
 
   // Auto-open the guided setup once when it's first needed (the user can reopen
   // it later via the "Set up savings" button).
@@ -255,7 +259,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const refetchRef = useRef(refetchAccountStatus);
   refetchRef.current = refetchAccountStatus;
   useEffect(() => {
-    if (!setupOpen || accountExists) return undefined;
+    if (!setupOpen || accountExists === true) return undefined;
     const id = setInterval(() => refetchRef.current(), 2500);
     return () => clearInterval(id);
   }, [setupOpen, accountExists]);
@@ -572,7 +576,11 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 >
                   {label}
                 </Typography>
-                {!userPosition ? (
+                {positionError && !userPosition ? (
+                  <Typography sx={{ fontSize: '12px', color: '#B45309' }}>
+                    {t('Unavailable — retrying…')}
+                  </Typography>
+                ) : !userPosition ? (
                   <Skeleton variant="text" width={80} height={18} />
                 ) : (
                   <Typography
@@ -1264,7 +1272,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         open={setupOpen}
         onClose={() => setSetupOpen(false)}
         walletAddress={wallet.address || ''}
-        accountExists={accountExists}
+        accountExists={accountExists === true}
         hasUsdcTrustline={hasUsdcTrustline}
         trustlineRequired={!!savingsUsdcIssuer}
         isCheckingAccount={isCheckingAccount}

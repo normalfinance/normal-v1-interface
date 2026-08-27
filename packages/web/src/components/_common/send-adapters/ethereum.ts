@@ -8,6 +8,7 @@ import { getChain } from '@/lib/chains/registry';
 import { announceTransaction } from '@/lib/tx-events';
 import { ETH_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 
 import type { SendParams, SendAdapter } from './index';
@@ -64,7 +65,10 @@ export function createEthereumAdapter(
     async send(params: SendParams): Promise<string> {
       try {
         const info = await getTurnkeyWalletInfo();
-        if (!info?.subOrgId) throw new Error('Turnkey wallet not found');
+        if (!info?.subOrgId)
+          throw new Error(
+            'Could not load your wallet just now — check your connection and try again.'
+          );
         const subOrgId = info.subOrgId;
 
         const { http, parseEther, createPublicClient, serializeTransaction } = await import('viem');
@@ -217,7 +221,7 @@ export function createEthereumAdapter(
 
         return txHash;
       } catch (err: any) {
-        const msg: string = err?.shortMessage ?? err?.message ?? 'Ethereum transaction failed';
+        const msg: string = friendlyAppError(err);
         onError?.(msg);
         return '';
       }
