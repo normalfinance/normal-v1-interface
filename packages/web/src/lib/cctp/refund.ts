@@ -61,6 +61,9 @@ export async function runCctpRefund(args: {
       srcAddress: baseAddress,
       destAddress: stellarAddress,
       refund: true,
+      // Doc 95 Wave 2: the server verifies this is the caller's own
+      // unfinished outbound swap before allowing the min/cap bypass.
+      refundOfTransferId: transferId,
     }),
   });
   const createData = await createRes.json().catch(() => null);

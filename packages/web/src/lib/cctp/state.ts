@@ -44,7 +44,11 @@ export async function advanceTransfer(transfer: CctpTransfer): Promise<CctpTrans
       case 'BURN_CONFIRMED': {
         if (!transfer.burnTxHash) break;
         const iris = new IrisClient(network);
-        const msg = await iris.getMessageByTxHash(transfer.sourceDomain, transfer.burnTxHash);
+        const msg = await iris.getMessageByTxHash(
+          transfer.sourceDomain,
+          transfer.burnTxHash,
+          transfer.destDomain
+        );
         if (IrisClient.isComplete(msg)) {
           await prisma.cctpTransfer.updateMany({
             where: { id: transfer.id, status: transfer.status },

@@ -5,6 +5,8 @@ import { NextResponse } from 'next/server';
 import { quoteRateLimiter } from '@/server/rateLimiter';
 import { getFeesDepositAddress } from '@/lib/build-fee-payment';
 import { isValidStellarAddress } from '@/utils/stellar-address';
+import { StrKey, TransactionBuilder } from '@stellar/stellar-sdk';
+import { getStellarConfigForNetwork } from '@normalfinance/utils';
 
 const DEFAULT_SOROSWAP_API_BASE_URL = 'https://api.soroswap.finance';
 const DEFAULT_PROTOCOLS = ['soroswap'];
@@ -232,6 +234,50 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Swap aggregator did not return a transaction XDR' },
         { status: 500 }
+      );
+    }
+
+    // Doc 95 Wave 2: the aggregator's XDR used to be forwarded and signed with
+    // ZERO verification. Check the two properties we can prove cheaply before
+    // a user is asked to sign it:
+    //   1. the transaction's source is the sender we asked for (it spends
+    //      THEIR account — a different source would be someone else's money);
+    //   2. when we asked for the embedded fee, the fee address is actually in
+    //      the transaction (verified live 2026-08-27: Soroswap encodes it as
+    //      the raw 32-byte ed25519 key).
+    try {
+      const parsed = TransactionBuilder.fromXDR(
+        xdr,
+        getStellarConfigForNetwork(network).NETWORK_PASSPHRASE
+      );
+      const source = 'source' in parsed ? (parsed as { source: string }).source : '';
+      if (source !== sender) {
+        console.error('[swap/quote] built XDR source mismatch', { source, sender });
+        return NextResponse.json(
+          { success: false, error: 'The exchange returned a transaction for a different account' },
+          { status: 502 }
+        );
+      }
+      if (embeddedFee) {
+        const feeKey = Buffer.from(StrKey.decodeEd25519PublicKey(getFeesDepositAddress()));
+        if (!Buffer.from(xdr, 'base64').includes(feeKey)) {
+          console.error('[swap/quote] embedded fee missing from built XDR — falling back');
+          embeddedBrokenUntil = Date.now() + EMBEDDED_BREAKER_MS;
+          return NextResponse.json(
+            {
+              success: false,
+              embedded_unavailable: true,
+              error: 'Single-signature swap unavailable right now — using the standard flow',
+            },
+            { status: 409 }
+          );
+        }
+      }
+    } catch (verifyErr) {
+      console.error('[swap/quote] could not verify the built XDR:', verifyErr);
+      return NextResponse.json(
+        { success: false, error: 'The exchange returned a transaction we could not verify' },
+        { status: 502 }
       );
     }
 

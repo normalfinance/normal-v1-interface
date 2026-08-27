@@ -26,7 +26,16 @@ The tab must never be required after signing.
 - `use-cctp-engine.tsx:931,703` + cron — **no server-side pivot/burn driver**: cctp-advance must run the outbound pivot and inbound burn (autopilot) so a closed tab still completes; STALE sweep must stop skipping srcSwapTxHash rows.
 - `lib/cctp/refund.ts:68` — refund's gas-topup result discarded + blind 6s sleep + stale balance + un-retried patch: mirror the engine's verified-topup + 3-attempt patcher (partly done in 0b; finish it).
 
-## Wave 2 — Never sign what we didn't verify (money-critical: blind signing / open relay)
+## Wave 2 — Never sign what we didn't verify (money-critical: blind signing)
+
+> **STATUS: SHIPPED 2026-08-27, run 2** — explainer `97-explainer-verify-before-sign.html`;
+> 6 new tests (`lib/cctp/iris-message.test.ts`). Correction to the sweep's wording: the
+> `submit-single` route was NOT an open relay — it does require auth (`withAuth`). What it
+> lacked were the ownership check, rate limit, fee verification and config-aware Horizon that
+> `execute-pair` has; all four are now in place.
+> Key de-risking step: the fee-in-XDR check was verified against the LIVE Soroswap build API
+> before shipping (the referral address is embedded as its raw 32-byte key), so it enforces
+> from day one instead of running log-only.
 - `app/api/swap/submit-single/route.ts:24,42,15` — **open relay**: no rate limit, no `userOwnsWallet`, no fee-embed check, hardcoded Horizon; broadcasts arbitrary signed XDR + writes swap_logs. Add the guards `execute-pair` already has (or retire the route).
 - `app/api/swap/quote/route.ts:228` + `use-swap.tsx` — Soroswap `built.xdr` signed with zero verification (ops/assets/amount/destination). Cross-check the built tx against the quote before returning it.
 - `lib/lifi/btc-sign.ts:115,121,119` — PSBT signed without checking outputs/amounts/change/fee against the quote; `sighashType` ignored (always SIGHASH_ALL); non-witness inputs silently skipped. Validate the PSBT shape; honor declared sighash; refuse unknown input types.
