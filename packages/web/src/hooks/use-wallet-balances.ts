@@ -10,6 +10,7 @@ import {
   pickNewerPayload,
   portfolioCacheKey,
   readCachedPortfolio,
+  fillErroredFromKnown,
   writeCachedPortfolio,
 } from '@/lib/portfolio/client-cache';
 
@@ -131,11 +132,19 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
       // the raw promise let whichever fetch resolved LAST own the screen, and
       // a stale straggler could overwrite the post-swap gate's fresh read.
       // pickNewerPayload makes arrival order irrelevant.
+      // Two rules compose here: the newer aggregation wins (pickNewerPayload),
+      // and whatever wins has its error-holes patched with balances we already
+      // know (fillErroredFromKnown) — a failed chain read must show as a stale
+      // known number, never flash a zero.
       setTimeout(
         () =>
-          mutate(async (current) => pickNewerPayload(current, await fetchPayload(swrKey, true)), {
-            revalidate: false,
-          }),
+          mutate(
+            async (current) => {
+              const fresh = pickNewerPayload(current, await fetchPayload(swrKey, true));
+              return { ...fresh, ...fillErroredFromKnown(fresh, current) };
+            },
+            { revalidate: false }
+          ),
         800
       );
     };
@@ -185,7 +194,13 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
       // The CALLER always gets this fetch's own result (the balance gate needs
       // the read it made, whichever payload ends up on screen).
       const fetched = await fetchPayload(swrKey, true);
-      await mutate((current) => pickNewerPayload(current, fetched), { revalidate: false });
+      await mutate(
+        (current) => {
+          const fresh = pickNewerPayload(current, fetched);
+          return { ...fresh, ...fillErroredFromKnown(fresh, current) };
+        },
+        { revalidate: false }
+      );
       // `floored` rides on the payload only so it can be read back here; it is
       // NOT part of the stored snapshot (see fetchPayload).
       return {

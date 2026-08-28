@@ -231,6 +231,21 @@ export async function aggregatePortfolio(
   const priceOf = (s: string): number | null => (s in spot.prices ? spot.prices[s] : null);
   const changeOf = (s: string): number | null => (s in spot.changes ? spot.changes[s] : null);
 
+  // A failed source must be VISIBLE in the log (2026-08-28: an ETH balance
+  // flashed to 0 and nothing anywhere said which layer had failed — the
+  // aggregate was silently marking the row errored).
+  const named: [string, PromiseSettledResult<unknown>][] = [
+    ['btc', btcR],
+    ['eth', ethR],
+    ['sol', solR],
+    ['stellar', stellarR],
+  ];
+  for (const [name, r] of named) {
+    if (r.status === 'rejected') {
+      console.warn(`[portfolio] ${name} source failed:`, String(r.reason).slice(0, 200));
+    }
+  }
+
   // number on success, null on error — `undefined` never happens (settled).
   const settledBalance = (r: PromiseSettledResult<number | null>): number | null =>
     r.status === 'fulfilled' ? r.value : null;

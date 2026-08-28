@@ -7,6 +7,7 @@ import {
   pickNewerPayload,
   portfolioCacheKey,
   readCachedPortfolio,
+  fillErroredFromKnown,
   writeCachedPortfolio,
   readCachedCompanionStellarAddress,
 } from './client-cache';
@@ -113,5 +114,48 @@ describe('writeCachedPortfolio no-clobber', () => {
     writeCachedPortfolio(key, at(1_000));
     writeCachedPortfolio(key, at(2_000));
     expect(readCachedPortfolio(key)?.updatedAt).toBe(2_000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Live 2026-08-28: ETH showed correctly after a swap, then a refresh whose ETH
+// source had FAILED arrived (balance null) and the mappers coerced null to
+// '0' — the balance flashed to zero until the next good read. A known number
+// must never be replaced by a hole.
+// ---------------------------------------------------------------------------
+describe('fillErroredFromKnown', () => {
+  const eth = (balance: string | null, status = balance === null ? 'error' : 'ok') =>
+    ({ symbol: 'ETH', chain: 'ethereum', balance, status, price: '2500' }) as any;
+  const wrap = (assets: any[]) => ({ updatedAt: 2_000, assets, companionStellar: null }) as any;
+
+  it('keeps the known balance when the incoming row errored — the live flash-to-zero', () => {
+    const out = fillErroredFromKnown(wrap([eth(null)]), wrap([eth('0.0042')]));
+    expect(out.assets[0].balance).toBe('0.0042');
+    expect(out.assets[0].status).toBe('stale');
+  });
+
+  it('lets a REAL zero through — an emptied wallet is not an error', () => {
+    const out = fillErroredFromKnown(wrap([eth('0')]), wrap([eth('0.0042')]));
+    expect(out.assets[0].balance).toBe('0');
+    expect(out.assets[0].status).toBe('ok');
+  });
+
+  it('keeps the incoming price on a patched row when it has one', () => {
+    const incoming = wrap([{ ...eth(null), price: '2600' }]);
+    const out = fillErroredFromKnown(incoming, wrap([eth('0.0042')]));
+    expect(out.assets[0].price).toBe('2600');
+  });
+
+  it('leaves an errored row alone when nothing was ever known', () => {
+    const out = fillErroredFromKnown(wrap([eth(null)]), wrap([eth(null)]));
+    expect(out.assets[0].balance).toBeNull();
+    expect(fillErroredFromKnown(wrap([eth(null)]), undefined).assets[0].balance).toBeNull();
+  });
+
+  it('matches rows by chain AND symbol, never across chains', () => {
+    const stellarUsdc = { symbol: 'USDC', chain: 'stellar', balance: '50', status: 'ok' } as any;
+    const brokenEth = eth(null);
+    const out = fillErroredFromKnown(wrap([brokenEth]), wrap([stellarUsdc]));
+    expect(out.assets[0].balance).toBeNull();
   });
 });

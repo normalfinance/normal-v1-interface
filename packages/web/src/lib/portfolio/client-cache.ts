@@ -50,6 +50,39 @@ export function pickNewerPayload<T extends PortfolioPayload>(
   return incoming.updatedAt >= current.updatedAt ? incoming : current;
 }
 
+/**
+ * Patch the holes in a newer payload with balances the app already knows.
+ *
+ * The aggregate marks a failed chain source as `balance: null, status:
+ * 'error'`, and the SERVER backfills that from its own last-good snapshot —
+ * but when that backfill itself has nothing (a Redis blip, an expired
+ * snapshot), the null reaches the browser, and the token mappers coerce
+ * null to '0'. Live 2026-08-28: ETH showed correctly after a swap, then a
+ * refresh whose ETH read failed arrived and the balance flashed to 0 for a
+ * few seconds until the next good read. A number we KNEW became a lie.
+ *
+ * Rule: an incoming row with no balance never replaces a row whose balance
+ * is known — the known value is kept and marked 'stale' so honest surfaces
+ * can say so. A REAL zero (user emptied the wallet) has `balance: '0'`,
+ * not null, and flows through untouched.
+ */
+export function fillErroredFromKnown(
+  incoming: PortfolioPayload,
+  known: PortfolioPayload | undefined
+): PortfolioPayload {
+  if (!known?.assets?.length || !incoming.assets?.length) return incoming;
+  const prior = new Map(known.assets.map((a) => [`${a.chain}:${a.symbol}`, a]));
+  let patched = false;
+  const assets = incoming.assets.map((a) => {
+    if (a.balance !== null) return a;
+    const p = prior.get(`${a.chain}:${a.symbol}`);
+    if (!p || p.balance === null) return a;
+    patched = true;
+    return { ...p, status: 'stale' as const, price: a.price ?? p.price };
+  });
+  return patched ? { ...incoming, assets } : incoming;
+}
+
 export function writeCachedPortfolio(cacheKey: string, payload: PortfolioPayload): void {
   if (typeof window === 'undefined') return;
   try {
