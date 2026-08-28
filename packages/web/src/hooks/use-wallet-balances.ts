@@ -7,6 +7,7 @@ import { buildAuthHeaders } from '@/utils/http';
 import { useMemo, useEffect, useCallback } from 'react';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import {
+  pickNewerPayload,
   portfolioCacheKey,
   readCachedPortfolio,
   writeCachedPortfolio,
@@ -75,7 +76,10 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
   const swrKey = enabled ? portfolioCacheKey(stellar, network) : null;
 
   const fetchPayload = useCallback(
-    async (cacheKey: string, fresh: boolean): Promise<PortfolioPayload> => {
+    async (
+      cacheKey: string,
+      fresh: boolean
+    ): Promise<PortfolioPayload & { floored?: boolean; retryAfterMs?: number }> => {
       const headers = await buildAuthHeaders();
       const res = await fetch(
         `/api/wallet/portfolio?stellar=${encodeURIComponent(stellar)}&network=${network}` +
@@ -121,7 +125,19 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
   useEffect(() => {
     const handler = () => {
       if (!swrKey) return;
-      setTimeout(() => mutate(fetchPayload(swrKey, true), { revalidate: false }), 800);
+      // No-clobber seed (live 2026-08-28): this fires in EVERY mounted
+      // instance of this hook (~23 across the app), 800ms after the event —
+      // usually BEFORE the ledger settles, so the data is pre-action. Seeding
+      // the raw promise let whichever fetch resolved LAST own the screen, and
+      // a stale straggler could overwrite the post-swap gate's fresh read.
+      // pickNewerPayload makes arrival order irrelevant.
+      setTimeout(
+        () =>
+          mutate(async (current) => pickNewerPayload(current, await fetchPayload(swrKey, true)), {
+            revalidate: false,
+          }),
+        800
+      );
     };
     window.addEventListener('nf:activity-updated', handler);
     return () => window.removeEventListener('nf:activity-updated', handler);
@@ -164,14 +180,19 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
     },
     refreshFresh: async () => {
       if (!swrKey) return { assets: null, companionAssets: null, floored: false };
-      const payload = await mutate(fetchPayload(swrKey, true), { revalidate: false });
+      // Fetch first, seed second — and through the no-clobber rule, so a
+      // racing stale read can never rewind what this fetch is about to show.
+      // The CALLER always gets this fetch's own result (the balance gate needs
+      // the read it made, whichever payload ends up on screen).
+      const fetched = await fetchPayload(swrKey, true);
+      await mutate((current) => pickNewerPayload(current, fetched), { revalidate: false });
       // `floored` rides on the payload only so it can be read back here; it is
       // NOT part of the stored snapshot (see fetchPayload).
       return {
-        assets: payload?.assets ?? null,
-        companionAssets: payload?.companionStellar?.assets ?? null,
-        floored: !!payload?.floored,
-        retryAfterMs: payload?.retryAfterMs,
+        assets: fetched.assets ?? null,
+        companionAssets: fetched.companionStellar?.assets ?? null,
+        floored: !!fetched.floored,
+        retryAfterMs: fetched.retryAfterMs,
       };
     },
   };

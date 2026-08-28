@@ -26,9 +26,37 @@ export function readCachedPortfolio(cacheKey: string): PortfolioPayload | undefi
   }
 }
 
+/**
+ * No-clobber rule (live 2026-08-28): every payload carries `updatedAt`, the
+ * server-side moment it was aggregated (floored/cached responses keep the
+ * ORIGINAL timestamp, not the serve time). The newer aggregation wins;
+ * resolve ORDER is meaningless.
+ *
+ * Why this exists: ~23 mounted components each fire their own refresh on
+ * `nf:activity-updated`, 800ms after a swap — BEFORE the ledger has settled,
+ * so those reads carry pre-swap balances. They race the post-swap gate's
+ * fresh read, and whichever resolved LAST used to own both the SWR cache and
+ * this localStorage snapshot. The balance gate logged `changed=true` with the
+ * correct post-swap numbers in hand while the screen kept the old ones — a
+ * stale straggler had landed after it.
+ */
+export function pickNewerPayload<T extends PortfolioPayload>(
+  current: T | undefined,
+  incoming: T
+): T {
+  if (!current?.updatedAt) return incoming;
+  // An undated payload must never replace a dated one.
+  if (!incoming.updatedAt) return current;
+  return incoming.updatedAt >= current.updatedAt ? incoming : current;
+}
+
 export function writeCachedPortfolio(cacheKey: string, payload: PortfolioPayload): void {
   if (typeof window === 'undefined') return;
   try {
+    // Same no-clobber rule on disk: a stale straggler must not rewind the
+    // snapshot a fresher fetch already wrote.
+    const existing = readCachedPortfolio(cacheKey);
+    if (existing && pickNewerPayload(existing, payload) === existing) return;
     localStorage.setItem(`${LS_KEY}:${cacheKey}`, JSON.stringify(payload));
   } catch {
     /* quota / serialization — non-fatal */

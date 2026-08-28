@@ -4,6 +4,7 @@
 import { it, expect, describe, beforeEach } from '@jest/globals';
 
 import {
+  pickNewerPayload,
   portfolioCacheKey,
   readCachedPortfolio,
   writeCachedPortfolio,
@@ -63,5 +64,54 @@ describe('portfolio client cache', () => {
     localStorage.setItem(`nf:portfolio:v1:${EXT}:mainnet`, '{not json');
     expect(readCachedPortfolio(portfolioCacheKey(EXT, 'mainnet'))).toBeUndefined();
     expect(readCachedCompanionStellarAddress(EXT, 'mainnet')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// No-clobber (live 2026-08-28): the balance gate fetched post-swap values and
+// logged changed=true, yet the screen kept pre-swap numbers — one of ~23
+// event-handler refreshes (fired pre-ledger) resolved AFTER it and overwrote
+// the SWR cache and this snapshot. Arrival order must be meaningless.
+// ---------------------------------------------------------------------------
+describe('pickNewerPayload', () => {
+  const at = (updatedAt: number) => ({ updatedAt, assets: [], companionStellar: null });
+
+  it('lets a newer aggregation replace an older one', () => {
+    expect(pickNewerPayload(at(1_000), at(2_000)).updatedAt).toBe(2_000);
+  });
+
+  it('REJECTS an older aggregation arriving late — the live bug', () => {
+    expect(pickNewerPayload(at(2_000), at(1_000)).updatedAt).toBe(2_000);
+  });
+
+  it('takes the incoming copy on a tie (same aggregation, fresher transport)', () => {
+    const incoming = at(1_500);
+    expect(pickNewerPayload(at(1_500), incoming)).toBe(incoming);
+  });
+
+  it('accepts anything when there is nothing yet', () => {
+    expect(pickNewerPayload(undefined, at(1)).updatedAt).toBe(1);
+  });
+
+  it('never lets an undated payload replace a dated one', () => {
+    expect(pickNewerPayload(at(2_000), at(0)).updatedAt).toBe(2_000);
+  });
+});
+
+describe('writeCachedPortfolio no-clobber', () => {
+  beforeEach(() => localStorage.clear());
+  const key = portfolioCacheKey(EXT, 'mainnet');
+  const at = (updatedAt: number) => ({ updatedAt, assets: [], companionStellar: null });
+
+  it('ignores a stale write after a fresher one', () => {
+    writeCachedPortfolio(key, at(2_000));
+    writeCachedPortfolio(key, at(1_000)); // the late straggler
+    expect(readCachedPortfolio(key)?.updatedAt).toBe(2_000);
+  });
+
+  it('still moves forward normally', () => {
+    writeCachedPortfolio(key, at(1_000));
+    writeCachedPortfolio(key, at(2_000));
+    expect(readCachedPortfolio(key)?.updatedAt).toBe(2_000);
   });
 });
