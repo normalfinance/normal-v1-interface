@@ -1,6 +1,6 @@
 'use client';
 
-import { logger } from '@normalfinance/utils';
+import { logger } from '@/utils/logger';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';

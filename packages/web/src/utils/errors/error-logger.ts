@@ -1,3 +1,5 @@
+import { logger } from '@/utils/logger';
+
 import { classifyError } from './error-classifier';
 
 import type { AppError } from './error-types';
@@ -11,7 +13,7 @@ export function logError(error: unknown, options: LogErrorOptions = {}): AppErro
   const appError = classifyError(error);
 
   if (process.env.NODE_ENV === 'development') {
-    console.error(`[${appError.category}] ${options.context || 'Error'}:`, error);
+    logger.error(`[${appError.category}] ${options.context || 'Error'}:`, error);
   }
 
   return appError;

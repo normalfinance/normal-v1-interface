@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/utils/logger';
 import { buildAuthHeaders } from '@/utils/http';
 
 // ---------------------------------------------------------------------------
@@ -31,7 +32,7 @@ export function postTransactionLog(path: string, payload: unknown): void {
       if (!res.ok) {
         // 401 = the session wasn't sent or expired; 403 = the wallet isn't
         // linked to this account. Both mean the record was NOT written.
-        console.error(`[log-transaction] ${path} failed with ${res.status} — record not saved`);
+        logger.error(`[log-transaction] ${path} failed with ${res.status} — record not saved`);
         return;
       }
 
@@ -49,7 +50,7 @@ export function postTransactionLog(path: string, payload: unknown): void {
       // this one guarantees the database row appears.
       window.dispatchEvent(new Event('nf:activity-updated'));
     } catch (error) {
-      console.error(`[log-transaction] ${path} error — record not saved`, error);
+      logger.error(`[log-transaction] ${path} error — record not saved`, error);
     }
   })();
 }

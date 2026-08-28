@@ -1,4 +1,4 @@
-import { logger } from '@normalfinance/utils';
+import { logger } from '@/utils/logger';
 import { buildAuthHeaders } from '@/utils/http';
 
 /**

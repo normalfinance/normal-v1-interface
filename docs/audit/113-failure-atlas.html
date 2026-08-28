@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Swap Failure Atlas</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:980px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:42px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .auto { display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:0.04em; padding:1px 7px; border-radius:99px; background:rgba(26,179,125,0.12); color:#0a6649; }
+  .tap { display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:0.04em; padding:1px 7px; border-radius:99px; background:rgba(29,78,216,0.10); color:#1d4ed8; }
+  .stop { display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:0.04em; padding:1px 7px; border-radius:99px; background:rgba(10,10,15,0.08); color:#3a3a44; }
+  .red { display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:0.04em; padding:1px 7px; border-radius:99px; background:rgba(220,38,38,0.10); color:#991b1b; }
+</style>
+</head>
+<body>
+<h1>The Swap Failure Atlas</h1>
+<p class="subtitle">Doc 113 &mdash; every swap type, every step, and exactly what happens when
+each step fails. Written from the code as it stands on
+<code>feat/swap-matrix-hardening</code> (2026-08-28), each claim verified at its source, not from
+memory.</p>
+
+<h2>1 &middot; Your two questions, answered straight</h2>
+
+<h3>&ldquo;If something fails, does the refund begin automatically?&rdquo;</h3>
+<p><strong>Where a refund is the right answer &mdash; yes.</strong> But the honest, complete
+answer is that most failures do not need a refund at all, because of one design rule: <em>funds
+travel via your own addresses at every step</em>. Money is never sitting with us or with a
+counterparty waiting to be given back &mdash; so &ldquo;recovery&rdquo; usually means either
+&ldquo;nothing ever moved&rdquo; or &ldquo;finish the journey forward&rdquo;. The full truth
+table:</p>
+<table>
+  <tr><th>situation</th><th>what happens</th><th>automatic?</th></tr>
+  <tr><td>A step fails <em>before</em> anything is signed (guards, quotes, fees)</td>
+      <td>Nothing moved. You fix the input or just retry.</td>
+      <td><span class="stop">NOTHING TO REFUND</span></td></tr>
+  <tr><td>The source transaction reverts on-chain (inbound swap)</td>
+      <td>The chain undid everything &mdash; funds never left (minus network fee). Calm grey
+      ending; the record retires itself.</td>
+      <td><span class="stop">NOTHING TO REFUND</span></td></tr>
+  <tr><td>A bridge leg fails mid-route on a LI.FI swap</td>
+      <td>The bridge protocol itself returns the funds to your source address. We track it and
+      tell you: &ldquo;your {sym} was returned — no funds were lost.&rdquo;</td>
+      <td><span class="auto">AUTOMATIC (by the bridge)</span></td></tr>
+  <tr><td>Outbound swap: your USDC reached Base, but the final exchange keeps getting rejected
+      on-chain</td>
+      <td>Two automatic attempts first (original route, then a re-route excluding the failed
+      bridge <em>and</em> DEX). If both revert: <strong>the refund starts itself</strong> —
+      the popup stays open, says <em>&ldquo;The exchange route kept failing — bringing your USDC
+      back automatically&rdquo;</em>, and walks the refund steps.</td>
+      <td><span class="auto">AUTOMATIC</span> &mdash; zero prompts with autopilot on; exactly one
+      passkey confirmation without it (the refund is itself an on-chain transaction, and only
+      autopilot may sign for you)</td></tr>
+  <tr><td>Any failure where retrying is genuinely viable (a declined signature, a network blip)</td>
+      <td>Red panel with Try again / the banner&rsquo;s one-tap recovery. Auto-refunding here
+      would throw away a swap that one tap can finish.</td>
+      <td><span class="tap">ONE TAP, YOUR CHOICE</span></td></tr>
+</table>
+
+<h3>&ldquo;Are the errors user-friendly now?&rdquo;</h3>
+<p><strong>Yes, with one honest caveat.</strong> What is now true everywhere:</p>
+<ul>
+  <li>Raw chain errors never reach you: a single tested classifier translates Horizon/Soroban
+      codes, passkey/WebAuthn outcomes, nonce races, rate limits and timeouts into plain
+      sentences; anything that still looks technical (stack traces, hex dumps) collapses to a
+      calm generic line instead of leaking.</li>
+  <li>No more double-translation: the collision that rewrote &ldquo;not enough ETH for the
+      <em>network</em> fee&rdquo; into &ldquo;the network didn&rsquo;t answer — try again&rdquo;
+      is gone and pinned by a test.</li>
+  <li>Endings are color-honest: <strong>grey = nothing moved, nothing to do</strong> (calm panel,
+      Close only); <strong>red = your money moved and needs a decision</strong> (Try again /
+      Bring back). Red is no longer used to say &ldquo;nothing happened&rdquo;.</li>
+  <li>Surfaces cannot contradict each other about facts: the LI.FI verdict, the banner phase
+      table and the failure copy each live in one tested module.</li>
+</ul>
+<p><em>The caveat:</em> a truly unknown error (something no pattern matches, under 200 characters,
+not technical-looking) is shown as-is. That is deliberate — better an odd but genuine sentence
+than a wrong translation — but it means &ldquo;friendly&rdquo; is guaranteed by classes, not by
+enumerating every possible string.</p>
+
+<h2>2 &middot; The map: which swap uses which machine</h2>
+<table>
+  <tr><th>pair</th><th>engine</th><th>signatures</th></tr>
+  <tr><td>XLM ↔ USDC (Stellar)</td><td><strong>Soroswap</strong> — one atomic Stellar transaction</td>
+      <td>1 (embedded fee) or 2 (fee-pair fallback)</td></tr>
+  <tr><td>BTC / ETH / SOL → USDC or XLM</td><td><strong>CCTP inbound</strong> — LI.FI to Base, Circle bridge to Stellar</td>
+      <td>1 (source chain); burn is automatic or 1 more</td></tr>
+  <tr><td>USDC → BTC / ETH / SOL</td><td><strong>CCTP outbound</strong> — Circle bridge to Base, LI.FI to target</td>
+      <td>1 (Stellar burn); pivot is automatic or 1 more</td></tr>
+  <tr><td>BTC ↔ ETH ↔ SOL (no Stellar side)</td><td><strong>LI.FI direct</strong> — one bridge route</td>
+      <td>1</td></tr>
+</table>
+<p>BTC, ETH and SOL share each engine&rsquo;s code path — the per-asset differences are the signing
+method (BTC = PSBT raw-payload signing with a spend cap; ETH = EIP-1559 with a live gas reserve;
+SOL = rent-exempt minimum guard) and the settlement clock. A failure behaves the same way for all
+three unless a row below says otherwise.</p>
+
+<h2>3 &middot; Soroswap: XLM ↔ USDC</h2>
+<p>The simplest machine, and the reason it needs no refunds: the whole swap is <strong>one atomic
+Stellar transaction</strong>. It either applies completely or does not apply at all — there is no
+half-way state to rescue.</p>
+<table>
+  <tr><th>step</th><th>if it fails</th><th>your money</th><th>then</th></tr>
+  <tr><td>1 · Quote</td><td>One quiet retry on 429/5xx; a broken embedded-fee build answers 409
+      and the app silently falls back to the two-signature flow. A fee the server cannot state
+      refuses the single-signature path rather than billing wrong.</td>
+      <td class="ok">untouched</td><td>Card recovers by itself or shows a retryable error.</td></tr>
+  <tr><td>2 · Guards (before any prompt)</td><td>Not enough XLM for the Soroban fee → the button
+      itself says <em>&ldquo;Add XLM to cover the network fee&rdquo;</em> and will not proceed;
+      MAX holds the fee back. You can no longer sign a swap that is guaranteed to fail.</td>
+      <td class="ok">untouched</td><td>Add XLM or lower the amount.</td></tr>
+  <tr><td>3 · Signature(s)</td><td>Declined/dismissed passkey → &ldquo;nothing was sent&rdquo;
+      with Try again. Nothing was broadcast.</td>
+      <td class="ok">untouched</td><td>Try again re-prompts.</td></tr>
+  <tr><td>4 · Submit (server funnel)</td><td>Record-before-broadcast: the attempt is written down
+      before it is sent, so it can never vanish. If confirmation times out, the copy says
+      &ldquo;check your activity in a minute — safe to try again&rdquo; — and it genuinely is: a
+      retry reuses the same sequence numbers, so <strong>at most one</strong> can ever apply
+      on-chain. A background reconciler settles the record from the chain either way.</td>
+      <td class="ok">either swapped or untouched — never both, never lost</td>
+      <td>Retry or wait; Activity shows the truth.</td></tr>
+  <tr><td>5 · On-chain apply</td><td>Rejected by the network (e.g. price moved past the built-in
+      minimum-out) → the whole transaction is void, translated to a plain sentence with Try
+      again.</td>
+      <td class="ok">untouched (network fee only)</td><td>Fresh quote, try again.</td></tr>
+  <tr><td>6 · &ldquo;Updating balances&rdquo;</td><td>Done waits for the ledger to actually show
+      the result (bounded); every surface updates together.</td>
+      <td class="ok">swapped ✓</td><td>—</td></tr>
+</table>
+<p><em>Fee note:</em> on the two-signature path, a fee payment that cannot be submitted right away
+is escrowed and swept later — the deposit succeeds and you are told the 0.5% settles as a separate
+small transaction. A fee-leg problem never blocks or reverts your swap.</p>
+
+<h2>4 &middot; CCTP inbound: BTC / ETH / SOL → USDC or XLM</h2>
+<p>Journey: source chain → (LI.FI) → USDC lands at <strong>your own Base address</strong> →
+(Circle burn+mint) → your Stellar wallet. The design consequence: once the source leg succeeds,
+recovery is always <em>forward</em> — the USDC is already yours on Base and only needs to finish
+the trip.</p>
+<table>
+  <tr><th>step</th><th>if it fails</th><th>your money</th><th>then</th></tr>
+  <tr><td>1 · Quote + pre-sign guards</td><td>Quote older than 10 min is re-fetched before
+      signing; &gt;1% worse re-asks consent. BTC: a transaction that would spend more than quoted
+      is refused before the passkey (cap can never be silently skipped). ETH: a live gas check
+      offers the affordable amount instead of failing after signing. SOL: the rent-minimum guard.
+      A zero-fee transaction is refused rather than signed into limbo.</td>
+      <td class="ok">untouched</td><td>Fix input / accept new quote.</td></tr>
+  <tr><td>2 · Signature declined</td><td>The just-created record is retired (provably nothing
+      moved), red panel with Try again.</td>
+      <td class="ok">untouched</td><td>Try again.</td></tr>
+  <tr><td>3 · Source tx broadcast</td><td>BTC broadcasts through two independent relays and is
+      idempotent — a lost response is probed by transaction id, never double-sent. ETH re-signs
+      once on a nonce race.</td>
+      <td class="ok">untouched until broadcast succeeds</td><td>Automatic.</td></tr>
+  <tr><td>4 · Source tx <strong>reverts on-chain</strong></td>
+      <td><strong>Calm grey ending</strong>: &ldquo;the transaction reverted&hellip; your
+      {BTC/ETH/SOL} never left your wallet; only the small network fee was spent.&rdquo; One
+      Close button. The record retires itself (LI.FI-verified) and the banner drops it within
+      ~30s — no ghost, no dead buttons.</td>
+      <td class="ok">never left (minus network fee)</td>
+      <td><span class="stop">NOTHING TO REFUND</span> — just swap again.</td></tr>
+  <tr><td>4b · Bridge refunds the source leg</td><td>Same calm ending, worded for the refund:
+      funds are back in your wallet.</td>
+      <td class="ok">returned by the bridge</td><td><span class="auto">AUTOMATIC (bridge)</span></td></tr>
+  <tr><td>5 · USDC arrives on Base, but the tab closed / burn never ran</td>
+      <td>The banner shows the transfer with <strong>Receive USDC</strong> — one tap burns your
+      share (never a sibling transfer&rsquo;s) and the rest is automatic. Clicking while the
+      bridge is still working gets a patient &ldquo;still on its way&rdquo; note, not an
+      error.</td>
+      <td class="ok">at your own Base address</td>
+      <td><span class="tap">ONE TAP</span> (or autopilot does it)</td></tr>
+  <tr><td>6 · Circle attestation / Stellar mint</td><td>Fully automatic and multiply redundant:
+      your open tab, the banner&rsquo;s 30s poke, and the server cron all advance it; the mint
+      retries sequence collisions; a timed-out Stellar submit keeps its hash so nothing invisible
+      is ever re-sent.</td>
+      <td class="ok">in the bridge, addressed to you</td><td><span class="auto">AUTOMATIC (~20 min)</span></td></tr>
+</table>
+
+<h2>5 &middot; CCTP outbound: USDC → BTC / ETH / SOL</h2>
+<p>Journey: (optional funding move from Lobstr) → Stellar burn → (Circle) → USDC minted at
+<strong>your own Base address</strong> → gas top-up → LI.FI pivot to the target chain →
+delivery. This is the one flow with a real refund story, because after the bridge your USDC sits
+on Base <em>waiting to be exchanged</em> — if the exchange cannot happen, the right move is to
+bring it home.</p>
+<table>
+  <tr><th>step</th><th>if it fails</th><th>your money</th><th>then</th></tr>
+  <tr><td>0 · Funding move (external wallet)</td><td>&ldquo;Nothing was swapped&rdquo; — and a
+      completed move is recorded with before/after balance proof, so a retry can never move the
+      USDC twice, even after unrelated swaps.</td>
+      <td class="ok">in Lobstr, or moved once to your Normal wallet</td>
+      <td>Try again continues from where it stopped; the funding step keeps its green check.</td></tr>
+  <tr><td>1 · Stellar burn — signature declined / build fails</td>
+      <td>Record retired (nothing moved), red panel, Try again.</td>
+      <td class="ok">untouched</td><td>Try again.</td></tr>
+  <tr><td>2 · Bridge to Base</td><td>Automatic, same redundancy as inbound step 6.</td>
+      <td class="ok">in the bridge, addressed to you</td><td><span class="auto">AUTOMATIC</span></td></tr>
+  <tr><td>3 · Gas top-up</td><td>Retried; on persistent failure the pivot falls back to the
+      interactive path, which tops up again before prompting.</td>
+      <td class="ok">USDC at your Base address</td><td>Automatic / one tap.</td></tr>
+  <tr><td>4 · Pivot swap <strong>reverts on-chain</strong></td>
+      <td><strong>Attempt 1</strong>: the quoted route. <strong>Attempt 2</strong> (automatic,
+      silent): a fresh route <em>excluding</em> the failed bridge and the failed DEX steps — the
+      exclusions accumulate on the record so later retries never re-pick a route that already
+      reverted. <strong>Both reverted?</strong> No third prompt-and-fail: the popup switches to
+      the refund checklist by itself — <em>&ldquo;The exchange route kept failing — bringing your
+      USDC back automatically.&rdquo;</em></td>
+      <td class="ok">USDC at your own Base address throughout</td>
+      <td><span class="auto">AUTO-REFUND</span> — autopilot: zero prompts; without autopilot: one
+      passkey for the refund burn. Either way the popup stays open and shows each refund step.</td></tr>
+  <tr><td>4b · Pivot fails for a retryable reason (declined passkey, network blip)</td>
+      <td>Red panel with <strong>Try again</strong> (banner recovery, with the accumulated
+      exclusions) and <strong>Bring back as USDC</strong> — shown only when USDC is actually on
+      Base, so the button always does something.</td>
+      <td class="ok">USDC at your Base address</td>
+      <td><span class="tap">YOUR CHOICE</span>: retry forward or refund home.</td></tr>
+  <tr><td>5 · Refund bridge (Base → Stellar)</td><td>Same automatic machinery as any inbound
+      bridge (~20 min, safe to close). If the refund itself hits an error, the popup shows it
+      with a working Try again on the refund.</td>
+      <td class="ok">coming back to your Stellar wallet</td><td><span class="auto">AUTOMATIC</span></td></tr>
+  <tr><td>6 · Delivery tracking</td><td>Delivered amount is recorded from what actually arrived.
+      A slow bridge past the poll budget closes honestly: &ldquo;{sym} is on its way — delivery is
+      taking longer than usual.&rdquo;</td>
+      <td class="ok">in flight to your own address</td><td><span class="auto">AUTOMATIC</span></td></tr>
+</table>
+<div class="box warn"><div class="label">The one hand-off to support — named honestly</div>
+If the pivot transaction <em>confirms</em> but LI.FI then reports the final leg as failed or
+refunded mid-delivery (extremely rare — the route already accepted the funds), the popup says
+plainly: your USDC is at your own Base address, untouched by anyone else — contact support. It is
+the one place we currently stop rather than automate, because the money&rsquo;s exact position
+depends on the individual route. Your funds are never in limbo — always at your own address.</div>
+
+<h2>6 &middot; LI.FI direct: BTC ↔ ETH ↔ SOL</h2>
+<table>
+  <tr><th>step</th><th>if it fails</th><th>your money</th><th>then</th></tr>
+  <tr><td>1 · Quote + guards</td><td>Identical pre-sign protections to CCTP step 1 (freshness,
+      BTC spend cap, ETH gas check, reserve rules for typed amounts and MAX alike).</td>
+      <td class="ok">untouched</td><td>Fix / re-quote.</td></tr>
+  <tr><td>2 · Sign + broadcast</td><td>Declined → nothing sent. BTC double-relay idempotent
+      broadcast; ETH nonce-race re-sign.</td>
+      <td class="ok">untouched</td><td>Try again.</td></tr>
+  <tr><td>3 · Bridge route</td><td>The tracker follows it to a terminal verdict.
+      <strong>Refunded</strong> → &ldquo;Swap refunded — your {sym} was returned. No funds were
+      lost.&rdquo; <strong>Failed</strong> → &ldquo;If your {sym} left the wallet, the bridge
+      returns it automatically — check Activity for the final state.&rdquo; Bridge-protocol
+      refunds go back to your own source address on their own.</td>
+      <td class="ok">returned to your source address</td>
+      <td><span class="auto">AUTOMATIC (bridge)</span> — timing is the bridge&rsquo;s, typically
+      minutes.</td></tr>
+  <tr><td>4 · Delivery</td><td>Tracked to true arrival (BTC gets a mined-block clock);
+      balances refresh through the verified gate.</td>
+      <td class="ok">delivered ✓</td><td>—</td></tr>
+</table>
+
+<h2>7 &middot; The rules that make all of the above true</h2>
+<table>
+  <tr><th>rule</th><th>consequence</th></tr>
+  <tr><td>Funds travel via <strong>your own addresses</strong> at every step</td>
+      <td>No failure can strand money with us or a counterparty; recovery is always &ldquo;finish
+      forward&rdquo; or &ldquo;bring home&rdquo;, both from addresses you control.</td></tr>
+  <tr><td>Record before broadcast; never sign what we didn&rsquo;t verify</td>
+      <td>No transaction can happen invisibly, and no transaction can spend more than its quote
+      said.</td></tr>
+  <tr><td>Broadcasts are idempotent; every money path has a second provider</td>
+      <td>A lost response or a dead RPC/relay/Horizon degrades to a retry, never a double-spend
+      or a blank screen.</td></tr>
+  <tr><td>Each transfer moves only <em>its own share</em></td>
+      <td>Two simultaneous swaps can no longer eat each other&rsquo;s funds.</td></tr>
+  <tr><td>Failed routes are excluded per-retry, never removed globally</td>
+      <td>Failover is automatic and cannot ping-pong onto a route that already reverted; the
+      bridge stays available for everyone else.</td></tr>
+  <tr><td>Grey = nothing moved · Red = needs your decision · Banner = one-tap forward recovery
+      · Refund = starts itself when options are exhausted</td>
+      <td>The color and the buttons always tell you the true state and the true next step.</td></tr>
+  <tr><td>Terminal is terminal</td><td>A dead record retires itself everywhere at once — popup,
+      banner, activity — and can never come back as a ghost.</td></tr>
+</table>
+
+<h2>8 &middot; Honest gaps that remain</h2>
+<ul>
+  <li><strong>The support hand-off</strong> in §5 — post-pivot delivery failure is surfaced
+      honestly but not yet automated.</li>
+  <li><strong>The refund burn needs one passkey without autopilot.</strong> Unavoidable: it is an
+      on-chain transaction from your address, and only the autopilot policy you explicitly enable
+      may sign in your place.</li>
+  <li><strong>Bridge-protocol refunds run on the bridge&rsquo;s clock.</strong> We report them
+      truthfully the moment they are visible, but we cannot accelerate them.</li>
+  <li><strong>A closed tab in the final seconds of delivery</strong> records the quoted (minimum)
+      amount instead of the exact delivered figure — cosmetic, and the run-page work (doc 93
+      phase 0c) removes it.</li>
+  <li><strong>Unknown errors pass through as-is</strong> when they read like a human sentence —
+      by design, but worth restating.</li>
+</ul>
+
+</body>
+</html>

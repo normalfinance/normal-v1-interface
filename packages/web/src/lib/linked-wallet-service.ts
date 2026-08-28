@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { logger } from '@normalfinance/utils';
+import { logger } from '@/utils/logger';
 
 export interface LinkedWallet {
   id: string;

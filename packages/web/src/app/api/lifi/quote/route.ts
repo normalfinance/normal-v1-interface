@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 
+import { logger } from '@/utils/logger';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
 import { quoteRateLimiter } from '@/server/rateLimiter';
 import { getLifiQuote, LifiQuoteError } from '@/server/lifi-quote';
 import { sanitizeTool, sanitizeToolList } from '@/lib/cctp/failure-class';

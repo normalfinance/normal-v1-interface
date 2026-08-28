@@ -67,7 +67,14 @@ export const POST = withAuth(async (req: Request, { user }) => {
       if (!loc) {
         return j(502, { error: 'Anchor redirected without a Location header', status: r.status });
       }
-      console.log('[MGI] deposit interactive redirect', r.status, 'in', dur, 'ms ->', loc);
+      console.log(
+        '[MGI] deposit interactive redirect',
+        r.status,
+        'in',
+        dur,
+        'ms ->',
+        String(loc).split('?')[0]
+      );
       return NextResponse.json({ url: loc, id: null });
     }
 
@@ -98,7 +105,14 @@ export const POST = withAuth(async (req: Request, { user }) => {
           console.error('[MGI] failed to record deposit tx', dbErr);
         }
       }
-      console.log('[MGI] deposit interactive JSON', r.status, 'in', dur, 'ms ->', url);
+      console.log(
+        '[MGI] deposit interactive JSON',
+        r.status,
+        'in',
+        dur,
+        'ms ->',
+        String(url).split('?')[0]
+      );
       return NextResponse.json({ url, id });
     }
 

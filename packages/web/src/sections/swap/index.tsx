@@ -1,6 +1,6 @@
 'use client';
 
-import { logger } from '@normalfinance/utils';
+import { logger } from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';

@@ -3,6 +3,7 @@
 import type { ChainId } from '@/lib/chains/registry';
 
 import { useSnackbar } from 'notistack';
+import { logger } from '@/utils/logger';
 import { buildAuthHeaders } from '@/utils/http';
 import { useRef, useState, useEffect } from 'react';
 import { ETH_RPC_URLS, SOL_RPC_URLS } from '@/lib/chains/rpc-fallback';
@@ -53,9 +54,7 @@ export function registryChainOf(id: number): ChainId | undefined {
 }
 
 const log = (msg: string, extra?: unknown) =>
-  extra !== undefined
-    ? console.log(`[lifi-swap] ${msg}`, extra)
-    : console.log(`[lifi-swap] ${msg}`);
+  extra !== undefined ? logger.log(`[lifi-swap] ${msg}`, extra) : logger.log(`[lifi-swap] ${msg}`);
 
 function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));

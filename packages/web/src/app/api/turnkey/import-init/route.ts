@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server';
 import type { PasskeyAttestation } from '@/lib/turnkey/server';
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
 import { XLM_ACCOUNT } from '@/lib/turnkey/account-specs';
 import { turnkey, getSubOrgRootUserId, buildPasskeyRootUser } from '@/lib/turnkey/server';
 

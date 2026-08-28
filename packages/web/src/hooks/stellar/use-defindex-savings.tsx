@@ -4,6 +4,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { OptionsObject, SnackbarMessage } from 'notistack';
 import type { VaultInfo, SavingsPosition } from '@/types/savings';
 
+import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
@@ -253,14 +254,14 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
               (b as Horizon.HorizonApi.BalanceLine<'credit_alphanum4'>).asset_code === 'USDC' &&
               (b as Horizon.HorizonApi.BalanceLine<'credit_alphanum4'>).asset_issuer === usdcIssuer
           );
-          console.log('usdcBalance', usdcBalance);
+          logger.log('usdcBalance', usdcBalance);
           if (!usdcBalance) {
             const anyUsdc = account.balances.find(
               (b) =>
                 b.asset_type === 'credit_alphanum4' &&
                 (b as Horizon.HorizonApi.BalanceLine<'credit_alphanum4'>).asset_code === 'USDC'
             );
-            console.log('anyUsdc', anyUsdc);
+            logger.log('anyUsdc', anyUsdc);
             if (anyUsdc) {
               const wrongIssuer = (anyUsdc as Horizon.HorizonApi.BalanceLine<'credit_alphanum4'>)
                 .asset_issuer;
@@ -289,7 +290,7 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           }
           // Doc 90 W4: proceeding costs the user TWO signatures before the
           // failure — proceed, but SAY the pre-check could not run.
-          console.warn('Could not pre-check USDC balance:', balanceErr.message);
+          logger.warn('Could not pre-check USDC balance:', balanceErr.message);
           enqueueSnackbar(
             t(
               'We could not pre-check your balance — the transaction may still fail after signing.'
@@ -427,7 +428,7 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         return pair.serviceHash;
       } catch (err: any) {
         if (err instanceof WalletSessionExpiredError) return '';
-        console.error('Error depositing:', err);
+        logger.error('Error depositing:', err);
         const rawMessage = String(err?.message ?? '');
         const errorMessage = friendlyAppError(err);
         if (rawMessage.toLowerCase().includes('trustline')) {
@@ -649,7 +650,7 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         return withdrawTxHash;
       } catch (err: any) {
         if (err instanceof WalletSessionExpiredError) return '';
-        console.error('Error withdrawing:', err);
+        logger.error('Error withdrawing:', err);
         const rawMessage = String(err?.message ?? '');
         const errorMessage = friendlyAppError(err);
         if (rawMessage.toLowerCase().includes('trustline')) {

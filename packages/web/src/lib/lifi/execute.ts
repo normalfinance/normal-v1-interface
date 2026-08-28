@@ -2,6 +2,7 @@
 
 import type { ChainAddresses } from '@/lib/chains/registry';
 
+import { logger } from '@/utils/logger';
 import { describePsbt } from '@/lib/lifi/psbt-debug';
 import { SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
@@ -58,8 +59,8 @@ export interface LifiQuote {
 
 function log(msg: string, extra?: unknown) {
   // Visible in browser devtools to trace each swap step.
-  if (extra !== undefined) console.log(`[lifi-swap] ${msg}`, extra);
-  else console.log(`[lifi-swap] ${msg}`);
+  if (extra !== undefined) logger.log(`[lifi-swap] ${msg}`, extra);
+  else logger.log(`[lifi-swap] ${msg}`);
 }
 
 async function getTurnkeyClient() {

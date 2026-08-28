@@ -269,4 +269,33 @@ export default [
   reactPlugin.configs.flat.recommended,
   i18nextPlugin.configs['flat/recommended'],
   customConfig,
+  // -------------------------------------------------------------------
+  // Console hygiene (doc 114): browser consoles must stay silent for real
+  // users — balances, tx hashes and keyed-URL-bearing error objects were
+  // printing via F12. Client code uses the dev-gated `logger` from
+  // @normalfinance/utils (a no-op in production); raw console is a lint
+  // ERROR so it cannot come back. Server-side code is exempt: its output
+  // goes to the Vercel function logs, not to any user's browser, and
+  // several lines there are load-bearing operational signals.
+  { rules: { 'no-console': 2 } },
+  {
+    files: [
+      'src/app/api/**',
+      'src/server/**',
+      'src/services/**',
+      'src/middleware.ts',
+      // server-only lib modules (imported by routes/cron, never by browser
+      // bundles) whose warnings must reach the Vercel logs in production:
+      'src/lib/portfolio/aggregate.ts',
+      'src/lib/cctp/executor.ts',
+      'src/lib/cctp/iris.ts',
+      'src/lib/cctp/state.ts',
+      'src/lib/edge-config-middleware.ts',
+      // the dev-gated sinks themselves:
+      'src/utils/logger.ts',
+      // tests are never shipped:
+      '**/*.test.*',
+    ],
+    rules: { 'no-console': 0 },
+  },
 ];

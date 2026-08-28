@@ -8,8 +8,8 @@ import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useStellarConfig } from '@/hooks';
 import { announceTransaction } from '@/lib/tx-events';
-import { detectMemoType } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
+import { logger, detectMemoType } from '@normalfinance/utils';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { spendableXlm, stellarMinReserve } from '@/utils/stellar-reserve';
@@ -265,7 +265,7 @@ export function useSendToken(): ReturnType {
         ? `${resultCodes.transaction ?? ''} ${(resultCodes.operations ?? []).join(' ')}`.trim()
         : null;
       const message = friendlyAppError(stellarError ? new Error(stellarError) : err);
-      console.error('[SEND TOKEN] Transaction failed:', err, resultCodes ?? '');
+      logger.error('[SEND TOKEN] Transaction failed:', err, resultCodes ?? '');
       enqueueSnackbar(t(message), { variant: 'error' });
       setError(message);
       return '';

@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server';
 import type { ChainId, AddressField } from '@/lib/chains/registry';
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
 import { turnkey } from '@/lib/turnkey/server';
 import { CHAINS, CHAIN_IDS, isChainId, pickAddresses } from '@/lib/chains/registry';
 import { isPrimaryWallet, defaultSeedLabel, seedAddressUpdate } from '@/lib/turnkey/wallet-seeds';

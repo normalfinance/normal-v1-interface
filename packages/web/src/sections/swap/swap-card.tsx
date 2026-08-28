@@ -21,8 +21,8 @@ import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useMemo, useState, useCallback } from 'react';
-import { getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
+import { logger, getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import {
   nextReadDelayMs,
@@ -355,7 +355,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         try {
           res = await read();
         } catch (err) {
-          console.info(`[balance-gate:${label}] attempt ${attempt} FAILED`, err);
+          logger.info(`[balance-gate:${label}] attempt ${attempt} FAILED`, err);
           res = { assets: null, companionAssets: null, floored: false };
         }
         const after = valueOf(res);
@@ -363,7 +363,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         // One line per attempt, on purpose: when a balance looks stale after a
         // swap this says immediately WHICH layer was stale — whether the read
         // was floored, what the server returned, and how long it took.
-        console.info(
+        logger.info(
           `[balance-gate:${label}] attempt ${attempt} floored=${res.floored} ` +
             `changed=${changed} before=${before} after=${after} ` +
             `retryAfterMs=${res.retryAfterMs ?? '-'} elapsed=${Date.now() - startedAt}ms`
@@ -379,7 +379,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         // the symptom being fixed. Stop instead and let the background poll
         // finish the job.
         if (!canAffordAnotherRead(Date.now() - startedAt, delay)) {
-          console.info(`[balance-gate:${label}] out of budget — deferring to the background poll`);
+          logger.info(`[balance-gate:${label}] out of budget — deferring to the background poll`);
           return;
         }
 

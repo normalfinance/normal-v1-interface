@@ -1,9 +1,9 @@
 import type { NextRequest } from 'next/server';
 
+import { logger } from '@/utils/logger';
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/with-auth';
 import { redis } from '@/server/rateLimiter';
-import { logger } from '@normalfinance/utils';
 import { KNOWN_MEMO_REQUIRED } from '@/lib/stellar/memo-required-list';
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 import { useSnackbar } from 'notistack';
-import { logger } from '@normalfinance/utils';
+import { logger } from '@/utils/logger';
 import { useRef, useEffect, useCallback } from 'react';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { friendlyAppError } from '@/utils/errors/error-classifier';

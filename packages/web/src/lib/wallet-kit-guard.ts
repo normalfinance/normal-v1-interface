@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from '@/utils/logger';
+
 // ---------------------------------------------------------------------------
 // Serializes external-wallet (WalletConnect/Lobstr/Freighter) signing requests
 // and absorbs the transient "A request is already pending" error — finding
@@ -53,7 +55,7 @@ async function attempt<T>(sign: () => Promise<T>): Promise<T> {
     if (isRequestPending(error)) {
       // The bounced request was never queued wallet-side, so one retry after
       // the session has had time to settle cannot double-sign.
-      console.warn('[wallet-kit-guard] request bounced as already-pending — retrying once');
+      logger.warn('[wallet-kit-guard] request bounced as already-pending — retrying once');
       await sleep(PENDING_RETRY_DELAY_MS);
       return sign();
     }

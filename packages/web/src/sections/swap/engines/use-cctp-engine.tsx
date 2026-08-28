@@ -17,6 +17,7 @@
 // a closed tab never loses funds; pre-burn/pivot legs live at the user's own
 // addresses at every step.
 
+import { logger } from '@/utils/logger';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
@@ -440,7 +441,7 @@ export function useCctpEngine({
           }
           await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
         }
-        console.error('[cctp] PATCH permanently failed:', Object.keys(body).join(','));
+        logger.error('[cctp] PATCH permanently failed:', Object.keys(body).join(','));
         return undefined;
       },
       pollStatus: async (target: string, intervalMs: number) => {
@@ -567,7 +568,7 @@ export function useCctpEngine({
         setRefundStage('done');
         window.dispatchEvent(new Event('nf:activity-updated'));
       } catch (e: any) {
-        console.error('[cctp refund] failed:', e);
+        logger.error('[cctp refund] failed:', e);
         setRefundError(friendlyAppError(e));
       }
     },
@@ -888,7 +889,7 @@ export function useCctpEngine({
           return;
         }
         if (String(e?.message) !== 'cancelled') {
-          console.error('[cctp engine] stage failed:', e); // surface stack
+          logger.error('[cctp engine] stage failed:', e); // surface stack
           // Stash the run's transfer id BEFORE the active marker is cleared —
           // the failure popup's buttons resolve their id from this ref (the
           // marker is already null by the time they render; live 2026-08-26).
@@ -1133,7 +1134,7 @@ export function useCctpEngine({
         await finish();
       } catch (e: any) {
         if (String(e?.message) !== 'cancelled') {
-          console.error('[cctp engine] stage failed:', e); // surface stack
+          logger.error('[cctp engine] stage failed:', e); // surface stack
           // Stash the run's transfer id BEFORE the active marker is cleared —
           // the failure popup's buttons resolve their id from this ref (the
           // marker is already null by the time they render; live 2026-08-26).
@@ -1277,7 +1278,7 @@ export function useCctpEngine({
       if (direction === 'in') await runInbound(data.id, quote);
       else await runOutbound(data.id, amountWire);
     } catch (e: any) {
-      console.error('[cctp engine] execute failed:', e); // surface stack
+      logger.error('[cctp engine] execute failed:', e); // surface stack
       if (e?.__calmEnd) {
         // Quiet truth, not alarm: funds are where they were and the row is
         // retired server-side — tell the banner and the feed to re-read so
