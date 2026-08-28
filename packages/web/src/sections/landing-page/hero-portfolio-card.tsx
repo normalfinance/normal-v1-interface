@@ -299,6 +299,17 @@ export function HeroPortfolioCard() {
     portfolio.savings.positionLoading,
     portfolio.savings.companionPositionLoading,
   ]);
+  // Doc 116: the gate above couples EVERY row to the savings/companion reads.
+  // On Safari <16 the companion lookup died instantly (AbortSignal.timeout,
+  // doc 115), its loading flag stuck true, and this gate then blanked the
+  // WHOLE card forever — crypto rows that had loaded fine never painted
+  // (the coworker's iPhone screenshot, 2026-08-28). The data-side bug is
+  // fixed; this cap guarantees the coupling can never blank the card again:
+  // after 8s, paint what we have — savings joins when its read lands.
+  useEffect(() => {
+    const id = setTimeout(() => setFirstPaintDone(true), 8_000);
+    return () => clearTimeout(id);
+  }, []);
 
   const loading =
     isAuthed &&
