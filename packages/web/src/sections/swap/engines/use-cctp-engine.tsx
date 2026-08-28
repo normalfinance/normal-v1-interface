@@ -28,6 +28,7 @@ import { runCctpRefund } from '@/lib/cctp/refund';
 import { useDebounce } from '@/hooks/use-debounce';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executeLifiSwap } from '@/lib/lifi/execute';
+import { abortTimeout } from '@/utils/abort-timeout';
 import { scopedAmountWire } from '@/lib/cctp/amounts';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { evmAddressToBytes } from '@/lib/cctp/addresses';
@@ -400,7 +401,7 @@ export function useCctpEngine({
     } else if (fromSymbol === 'BTC') {
       try {
         const r = await fetch('https://mempool.space/api/v1/fees/recommended', {
-          signal: AbortSignal.timeout(6000),
+          signal: abortTimeout(6000),
         });
         const f = await r.json();
         const feeSat = (f.halfHourFee || 15) * 210 * 1.4;
@@ -455,7 +456,7 @@ export function useCctpEngine({
             const res = await fetch(`/api/cctp/transfers/${transferId}`, {
               headers: await buildAuthHeaders(),
               credentials: 'include',
-              signal: AbortSignal.timeout(20_000),
+              signal: abortTimeout(20_000),
             });
             if (res.ok) {
               const data = await res.json();
@@ -495,7 +496,7 @@ export function useCctpEngine({
               headers: await buildAuthHeaders(),
               credentials: 'include',
               body: JSON.stringify({ transferId }),
-              signal: AbortSignal.timeout(30_000),
+              signal: abortTimeout(30_000),
             });
             ok = res.ok || res.status === 409;
           } catch {
@@ -533,7 +534,7 @@ export function useCctpEngine({
       const res = await fetch('/api/autopilot/status', {
         headers: await buildAuthHeaders(),
         credentials: 'include',
-        signal: AbortSignal.timeout(10_000),
+        signal: abortTimeout(10_000),
       });
       if (!res.ok) return false;
       return (await res.json())?.active === true;
@@ -632,7 +633,7 @@ export function useCctpEngine({
           headers: await buildAuthHeaders(),
           credentials: 'include',
           body: JSON.stringify({ transferId, ...extra }),
-          signal: AbortSignal.timeout(300_000),
+          signal: abortTimeout(300_000),
         });
         const data = await res.json().catch(() => null);
         if (res.ok && data?.success) return data;

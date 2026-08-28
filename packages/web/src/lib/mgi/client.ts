@@ -3,6 +3,7 @@
 import { enqueueSnackbar } from 'notistack';
 import { buildAuthHeaders } from '@/utils/http';
 import { authedFetch } from '@/utils/authed-fetch';
+import { abortTimeout } from '@/utils/abort-timeout';
 
 import { getTransaction } from './history';
 import { signStellarTxForMgi } from './kit-signer';
@@ -92,7 +93,7 @@ function tryParseJwtExpMs(token: string): number | undefined {
 export async function fetchMgiChallenge(userAccount: string) {
   const r = await authedFetch(
     `/api/mgi/sep10/challenge?account=${encodeURIComponent(userAccount)}`,
-    { signal: AbortSignal.timeout(15_000) }
+    { signal: abortTimeout(15_000) }
   );
   if (!r.ok) {
     // The route forwards the anchor's own (useful) text — show it, not the
@@ -110,7 +111,7 @@ export async function completeMgiAuth(userSignedXDR: string): Promise<string> {
   const r = await authedFetch(`/api/mgi/sep10/complete`, {
     method: 'POST',
     body: JSON.stringify({ userSignedXDR }),
-    signal: AbortSignal.timeout(20_000),
+    signal: abortTimeout(20_000),
   });
 
   const text = await r.text();
@@ -156,7 +157,7 @@ export async function startMgiDeposit(token: string, userAccount: string, amount
   const r = await authedFetch(`/api/mgi/sep24/deposit`, {
     method: 'POST',
     body: JSON.stringify({ token, account: userAccount, amount }),
-    signal: AbortSignal.timeout(20_000),
+    signal: abortTimeout(20_000),
   });
 
   const raw = await r.text();
