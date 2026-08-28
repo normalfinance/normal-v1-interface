@@ -3,6 +3,7 @@ import type { PortfolioAsset, PortfolioPayload } from '@/types/portfolio';
 
 import { redis } from '@/server/rateLimiter';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
+import { fetchStellarBalancesFromPool } from '@/lib/stellar/horizon-pool';
 
 import { buildAsset } from './normalize';
 
@@ -149,19 +150,25 @@ async function fetchStellarBalances(
   address: string,
   network: NetworkType
 ): Promise<{ xlm: number; usdc: number }> {
+  // 2026-08-28: one URL and no fallback here meant an unreachable
+  // horizon.stellar.org blanked XLM/USDC for every user of this deployment
+  // while BTC/ETH/SOL (other providers) kept loading. The pool logic is the
+  // tested module lib/stellar/horizon-pool.ts.
   const cfg = getStellarConfigForNetwork(network);
-  const res = await withTimeout(fetch(`${cfg.HORIZON_URL}/accounts/${address}`));
-  if (!res.ok) {
-    if (res.status === 404) return { xlm: 0, usdc: 0 };
-    throw new Error(`stellar ${res.status}`);
-  }
-  const d = await res.json();
-  const balances: any[] = d.balances ?? [];
-  const xlm = parseFloat(balances.find((b) => b.asset_type === 'native')?.balance ?? '0');
-  const usdc = parseFloat(
-    balances.find((b) => b.asset_code === 'USDC' && b.asset_issuer === cfg.USDC_ISSUER)?.balance ??
-      '0'
+  const urls = cfg.HORIZON_URLS ?? [cfg.HORIZON_URL];
+  const { xlm, usdc, servedBy } = await fetchStellarBalancesFromPool(
+    urls,
+    address,
+    cfg.USDC_ISSUER,
+    {
+      timeoutMs: SOURCE_TIMEOUT_MS,
+    }
   );
+  // Loud only when the primary did NOT answer — a silent failover reads as
+  // "everything is fine" while one provider is dark (doc 98's rule).
+  if (urls.length > 1 && servedBy !== urls[0].replace(/\/+$/, '')) {
+    console.warn(`[portfolio] stellar primary Horizon failed — served by fallback ${servedBy}`);
+  }
   return { xlm, usdc };
 }
 

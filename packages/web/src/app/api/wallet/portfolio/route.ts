@@ -29,7 +29,11 @@ import {
 export const dynamic = 'force-dynamic';
 
 const RESPONSE_TTL_SECONDS = 15;
-const SNAPSHOT_TTL_SECONDS = 3600;
+// 24h, not 1h (2026-08-28): the user was away for a few hours, the snapshot
+// expired, and a Horizon outage then rendered as BLANK XLM/USDC instead of
+// day-old values honestly marked `stale`. An outage should degrade the data's
+// age, never its existence.
+const SNAPSHOT_TTL_SECONDS = 86_400;
 
 export const GET = withAuth(async (req: NextRequest, { user }) => {
   try {
