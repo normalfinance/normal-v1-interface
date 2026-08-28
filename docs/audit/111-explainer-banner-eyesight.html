@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Banner That Could Not See Failure</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.bad { border-left-color:#991b1b; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>The Banner That Could Not See Failure</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 16 &mdash; why the ghost
+row survived run 15, in one line.</p>
+
+<h2>1 &middot; Your screenshot proved the fix worked — and exposed my gap</h2>
+<p>Look at your own Activity feed: the ETH → USDC row shows <strong>Failed, $0</strong>. That is
+run 15&rsquo;s retirement doing its job — the database row was marked FAILED with the honest
+detail. The banner showed the same row as &ldquo;finish once it arrives&rdquo; anyway, because the
+banner does not trust the server&rsquo;s list — it fetches <em>all</em> recent rows and classifies
+them itself, with this table:</p>
+<pre>REFUNDED   → hidden
+COMPLETED  → hidden
+<span class="no">FAILED     → (no rule — falls through to "halt-receive")</span></pre>
+<p>Until yesterday, an inbound row with a source hash could not <em>be</em> FAILED — retirement
+was broken, which is what run 15 fixed. So the classifier never needed the line. The moment
+retirement started working, retired rows existed for the first time, fell through the table, and
+came out labelled &ldquo;USDC on Base, needs the burn&rdquo;.</p>
+<div class="box bad"><div class="label">Owning it</div>
+Run 15 taught the state machine a new terminal state and did not teach the banner&rsquo;s
+classifier to recognise it. That is the same class of miss I have been fixing all week — two
+surfaces reading one fact through two private rules — and this time both rules were mine.</div>
+
+<h2>2 &middot; The fix</h2>
+<p>One line — <code>FAILED → hidden</code>, beside REFUNDED — plus insurance against a third
+bite: the phase table now lives in its own pure module (<code>cctp-phase.ts</code>) with
+<strong>9 tests</strong>, the first of which is your exact ghost (a FAILED inbound row with a
+source hash must be invisible). The banner imports the table instead of owning a private copy;
+any future state the machine learns must pass this test file to reach the banner.</p>
+
+<h2>3 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R72</span></td>
+      <td>Reload the app (dev server picks the change up on save).</td>
+      <td>The &ldquo;27.48 USDC · ETH → USDC — finish once it arrives&rdquo; banner is
+      <span class="ok">gone</span>, immediately. Activity keeps showing the row as Failed —
+      one story on every surface.</td></tr>
+</table>
+
+<h2>4 &middot; Commit</h2>
+<p><code>fix(cctp): the banner recognises retired rows</code> (full message in chat). New tests:
+<code>sections/swap/cctp-phase.test.ts</code> (9).</p>
+
+</body>
+</html>

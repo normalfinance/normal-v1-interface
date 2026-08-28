@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Race After The Finish Line</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>The Race After The Finish Line</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 13 &mdash; your console
+line found the real bug, and it was never in the refresh at all.</p>
+
+<h2>1 &middot; Your log line, read out loud</h2>
+<pre>[balance-gate:XLM->USDC] attempt 1 <span class="ok">floored=false changed=true</span>
+  before= normal XLM 18.04 | USDC 28.56
+  after = normal XLM <span class="ok">13.04</span> | USDC <span class="ok">29.48</span>   elapsed=5396ms</pre>
+<p>Decoded: the gate asked the server, got a <em>genuinely fresh</em> read (not floored), and that
+read contained the <strong>correct post-swap balances</strong> &mdash; 5 XLM gone, ~0.9 USDC
+arrived. The machinery I have been fixing for four rounds <strong>worked</strong>. It fetched the
+right numbers, put them in place, and ticked Done.</p>
+<p>And your screen still showed the old numbers. Which means something overwrote them
+<em>afterwards</em>.</p>
+
+<h2>2 &middot; The actual bug: last writer wins</h2>
+<p>When a swap finishes, the app fires an event (<code>nf:activity-updated</code>) so the activity
+feed updates immediately. The balance hook also listens to that event &mdash; and that hook is
+mounted in <strong>about 23 components</strong> (drawer, savings card, send modal, search bar,
+portfolio&hellip;). Every one of them fires its own balance refresh 800ms after the event.</p>
+<p>800ms after a Stellar swap is <em>before the ledger has settled</em> (~5s). So all of those
+reads come back with <strong>pre-swap balances</strong>. Meanwhile the gate does its careful,
+ledger-aware read and gets the post-swap ones. Now there are two dozen answers in flight, one
+right and the rest stale &mdash; and the shared cache they all write into had a simple rule:</p>
+<div class="box bad"><div class="label">The rule that was wrong</div>
+<strong>Whichever fetch resolves last owns the screen.</strong> Not the freshest one — the
+slowest one. Your swap: the gate&rsquo;s correct read landed (its own request took 5.4s), and a
+straggler carrying pre-swap numbers resolved after it and rewound the display. The 30-second
+background poll eventually fixed it — that is the &ldquo;it updates later by itself&rdquo; you
+kept seeing.</div>
+<p>This also explains why five rounds of fixes behaved so confusingly: it is a <em>race</em>.
+Sometimes the fresh read resolved last and everything looked instant (&ldquo;this worked for
+swaps&rdquo;). Sometimes a stale one did, and it looked like nothing I fixed had helped. Rounds
+1&ndash;4 each repaired a real defect in the refresh layer — and none of them could win a race
+that was decided after the finish line.</p>
+
+<h2>3 &middot; The fix: age decides, not arrival order</h2>
+<p>Every balance payload already carries <code>updatedAt</code> &mdash; the server-side moment it
+was aggregated. Crucially, a cached/floored response keeps its <em>original</em> older timestamp,
+so stale data cannot masquerade as fresh. One pure rule now sits in front of every write:</p>
+<pre>pickNewerPayload(current, incoming):
+  no current yet            → take incoming
+  incoming has no timestamp → keep current   (undated must never beat dated)
+  otherwise                 → the NEWER aggregation wins, ties go to incoming</pre>
+<p>Applied in all three places a payload can land:</p>
+<ul>
+  <li>the event-handler refresh (the herd of 23);</li>
+  <li>the gate&rsquo;s own <code>refreshFresh</code> seed &mdash; which now also always hands the
+      gate <em>its own</em> read for the changed/floored decision, whichever copy ends up on
+      screen;</li>
+  <li>the localStorage snapshot, so a straggler cannot rewind what a fresh fetch already wrote to
+      disk either.</li>
+</ul>
+<p>7 new tests, including the exact case: <em>an older aggregation arriving late is
+rejected.</em></p>
+
+<h2>4 &middot; Why I believe this one is it, when I was wrong four times</h2>
+<table>
+  <tr><th>round</th><th>fixed</th><th>real?</th><th>your bug?</th></tr>
+  <tr><td>1&ndash;2</td><td>cached response mistaken for fresh; blind 5.6s waits</td><td class="ok">yes</td><td class="no">no</td></tr>
+  <tr><td>3</td><td>failed read skipping the gate; wait for the ledger</td><td class="ok">yes</td><td class="no">no</td></tr>
+  <tr><td>4</td><td>gate watching the connected wallet instead of the Normal wallet</td><td class="ok">yes</td><td class="no">partly — it made &ldquo;worked instantly&rdquo; possible at all</td></tr>
+  <tr><td>5</td><td><strong>stale fetch resolving last overwrites the fresh one</strong></td><td class="ok">yes</td><td class="ok"><strong>yes — proven by your console line</strong></td></tr>
+</table>
+<p>The difference this round: I am not inferring from symptoms. Your log shows the correct data
+arriving and returning <code>changed=true</code>; the screen disagreed; the only writers to that
+screen are the racing seeds. The failure is pinned between two specific lines of code, and the
+test for it fails on the old code and passes on the new.</p>
+<div class="box warn"><div class="label">One loose thread, named honestly</div>
+Your gate read took <strong>5.4 seconds</strong> — that is one of the balance sources (BTC, ETH,
+SOL or prices) hitting its 5-second timeout that run, not Stellar. Harmless here (the gate waits),
+but if &ldquo;Updating balances&rdquo; regularly takes ~5s rather than ~1s, tell me — that would be
+a provider worth looking at. Not blocking, not hidden.</div>
+
+<h2>5 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R69</span></td>
+      <td>Swap XLM ↔ USDC from the Normal wallet. Watch the card and drawer <em>at the moment
+      Done ticks</em> — and keep watching for ~30 more seconds.</td>
+      <td>Correct at Done, and it <strong>stays</strong> correct — no flip back to old numbers a
+      few seconds later. The flip-back was the signature of a straggler winning; it is now
+      impossible by rule.</td></tr>
+  <tr><td>2<br><span class="qa">QA R64</span></td>
+      <td>Two swaps back to back.</td>
+      <td>Both correct, no page refresh.</td></tr>
+</table>
+
+<h2>6 &middot; Commit</h2>
+<p><code>fix(portfolio): a stale fetch must never overwrite a fresher one</code> (full message in
+chat). 7 new tests in <code>lib/portfolio/client-cache.test.ts</code>.</p>
+
+</body>
+</html>

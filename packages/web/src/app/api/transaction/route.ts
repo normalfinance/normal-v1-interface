@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import type { NetworkType } from '@normalfinance/utils';
 import type { NetworkConfig } from '@normalfinance/types';
 
 import { cookies } from 'next/headers';
@@ -8,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { getClientIP } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
 import { ContractErrorType } from '@normalfinance/types';
+import { networkFromCookie } from '@/server/network-cookie';
 import { rpc, Keypair, Transaction } from '@stellar/stellar-sdk';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
@@ -19,7 +19,7 @@ export const runtime = 'nodejs';
 const transactionHandler = withAuth(async (req: NextRequest, { user }) => {
   try {
     const cookieStore = await cookies();
-    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as NetworkType;
+    const network = networkFromCookie(cookieStore);
     const config: NetworkConfig = getStellarConfigForNetwork(network);
 
     // Validate params

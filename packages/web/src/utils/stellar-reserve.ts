@@ -34,9 +34,45 @@ export function spendableXlm(balance: BigNumber.Value, subentryCount: number): B
 }
 
 // Minimum spendable XLM (above the account reserve) needed to safely pay the
-// Soroban fees of a savings deposit/withdrawal. Below this we warn the user that
-// they need to top up XLM before they can move money in/out of savings.
-export const MIN_XLM_FOR_SAVINGS_TX = 0.5;
+// fees of ANY Soroban transaction — a savings deposit/withdrawal or a Soroswap
+// swap. Soroban fees run 0.05–0.5+ XLM, i.e. hundreds of times the 0.0002 XLM
+// classic fee that `spendableXlm` holds back.
+export const MIN_XLM_FOR_SOROBAN_TX = 0.5;
+
+/** @deprecated name — kept because savings surfaces import it. Same number,
+ *  same reason: it is the Soroban fee floor, not a savings-specific rule. */
+export const MIN_XLM_FOR_SAVINGS_TX = MIN_XLM_FOR_SOROBAN_TX;
+
+/**
+ * Doc 95 Wave 6 — can this account still pay a Soroban fee AFTER the swap?
+ *
+ * Two shapes of the same bug, both ending in an on-chain failure *after* the
+ * user had signed (twice, on the fee-pair path):
+ *   - MAX on an XLM source spent everything `spendableXlm` allowed, which
+ *     holds back the reserve and the 0.0002 XLM CLASSIC fee — leaving nothing
+ *     for the Soroban fee the swap itself costs;
+ *   - a USDC source on an account whose XLM already sat at the reserve had no
+ *     fee money at all, and nothing checked before building.
+ *
+ * `xlmSpent` is the XLM this swap itself sends (0 when the source is USDC).
+ */
+export function canPaySorobanFee(
+  xlmBalance: BigNumber.Value,
+  subentryCount: number,
+  xlmSpent: BigNumber.Value = 0
+): boolean {
+  const left = BigNumber(xlmBalance).minus(xlmSpent);
+  return xlmAvailableForFees(left, subentryCount).gte(MIN_XLM_FOR_SOROBAN_TX);
+}
+
+/**
+ * The most XLM a swap may send: whatever is spendable, minus the Soroban fee
+ * the swap will itself have to pay. Without this, MAX was a guaranteed
+ * failure — the card offered an amount the transaction could not afford.
+ */
+export function maxXlmForSorobanSwap(spendable: BigNumber.Value): BigNumber {
+  return BigNumber.max(BigNumber(spendable).minus(MIN_XLM_FOR_SOROBAN_TX), 0);
+}
 
 /** XLM available (above the minimum reserve) to spend on network/Soroban fees. */
 export function xlmAvailableForFees(xlmBalance: BigNumber.Value, subentryCount = 1): BigNumber {

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { advanceTransfer } from '@/lib/cctp/state';
+import { lifiSourceVerdict } from '@/lib/cctp/lifi-verdict';
 import { pivotRevertDetail } from '@/lib/cctp/failure-class';
 
 export const dynamic = 'force-dynamic';
@@ -54,6 +55,14 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   if (body.dstAmount && !transfer!.dstAmount) {
     data.dstAmount = String(body.dstAmount);
   }
+  // Doc 95 Wave 5: the CONFIRMED delivered amount, read from the bridge's own
+  // status once the destination has it. This one overwrites on purpose — the
+  // earlier value is the quote's guaranteed minimum, written before anyone
+  // could know the truth, and the set-once rule was freezing that estimate
+  // into the activity feed and the Dune dashboard forever.
+  if (body.dstAmountFinal && /^\d+(\.\d+)?$/.test(String(body.dstAmountFinal))) {
+    data.dstAmount = String(body.dstAmountFinal);
+  }
   // A reverted pivot (interactive path) records WHICH bridge failed so the
   // next retry can exclude it — server-formatted from validated slugs, never
   // raw client text. Overwrite is deliberate: the LATEST revert wins.
@@ -97,16 +106,14 @@ export const PATCH = withAuth(async (req, { user, params }) => {
       );
       if (res.ok) {
         const d = await res.json();
-        const st = d?.status as string | undefined;
-        const sub = String(d?.substatus ?? '').toUpperCase();
-        const terminal =
-          st === 'FAILED' ||
-          st === 'INVALID' ||
-          (st === 'DONE' && (sub === 'REFUNDED' || sub === 'PARTIAL'));
-        if (terminal) {
+        const verdict = lifiSourceVerdict(d?.status, d?.substatus);
+        if (verdict) {
           data.status = 'FAILED';
           if (!transfer!.errorDetail)
-            data.errorDetail = 'Source swap refunded or failed — nothing was bridged';
+            data.errorDetail =
+              verdict === 'REFUNDED'
+                ? 'Source swap refunded — funds returned to the sender; nothing was bridged'
+                : 'Source transaction reverted on-chain — funds never left the sender; nothing was bridged';
         }
       }
     } catch {

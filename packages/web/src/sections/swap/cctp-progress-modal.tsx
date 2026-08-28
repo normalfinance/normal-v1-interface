@@ -75,7 +75,15 @@ interface Props {
   refundStage?: 'topup' | 'burn' | 'done' | null;
   /** Doc 93 0b: why a refund started automatically. */
   refundNotice?: string | null;
+  /** Niko 2026-08-28: the swap ended WITHOUT moving funds (source leg
+   *  reverted on-chain, or the bridge refunded). Rendered as a calm grey
+   *  panel with a Close button — deliberately not the red error surface,
+   *  and deliberately without Try again: there is nothing to retry, the
+   *  right next step is a fresh swap. */
+  calmEnding?: string | null;
 }
+
+import { classifyCctpFailure } from './cctp-failure-copy';
 
 const TX_HASH_RE = /0x[0-9a-fA-F]{64}/;
 
@@ -85,20 +93,21 @@ function extractTxHash(raw: string | null): string | null {
 }
 
 /** Raw chain errors are for explorers, not people (Niko 2026-08-26: "that
- *  error was not user friendly"). The hash still renders — small, below. */
+ *  error was not user friendly"). The hash still renders — small, below.
+ *
+ *  Doc 95 Wave 7: this used to be a SECOND classifier running over text the
+ *  engine had already made friendly, and its bare /network/ pattern rewrote
+ *  "Not enough ETH left to pay the NETWORK fee" into "the network did not
+ *  answer — try again" — advice for a retry that cannot succeed. The decision
+ *  now lives in cctp-failure-copy.ts, is pinned by tests, and only ever ADDS
+ *  the one thing the shared classifier cannot know: that on a CCTP swap the
+ *  money is safe at the user's own Base address. */
 function friendlyError(raw: string, t: (k: string) => string): string {
-  if (/reverted|WrappedError|rejected on-chain/i.test(raw)) {
-    return t(
-      'The exchange route failed on the provider side — your USDC is safe in your own account. You can retry, or bring it back as USDC.'
-    );
-  }
-  if (/NotAllowedError|not allowed|denied|declined/i.test(raw)) {
-    return t('The signature was declined. Nothing was sent — you can try again.');
-  }
-  if (/timeout|timed out|network|fetch/i.test(raw)) {
-    return t('The network did not answer in time. Nothing is lost — try again in a moment.');
-  }
-  return raw;
+  return classifyCctpFailure(raw) === 'route-failed'
+    ? t(
+        'The exchange route failed on the provider side — your USDC is safe in your own account. You can retry, or bring it back as USDC.'
+      )
+    : raw;
 }
 
 export function CctpProgressModal({
@@ -117,6 +126,7 @@ export function CctpProgressModal({
   onBringBack,
   refundStage = null,
   refundNotice = null,
+  calmEnding = null,
 }: Props) {
   const { t } = useTranslate();
   // Refund mode reuses the whole step machinery below unchanged.
@@ -334,6 +344,14 @@ export function CctpProgressModal({
               >
                 {isDone || isFinalDone ? (
                   <Iconify icon="lets-icons:check-fill" width={20} sx={{ color: '#1AB37D' }} />
+                ) : isActive && calmEnding && !error ? (
+                  // The journey stopped here and nothing is wrong with the
+                  // user's funds — a quiet marker, not a red alarm.
+                  <Iconify
+                    icon="eva:minus-circle-outline"
+                    width={18}
+                    sx={{ color: 'rgba(10,10,15,0.35)' }}
+                  />
                 ) : isActive && !error ? (
                   <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />
                 ) : isActive && error ? (
@@ -373,6 +391,7 @@ export function CctpProgressModal({
           finish itself, because the engine re-checks status right before
           that step. */}
       {!error &&
+        !calmEnding &&
         autopilot === false &&
         !!onEnableAutopilot &&
         stage &&
@@ -418,6 +437,51 @@ export function CctpProgressModal({
           </Box>
         )}
 
+      {calmEnding && !error && (
+        <Box
+          sx={{
+            mt: '12px',
+            px: '14px',
+            py: '12px',
+            borderRadius: '10px',
+            bgcolor: 'rgba(10,10,15,0.03)',
+            border: '1px solid rgba(10,10,15,0.08)',
+          }}
+        >
+          <Stack direction="row" spacing={1} alignItems="flex-start">
+            <Iconify
+              icon="eva:info-outline"
+              width={15}
+              sx={{ color: 'rgba(10,10,15,0.45)', mt: '2px', flexShrink: 0 }}
+            />
+            <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
+              {calmEnding}
+            </Typography>
+          </Stack>
+          <Box
+            component="button"
+            onClick={onClose}
+            sx={{
+              mt: '12px',
+              appearance: 'none',
+              border: '1px solid rgba(10,10,15,0.15)',
+              borderRadius: '10px',
+              px: '16px',
+              py: '9px',
+              width: '100%',
+              fontSize: '13px',
+              fontWeight: 600,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              bgcolor: '#fff',
+              color: '#0A0A0F',
+              '&:hover': { bgcolor: 'rgba(10,10,15,0.04)' },
+            }}
+          >
+            {t('Close')}
+          </Box>
+        </Box>
+      )}
       {error && (
         <Box
           sx={{

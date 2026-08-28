@@ -12,6 +12,7 @@ import { executeLifiSwap } from '@/lib/lifi/execute';
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
+import { driftVerdict, isQuoteStale } from '@/lib/lifi/quote-freshness';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -78,6 +79,47 @@ export interface LifiEngineProps {
   onAmountAdjusted?: (amountEth: string) => void;
 }
 
+type QuoteFetch =
+  | { ok: true; quote: LifiQuote; feePercent: number }
+  | { ok: false; error: unknown };
+
+/**
+ * Doc 95 Wave 6: pulled out of the card's effect so the EXECUTE path can ask
+ * for a fresh quote with exactly the same request. When the two drifted apart
+ * there was no way to re-price at the moment of signing, which is the only
+ * moment the price actually matters.
+ */
+async function requestLifiQuote(
+  body: Record<string, unknown>,
+  opts: { signal?: AbortSignal; cancelled?: () => boolean } = {}
+): Promise<QuoteFetch> {
+  let res: Response | null = null;
+  let data: any = null;
+  // Doc 90 W4: 429/5xx quote failures are transient — one quiet retry before
+  // parking an error in the card.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    res = await fetch('/api/lifi/quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: opts.signal,
+      body: JSON.stringify(body),
+    }).catch(() => null);
+    data = res ? await res.json().catch(() => null) : null;
+    if (opts.cancelled?.()) return { ok: false, error: null };
+    if (res && res.ok && data?.success) break;
+    const transient = !res || res.status === 429 || res.status >= 500;
+    if (!transient || attempt === 1) break;
+    await new Promise((r) => setTimeout(r, 6_000));
+    if (opts.cancelled?.()) return { ok: false, error: null };
+  }
+  if (!res || !res.ok || !data?.success) return { ok: false, error: data?.error ?? null };
+  return {
+    ok: true,
+    quote: data.quote as LifiQuote,
+    feePercent: typeof data.feePercent === 'number' ? data.feePercent : 0,
+  };
+}
+
 export function useLifiEngine({
   fromSymbol,
   toSymbol,
@@ -100,6 +142,8 @@ export function useLifiEngine({
   const toAddress = addresses[toSymbol];
 
   const [quote, setQuote] = useState<LifiQuote | null>(null);
+  /** When the quote on screen was built (ms). Null = none. */
+  const [quoteAt, setQuoteAt] = useState<number | null>(null);
   // Integrator fee as a fraction (e.g. 0.005), reported by the quote route — 0
   // when the portal stripped it (1011 fallback), so we never show a phantom fee.
   const [feePercent, setFeePercent] = useState(0);
@@ -149,7 +193,15 @@ export function useLifiEngine({
 
   const amountUsd = fromPrice.gt(0) ? amount.multipliedBy(fromPrice) : null;
   const belowMinimum = amount.gt(0) && amountUsd !== null && amountUsd.lt(MIN_SWAP_USD);
-  const insufficient = amount.gt(0) && amount.gt(fromBalance);
+  // Doc 95 Wave 6: the fee reserve was applied by MAX only, so TYPING the
+  // full balance walked straight past it and produced a swap with nothing
+  // left to pay the miner/validator. ETH is exempt because its live gas
+  // reserve already sits inside `fromBalance` (subtracting here would
+  // double-reserve). One expression, used by the guard AND by MAX, so the
+  // two cannot disagree.
+  const spendable =
+    fromSymbol === 'ETH' ? fromBalance : BigNumber.max(fromBalance.minus(from.feeReserve), 0);
+  const insufficient = amount.gt(0) && amount.gt(spendable);
   // Gas honesty (Niko GO 2026-08-20): the quote carries the route's OWN gas
   // cost — surface it, warn when it eats >20% of the swap, block >50% (at
   // that point it's a donation to validators, not a swap). Percentage rule,
@@ -161,6 +213,20 @@ export function useLifiEngine({
   const swapUsdIn = fromPrice.gt(0) ? amount.multipliedBy(fromPrice).toNumber() : 0;
   const gasShare = swapUsdIn > 0 && gasUsd > 0 ? gasUsd / swapUsdIn : 0;
 
+  // One request shape for both callers. ROUND_DOWN, not BigNumber's default
+  // ROUND_HALF_UP (doc 95 Wave 6): rounding a typed amount UP can ask to swap
+  // one wire unit more than the wallet holds, which fails at execution for a
+  // reason the user cannot see anywhere on screen.
+  const quoteBody = (value: BigNumber) => ({
+    fromSymbol,
+    toSymbol,
+    fromAmount: value
+      .multipliedBy(BigNumber(10).pow(from.decimals))
+      .toFixed(0, BigNumber.ROUND_DOWN),
+    fromAddress,
+    toAddress,
+  });
+
   // Debounce the token amount; gated on `enabled` so the inactive engine never
   // fetches. `stale` (not the abort signal) settles the spinner deterministically.
   const debouncedAmount = useDebounce(enabled ? amount.toFixed() : '', 600);
@@ -169,6 +235,7 @@ export function useLifiEngine({
     const value = BigNumber(debouncedAmount || 0);
     if (!enabled || !fromAddress || !toAddress || value.lte(0) || belowMinimum) {
       setQuote(null);
+      setQuoteAt(null);
       setQuoteError(null);
       setQuoteLoading(false);
       return undefined;
@@ -177,41 +244,25 @@ export function useLifiEngine({
     let stale = false;
     const controller = new AbortController();
     setQuote(null);
+    setQuoteAt(null);
     setQuoteError(null);
     setQuoteLoading(true);
 
     (async () => {
       try {
-        // Doc 90 W4: 429/5xx quote failures are transient — one quiet retry
-        // before parking an error in the card.
-        let res: Response | null = null;
-        let data: any = null;
-        for (let qAttempt = 0; qAttempt < 2; qAttempt++) {
-          res = await fetch('/api/lifi/quote', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-            body: JSON.stringify({
-              fromSymbol,
-              toSymbol,
-              fromAmount: value.multipliedBy(BigNumber(10).pow(from.decimals)).toFixed(0),
-              fromAddress,
-              toAddress,
-            }),
-          }).catch(() => null);
-          data = res ? await res.json().catch(() => null) : null;
-          if (stale) return;
-          if (res && res.ok && data?.success) break;
-          const transient = !res || res.status === 429 || res.status >= 500;
-          if (!transient || qAttempt === 1) break;
-          await new Promise((r) => setTimeout(r, 6_000));
-          if (stale) return;
-        }
-        if (!res || !res.ok || !data?.success) {
-          setQuoteError(friendlyAppError(data?.error ?? t('Failed to fetch quote')));
+        const result = await requestLifiQuote(quoteBody(value), {
+          signal: controller.signal,
+          cancelled: () => stale,
+        });
+        if (stale) return;
+        if (!result.ok) {
+          setQuoteError(friendlyAppError(result.error ?? t('Failed to fetch quote')));
         } else {
-          setQuote(data.quote);
-          setFeePercent(typeof data.feePercent === 'number' ? data.feePercent : 0);
+          setQuote(result.quote);
+          // Doc 95 Wave 6: a quote is only usable for a while — stamp it so
+          // the execute path can tell how old the one on screen is.
+          setQuoteAt(Date.now());
+          setFeePercent(result.feePercent);
         }
       } catch {
         if (!stale) setQuoteError(t('Failed to fetch quote'));
@@ -246,14 +297,11 @@ export function useLifiEngine({
   // limit × buffer) — a flat reserve is either far too large in USD or too small
   // when gas spikes. Shared with the CCTP engine (gas-reserve.ts) so the two
   // can't drift. Returns the max in *token* units; the shell formats it.
-  const getMaxToken = async (): Promise<BigNumber> => {
+  const getMaxToken = async (): Promise<BigNumber> =>
     // ETH's gas reserve now lives INSIDE fromBalance (the card holds it back
     // so TYPED amounts are gas-safe too, not just MAX) — subtracting again
     // here would double-reserve.
-    if (fromSymbol === 'ETH') return fromBalance;
-    return BigNumber.max(fromBalance.minus(from.feeReserve), 0);
-  };
-
+    spendable;
   const handleSetupSuccess = async () => {
     // The account EXISTS by the time this runs — the dialog reported success.
     // Closing must therefore not depend on the refresh succeeding: an
@@ -277,7 +325,51 @@ export function useLifiEngine({
     if (!quote) return;
     setExecuting(true);
     try {
-      const txHash = await executeLifiSwap(quote, {
+      // ------------------------------------------------------------------
+      // Doc 95 Wave 6: a LI.FI quote carries a BUILT transaction. For Bitcoin
+      // that is a Chainflip deposit CHANNEL, which expires — so executing a
+      // quote the card fetched half an hour ago can mean sending coins to an
+      // address that no longer routes anywhere. There is no bridge to fail
+      // over from and nothing to refund; the only fix is to not send it.
+      // ------------------------------------------------------------------
+      let live = quote;
+      if (isQuoteStale(Date.now() - (quoteAt ?? NaN))) {
+        const shownOut = toAmount ? toAmount.toFixed() : null;
+        const fresh = await requestLifiQuote(quoteBody(amount));
+        if (!fresh.ok) {
+          // Nothing has been signed at this point — say exactly that, so the
+          // user is not left wondering whether their coins moved.
+          enqueueSnackbar(
+            t(
+              'This quote expired and a new one could not be fetched — nothing was sent. Please try again.'
+            ),
+            { variant: 'error' }
+          );
+          return;
+        }
+        const freshOut = BigNumber(fresh.quote.estimate.toAmount)
+          .dividedBy(BigNumber(10).pow(to.decimals))
+          .toFixed();
+        setQuote(fresh.quote);
+        setQuoteAt(Date.now());
+        setFeePercent(fresh.feePercent);
+        if (driftVerdict(shownOut, freshOut) === 'worse') {
+          // The deal on screen is no longer the deal on offer. The card now
+          // shows the new number; pressing Swap again is the consent. We do
+          // NOT silently execute at a materially worse price, and we do not
+          // dead-end either — the button is live and the quote is fresh.
+          enqueueSnackbar(
+            t(
+              'The price moved while this quote was open — the amount shown is updated. Press Swap to continue.'
+            ),
+            { variant: 'warning' }
+          );
+          return;
+        }
+        live = fresh.quote;
+      }
+
+      const txHash = await executeLifiSwap(live, {
         bitcoinAddress: addresses.BTC,
         ethereumAddress: addresses.ETH,
         solanaAddress: addresses.SOL,
@@ -287,8 +379,8 @@ export function useLifiEngine({
       // engine now, so closing the dialog won't stop it.
       setStatusTx({
         txHash,
-        fromChainId: quote.action.fromChainId,
-        toChainId: quote.action.toChainId,
+        fromChainId: live.action.fromChainId,
+        toChainId: live.action.toChainId,
         fromSymbol,
         toSymbol,
         amountIn: amount.toFixed(),
@@ -300,6 +392,7 @@ export function useLifiEngine({
       window.dispatchEvent(new Event('nf:activity-updated'));
       resetInput();
       setQuote(null);
+      setQuoteAt(null);
     } catch (err: any) {
       const { GasShortfallError, maxAffordableEth } = await import('@/lib/lifi/gas-shortfall');
       if (err instanceof GasShortfallError) {

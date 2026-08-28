@@ -8,6 +8,7 @@ import { cookies } from 'next/headers';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
+import { networkFromCookie } from '@/server/network-cookie';
 import { SOL_RENT_DUST_MESSAGE } from '@/lib/send/native-dust';
 import {
   settleSend,
@@ -221,7 +222,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     }
 
     const cookieStore = await cookies();
-    const network = cookieStore.get('normal-network')?.value ?? 'mainnet';
+    const network = networkFromCookie(cookieStore);
 
     // Record BEFORE broadcast — a DB failure aborts with nothing on-chain.
     const recordId = await createPendingSend({

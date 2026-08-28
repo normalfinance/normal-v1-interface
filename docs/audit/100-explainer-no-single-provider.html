@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Run Explainer — No Single Point of Failure</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>No Single Point of Failure</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 5 (2026-08-27) — doc 95
+Wave 4: every money path now has a second way through.</p>
+
+<h2>1 · The idea</h2>
+<p>To move money on a blockchain you have to talk to a <em>node</em> — someone else's server. If
+the one node you use is slow, rate-limited, or down, your transaction doesn't fail cleanly; it
+fails in whatever way that node happens to break, sometimes <em>after</em> the user has already
+signed. Wave 4's rule: <strong>no leg that moves money may depend on one provider.</strong></p>
+
+<div class="box warn"><div class="label">The gap this closes</div>
+Wave 1 of the honest-errors work gave the <em>browser</em> fallback lists. The <em>server</em>
+never got them — so the autopilot burn, the autopilot pivot, the balance reads that decide how
+much to move, and the relayer's mints all ran through a single unkeyed public endpoint. That's
+the half of the system that runs when the user isn't watching.</div>
+
+<h2>2 · What changed</h2>
+<table>
+  <tr><th>path</th><th>before</th><th>now</th></tr>
+  <tr><td>Autopilot burn (server)</td><td class="no">viem's default public RPC</td>
+      <td>keyed endpoint → mainnet.base.org → publicnode</td></tr>
+  <tr><td>Autopilot pivot (server)</td><td class="no">viem's default public RPC</td><td>same fallback list</td></tr>
+  <tr><td>The balance reads that size a burn/pivot</td><td class="no">viem's default public RPC</td><td>same fallback list</td></tr>
+  <tr><td>Relayer mints</td><td>one keyed URL, or the default if unset</td><td>keyed URL <em>first</em>, then public fallbacks</td></tr>
+  <tr><td>LI.FI Ethereum leg</td><td class="no">one endpoint for nonce, gas, balance <em>and</em> broadcast</td><td>fallback list</td></tr>
+  <tr><td>Bitcoin broadcast</td><td class="no">mempool.space only</td><td>mempool.space, then Blockstream</td></tr>
+  <tr><td>Funding-move verification (Horizon)</td><td class="no">one read, no retry</td><td>two extra attempts with backoff</td></tr>
+</table>
+
+<h3>Order matters</h3>
+<p>Keyed endpoints (paid, higher rate limits) are tried first; public ones are the safety net. The
+server-only keys never reach the browser — in client code those variables read as undefined and
+simply drop out of the list.</p>
+
+<h3>Why Bitcoin needed a second relay specifically</h3>
+<p>A signed Bitcoin transaction is worthless until someone accepts it. With one relay, a
+rate-limit window stranded a transaction the user had already approved with their passkey, and
+they had to re-sign against a quote whose deposit channel might have expired. Blockstream is an
+independent operator serving the same purpose — combined with last run's idempotency fix (the
+transaction ID is computed locally), a broadcast now has two ways to land and a reliable way to
+tell whether it already did.</p>
+
+<h3>Why the Horizon retry matters more than it looks</h3>
+<p>That read answers "did the USDC actually arrive in the Normal wallet?" after a Lobstr funding
+move. A rate-limit blip made it answer <strong>no</strong> about a move that had genuinely
+happened — and the user's retry moved the money a second time. It's the same failure the Wave 3
+guard protects against, one layer down: an unreliable answer treated as fact.</p>
+
+<h2>3 · How to test</h2>
+<p>This wave is invisible when everything works — which is the point. The honest test is that
+nothing changes:</p>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1</td><td>Run one swap of each kind you normally test (Stellar, CCTP in, CCTP out, a
+      BTC one)</td>
+      <td>Everything behaves exactly as before. No new prompts, no new errors — the fallbacks are
+      only consulted when the first provider fails</td></tr>
+  <tr><td>2</td><td>Optional, in devtools: block <code>mainnet.base.org</code> and run a CCTP
+      swap</td>
+      <td>The swap still completes through the next endpoint in the list, instead of failing</td></tr>
+  <tr><td>3</td><td>Optional: block <code>mempool.space</code> and send BTC</td>
+      <td>The broadcast goes out via Blockstream; the server log names which relay was used</td></tr>
+</table>
+<div class="box good"><div class="label">Verified structurally</div>
+A repository-wide search confirms there is no longer a single <code>transport: http()</code>
+(viem's unkeyed default) anywhere under <code>server/</code>, <code>lib/</code> or the API routes —
+every money path is pooled.</div>
+
+<h2>4 · Deliberately still open</h2>
+<p>The wallet-setup dialog's funding step still decides "ready" from an absolute balance, so a
+companion that already holds enough USDC can skip the "move your USDC" step — the second entry
+point of the double-funding problem. It is <strong>not</strong> being patched here on purpose:
+the run-page work (doc 93 phase 0c) folds wallet setup into the swap's own step list, which
+removes the second path entirely rather than adding a second guard to it.</p>
+
+<h2>5 · Commit</h2>
+<p><code>fix(rpc): no money path depends on a single provider</code> (full message in chat).</p>
+
+</body>
+</html>

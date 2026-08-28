@@ -29,6 +29,7 @@ import { buildAuthHeaders } from '@/utils/http';
 import { wireToUsdc } from '@/lib/cctp/decimals';
 import { runCctpRefund } from '@/lib/cctp/refund';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
+import { scopedAmountWire } from '@/lib/cctp/amounts';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
@@ -44,6 +45,8 @@ import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { useSnackbar } from '@/components/template/snackbar';
+
+import { type Phase, bannerPhase } from './cctp-phase';
 
 type CrosschainSymbol = 'BTC' | 'ETH' | 'SOL';
 const NATIVE_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
@@ -66,27 +69,11 @@ interface TransferRow {
   errorDetail?: string | null;
 }
 
-type Phase = 'hidden' | 'auto' | 'halt-receive' | 'halt-finish';
-
-function rawPhase(tr: TransferRow): Phase {
-  if (tr.status === 'REFUNDED') return 'hidden';
-  const outbound = tr.direction === 'stellar_to_crosschain';
-  if (outbound) {
-    if (tr.dstSwapTxHash) return 'hidden'; // pivot done → settled
-    if (!tr.burnTxHash) return 'hidden'; // pre-burn, still in-session
-    if (tr.mintTxHash || tr.status === 'COMPLETED') return 'halt-finish'; // USDC on Base → pivot needed
-    // Bridging Stellar→Base: the pivot signature still follows, so this is NOT
-    // "no action needed". The progress modal owns it in-session; an orphaned one
-    // resurfaces as halt-finish (after grace) once the mint lands.
-    return 'hidden';
-  }
-  // inbound
-  if (tr.status === 'COMPLETED') return 'hidden'; // USDC delivered to Stellar
-  if (tr.burnTxHash) return 'auto'; // bridging Base → Stellar
-  if (tr.srcSwapTxHash) return 'halt-receive'; // USDC on Base, needs the burn
-  return 'hidden'; // pre-LI.FI delivery — nothing to recover yet
-}
-
+// Doc 111 (2026-08-28): the phase table lives in cctp-phase.ts, pure and
+// tested. Run 15 taught the state machine to retire dead rows (FAILED) and
+// the local classifier here, which predated such rows, kept showing them as
+// "finish once it arrives" — only REFUNDED/COMPLETED were hidden. Activity
+// said Failed while this banner said in-flight: never again.
 function phaseOf(tr: TransferRow, now: number): Phase {
   // No freshness grace (2026-08-26, second bite): hiding a "too fresh" halt
   // made the banner empty right after a reload, which also blinded the
@@ -94,7 +81,7 @@ function phaseOf(tr: TransferRow, now: number): Phase {
   // in-session duplication the grace guarded against is already prevented by
   // the activeId filter, which tracks the ACTUAL open modal.
   void now;
-  return rawPhase(tr);
+  return bannerPhase(tr);
 }
 
 async function readBaseUsdc(network: NetworkType, address: string): Promise<bigint> {
@@ -132,7 +119,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   // the failure modal so a halted transfer surfaces INSTANTLY (2026-08-26).
   const graceOffUntilRef = useRef(0);
   const phaseFor = (tr: TransferRow, now: number): Phase =>
-    now < graceOffUntilRef.current ? rawPhase(tr) : phaseOf(tr, now);
+    now < graceOffUntilRef.current ? bannerPhase(tr) : phaseOf(tr, now);
   const [busyId, setBusyId] = useState<string | null>(null);
   // "Safe in your Base account" is only said once we've SEEN the balance —
   // an undelivered (later refunded) leg was described as safely arrived
@@ -190,10 +177,13 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       ).then((ids) => {
         setVerifiedIds(new Set(ids.filter((x): x is string => !!x)));
       });
-      // Poke any 'auto' (post-burn) transfer so its status advances between cron ticks.
-      const auto = shown.find((tr) => phaseFor(tr, now) === 'auto');
-      if (auto) {
-        fetch(`/api/cctp/transfers/${auto.id}`, { headers, credentials: 'include' }).catch(
+      // Poke EVERY 'auto' (post-burn) transfer so each advances between cron
+      // ticks. This used to poke only the first match, so with two bridges in
+      // flight the second made no progress until the first finished — which
+      // is exactly the situation the Wave 3 fixes are tested in.
+      const autoRows = shown.filter((tr) => phaseFor(tr, now) === 'auto');
+      for (const auto of autoRows) {
+        void fetch(`/api/cctp/transfers/${auto.id}`, { headers, credentials: 'include' }).catch(
           () => {}
         );
       }
@@ -221,7 +211,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       const runResume = () => {
         const tr = transfersRef.current.find((x) => x.id === id2);
         if (!tr) return false;
-        const ph = rawPhase(tr);
+        const ph = bannerPhase(tr);
         // recoverRef: `recover` is declared below this effect; the ref keeps
         // the listener stable without a TDZ/order problem.
         if (ph === 'halt-receive' || ph === 'halt-finish') recoverRef.current?.(tr, ph);
@@ -247,7 +237,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       graceOffUntilRef.current = Date.now() + 5 * 60_000;
       const run = () => {
         const tr = transfersRef.current.find((x) => x.id === id2);
-        if (tr && rawPhase(tr) === 'halt-finish') {
+        if (tr && bannerPhase(tr) === 'halt-finish') {
           refundRef.current?.(tr);
           return true;
         }
@@ -292,7 +282,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   }, [user, refresh]);
 
   const patch = useCallback(
-    (id: string, headers: HeadersInit, body: Record<string, string>) =>
+    (id: string, headers: HeadersInit, body: Record<string, string | boolean>) =>
       fetch(`/api/cctp/transfers/${id}`, {
         method: 'PATCH',
         headers,
@@ -320,15 +310,44 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         if (phase === 'halt-receive') {
           // INBOUND: burn whatever USDC actually landed on the user's Base address.
           const bal = await readBaseUsdc(network, tr.srcAddress);
-          if (bal === 0n) throw new Error(t('No USDC found on Base — it may already be bridging.'));
+          if (bal === 0n) {
+            // Nothing on Base. Either the source leg is still in flight — or
+            // it FAILED on-chain and this row is a ghost. Ask the server
+            // (which re-verifies against LI.FI) which one it is, and retire
+            // the ghost instead of erroring at the user (Niko 2026-08-28:
+            // "No USDC found on Base" on a swap whose ETH provably never
+            // moved — three surfaces told three different stories).
+            const vres = await patch(tr.id, headers, { markSourceRefunded: true });
+            const row = vres?.ok ? (await vres.json().catch(() => null))?.transfer : null;
+            if (row?.status === 'FAILED') {
+              enqueueSnackbar(
+                t(
+                  'That swap had already failed on-chain — nothing was bridged and your funds never left your wallet. Removed it from in-flight.'
+                ),
+                { variant: 'info' }
+              );
+            } else {
+              enqueueSnackbar(
+                t(
+                  'USDC has not reached Base yet — the bridge is still working. This finishes by itself; nothing to do.'
+                ),
+                { variant: 'info' }
+              );
+            }
+            window.dispatchEvent(new Event('nf:activity-updated')); // re-read the list
+            return;
+          }
+          // Doc 95 Wave 3: burn this row's share, not the whole address —
+          // a sibling transfer's USDC may be sitting here too.
+          const burnWire = scopedAmountWire(bal, BigInt(tr.amountWire));
           const { burnTxHash } = await burnUsdcOnEvm({
             network,
             chain: 'base',
             evmAddress: tr.srcAddress,
-            amountWire: bal,
+            amountWire: burnWire,
             stellarRecipient: tr.destAddress,
           });
-          await patch(tr.id, headers, { burnTxHash, dstAmount: wireToUsdc(bal) });
+          await patch(tr.id, headers, { burnTxHash, dstAmount: wireToUsdc(burnWire) });
           enqueueSnackbar(t('Bridging your USDC to Stellar — completes automatically (~20 min).'), {
             variant: 'info',
           });
@@ -371,11 +390,16 @@ export function CctpRecoveryBanner({ addresses }: Props) {
           const denyExchanges = [
             ...new Set([...parseFailedExchanges(detail), ...(remembered?.exchanges ?? [])]),
           ];
+          // Doc 95 Wave 3: pivot this row's share only. The banner is the
+          // very path a user reaches when a second swap is already in
+          // flight, so a whole-balance pivot here would swallow the other
+          // transfer's minted USDC.
+          const pivotWire = scopedAmountWire(bal, BigInt(tr.amountWire));
           const result = await executePivotSwap({
             evmAddress: tr.destAddress,
             toSymbol,
             toAddress,
-            amountWire: bal,
+            amountWire: pivotWire,
             denyBridges: denyBridges.length ? denyBridges : undefined,
             denyExchanges: denyExchanges.length ? denyExchanges : undefined,
           });

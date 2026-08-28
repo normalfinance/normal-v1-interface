@@ -13,6 +13,7 @@
 // this layer's job). Mainnet-only Base, same as the client version.
 
 import { EVM_USDC } from '@/lib/cctp/config';
+import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 
 import { getLifiQuote } from './lifi-quote';
 import { signWithAutopilot } from './autopilot-signer';
@@ -46,11 +47,16 @@ export async function autopilotPivotSwap(params: {
   denyBridges?: string[];
   /** DEX steps to exclude — the failure can live in the swap, not the bridge */
   denyExchanges?: string[];
+  /** Doc 95 Wave 3: called the moment a leg is broadcast, before its receipt
+   *  is awaited, so a real hash is never lost to a receipt-wait failure. */
+  onBroadcast?: (hash: `0x${string}`, label: string) => Promise<void> | void;
 }): Promise<AutopilotPivotResult> {
-  const { http, erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } =
-    await import('viem');
+  const { erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } = await import(
+    'viem'
+  );
   const { base } = await import('viem/chains');
-  const client = createPublicClient({ chain: base, transport: http() });
+  // Doc 95 Wave 4: fallback list instead of viem's default public RPC.
+  const client = createPublicClient({ chain: base, transport: await baseFallbackTransport() });
   const from = params.evmAddress as `0x${string}`;
   const usdc = EVM_USDC.base.mainnet;
 
@@ -75,33 +81,50 @@ export async function autopilotPivotSwap(params: {
     label: string,
     gasHint?: bigint
   ) => {
-    const [nonce, fees, gas] = await Promise.all([
-      client.getTransactionCount({ address: from, blockTag: 'pending' }),
-      client.estimateFeesPerGas(),
-      gasHint
-        ? Promise.resolve(gasHint)
-        : client.estimateGas({ account: from, to, data: dataHex, value }),
-    ]);
-    const unsigned = serializeTransaction({
-      chainId: base.id,
-      type: 'eip1559',
-      nonce,
-      to,
-      data: dataHex,
-      value,
-      gas: (gas * 12n) / 10n,
-      maxFeePerGas: fees.maxFeePerGas,
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
-    });
-    const raw = (await signWithAutopilot({
-      subOrgId: params.subOrgId,
-      signWith: params.evmAddress,
-      unsignedTransaction: unsigned,
-      purpose: `cctp-outbound-${label}`,
-      // USDC wire ≈ USD; caps armed on the pivot itself, not the approve.
-      amountUsd: label === 'pivot' ? Number(params.amountWire) / 1e6 : undefined,
-    })) as `0x${string}`;
-    const hash = await client.sendRawTransaction({ serializedTransaction: raw });
+    // Doc 95 Wave 3: nonce-race rebuild, matching the client twin.
+    let hash: `0x${string}` | null = null;
+    for (let attempt = 0; hash === null; attempt++) {
+      const [nonce, fees, gas] = await Promise.all([
+        client.getTransactionCount({ address: from, blockTag: 'pending' }),
+        client.estimateFeesPerGas(),
+        gasHint
+          ? Promise.resolve(gasHint)
+          : client.estimateGas({ account: from, to, data: dataHex, value }),
+      ]);
+      const unsigned = serializeTransaction({
+        chainId: base.id,
+        type: 'eip1559',
+        nonce,
+        to,
+        data: dataHex,
+        value,
+        gas: (gas * 12n) / 10n,
+        maxFeePerGas: fees.maxFeePerGas,
+        maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+      });
+      const raw = (await signWithAutopilot({
+        subOrgId: params.subOrgId,
+        signWith: params.evmAddress,
+        unsignedTransaction: unsigned,
+        purpose: `cctp-outbound-${label}`,
+        // USDC wire ≈ USD; caps armed on the pivot itself, not the approve.
+        amountUsd: label === 'pivot' ? Number(params.amountWire) / 1e6 : undefined,
+      })) as `0x${string}`;
+      try {
+        hash = await client.sendRawTransaction({ serializedTransaction: raw });
+      } catch (sendErr: any) {
+        const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
+        if (
+          attempt === 0 &&
+          /nonce too low|already known|replacement transaction underpriced/i.test(m)
+        ) {
+          continue;
+        }
+        throw sendErr;
+      }
+    }
+    // Hash first, receipt second (see autopilot-burn).
+    await params.onBroadcast?.(hash, label);
     const receipt = await client.waitForTransactionReceipt({ hash });
     if (receipt.status !== 'success') {
       // Classified revert (2026-08-26): the tx broadcast and failed ON-CHAIN.

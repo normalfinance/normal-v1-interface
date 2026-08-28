@@ -3,13 +3,19 @@
 // failed. URL arrays are pure (importable anywhere); the viem transport is
 // built via dynamic import to respect the bundle-size pattern.
 
+// Order matters: a KEYED endpoint (paid, higher limits) is tried first, then
+// public ones as the safety net. `CCTP_RPC_URL_*` are server-only vars — on
+// the client they read as undefined and simply drop out of the list, which is
+// correct: browsers must never see a keyed URL.
 export const BASE_RPC_URLS: string[] = [
+  ...(process.env.CCTP_RPC_URL_BASE ? [process.env.CCTP_RPC_URL_BASE] : []),
   ...(process.env.NEXT_PUBLIC_BASE_RPC_URL ? [process.env.NEXT_PUBLIC_BASE_RPC_URL] : []),
   'https://mainnet.base.org',
   'https://base-rpc.publicnode.com',
 ];
 
 export const ETH_RPC_URLS: string[] = [
+  ...(process.env.CCTP_RPC_URL_ETHEREUM ? [process.env.CCTP_RPC_URL_ETHEREUM] : []),
   process.env.NEXT_PUBLIC_ETH_RPC_URL ?? 'https://ethereum-rpc.publicnode.com',
   'https://eth.llamarpc.com',
 ];

@@ -27,6 +27,7 @@ import { runCctpRefund } from '@/lib/cctp/refund';
 import { useDebounce } from '@/hooks/use-debounce';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executeLifiSwap } from '@/lib/lifi/execute';
+import { scopedAmountWire } from '@/lib/cctp/amounts';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
@@ -35,6 +36,7 @@ import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
+import { parseDeliveredAmount } from '@/lib/cctp/delivered-amount';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
@@ -118,7 +120,7 @@ async function pollPivotDelivery(
   // BTC payouts are mined Bitcoin txs — allow up to ~60 min (Niko 2026-08-19:
   // the modal now tracks BTC to true delivery like SOL/ETH).
   maxPolls = 60
-): Promise<'DONE' | 'REFUNDED' | 'FAILED' | null> {
+): Promise<{ verdict: 'DONE' | 'REFUNDED' | 'FAILED' | null; deliveredAmount: string | null }> {
   for (let i = 0; i < maxPolls; i++) {
     if (cancelledRef.current) throw new Error('cancelled');
     try {
@@ -130,17 +132,30 @@ async function pollPivotDelivery(
         const data = await res.json();
         const s = data?.status?.status as string | undefined;
         const sub = String(data?.status?.substatus ?? '').toUpperCase();
+        // Doc 95 Wave 5: LI.FI reports what the destination ACTUALLY received.
+        // We used to record the quoted MINIMUM and guard it against being
+        // replaced, so every swap under-reported delivery by its slippage in
+        // Activity and in the Dune dashboard.
+        // Pure + tested (lib/cctp/delivered-amount): returns null rather than
+        // a guess, so a bad payload leaves the quoted figure in place instead
+        // of writing junk into the activity feed.
+        const deliveredAmount = parseDeliveredAmount(data?.status?.receiving);
         // A refund is reported as DONE+REFUNDED (or PARTIAL) — funds returned,
         // destination not delivered.
-        if (s === 'DONE') return sub === 'REFUNDED' || sub === 'PARTIAL' ? 'REFUNDED' : 'DONE';
-        if (s === 'FAILED' || s === 'INVALID') return 'FAILED';
+        if (s === 'DONE') {
+          return {
+            verdict: sub === 'REFUNDED' || sub === 'PARTIAL' ? 'REFUNDED' : 'DONE',
+            deliveredAmount,
+          };
+        }
+        if (s === 'FAILED' || s === 'INVALID') return { verdict: 'FAILED', deliveredAmount: null };
       }
     } catch {
       /* transient — retry next interval */
     }
     await new Promise((r) => setTimeout(r, 10_000));
   }
-  return null;
+  return { verdict: null, deliveredAmount: null };
 }
 
 async function readBaseUsdc(address: string): Promise<bigint> {
@@ -212,6 +227,11 @@ export function useCctpEngine({
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [stage, setStage] = useState<CctpStage | null>(null);
   const [stageError, setStageError] = useState<string | null>(null);
+  // Niko 2026-08-28: a swap whose SOURCE leg ended without moving anything
+  // (on-chain revert / bridge refund) is not an error the user must act on.
+  // It renders as a quiet grey panel with a Close button — no red, no Try
+  // again — while stageError keeps owning the genuinely actionable failures.
+  const [calmEnding, setCalmEnding] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   // Bring-back-in-modal (Niko 2026-08-27): the refund runs INSIDE the popup
   // with its own checklist instead of closing it and delegating invisibly.
@@ -526,6 +546,12 @@ export function useCctpEngine({
   // the next one. See autopilot-gate.ts.
   const autopilotGate = useRef(createAutopilotGate(() => autopilotActive()));
 
+  // Stages at which the outbound USDC has actually reached the Base address,
+  // i.e. the only ones where bringing it back is a thing that can happen.
+  // Before 'topup' the money is still in Stellar or mid-bridge; a failure
+  // there is recovered by Try again / the banner, not by a refund.
+  const BRING_BACK_STAGES: CctpStage[] = ['topup', 'pivot-swap', 'delivering'];
+
   const runRefund = useCallback(
     async (transferId: string) => {
       setRefundError(null);
@@ -725,7 +751,11 @@ export function useCctpEngine({
             /* transient RPC hiccup — retry next interval */
           }
           if (bal >= baseline + (target * 95n) / 100n) {
-            arrivedWire = bal - baseline > target ? target : bal - baseline;
+            // Doc 95 Wave 3: one shared rule. The old clamp to `target`
+            // stranded positive slippage on Base forever; the server's
+            // whole-balance read swept siblings. scopedAmountWire does both
+            // correctly: own share + slippage headroom, never more.
+            arrivedWire = scopedAmountWire(bal - baseline, target);
             break;
           }
           // Refund honesty (live 2026-08-20: a refunded bridge leg polled a
@@ -769,17 +799,24 @@ export function useCctpEngine({
                     setTimeout(r2, ARRIVAL_CAP_MS);
                   }),
                 ]);
-              throw new Error(
+              // Niko 2026-08-28: this is a CALM ending, not an alarm. The
+              // funds never moved (FAILED = the source tx reverted on-chain,
+              // REFUNDED = the bridge returned them), so the modal states the
+              // truth quietly — no red box, no Try again — and the retirement
+              // above makes the banner drop the row.
+              const calm: Error & { __calmEnd?: boolean } = new Error(
                 verdict === 'REFUNDED'
                   ? t(
-                      'The bridge could not complete and returned your {{sym}} — it is back in your wallet. Nothing was lost; you can try the swap again.',
+                      'The bridge could not complete and returned your {{sym}} — it is back in your wallet. Nothing was lost; you can simply start a new swap.',
                       { sym: fromSymbol }
                     )
                   : t(
-                      'The bridge could not complete this swap. Your {{sym}} stays at your own address — nothing was moved onward.',
+                      'The exchange rejected this swap on-chain — the transaction reverted, which usually means the price moved past its protection while it was being processed. Your {{sym}} never left your wallet; only the small network fee was spent. Get a fresh quote and swap again whenever you like.',
                       { sym: fromSymbol }
                     )
               );
+              calm.__calmEnd = true;
+              throw calm;
             }
           }
           if (Date.now() - started > 45 * 60_000)
@@ -907,6 +944,10 @@ export function useCctpEngine({
       addresses,
       amount,
       makePatcher,
+      // Doc 95 Wave 3: runRefund closes over the wallet addresses. Omitting
+      // it here let a stale copy be captured, so an auto-refund could target
+      // a previous session's addresses — a money path, so it is a real dep.
+      runRefund,
       autopilotActive,
       tryAutopilot,
       finish,
@@ -1064,15 +1105,22 @@ export function useCctpEngine({
               10
           )
         );
-        if (delivery === 'FAILED' || delivery === 'REFUNDED') {
+        if (delivery.verdict === 'FAILED' || delivery.verdict === 'REFUNDED') {
           throw new Error(
             t(
               'The final swap leg did not deliver — your USDC is at your own Base address, untouched by anyone else. Contact support to recover it.'
             )
           );
         }
-        await patch({ dstAmount });
-        if (delivery === null) {
+        // Doc 95 Wave 5: prefer the amount the destination actually received
+        // over the quote's guaranteed minimum. `dstAmountFinal` is allowed to
+        // OVERWRITE, unlike the set-once `dstAmount`.
+        if (delivery.deliveredAmount) {
+          await patch({ dstAmountFinal: delivery.deliveredAmount });
+        } else {
+          await patch({ dstAmount });
+        }
+        if (delivery.verdict === null) {
           // Timed out (~10 min) still bridging: rare, and the funds are in
           // flight to the user's own address. Documented trade-off (Niko's
           // #62 rule — a successful swap must never look stuck): close out
@@ -1163,7 +1211,11 @@ export function useCctpEngine({
       if (direction === 'out' && fundFromExternal) {
         setUsedFunding(true);
         setStage('funding');
-        const funded = await fundFromExternal.execute(amount.toFixed(7, BigNumber.ROUND_DOWN));
+        // Doc 95 Wave 5: move exactly what the burn will spend. The move used
+        // to send 7 decimals (Stellar precision) while the burn takes 6 (CCTP
+        // wire units), so the 7th decimal was carried to the Normal wallet and
+        // then never swapped — a silent dust leak on every MAX-style amount.
+        const funded = await fundFromExternal.execute(amount.toFixed(6, BigNumber.ROUND_DOWN));
         if (!funded) {
           throw new Error(
             t('The USDC transfer from {{wallet}} was not completed — nothing was swapped.', {
@@ -1171,6 +1223,13 @@ export function useCctpEngine({
             })
           );
         }
+        // Doc 95 Wave 7: the stage used to stay on 'funding' through the row
+        // creation below, so ANY later failure (a 403, a dropped request)
+        // put the red error marker on the funding step — the one step that
+        // had genuinely SUCCEEDED. The user was told the move from their
+        // wallet failed while their USDC had, in fact, moved. Advance the
+        // moment it is done, so the marker lands where the failure is.
+        setStage('burn-prepare');
       } else {
         setUsedFunding(false);
       }
@@ -1219,6 +1278,15 @@ export function useCctpEngine({
       else await runOutbound(data.id, amountWire);
     } catch (e: any) {
       console.error('[cctp engine] execute failed:', e); // surface stack
+      if (e?.__calmEnd) {
+        // Quiet truth, not alarm: funds are where they were and the row is
+        // retired server-side — tell the banner and the feed to re-read so
+        // the dead entry disappears without any user action.
+        setCalmEnding(String(e?.message ?? ''));
+        setActiveCctpTransfer(null);
+        window.dispatchEvent(new Event('nf:activity-updated'));
+        return;
+      }
       setStageError(
         isInsufficientGasError(e)
           ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
@@ -1570,6 +1638,14 @@ export function useCctpEngine({
     </Stack>
   ) : null;
 
+  // Doc 95 Wave 7: two conditions, both required — the USDC must have reached
+  // Base, AND a transfer row must exist for the refund to act on. Without the
+  // second, the handler returned early and the button did nothing at all.
+  const canBringBack =
+    !!stage &&
+    BRING_BACK_STAGES.includes(stage) &&
+    !!(getActiveCctpTransfer() ?? lastFailedRunIdRef.current);
+
   return {
     toAmount,
     quoteLoading: enabled ? quoteLoading : false,
@@ -1632,6 +1708,7 @@ export function useCctpEngine({
           onEnableAutopilot={
             process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY ? () => setConsentOpen(true) : undefined
           }
+          calmEnding={calmEnding}
           refundStage={refundStage}
           refundNotice={refundNotice}
           onTryAgain={
@@ -1663,7 +1740,16 @@ export function useCctpEngine({
                 : undefined
           }
           onBringBack={
-            stageError && direction === 'out' && !refundStage
+            // Doc 95 Wave 7: this was offered on ANY outbound failure. But
+            // "bring back as USDC" returns USDC that is sitting at the user's
+            // own Base address — and before the bridge delivers there, there
+            // is nothing to return. Offered on a funding or burn failure it
+            // could only fail, and when no transfer row existed yet the
+            // handler hit `if (!failedId) return` and the button did
+            // NOTHING AT ALL: a dead control on a failure screen, which is
+            // the worst place to put one. Shown now only once the USDC has
+            // actually arrived on Base.
+            stageError && direction === 'out' && !refundStage && canBringBack
               ? () => {
                   // Niko 2026-08-27: the refund runs IN this popup — the
                   // steps update in place instead of the modal closing and
@@ -1681,6 +1767,7 @@ export function useCctpEngine({
             cancelled.current = true;
             setModalOpen(false);
             if (stage === 'done') setStage(null);
+            setCalmEnding(null);
           }}
         />
       </>

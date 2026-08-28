@@ -3,11 +3,8 @@ import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { mgiApiBase } from '@/lib/mgi/server-base';
 import { Keypair, Transaction } from '@stellar/stellar-sdk';
-import {
-  type NetworkType,
-  getCurrentNetwork,
-  getStellarConfigForNetwork,
-} from '@normalfinance/utils';
+import { networkFromCookie } from '@/server/network-cookie';
+import { getStellarConfigForNetwork } from '@normalfinance/utils';
 
 /**
  * POST /api/mgi/sep10/complete
@@ -33,8 +30,7 @@ export const POST = withAuth(async (req: Request, { user }) => {
     // Prefer the user's cookie, but fall back to the build's NEXT_PUBLIC_NETWORK
     // (not a hardcoded testnet) so a missing cookie can't downgrade a mainnet
     // user onto the testnet passphrase against the production MoneyGram host.
-    const network =
-      (cookieStore.get('normal-network')?.value as NetworkType | undefined) ?? getCurrentNetwork();
+    const network = networkFromCookie(cookieStore);
     const passphrase = getStellarConfigForNetwork(network).NETWORK_PASSPHRASE;
 
     if (!authSecret) {

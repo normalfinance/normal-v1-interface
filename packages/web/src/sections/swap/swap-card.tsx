@@ -2,6 +2,7 @@
 
 import type { Token } from '@normalfinance/types';
 import type { ChainId } from '@/lib/chains/registry';
+import type { FreshRead } from '@/hooks/use-wallet-balances';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
 import { BigNumber } from 'bignumber.js';
@@ -23,6 +24,13 @@ import React, { useRef, useMemo, useState, useCallback } from 'react';
 import { getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
+import {
+  nextReadDelayMs,
+  balanceSignature,
+  MAX_REFRESH_ATTEMPTS,
+  canAffordAnotherRead,
+  shouldRetryPortfolioRead,
+} from '@/lib/portfolio/refresh-retry';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -320,6 +328,67 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     () => ({ BTC: btc.bitcoinAddress, ETH: eth.ethereumAddress, SOL: sol.solanaAddress }),
     [btc.bitcoinAddress, eth.ethereumAddress, sol.solanaAddress]
   );
+  // Doc 95 follow-up (Niko live 2026-08-27, two Stellar swaps back to back):
+  // both post-action reads below used to decide they were done by asking
+  // "did the number change?" — a PROXY for "was that read fresh?". The two
+  // come apart inside the route's 5s bypass floor, where a `refresh=1` request
+  // is handed the 15s cache instead: swap 2's floored response carried swap
+  // 1's data, the number HAD moved, so no retry ran and the balance sat on the
+  // wrong figure until a full page reload. The route now reports `floored`, so
+  // this asks the real question. Decision + bounds are tested in
+  // lib/portfolio/refresh-retry.ts.
+  const refreshUntilFresh = useCallback(
+    async (
+      label: string,
+      read: () => Promise<FreshRead>,
+      valueOf: (read: FreshRead) => string | null,
+      before: string | null
+    ) => {
+      const startedAt = Date.now();
+      for (let attempt = 1; attempt <= MAX_REFRESH_ATTEMPTS; attempt += 1) {
+        // A read that THROWS used to abort this whole loop: fetchPayload
+        // rejects on any non-ok response (a 429, an auth blip), the rejection
+        // travelled out through the engine's `.catch(() => {})`, and Done
+        // appeared having refreshed nothing at all. More attempts meant more
+        // chances to hit it. A failed read is simply "not fresh" — retry.
+        let res: FreshRead;
+        try {
+          res = await read();
+        } catch (err) {
+          console.info(`[balance-gate:${label}] attempt ${attempt} FAILED`, err);
+          res = { assets: null, companionAssets: null, floored: false };
+        }
+        const after = valueOf(res);
+        const changed = after !== null && after !== before;
+        // One line per attempt, on purpose: when a balance looks stale after a
+        // swap this says immediately WHICH layer was stale — whether the read
+        // was floored, what the server returned, and how long it took.
+        console.info(
+          `[balance-gate:${label}] attempt ${attempt} floored=${res.floored} ` +
+            `changed=${changed} before=${before} after=${after} ` +
+            `retryAfterMs=${res.retryAfterMs ?? '-'} elapsed=${Date.now() - startedAt}ms`
+        );
+        if (!shouldRetryPortfolioRead({ floored: res.floored, changed, attempt })) return;
+
+        const delay = nextReadDelayMs({
+          floored: res.floored,
+          retryAfterMs: res.retryAfterMs,
+        });
+        // The modal's Done awaits this loop under a 15s cap. Outliving that
+        // cap would show Done with the balance still catching up — exactly
+        // the symptom being fixed. Stop instead and let the background poll
+        // finish the job.
+        if (!canAffordAnotherRead(Date.now() - startedAt, delay)) {
+          console.info(`[balance-gate:${label}] out of budget — deferring to the background poll`);
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    },
+    []
+  );
+
   // #66: refetchBalance, not refetch — refetch reloads Turnkey ADDRESSES,
   // which is what the #62 arrival gate was accidentally awaiting before.
   // refetchBalance is the awaitable, server-cache-bypassing refresh of the
@@ -349,14 +418,14 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         /* transient — balances below still refresh */
       }
       const before = balancesRef.current[symbol as SwapSymbol]?.balance;
-      const fresh = await hook.refetchBalance();
-      const after = fresh?.find((a) => a.symbol === symbol)?.balance;
-      if (after !== undefined && after === before) {
-        await new Promise((resolve) => setTimeout(resolve, 5_600)); // past the 5s server floor
-        await hook.refetchBalance();
-      }
+      await refreshUntilFresh(
+        symbol,
+        () => hook.refetchBalance(),
+        (read) => read.assets?.find((a) => a.symbol === symbol)?.balance ?? null,
+        before ?? null
+      );
     },
-    [btc, eth, sol]
+    [btc, eth, sol, refreshUntilFresh]
   );
   // Same verify-and-retry for STELLAR swaps (Niko live 2026-08-21: the
   // modal said Done but the drawer needed 2-3s — the gate's single refresh
@@ -366,29 +435,51 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   // floor and pull once more. Refs keep the callback stable and un-stale.
   const aggAssetsRef = useRef(aggAssets);
   aggAssetsRef.current = aggAssets;
-  const stellarToSymbolRef = useRef(toSymbol);
-  stellarToSymbolRef.current = toSymbol;
+  const stellarPairRef = useRef<[SwapSymbol, SwapSymbol]>([fromSymbol, toSymbol]);
+  stellarPairRef.current = [fromSymbol, toSymbol];
+  const companionAssetsRef = useRef(companionStellar?.assets ?? null);
+  companionAssetsRef.current = companionStellar?.assets ?? null;
   const refetchStellarAfterSwap = useCallback(async () => {
-    const sym = stellarToSymbolRef.current;
-    const total = (assets: { symbol: string; balance: string | null }[] | null | undefined) =>
-      (assets ?? [])
-        .filter((a) => a.symbol === sym)
-        .reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
-    const before = total(aggAssetsRef.current);
-    const fresh = await refreshFresh();
-    if (fresh && total(fresh) === before) {
-      await new Promise((resolve) => setTimeout(resolve, 5_600)); // past the 5s server floor
-      await refreshFresh();
-    }
-  }, [refreshFresh]);
+    // ------------------------------------------------------------------
+    // Watch BOTH sides of the swap AND BOTH wallets.
+    //
+    // Both sides, because a swap moves two balances and either one moving
+    // proves the read is post-swap.
+    //
+    // Both wallets, because of the live 2026-08-28 failure: an external
+    // (Lobstr) user swapping FROM their Normal wallet moves the COMPANION's
+    // balances, which live in `companionStellar` and never appear in
+    // `assets` at all. The gate was watching the connected Lobstr wallet's
+    // untouched 0.00, so "did it change?" was permanently false — it waited
+    // out its whole budget and gave up, every time, no matter how many
+    // caching bugs underneath it got fixed. Only one of these four numbers
+    // moves on any given swap; including all four means we never have to
+    // know in advance which wallet paid.
+    // ------------------------------------------------------------------
+    const pair = stellarPairRef.current;
+    await refreshUntilFresh(
+      `${pair[0]}->${pair[1]}`,
+      refreshFresh,
+      (read) => balanceSignature(pair, read.assets, read.companionAssets),
+      balanceSignature(pair, aggAssetsRef.current, companionAssetsRef.current)
+    );
+  }, [refreshFresh, refreshUntilFresh]);
 
   // Records a COMPLETED external→companion move for the amount currently
   // being swapped, so a retry after a rejected burn doesn't move twice.
-  // In-memory only, and cleared the moment a swap completes (resetInput).
+  //
+  // Doc 95 Wave 3: `resetInput` is handed to ALL THREE engines, so finishing
+  // any unrelated swap used to clear this guard — fund 100 USDC from Lobstr,
+  // have the CCTP swap fail, do a Soroswap swap, retry, and the money moved
+  // a SECOND time. The guard now clears only when the amount itself changes,
+  // which is the real "this is a different swap" signal.
   const movedForAmount = useRef<string | null>(null);
   const resetInput = useCallback(() => {
-    movedForAmount.current = null;
     setAmountIn('');
+  }, []);
+  const setAmountAndClearMove = useCallback((v: string) => {
+    movedForAmount.current = null;
+    setAmountIn(v);
   }, []);
   // Dynamic-gas write-back is a TOKEN amount — flip fiat mode off so the
   // field can't reinterpret 0.0085 ETH as $0.0085 (sweep 2026-08-21).
@@ -477,16 +568,32 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                 );
                 return true;
               }
+              // Doc 95 Wave 3: read the companion BEFORE sending. The old
+              // check asked "does the companion now hold >= the amount?",
+              // which is true on the first probe whenever it already held
+              // enough — the same "a BALANCE can never prove a move" mistake
+              // the comment above warns about, one level down. Only a RISE of
+              // the amount proves this payment landed.
+              let baselineUsdc = BigNumber(0);
+              try {
+                baselineUsdc = BigNumber(
+                  (await probeCompanion(companionStellar.address, config)).usdcBalance
+                );
+              } catch {
+                /* unreadable baseline — fall back to the absolute test below */
+              }
               const hash = await stellarSend({
                 destination: companionStellar.address,
                 token: tokenBySymbol.USDC,
                 amount: amountUsdc,
               });
               if (!hash) return false;
+              // Horizon lags by a fraction; allow a hair of tolerance.
+              const arrivalTarget = baselineUsdc.plus(amountUsdc).minus(0.0000001);
               for (let i = 0; i < 10; i += 1) {
                 try {
                   const probe = await probeCompanion(companionStellar.address, config);
-                  if (BigNumber(probe.usdcBalance).gte(amountUsdc)) {
+                  if (BigNumber(probe.usdcBalance).gte(arrivalTarget)) {
                     // Verified visible on the companion — a retry may skip it.
                     movedForAmount.current = amountUsdc;
                     return true;
@@ -585,9 +692,9 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const handleMax = async () => {
     const maxToken = await engine.getMaxToken();
     if (isFiatMode && fromPrice.gt(0)) {
-      setAmountIn(maxToken.multipliedBy(fromPrice).toFixed(2, BigNumber.ROUND_DOWN));
+      setAmountAndClearMove(maxToken.multipliedBy(fromPrice).toFixed(2, BigNumber.ROUND_DOWN));
     } else {
-      setAmountIn(maxToken.toFixed(Math.min(fromDecimals, 8), BigNumber.ROUND_DOWN));
+      setAmountAndClearMove(maxToken.toFixed(Math.min(fromDecimals, 8), BigNumber.ROUND_DOWN));
     }
   };
 
@@ -841,7 +948,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               value={amountIn}
               placeholder="0"
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setAmountIn(sanitizeAmountInput(e.target.value))
+                setAmountAndClearMove(sanitizeAmountInput(e.target.value))
               }
               onKeyDown={(e: React.KeyboardEvent) => e.key === '-' && e.preventDefault()}
               sx={{

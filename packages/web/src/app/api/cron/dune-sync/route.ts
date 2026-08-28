@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cronAuthVerdict } from '@/server/cron-auth';
 import { duneClear, duneInsert } from '@/lib/dune/client';
 import { fetchSupabaseUsers } from '@/services/supabase-sync';
 import { recordCronHeartbeat } from '@/server/cron-heartbeat';
@@ -25,11 +26,16 @@ const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(req: Request) {
   // Auth check — Vercel Cron sets Authorization: Bearer <CRON_SECRET>
-  if (CRON_SECRET) {
-    const auth = req.headers.get('authorization');
-    if (auth !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Doc 95 Wave 7: an UNSET secret used to skip this check entirely, leaving
+  // a money-moving endpoint public. cronAuthVerdict fails closed instead.
+  const auth = cronAuthVerdict(
+    CRON_SECRET,
+    req.headers.get('authorization'),
+    process.env.NODE_ENV === 'development'
+  );
+  if (!auth.ok) {
+    console.error('[cron] refused:', auth.error);
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   const results: Record<string, string> = {};

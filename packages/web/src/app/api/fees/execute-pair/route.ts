@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import type { NetworkType } from '@normalfinance/utils';
 import type { FeeEscrowKind, FeeEscrowEntry } from '@/server/fee-escrow';
 import type { TxRecordInput, SwapRecordInput, SavingsRecordInput } from '@/server/tx-records';
 
@@ -8,6 +7,7 @@ import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
+import { networkFromCookie } from '@/server/network-cookie';
 import { getFeesDepositAddress } from '@/lib/build-fee-payment';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
@@ -138,7 +138,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
 
   try {
     const cookieStore = await cookies();
-    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as NetworkType;
+    const network = networkFromCookie(cookieStore);
     const config = getStellarConfigForNetwork(network);
 
     const { serviceXdr, feeXdr, kind, record } = await request.json();

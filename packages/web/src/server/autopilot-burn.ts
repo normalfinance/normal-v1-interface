@@ -11,6 +11,7 @@
 
 import { type NetworkType } from '@normalfinance/utils';
 import { stellarContractToBytes32 } from '@/lib/cctp/addresses';
+import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { bytesToHex, encodeStellarHookData } from '@/lib/cctp/hookdata';
 import {
   EVM_CCTP,
@@ -43,6 +44,9 @@ const DEPOSIT_FOR_BURN_WITH_HOOK_ABI = [
 ] as const;
 
 export interface AutopilotBurnParams {
+  /** Doc 95 Wave 3: called the moment a leg is broadcast, BEFORE its receipt
+   *  is awaited, so a real hash is never lost to a receipt-wait failure. */
+  onBroadcast?: (hash: `0x${string}`, label: string) => Promise<void> | void;
   network: NetworkType;
   chain: 'base' | 'ethereum';
   /** The user's Turnkey sub-org (resolved by the route from the session). */
@@ -70,15 +74,23 @@ export async function autopilotBurnUsdc(params: AutopilotBurnParams): Promise<{
     throw new Error('refusing to burn: invalid Stellar recipient address');
   }
 
-  const { http, erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } =
-    await import('viem');
+  const { erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } = await import(
+    'viem'
+  );
   const { base, mainnet, sepolia, baseSepolia } = await import('viem/chains');
   const chains = {
     mainnet: { base, ethereum: mainnet },
     testnet: { base: baseSepolia, ethereum: sepolia },
   } as const;
   const chain = chains[params.network][params.chain];
-  const client = createPublicClient({ chain, transport: http() });
+  // Doc 95 Wave 4: this was viem's DEFAULT public RPC — no key, no fallback —
+  // on a leg that signs and broadcasts real money, while the client twins
+  // already used fallback lists. One bad hour on that endpoint stalled every
+  // server-side burn.
+  const client = createPublicClient({
+    chain,
+    transport: await evmFallbackTransport(params.chain, params.network),
+  });
 
   const usdc = EVM_USDC[params.chain][params.network];
   const tokenMessenger = EVM_CCTP[params.network].tokenMessengerV2;
@@ -93,29 +105,51 @@ export async function autopilotBurnUsdc(params: AutopilotBurnParams): Promise<{
     data: `0x${string}`,
     label: string
   ): Promise<`0x${string}`> => {
-    const [nonce, fees, gas] = await Promise.all([
-      client.getTransactionCount({ address: from, blockTag: 'pending' }),
-      client.estimateFeesPerGas(),
-      client.estimateGas({ account: from, to, data }),
-    ]);
-    const unsigned = serializeTransaction({
-      chainId: chain.id,
-      type: 'eip1559',
-      nonce,
-      to,
-      data,
-      gas: (gas * 12n) / 10n, // 20% headroom
-      maxFeePerGas: fees.maxFeePerGas,
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
-    });
-    const raw = (await signWithAutopilot({
-      subOrgId: params.subOrgId,
-      signWith: params.evmAddress,
-      unsignedTransaction: unsigned,
-      purpose: `cctp-inbound-${label}`,
-      amountUsd: label === 'depositForBurnWithHook' ? legUsd : undefined,
-    })) as `0x${string}`;
-    const hash = await client.sendRawTransaction({ serializedTransaction: raw });
+    // Doc 95 Wave 3: the client twins rebuild on a nonce race; the server
+    // signers did not, so a user tab broadcasting concurrently hard-failed
+    // the autopilot leg mid-swap. Same guard here (autopilot re-signing
+    // costs no prompt, so this is free).
+    let hash: `0x${string}` | null = null;
+    for (let attempt = 0; hash === null; attempt++) {
+      const [nonce, fees, gas] = await Promise.all([
+        client.getTransactionCount({ address: from, blockTag: 'pending' }),
+        client.estimateFeesPerGas(),
+        client.estimateGas({ account: from, to, data }),
+      ]);
+      const unsigned = serializeTransaction({
+        chainId: chain.id,
+        type: 'eip1559',
+        nonce,
+        to,
+        data,
+        gas: (gas * 12n) / 10n, // 20% headroom
+        maxFeePerGas: fees.maxFeePerGas,
+        maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+      });
+      const raw = (await signWithAutopilot({
+        subOrgId: params.subOrgId,
+        signWith: params.evmAddress,
+        unsignedTransaction: unsigned,
+        purpose: `cctp-inbound-${label}`,
+        amountUsd: label === 'depositForBurnWithHook' ? legUsd : undefined,
+      })) as `0x${string}`;
+      try {
+        hash = await client.sendRawTransaction({ serializedTransaction: raw });
+      } catch (sendErr: any) {
+        const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
+        if (
+          attempt === 0 &&
+          /nonce too low|already known|replacement transaction underpriced/i.test(m)
+        ) {
+          continue;
+        }
+        throw sendErr;
+      }
+    }
+    // Doc 95 Wave 3: hand the hash UP before waiting for the receipt. A
+    // receipt-wait failure (RPC hiccup, function timeout) used to discard a
+    // real on-chain broadcast, and the engine then signed a SECOND burn.
+    await params.onBroadcast?.(hash, label);
     const receipt = await client.waitForTransactionReceipt({ hash });
     if (receipt.status !== 'success') throw new Error(`${label} reverted (${hash})`);
     return hash;

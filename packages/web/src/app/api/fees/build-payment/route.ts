@@ -1,10 +1,10 @@
 import type { NextRequest } from 'next/server';
-import type { NetworkType } from '@normalfinance/utils';
 
 import { cookies } from 'next/headers';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
+import { networkFromCookie } from '@/server/network-cookie';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
 import {
   type FeeAssetCode,
@@ -27,7 +27,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
 
   try {
     const cookieStore = await cookies();
-    const network = (cookieStore.get('normal-network')?.value ?? 'testnet') as NetworkType;
+    const network = networkFromCookie(cookieStore);
     const config = getStellarConfigForNetwork(network);
 
     const {

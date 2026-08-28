@@ -50,6 +50,24 @@ The tab must never be required after signing.
 - `app/api/cctp/transfers/route.ts:58` — `refund:true` from the body skips the min + cap; cap parse `NaN`-fails open. Validate refund server-side; harden the cap parse.
 
 ## Wave 3 — Broadcast races (money: double-spend / stranded / bad-seq)
+
+> **STATUS: SHIPPED 2026-08-27, run 4** — explainer `99-explainer-broadcast-races.html`;
+> 7 new tests (`lib/cctp/amounts.test.ts`) built from the LIVE incident numbers.
+> The whole-balance bug was caught in production data, not just in review: two BTC swaps
+> 30 min apart, row B's burn took row A's 15.59 USDC, row C's took 32.40 (~2 transfers),
+> and row A (`cmtakn7t00`) is permanently stuck in CREATED with nothing left to burn. No
+> funds lost — same user, same destination — but one transfer can never complete and the
+> feed misreports amounts. Fixed by one shared rule (`lib/cctp/amounts.ts`):
+> `take = min(available, quoted + 5% slippage headroom)`, which ALSO fixes the opposite
+> client-side bug (clamping to the quoted minimum stranded positive slippage on Base).
+> Also landed: hash persisted on broadcast (a receipt-wait failure used to discard a real
+> burn and trigger a second one); nonce rebuild ported to BOTH server signers and the
+> LI.FI ETH leg; BTC broadcast made idempotent by txid; funding guard no longer wiped by
+> unrelated engines and now verifies baseline+delta; Stellar relayer retries a sequence
+> collision.
+> **Not yet done in this wave:** the setup-dialog's second funding path
+> (`normal-wallet-setup.ts:48` — balance-based readiness) still needs unifying with the
+> engine's guard; tracked into Wave 4.
 - `server/autopilot-burn.ts:96` + `autopilot-pivot.ts:78` — server signers lack the nonce-rebuild the client twins have (my own gap). Port it.
 - `server/autopilot-burn.ts:119` + `burn/route.ts` — receipt-wait throws after a successful broadcast → hash discarded → 502 → engine does a SECOND burn. Persist the hash before the receipt wait.
 - `autopilot/pivot/route.ts:139` / `burn/route.ts` — balance read then whole-balance pivot minutes later sweeps a *second* transfer's minted USDC into this row. Scope to the row's amount, not the address balance.
@@ -59,15 +77,80 @@ The tab must never be required after signing.
 - `broadcast-btc/route.ts:46` — mempool accepts but response lost → reported failure while BTC is in mempool → double-broadcast on retry. Idempotency by txid.
 
 ## Wave 4 — Single-provider on money paths (money: outage = stranded)
+
+> **STATUS: SHIPPED 2026-08-27, run 5** — explainer `100-explainer-no-single-provider.html`.
+> Every money path is pooled: both server signers, both autopilot routes, the balance reads
+> that size a burn/pivot, the relayer transport (keyed URL first, then public fallbacks), the
+> LI.FI ETH leg, the BTC broadcast (mempool.space → Blockstream), and the Horizon read that
+> verifies a funding move (2 retries with backoff — a rate-limit blip used to report a
+> COMPLETED move as failed, causing a double move). Verified structurally: no bare
+> `transport: http()` remains under server/, lib/ or the API routes.
+> **Deliberately deferred:** `normal-wallet-setup.ts` still derives "ready" from an absolute
+> balance (the second funding entry point). Not patched here on purpose — phase 0c's run page
+> folds wallet setup into the swap's own step list and removes that path entirely.
 - `server/autopilot-*.ts`, `autopilot/*/route.ts`, `executor.ts:53` — server CCTP paths use viem default `http()` (no key, no fallback) while client paths use fallback lists. Route them through `evmFallbackTransport`/`baseFallbackTransport`.
 - `lifi/execute.ts:93,303` + `broadcast-btc` — LI.FI ETH leg + BTC broadcast are single-endpoint. Add fallbacks / a second BTC relay.
 - `normal-wallet-setup.ts:57` + `use-send-token.ts` — funding move + verification on one Horizon, no retry. Add retry/fallback.
 
 ## Wave 5 — Amount & accounting truth (money-low, silent)
+
+> **STATUS: SHIPPED 2026-08-27, run 6** — explainer `101-explainer-accounting-truth.html`.
+> Outbound rows now record LI.FI's REPORTED delivered amount via a new `dstAmountFinal` PATCH
+> field that is allowed to OVERWRITE (the set-once `dstAmount` guard stays for estimate-vs-estimate
+> races; it was rejecting fact-corrects-estimate). Parsing lives in `lib/cctp/delivered-amount.ts`
+> (8 tests) and returns `null` — keep the quoted figure — rather than ever writing a guess.
+> Funding move now `toFixed(6)` to match CCTP wire precision (was 7 → ≤0.0000009 USDC stranded;
+> the real value is that "did the funding land?" becomes exact arithmetic). Embedded-fee accounting
+> closed at both ends: `Number.isFinite` on the client (`NaN <= 0` is FALSE, so a non-numeric fee
+> sailed through and became `amount: "NaN"`), and server-side `embeddedFeeAmount()` — an unusable
+> figure now returns 409 `embedded_unavailable` and falls back to the fee pair instead of recording
+> the swap as fee-free while Soroswap still took its cut.
+> **Checked, NOT a bug:** `state.ts` inbound `dstAmount = wireToUsdc(amountWire)` is already the
+> truth — `CCTP_MAX_FEE = 0n` + finality 2000 is Circle's STANDARD transfer, which mints 1:1
+> (verified in `lib/cctp/config.ts`, not assumed).
+> **Left open on purpose:** `swap_logs.amountOut` stays the QUOTED output on the Stellar path —
+> the realized figure means parsing the Soroban return value, shaped differently per protocol
+> (soroswap/phoenix/aqua/sdex). Code now says so in a comment; tracked for a later wave.
+> **Residue:** closing the tab between the final leg broadcasting and the bridge confirming
+> delivery leaves that row on the quoted minimum (only the browser watches that window) — phase 0c's
+> run page removes it.
+> **Also:** `server/request-gate.test.ts` spacing case was wall-clock-timed and went flaky
+> (expected >=20ms, got 16 under load). Rewritten against the gate's injectable clock to assert the
+> exact waits `[30, 60]`; 5 consecutive green runs.
 - dstAmount written from the *quoted min* and set-once-guarded so the real delivered amount never replaces it (`state.ts:145`, `autopilot/pivot/route.ts:148`) — Activity + Dune under-report every swap by the slippage.
 - positive-slippage left on Base (`use-cctp-engine.tsx:725`); 7dp-vs-6dp funding dust (`:1130`); `swap_logs.amountOut` stores the estimate not the realized (`use-swap.tsx:393`); embedded fee `NaN`/0 accounting (`quote/route.ts:246`, `use-swap.tsx:323`).
 
 ## Wave 6 — Guards & quotes that fail open (money/UX)
+
+> **STATUS: SHIPPED 2026-08-27, run 7** — explainer `102-explainer-guards-that-fail-open.html`.
+> Theme: every one of these answered "I cannot tell" with YES. Fixed:
+> (1) **quote expiry** — `lib/lifi/quote-freshness.ts` (9 tests): quotes stamped at build,
+> re-fetched on execute past 10 min, >1% worse output requires a second explicit press; unknown
+> age counts as STALE. This is the only Wave 6 item that can lose coins (stale BTC quote pays into
+> an expired Chainflip deposit channel — no failover, no auto-refund, outside our state machine).
+> (2) **XLM Soroban fee gate** — `canPaySorobanFee` + `maxXlmForSorobanSwap` (6 tests): Soroban
+> fees are 0.05–0.5+ XLM but only the 0.0002 classic fee was held back, so MAX-XLM and low-XLM
+> USDC swaps failed on-chain AFTER two signatures. Button now blocks with "Add XLM to cover the
+> network fee"; the check counts the XLM the swap itself sends, so it is right in both directions.
+> (3) **zero-fee EIP-1559 refused** — quoted fee missing + estimateFeesPerGas failed = both sides
+> of the max() are 0; that tx never mines AND never errors (the worst of the three outcomes).
+> (4) **BTC spend cap is mandatory** — the caller's `catch { return undefined }` disabled the cap,
+> so an unparseable quote was the off switch for the Bitcoin spend limit; caller and signer both
+> throw now. The `allInputsOurs === false` skip STAYS (legitimate: LI.FI may combine another
+> party's UTXOs, so the arithmetic would be wrong, not lenient — the per-input loop still refuses
+> anything it cannot classify).
+> (5) **gas-shortfall guard retries** the balance read instead of skipping on one failure.
+> (6) **typed full balance** now honours the BTC/SOL fee reserve (was MAX-only) — one `spendable`
+> expression shared by the guard and MAX. **ROUND_DOWN** on the quote amount (BigNumber's default
+> ROUND_HALF_UP could ask for one wire unit more than the wallet holds).
+> (7) **`ensureChainAccount` strict lookup** — best-effort returned null on a failed request, which
+> that function reads as "user has no wallet yet" → new passkey + NEW sub-org beside the existing
+> wallet. Now `getTurnkeyWalletInfoStrict` (throws), so a blip is a retryable failure.
+> **CHECKED, NOT CHANGED:** `fees/execute-pair` 15-min window. It already refuses a pair with <60s
+> runway, and the built XDR carries Soroswap's `otherAmountThreshold` (min-out) — VERIFIED: the
+> build payload passes the whole quote object, not just the amounts. So a late broadcast at a moved
+> price FAILS on-chain rather than filling badly; exposure is a wasted network fee, not a bad fill.
+> Shortening the window would refuse more legitimate swaps to save a rare fee — the worse trade.
 - `lifi/execute.ts:130,143,267` — zero-fee EIP-1559 signed (fees rejected → 0), gas-shortfall guard skipped on RPC hiccup, PSBT rule-check passes on a parse failure.
 - `use-lifi-engine.tsx:222` + `:146,191` — **no quote expiry** (stale quote → closed Chainflip channel / reverting deadline); typed full-balance BTC/SOL bypasses the reserve guard; `ROUND_HALF_UP` can quote 1 unit over balance.
 - `use-soroswap-engine.tsx:138` + `stellar-reserve.ts:14` — no XLM-for-fees gate on Stellar swaps; MAX XLM holds back only 0.0002 XLM, not the real Soroban fee → guaranteed fail after two signatures.
@@ -75,6 +158,36 @@ The tab must never be required after signing.
 - `add-account.ts:116` — wallet setup uses best-effort info → transient blip loops a fresh passkey per lap (should use the Strict variant).
 
 ## Wave 7 — Copy collisions & honest failure (UX)
+
+> **STATUS: SHIPPED 2026-08-27, run 8 — ALL SEVEN WAVES NOW COMPLETE.** Explainer
+> `103-explainer-saying-the-right-thing.html`.
+> (1) **The copy collision** — the progress modal ran a SECOND classifier over text the engine had
+> already made friendly, and its bare `/network/` pattern rewrote "Not enough ETH left to pay the
+> NETWORK fee" into "the network did not answer — try again": advice for a retry that cannot
+> succeed. The modal no longer re-classifies; the decision is `sections/swap/cctp-failure-copy.ts`
+> (5 tests, one of them the exact live sentence) and keeps only the CCTP-specific upgrade (on-chain
+> rejection → "your USDC is safe at your own address, retry or bring it back").
+> (2) **Funding step painted red though it SUCCEEDED** — the stage stayed on 'funding' through the
+> row creation, so any later failure marked the step that had worked. `setStage('burn-prepare')`
+> the moment funding lands.
+> (3) **Dead Bring-back button** — offered on ANY outbound failure, including before any USDC
+> reached Base; with no row yet the handler hit `if (!failedId) return` and the click did NOTHING.
+> Now gated on stage ∈ {topup, pivot-swap, delivering} AND a real transfer id.
+> (4) **Cron auth failed open** — all four routes used `if (CRON_SECRET) { check }`, so an UNSET
+> secret skipped the check and left fee-sweep/bridge-advance publicly callable. `server/cron-auth.ts`
+> (6 tests): 401 on a bad token, **503 + log** when unconfigured in production, permissive only in
+> development.
+> (5) **One cookie, two defaults** — 16 routes each supplied their own fallback for `normal-network`
+> (cctp/quote, cctp/transfers, send/execute said 'mainnet'; the rest 'testnet'), and the cookie is
+> absent on a FIRST VISIT — so one user's swap quote was testnet while their CCTP row was mainnet.
+> All now derive from `getCurrentNetwork()` via `server/network-cookie.ts`; the junk-value `as
+> NetworkType` cast is replaced by a validating parser (`utils/network-value.ts`, 3 tests).
+> (6) **LIFI_DENY_EXCHANGES="" is no longer silent** — the escape hatch stays (it is documented),
+> but an empty blocklist now logs a warning naming what is unprotected.
+> **DOC 95 WAS WRONG on the fee-pair item:** the 40s give-up does NOT lack reconciliation —
+> `reconcileTxRecords()` probes every non-terminal record and settles it confirmed/failed/abandoned,
+> called by the `fee-escrow-sweep` cron. The real history is that that cron had NEVER RUN, which
+> looks identical from outside and is already fixed by the scheduler. No code change.
 - Triple `friendlyAppError` application collapsing our own messages to the generic; `cctp-progress-modal.tsx:98` re-maps "not enough ETH/XLM for the fee" into "network didn't answer — try again" (tells users to retry a guaranteed failure); `fee-pair.ts:143` 40s give-up with no reconciliation; funding-fail state paints the *succeeded* step red and offers a dead Bring-back button.
 - config doors: `LIFI_DENY_EXCHANGES=""` silently disables the fly blocklist; network-cookie default mismatch (testnet vs mainnet) on first visit; `CRON_SECRET` unset = open cron.
 

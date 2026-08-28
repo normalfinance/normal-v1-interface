@@ -4,10 +4,12 @@ import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/with-auth';
 import { wireToUsdc } from '@/lib/cctp/decimals';
+import { scopedAmountWire } from '@/lib/cctp/amounts';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { autopilotBurnUsdc } from '@/server/autopilot-burn';
 import { autopilotEnabled } from '@/server/autopilot-signer';
 import { ensureTransferGas } from '@/server/cctp-transfer-gas';
+import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 
 // #33 Stage 3 payoff — the server-side inbound burn. Called by the engine
 // (or cron) once USDC lands on the user's Base address, INSTEAD of prompting
@@ -77,12 +79,14 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     }
 
     // Burn whatever actually landed (mirrors the banner's recover()).
-    const { http, erc20Abi, createPublicClient } = await import('viem');
+    const { erc20Abi, createPublicClient } = await import('viem');
     const { base, baseSepolia } = await import('viem/chains');
     const network = tr.network === 'mainnet' ? 'mainnet' : 'testnet';
     const client = createPublicClient({
       chain: network === 'mainnet' ? base : baseSepolia,
-      transport: http(),
+      // Doc 95 Wave 4: fallback list, not viem's default public RPC — this
+      // read decides how much money the leg moves.
+      transport: await evmFallbackTransport('base', network),
     });
     const { EVM_USDC } = await import('@/lib/cctp/config');
     const bal = await client.readContract({
@@ -92,6 +96,13 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       args: [tr.srcAddress as `0x${string}`],
     });
     if (bal === 0n) {
+      return NextResponse.json({ success: false, error: 'No USDC on Base yet' }, { status: 409 });
+    }
+    // Doc 95 Wave 3 (live 2026-08-26): this used to burn the WHOLE balance,
+    // so when two swaps landed together one row's burn swept the other's
+    // minted USDC and orphaned it. Take only this row's share.
+    const burnWire = scopedAmountWire(bal as bigint, BigInt(tr.amountWire));
+    if (burnWire === 0n) {
       return NextResponse.json({ success: false, error: 'No USDC on Base yet' }, { status: 409 });
     }
 
@@ -120,8 +131,20 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       chain: 'base',
       subOrgId: wallet.subOrgId,
       evmAddress: tr.srcAddress,
-      amountWire: bal,
+      amountWire: burnWire,
       stellarRecipient: tr.destAddress,
+      // Doc 95 Wave 3: persist the hash the moment it is broadcast. A
+      // receipt-wait failure used to discard a real burn, after which the
+      // engine signed a SECOND one.
+      onBroadcast: async (hash, label) => {
+        if (label !== 'depositForBurnWithHook') return;
+        await prisma.cctpTransfer
+          .updateMany({
+            where: { id: tr.id, burnTxHash: null },
+            data: { burnTxHash: hash, status: 'BURN_SUBMITTED' },
+          })
+          .catch(() => {});
+      },
     });
 
     // Mirror the PATCH route exactly: the hash lands ONCE, and the status flip
@@ -133,7 +156,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       data: {
         burnTxHash,
         status: 'BURN_SUBMITTED',
-        ...(tr.dstAmount ? {} : { dstAmount: wireToUsdc(bal) }),
+        ...(tr.dstAmount ? {} : { dstAmount: wireToUsdc(burnWire) }),
       },
     });
 

@@ -49,10 +49,16 @@ export function deriveSetupStep(
   return 'ready';
 }
 
-/** One Horizon read → everything deriveSetupStep needs. 404 = not activated. */
+/** One Horizon read → everything deriveSetupStep needs. 404 = not activated.
+ *
+ *  Doc 95 Wave 4: a single Horizon with no retry decided whether a funding
+ *  move had landed. A rate-limit window turned a COMPLETED move into "not
+ *  completed" — and the user's retry moved the money a second time. Transient
+ *  failures now get two more attempts before the caller is told anything. */
 export async function probeCompanion(
   address: string,
-  config: NetworkConfig
+  config: NetworkConfig,
+  attempt = 0
 ): Promise<CompanionProbe> {
   const server = new Horizon.Server(config.HORIZON_URL, {
     allowHttp: config.HORIZON_URL.startsWith('http://'),
@@ -72,6 +78,15 @@ export async function probeCompanion(
   } catch (e: any) {
     if (e?.response?.status === 404 || e?.name === 'NotFoundError') {
       return { exists: false, hasUsdcTrustline: false, xlmBalance: 0, usdcBalance: 0 };
+    }
+    // Doc 95 Wave 4: a transient Horizon failure (rate limit, replica blip)
+    // must not be reported as fact — this answer decides whether a funding
+    // move landed, and a wrong "no" makes the user move the money twice.
+    if (attempt < 2) {
+      await new Promise((r) => {
+        setTimeout(r, 1200 * (attempt + 1));
+      });
+      return probeCompanion(address, config, attempt + 1);
     }
     throw e;
   }

@@ -3,10 +3,11 @@
 import type { ChainAddresses } from '@/lib/chains/registry';
 
 import { describePsbt } from '@/lib/lifi/psbt-debug';
+import { SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { runWebauthnCeremony } from '@/lib/turnkey/webauthn-guard';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
-import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 
 // ---------------------------------------------------------------------------
 // Executes a LI.FI quote's transactionRequest on the source chain, signed by
@@ -86,11 +87,17 @@ async function executeEvm(
   ethereumAddress: string,
   subOrgId: string
 ): Promise<string> {
-  const { http, createPublicClient, serializeTransaction } = await import('viem');
+  const { createPublicClient, serializeTransaction } = await import('viem');
   const { mainnet } = await import('viem/chains');
 
   const tx = quote.transactionRequest;
-  const client = createPublicClient({ chain: mainnet, transport: http(ETH_RPC_URL) });
+  // Doc 95 Wave 4: nonce, gas, balance AND the broadcast all ran through one
+  // endpoint — an outage there killed every ETH-source swap, some of them
+  // after the user had already signed.
+  const client = createPublicClient({
+    chain: mainnet,
+    transport: await evmFallbackTransport('ethereum', 'mainnet'),
+  });
   log('ETH: fetching nonce + gas');
   const nonce = await client.getTransactionCount({
     address: ethereumAddress as `0x${string}`,
@@ -129,6 +136,17 @@ async function executeEvm(
     : null;
   const maxFeePerGas = max(BigInt(tx.maxFeePerGas ?? '0'), liveFees?.maxFeePerGas ?? 0n);
 
+  // Doc 95 Wave 6: if LI.FI omitted a fee AND estimateFeesPerGas failed, both
+  // sides of that max() are 0 — and we would sign a transaction offering the
+  // network nothing. It never mines and never fails either: it just sits,
+  // which is the worst outcome of the three, because no error is raised for
+  // anything to react to. Refuse instead, and say which side is missing.
+  if (!legacyPrice && maxFeePerGas === 0n) {
+    throw new Error(
+      'Could not determine a network fee for this swap — the network did not respond with a gas price. Nothing was signed; please try again.'
+    );
+  }
+
   // Dynamic-gas layer 2 (Niko GO 2026-08-21): run the node's own admission
   // rule (balance ≥ value + gas×price) LOCALLY, before the passkey ceremony.
   // A gas spike between quote and now used to surface as the node's raw
@@ -137,9 +155,17 @@ async function executeEvm(
   // offer the affordable amount instead of an error. Balance-read failure
   // skips the check (the node still enforces it — this is UX, not custody).
   const { computeAffordability, GasShortfallError } = await import('@/lib/lifi/gas-shortfall');
-  const balanceWei = await client
-    .getBalance({ address: ethereumAddress as `0x${string}` })
-    .catch(() => null);
+  // Doc 95 Wave 6: one failed read used to skip the whole check, so a gas
+  // spike surfaced as the node's raw "insufficient funds" dump AFTER the
+  // passkey. The transport is already a fallback pool (Wave 4), so a second
+  // attempt costs little and usually lands on a different provider.
+  let balanceWei: bigint | null = null;
+  for (let attempt = 0; attempt < 2 && balanceWei === null; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 400));
+    balanceWei = await client
+      .getBalance({ address: ethereumAddress as `0x${string}` })
+      .catch(() => null);
+  }
   if (balanceWei !== null) {
     const check = computeAffordability({
       balanceWei,
@@ -156,51 +182,83 @@ async function executeEvm(
     }
   }
 
-  const unsigned = legacyPrice
-    ? serializeTransaction({
-        ...common,
-        type: 'legacy',
-        gasPrice: legacyPrice,
-      })
-    : serializeTransaction({
-        ...common,
-        type: 'eip1559',
-        maxFeePerGas,
-        maxPriorityFeePerGas: max(
-          BigInt(tx.maxPriorityFeePerGas ?? '0'),
-          liveFees?.maxPriorityFeePerGas ?? 0n
-        ),
-      });
+  const buildUnsigned = (useNonce: number) =>
+    legacyPrice
+      ? serializeTransaction({
+          ...common,
+          nonce: useNonce,
+          type: 'legacy',
+          gasPrice: legacyPrice,
+        })
+      : serializeTransaction({
+          ...common,
+          nonce: useNonce,
+          type: 'eip1559',
+          maxFeePerGas,
+          maxPriorityFeePerGas: max(
+            BigInt(tx.maxPriorityFeePerGas ?? '0'),
+            liveFees?.maxPriorityFeePerGas ?? 0n
+          ),
+        });
 
   const turnkey = await getTurnkeyClient();
-  log('ETH: requesting passkey signature');
-  // Serialized + fast-fail-retried like every other passkey ceremony (#51 —
-  // this path was missed in the original guard rollout and failed live with
-  // WebAuthn NotAllowedError, 2026-08-14).
-  const signResult = await runWebauthnCeremony(() =>
-    turnkey.signTransaction({
-      type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
-      timestampMs: String(Date.now()),
-      organizationId: subOrgId,
-      parameters: {
-        signWith: ethereumAddress,
-        unsignedTransaction: unsigned.startsWith('0x') ? unsigned.slice(2) : unsigned,
-        type: 'TRANSACTION_TYPE_ETHEREUM',
-      },
-    })
-  );
-  const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
-  if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
 
-  log('ETH: broadcasting');
-  // Return as soon as the tx is broadcast — the status modal tracks the
-  // receipt + bridge non-blockingly (a dropped/underpriced tx surfaces there
-  // as "Failed", not as a frozen button).
-  const hash = await client.sendRawTransaction({
-    serializedTransaction: (signedTx.startsWith('0x')
-      ? signedTx
-      : `0x${signedTx}`) as `0x${string}`,
-  });
+  // Doc 95 Wave 3: the nonce is read up here, then gas/balance checks and a
+  // 10-30s passkey ceremony happen before the broadcast. Anything else this
+  // wallet sends meanwhile (a CCTP leg, a second tab) claims it first and the
+  // swap dies with "nonce too low". Rebuild with a fresh nonce and re-sign —
+  // the extra prompt is unavoidable, because the signature covers the nonce.
+  let hash: `0x${string}` | null = null;
+  for (let attempt = 0; hash === null; attempt++) {
+    const useNonce =
+      attempt === 0
+        ? nonce
+        : await client.getTransactionCount({
+            address: ethereumAddress as `0x${string}`,
+            blockTag: 'pending',
+          });
+    const unsigned = buildUnsigned(useNonce);
+
+    log(attempt === 0 ? 'ETH: requesting passkey signature' : 'ETH: nonce race — re-signing');
+    // Serialized + fast-fail-retried like every other passkey ceremony (#51 —
+    // this path was missed in the original guard rollout and failed live with
+    // WebAuthn NotAllowedError, 2026-08-14).
+    const signResult = await runWebauthnCeremony(() =>
+      turnkey.signTransaction({
+        type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
+        timestampMs: String(Date.now()),
+        organizationId: subOrgId,
+        parameters: {
+          signWith: ethereumAddress,
+          unsignedTransaction: unsigned.startsWith('0x') ? unsigned.slice(2) : unsigned,
+          type: 'TRANSACTION_TYPE_ETHEREUM',
+        },
+      })
+    );
+    const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
+    if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
+
+    log('ETH: broadcasting');
+    // Return as soon as the tx is broadcast — the status modal tracks the
+    // receipt + bridge non-blockingly (a dropped/underpriced tx surfaces there
+    // as "Failed", not as a frozen button).
+    try {
+      hash = await client.sendRawTransaction({
+        serializedTransaction: (signedTx.startsWith('0x')
+          ? signedTx
+          : `0x${signedTx}`) as `0x${string}`,
+      });
+    } catch (sendErr: any) {
+      const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
+      if (
+        attempt === 0 &&
+        /nonce too low|already known|replacement transaction underpriced/i.test(m)
+      ) {
+        continue;
+      }
+      throw sendErr;
+    }
+  }
   log('ETH: broadcast hash', hash);
   return hash;
 }
@@ -294,13 +352,27 @@ async function executeBtc(
         bitcoinAddress,
         subOrgId,
         turnkey,
-        // Doc 95 Wave 2: the PSBT must pay the bridge at least what we quoted.
+        // Doc 95 Wave 2: the PSBT may not spend materially more than we
+        // quoted. Wave 6: this used to fall back to `undefined` on a parse
+        // failure — and `undefined` SKIPS the cap entirely, so the one input
+        // that could disable the Bitcoin spend limit was a malformed quote.
+        // A cap we cannot compute is a reason to stop, not to sign.
         (() => {
+          const raw = quote.action?.fromAmount;
+          let sat: bigint;
           try {
-            return BigInt(quote.action.fromAmount);
+            sat = BigInt(raw as string);
           } catch {
-            return undefined;
+            throw new Error(
+              `Refusing to sign: the quote's amount (${String(raw)}) is unreadable, so the spend limit cannot be checked`
+            );
           }
+          if (sat <= 0n) {
+            throw new Error(
+              'Refusing to sign: the quote reports a zero amount, so the spend limit cannot be checked'
+            );
+          }
+          return sat;
         })()
       )
     );

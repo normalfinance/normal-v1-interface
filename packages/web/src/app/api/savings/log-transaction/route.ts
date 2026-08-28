@@ -6,6 +6,7 @@ import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
+import { networkFromCookie } from '@/server/network-cookie';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import { invalidateSavingsPositionCache } from '@/server/tx-records';
 
@@ -93,7 +94,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     // so it is correct even while DeFindex's indexer is still behind. The
     // events cache deliberately stays: reconciliation makes its staleness safe.
     const cookieStore = await cookies();
-    const network = cookieStore.get('normal-network')?.value ?? 'testnet';
+    const network = networkFromCookie(cookieStore);
     await invalidateSavingsPositionCache(walletAddress, network);
 
     return NextResponse.json({ success: true });
