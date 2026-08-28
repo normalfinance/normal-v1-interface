@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { buildAuthHeaders } from '@/utils/http';
 import { useMemo, useEffect, useCallback } from 'react';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { nextReadDelayMs, MAX_REFRESH_ATTEMPTS } from '@/lib/portfolio/refresh-retry';
 import {
   pickNewerPayload,
   portfolioCacheKey,
@@ -66,6 +67,13 @@ export interface UseWalletBalancesResult {
   companionStellar: { address: string; assets: PortfolioAsset[] } | null;
 }
 
+// One activity-refresh loop per SWR key at a time, APP-WIDE. ~23 mounted
+// instances of this hook hear the same nf:activity-updated event; without
+// this latch each fired its own fetch and all but the first were floored
+// copies fighting over the shared cache. Every instance reads the same key,
+// so one loop serves every surface.
+const activityRefreshInFlight = new Set<string>();
+
 export function useWalletBalances(enabled = true): UseWalletBalancesResult {
   const { wallet } = usePersistStore();
   const network = useNetworkStore((s) => s.network);
@@ -119,34 +127,65 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
     keepPreviousData: true,
   });
 
-  // Refresh promptly after a send/swap/off-ramp settles — with `refresh=1`, so
-  // the server's 15s response cache is skipped for this one fetch and the new
-  // balance is actually new (the route floors the bypass server-side). Seeded
-  // back into SWR without revalidating, mirroring the activity hook's pattern.
+  // Refresh promptly after a send/swap/savings action settles — with
+  // `refresh=1`, so the server's 15s response cache is skipped and the new
+  // balance is actually new. Two hard-won rules compose on every seed:
+  // pickNewerPayload (a stale straggler can never overwrite a fresher read)
+  // and fillErroredFromKnown (a failed chain source can never flash a known
+  // balance to zero).
+  //
+  // Live 2026-08-28 (savings withdraw): the old handler read ONCE. When that
+  // one read landed inside another refresh's 5s bypass floor it silently got
+  // the 15s cache — pre-withdraw balances — and nothing re-read until the 30s
+  // poll. The drawer sat stale while the savings card, polling on its own
+  // cadence, moved on: two surfaces, two clocks. A floored read proves
+  // nothing, so it now earns a bounded retry (the same tested rules the
+  // post-swap gate uses); a real read ends the loop immediately.
   useEffect(() => {
     const handler = () => {
       if (!swrKey) return;
-      // No-clobber seed (live 2026-08-28): this fires in EVERY mounted
-      // instance of this hook (~23 across the app), 800ms after the event —
-      // usually BEFORE the ledger settles, so the data is pre-action. Seeding
-      // the raw promise let whichever fetch resolved LAST own the screen, and
-      // a stale straggler could overwrite the post-swap gate's fresh read.
-      // pickNewerPayload makes arrival order irrelevant.
-      // Two rules compose here: the newer aggregation wins (pickNewerPayload),
-      // and whatever wins has its error-holes patched with balances we already
-      // know (fillErroredFromKnown) — a failed chain read must show as a stale
-      // known number, never flash a zero.
-      setTimeout(
-        () =>
-          mutate(
-            async (current) => {
-              const fresh = pickNewerPayload(current, await fetchPayload(swrKey, true));
-              return { ...fresh, ...fillErroredFromKnown(fresh, current) };
-            },
-            { revalidate: false }
-          ),
-        800
-      );
+      const key = swrKey;
+      setTimeout(async () => {
+        if (activityRefreshInFlight.has(key)) return; // one loop per event burst
+        activityRefreshInFlight.add(key);
+        try {
+          for (let attempt = 1; attempt <= MAX_REFRESH_ATTEMPTS; attempt += 1) {
+            let fetched: (PortfolioPayload & { floored?: boolean; retryAfterMs?: number }) | null =
+              null;
+            try {
+              fetched = await fetchPayload(key, true);
+            } catch {
+              /* transient — a failed read proves nothing; retry below */
+            }
+            if (fetched) {
+              const got = fetched;
+              await mutate(
+                (current) => {
+                  const fresh = pickNewerPayload(current, got);
+                  return { ...fresh, ...fillErroredFromKnown(fresh, current) };
+                },
+                { revalidate: false }
+              );
+              // A real (non-floored) read IS the answer — done. Only a
+              // floored copy earns another attempt.
+              if (!got.floored) return;
+            }
+            if (attempt < MAX_REFRESH_ATTEMPTS) {
+              await new Promise((r) => {
+                setTimeout(
+                  r,
+                  nextReadDelayMs({
+                    floored: !!fetched?.floored,
+                    retryAfterMs: fetched?.retryAfterMs,
+                  })
+                );
+              });
+            }
+          }
+        } finally {
+          activityRefreshInFlight.delete(key);
+        }
+      }, 800);
     };
     window.addEventListener('nf:activity-updated', handler);
     return () => window.removeEventListener('nf:activity-updated', handler);

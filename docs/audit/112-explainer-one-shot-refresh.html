@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The One-Shot Refresh</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.bad { border-left-color:#991b1b; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>The One-Shot Refresh</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 17 &mdash; savings
+deposit/withdraw updated the savings card instantly, but the drawer&rsquo;s USDC lagged.</p>
+
+<h2>1 &middot; What was actually happening</h2>
+<p>The savings flow does everything right: it waits for the transaction to confirm on-chain,
+updates its own position optimistically, and then announces on the shared balance channel
+(<code>nf:activity-updated</code>) — the same event every swap and send uses.</p>
+<p>The gap was in the <em>listener</em>. The shared balance hook heard the event and made
+<strong>exactly one</strong> fresh read, 800ms later. But fresh reads are floored server-side —
+once per 5 seconds per user — and a savings action triggers several reads around the same moment
+(vault info, position, the activity feed). If the hook&rsquo;s one read landed inside someone
+else&rsquo;s floor window, it silently received the <strong>15-second cache: pre-withdraw
+balances</strong> — and then nothing asked again until the 30-second background poll.</p>
+<div class="box bad"><div class="label">Why the two surfaces disagreed</div>
+The savings card runs its own account poll every 2.5 seconds, so it caught up almost instantly.
+The drawer depends entirely on that one-shot event read. Two surfaces, two clocks — the same
+disease as every bug this week, in yet another spot.</div>
+
+<h2>2 &middot; The fix — and a free win</h2>
+<p>The listener now runs a <strong>bounded retry loop</strong> built from the same tested rules
+the post-swap gate uses: a real (non-floored) read ends the loop immediately; a floored read
+proves nothing, so it waits exactly the floor&rsquo;s remaining time (the server reports it) and
+asks again — up to 3 attempts, then the background poll owns it. Worst realistic case is a few
+seconds, not thirty.</p>
+<p>The free win: this hook is mounted in ~23 components, and every one of them used to fire its
+own fetch on every event — a herd of requests where all but the first were floored copies. The
+loop is now latched <strong>app-wide per event</strong>: one loop, one to three requests total,
+serving every surface through the shared cache. Less traffic, and no herd for the floor to feed
+stale copies to.</p>
+<pre>before: ~23 parallel one-shot reads → first one real, rest floored → maybe stale for 30s
+after:  1 loop → real read ends it; floored read retried with exact timing → seconds</pre>
+
+<h2>3 &middot; Honest note on tests</h2>
+<p>The decision rules this loop uses (<code>nextReadDelayMs</code>, the attempt cap, the
+no-clobber and keep-known-balance seeds) are all already unit-tested from the earlier runs. The
+loop itself is thin glue inside a React effect — it is exercised by the existing suite compiling
+and by QA R73, not by a new unit test, because mocking SWR + window events would test the mock
+more than the code.</p>
+
+<h2>4 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R73</span></td>
+      <td>With the account drawer open, withdraw from Normal Savings; then deposit. Watch the
+      drawer&rsquo;s USDC row.</td>
+      <td>It updates within a few seconds of the success toast — never a ~30s wait. The savings
+      card and the drawer now tell the same story at the same time.</td></tr>
+  <tr><td>2</td>
+      <td>In the network tab, count <code>/api/wallet/portfolio?refresh=1</code> requests right
+      after any swap/send/savings action.</td>
+      <td>One to three — not twenty-odd near-simultaneous ones.</td></tr>
+</table>
+
+<h2>5 &middot; Commit</h2>
+<p><code>fix(portfolio): the activity refresh retries floored reads — one loop app-wide</code>
+(full message in chat).</p>
+
+</body>
+</html>
