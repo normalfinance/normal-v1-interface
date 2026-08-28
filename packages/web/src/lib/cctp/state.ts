@@ -16,6 +16,7 @@ import type { CctpTransfer } from '@prisma/client';
 import type { NetworkType } from '@normalfinance/utils';
 
 import { prisma } from '@/lib/prisma';
+import { lifiSourceVerdict } from '@/lib/cctp/lifi-verdict';
 
 import { IrisClient } from './iris';
 import { wireToUsdc } from './decimals';
@@ -40,6 +41,45 @@ export async function advanceTransfer(transfer: CctpTransfer): Promise<CctpTrans
 
   try {
     switch (transfer.status) {
+      // Niko 2026-08-28: an inbound row whose SOURCE leg reverted on-chain
+      // stayed CREATED forever — the banner kept offering "finish once it
+      // arrives" for money that provably never moved, and Try again dead-
+      // ended on "No USDC found on Base". Every advance pass (the banner's
+      // 30s poke, the cron) now asks LI.FI and retires the ghost, so the
+      // banner clears without the user doing anything.
+      case 'CREATED': {
+        if (
+          transfer.direction !== 'crosschain_to_stellar' ||
+          !transfer.srcSwapTxHash ||
+          transfer.burnTxHash
+        )
+          break;
+        const vres = await fetch(
+          `https://li.quest/v1/status?txHash=${encodeURIComponent(transfer.srcSwapTxHash)}`,
+          {
+            cache: 'no-store',
+            signal: AbortSignal.timeout(15_000),
+            headers: process.env.LIFI_API_KEY ? { 'x-lifi-api-key': process.env.LIFI_API_KEY } : {},
+          }
+        );
+        if (!vres.ok) break;
+        const vd = await vres.json();
+        const verdict = lifiSourceVerdict(vd?.status, vd?.substatus);
+        if (verdict) {
+          await prisma.cctpTransfer.updateMany({
+            where: { id: transfer.id, status: 'CREATED' },
+            data: {
+              status: 'FAILED',
+              errorDetail:
+                verdict === 'REFUNDED'
+                  ? 'Source swap refunded — funds returned to the sender; nothing was bridged'
+                  : 'Source transaction reverted on-chain — funds never left the sender; nothing was bridged',
+            },
+          });
+        }
+        break;
+      }
+
       case 'BURN_SUBMITTED':
       case 'BURN_CONFIRMED': {
         if (!transfer.burnTxHash) break;
@@ -214,6 +254,21 @@ export async function advancePendingTransfers(): Promise<{
     });
   }
 
+  // CREATED inbound rows WITH a source hash are excluded from
+  // PENDING_STATUSES on purpose (in-session rows belong to the modal) — but
+  // a reverted source leg leaves them as permanent ghosts. Sweep them through
+  // advanceTransfer, which retires any whose leg LI.FI reports terminal.
+  const ghosts = await prisma.cctpTransfer.findMany({
+    where: {
+      status: 'CREATED',
+      direction: 'crosschain_to_stellar',
+      srcSwapTxHash: { not: null },
+      burnTxHash: null,
+    },
+    orderBy: { createdAt: 'asc' },
+    take: 10,
+  });
+
   const pending = await prisma.cctpTransfer.findMany({
     where: { status: { in: [...PENDING_STATUSES] } },
     orderBy: { createdAt: 'asc' },
@@ -221,7 +276,7 @@ export async function advancePendingTransfers(): Promise<{
   });
 
   const byStatus: Record<string, number> = {};
-  for (const t of pending) {
+  for (const t of [...ghosts, ...pending]) {
     const after = await advanceTransfer(t);
     byStatus[after.status] = (byStatus[after.status] ?? 0) + 1;
   }

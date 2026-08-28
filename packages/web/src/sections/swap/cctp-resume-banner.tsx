@@ -296,7 +296,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   }, [user, refresh]);
 
   const patch = useCallback(
-    (id: string, headers: HeadersInit, body: Record<string, string>) =>
+    (id: string, headers: HeadersInit, body: Record<string, string | boolean>) =>
       fetch(`/api/cctp/transfers/${id}`, {
         method: 'PATCH',
         headers,
@@ -324,7 +324,33 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         if (phase === 'halt-receive') {
           // INBOUND: burn whatever USDC actually landed on the user's Base address.
           const bal = await readBaseUsdc(network, tr.srcAddress);
-          if (bal === 0n) throw new Error(t('No USDC found on Base — it may already be bridging.'));
+          if (bal === 0n) {
+            // Nothing on Base. Either the source leg is still in flight — or
+            // it FAILED on-chain and this row is a ghost. Ask the server
+            // (which re-verifies against LI.FI) which one it is, and retire
+            // the ghost instead of erroring at the user (Niko 2026-08-28:
+            // "No USDC found on Base" on a swap whose ETH provably never
+            // moved — three surfaces told three different stories).
+            const vres = await patch(tr.id, headers, { markSourceRefunded: true });
+            const row = vres?.ok ? (await vres.json().catch(() => null))?.transfer : null;
+            if (row?.status === 'FAILED') {
+              enqueueSnackbar(
+                t(
+                  'That swap had already failed on-chain — nothing was bridged and your funds never left your wallet. Removed it from in-flight.'
+                ),
+                { variant: 'info' }
+              );
+            } else {
+              enqueueSnackbar(
+                t(
+                  'USDC has not reached Base yet — the bridge is still working. This finishes by itself; nothing to do.'
+                ),
+                { variant: 'info' }
+              );
+            }
+            window.dispatchEvent(new Event('nf:activity-updated')); // re-read the list
+            return;
+          }
           // Doc 95 Wave 3: burn this row's share, not the whole address —
           // a sibling transfer's USDC may be sitting here too.
           const burnWire = scopedAmountWire(bal, BigInt(tr.amountWire));

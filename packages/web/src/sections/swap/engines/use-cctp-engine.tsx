@@ -227,6 +227,11 @@ export function useCctpEngine({
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [stage, setStage] = useState<CctpStage | null>(null);
   const [stageError, setStageError] = useState<string | null>(null);
+  // Niko 2026-08-28: a swap whose SOURCE leg ended without moving anything
+  // (on-chain revert / bridge refund) is not an error the user must act on.
+  // It renders as a quiet grey panel with a Close button — no red, no Try
+  // again — while stageError keeps owning the genuinely actionable failures.
+  const [calmEnding, setCalmEnding] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   // Bring-back-in-modal (Niko 2026-08-27): the refund runs INSIDE the popup
   // with its own checklist instead of closing it and delegating invisibly.
@@ -794,17 +799,24 @@ export function useCctpEngine({
                     setTimeout(r2, ARRIVAL_CAP_MS);
                   }),
                 ]);
-              throw new Error(
+              // Niko 2026-08-28: this is a CALM ending, not an alarm. The
+              // funds never moved (FAILED = the source tx reverted on-chain,
+              // REFUNDED = the bridge returned them), so the modal states the
+              // truth quietly — no red box, no Try again — and the retirement
+              // above makes the banner drop the row.
+              const calm: Error & { __calmEnd?: boolean } = new Error(
                 verdict === 'REFUNDED'
                   ? t(
-                      'The bridge could not complete and returned your {{sym}} — it is back in your wallet. Nothing was lost; you can try the swap again.',
+                      'The bridge could not complete and returned your {{sym}} — it is back in your wallet. Nothing was lost; you can simply start a new swap.',
                       { sym: fromSymbol }
                     )
                   : t(
-                      'The bridge could not complete this swap. Your {{sym}} stays at your own address — nothing was moved onward.',
+                      'The exchange rejected this swap on-chain — the transaction reverted, which usually means the price moved past its protection while it was being processed. Your {{sym}} never left your wallet; only the small network fee was spent. Get a fresh quote and swap again whenever you like.',
                       { sym: fromSymbol }
                     )
               );
+              calm.__calmEnd = true;
+              throw calm;
             }
           }
           if (Date.now() - started > 45 * 60_000)
@@ -1266,6 +1278,15 @@ export function useCctpEngine({
       else await runOutbound(data.id, amountWire);
     } catch (e: any) {
       console.error('[cctp engine] execute failed:', e); // surface stack
+      if (e?.__calmEnd) {
+        // Quiet truth, not alarm: funds are where they were and the row is
+        // retired server-side — tell the banner and the feed to re-read so
+        // the dead entry disappears without any user action.
+        setCalmEnding(String(e?.message ?? ''));
+        setActiveCctpTransfer(null);
+        window.dispatchEvent(new Event('nf:activity-updated'));
+        return;
+      }
       setStageError(
         isInsufficientGasError(e)
           ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
@@ -1687,6 +1708,7 @@ export function useCctpEngine({
           onEnableAutopilot={
             process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY ? () => setConsentOpen(true) : undefined
           }
+          calmEnding={calmEnding}
           refundStage={refundStage}
           refundNotice={refundNotice}
           onTryAgain={
@@ -1745,6 +1767,7 @@ export function useCctpEngine({
             cancelled.current = true;
             setModalOpen(false);
             if (stage === 'done') setStage(null);
+            setCalmEnding(null);
           }}
         />
       </>

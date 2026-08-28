@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { advanceTransfer } from '@/lib/cctp/state';
+import { lifiSourceVerdict } from '@/lib/cctp/lifi-verdict';
 import { pivotRevertDetail } from '@/lib/cctp/failure-class';
 
 export const dynamic = 'force-dynamic';
@@ -105,16 +106,14 @@ export const PATCH = withAuth(async (req, { user, params }) => {
       );
       if (res.ok) {
         const d = await res.json();
-        const st = d?.status as string | undefined;
-        const sub = String(d?.substatus ?? '').toUpperCase();
-        const terminal =
-          st === 'FAILED' ||
-          st === 'INVALID' ||
-          (st === 'DONE' && (sub === 'REFUNDED' || sub === 'PARTIAL'));
-        if (terminal) {
+        const verdict = lifiSourceVerdict(d?.status, d?.substatus);
+        if (verdict) {
           data.status = 'FAILED';
           if (!transfer!.errorDetail)
-            data.errorDetail = 'Source swap refunded or failed — nothing was bridged';
+            data.errorDetail =
+              verdict === 'REFUNDED'
+                ? 'Source swap refunded — funds returned to the sender; nothing was bridged'
+                : 'Source transaction reverted on-chain — funds never left the sender; nothing was bridged';
         }
       }
     } catch {
