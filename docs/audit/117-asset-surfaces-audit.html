@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Asset Surfaces Audit</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:980px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .fx { color:#1d4ed8; font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>The Asset Surfaces Audit</h1>
+<p class="subtitle">Branch <code>chore/console-hygiene</code>, 2026-08-28 &mdash; every surface
+that displays assets, checked for the hero-card failure class: a sticky loading flag blanking
+healthy data. Two more instances found and fixed.</p>
+
+<h2>1 &middot; What the audit looked for</h2>
+<p>Doc 116 established the class: <code>companionPositionLoading</code> is <em>deliberately</em>
+sticky (its &ldquo;still loading&rdquo; test is <code>data === undefined</code>, so error-retry
+gaps never flash a wrong $0) — but any surface that gates rendering on it without a bound will
+blank <strong>forever</strong> when the companion lookup dies. So the sweep traced every consumer
+of that flag, plus every asset surface&rsquo;s loading gate, error rendering, and empty state.</p>
+
+<h2>2 &middot; The verdict table — every surface</h2>
+<table>
+  <tr><th>surface</th><th>gate</th><th>verdict</th></tr>
+  <tr><td>Landing hero card</td><td><code>firstPaintDone</code> waits on all slices</td>
+      <td class="ok">capped at 8s in doc 116 ✓</td></tr>
+  <tr><td><strong>Portfolio page — hero</strong></td>
+      <td><code>loading={savingsLoading || balancesLoading}</code> — a LIVE flag, no
+      first-paint guard at all</td>
+      <td class="fx">FIXED — worse than the landing card: a stuck companion lookup would spin
+      this hero forever, even after every row painted, and a background failure could re-stick
+      it later. Now gated on the capped first paint, same as Holdings.</td></tr>
+  <tr><td><strong>Portfolio page — first-paint gate</strong></td>
+      <td>same twin <code>firstPaintDone</code> effect as the landing hero</td>
+      <td class="fx">FIXED — same 8s cap applied.</td></tr>
+  <tr><td><strong>Account drawer — savings row</strong></td>
+      <td><code>savingsFetching</code> = the sticky flags, uncapped</td>
+      <td class="fx">FIXED — the savings row&rsquo;s spinner could spin for eternity; capped at
+      8s, after which the drawer shows what it has.</td></tr>
+  <tr><td>Account drawer — token rows</td><td><code>walletBalances.isLoading</code></td>
+      <td class="ok">bounded (drops on error); rows also protected by the stale/keep-known-balance
+      rules from runs 13–14</td></tr>
+  <tr><td>Holdings card (portfolio)</td><td><code>!firstPaintDone && (…)</code></td>
+      <td class="ok">bounded expression + the new cap; has an error state with Retry (doc 90)</td></tr>
+  <tr><td>Holdings savings <em>row</em></td><td>row status <code>'loading'</code> from the sticky
+      flag</td>
+      <td class="warn">contained: one row can show a loading coin while the rest paints. Accepted
+      for now — a single spinning row is visible and honest enough; noted for the deferred
+      asset-surface polish.</td></tr>
+  <tr><td>Swap card balances / pickers</td><td>aggregate + placeholder tokens</td>
+      <td class="ok">protected by stale-fallback, keep-known-balance and the per-swap balance
+      gate</td></tr>
+  <tr><td>Send modal / onramp / offramp balance reads</td><td><code>useAccountStatus</code></td>
+      <td class="ok">its <code>finally</code> always clears loading; errors keep the last known
+      answer (doc 90 W3)</td></tr>
+  <tr><td>Searchbar token list</td><td>none</td>
+      <td class="ok">empty list while loading — cosmetic only, search just shows no rows for a
+      beat</td></tr>
+  <tr><td><strong>Asset details page (My Balance)</strong></td><td><em>none at all</em></td>
+      <td class="warn">KNOWN GAP, pre-existing and already on the deferred-polish list: it renders
+      a confident $0.00 total while tokens are still loading (or after an uncached failure). Not
+      a hang — it self-corrects when data lands — but it violates the &ldquo;never a confident
+      $0&rdquo; rule and deserves the doc-90 treatment when the asset-page polish happens. Left
+      unfixed deliberately; wiring a loading state through <code>useStellarTokens</code> touches
+      10 consumers and belongs in that scoped pass.</td></tr>
+</table>
+
+<h2>3 &middot; The pattern, stated once</h2>
+<div class="box"><div class="label">Rule for future surfaces</div>
+A loading flag that is deliberately sticky (holds through error retries so it never flashes wrong
+data) may gate a <em>row</em>, but any gate that couples it to OTHER data&rsquo;s rendering must
+be <strong>capped</strong>. Aesthetic &ldquo;paint together&rdquo; coupling is worth seconds,
+never an infinite blank. Three surfaces now carry the same 8-second cap: landing hero, portfolio
+page, drawer.</div>
+
+<h2>4 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R77</span></td>
+      <td>Hybrid account, devtools blocking <code>/api/turnkey/wallet</code>. Load the
+      <strong>portfolio page</strong>, then open the <strong>account drawer</strong>.</td>
+      <td>Portfolio hero and holdings paint within ~8s (previously: hero spinner forever); the
+      drawer&rsquo;s token rows show and its savings spinner stops within ~8s. Unblock the route
+      — savings values appear on the next refresh.</td></tr>
+  <tr><td>2</td><td>Normal use, nothing blocked.</td>
+      <td>No visible change anywhere — caps only fire when a slice fails to resolve.</td></tr>
+</table>
+
+<h2>5 &middot; Commit</h2>
+<p><code>fix(assets): cap every sticky loading gate — no surface blanks forever</code> (full
+message in chat).</p>
+
+</body>
+</html>
