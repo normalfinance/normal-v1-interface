@@ -46,6 +46,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { useSnackbar } from '@/components/template/snackbar';
 
+import { type Phase, bannerPhase } from './cctp-phase';
+
 type CrosschainSymbol = 'BTC' | 'ETH' | 'SOL';
 const NATIVE_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
 
@@ -67,27 +69,11 @@ interface TransferRow {
   errorDetail?: string | null;
 }
 
-type Phase = 'hidden' | 'auto' | 'halt-receive' | 'halt-finish';
-
-function rawPhase(tr: TransferRow): Phase {
-  if (tr.status === 'REFUNDED') return 'hidden';
-  const outbound = tr.direction === 'stellar_to_crosschain';
-  if (outbound) {
-    if (tr.dstSwapTxHash) return 'hidden'; // pivot done → settled
-    if (!tr.burnTxHash) return 'hidden'; // pre-burn, still in-session
-    if (tr.mintTxHash || tr.status === 'COMPLETED') return 'halt-finish'; // USDC on Base → pivot needed
-    // Bridging Stellar→Base: the pivot signature still follows, so this is NOT
-    // "no action needed". The progress modal owns it in-session; an orphaned one
-    // resurfaces as halt-finish (after grace) once the mint lands.
-    return 'hidden';
-  }
-  // inbound
-  if (tr.status === 'COMPLETED') return 'hidden'; // USDC delivered to Stellar
-  if (tr.burnTxHash) return 'auto'; // bridging Base → Stellar
-  if (tr.srcSwapTxHash) return 'halt-receive'; // USDC on Base, needs the burn
-  return 'hidden'; // pre-LI.FI delivery — nothing to recover yet
-}
-
+// Doc 111 (2026-08-28): the phase table lives in cctp-phase.ts, pure and
+// tested. Run 15 taught the state machine to retire dead rows (FAILED) and
+// the local classifier here, which predated such rows, kept showing them as
+// "finish once it arrives" — only REFUNDED/COMPLETED were hidden. Activity
+// said Failed while this banner said in-flight: never again.
 function phaseOf(tr: TransferRow, now: number): Phase {
   // No freshness grace (2026-08-26, second bite): hiding a "too fresh" halt
   // made the banner empty right after a reload, which also blinded the
@@ -95,7 +81,7 @@ function phaseOf(tr: TransferRow, now: number): Phase {
   // in-session duplication the grace guarded against is already prevented by
   // the activeId filter, which tracks the ACTUAL open modal.
   void now;
-  return rawPhase(tr);
+  return bannerPhase(tr);
 }
 
 async function readBaseUsdc(network: NetworkType, address: string): Promise<bigint> {
@@ -133,7 +119,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   // the failure modal so a halted transfer surfaces INSTANTLY (2026-08-26).
   const graceOffUntilRef = useRef(0);
   const phaseFor = (tr: TransferRow, now: number): Phase =>
-    now < graceOffUntilRef.current ? rawPhase(tr) : phaseOf(tr, now);
+    now < graceOffUntilRef.current ? bannerPhase(tr) : phaseOf(tr, now);
   const [busyId, setBusyId] = useState<string | null>(null);
   // "Safe in your Base account" is only said once we've SEEN the balance —
   // an undelivered (later refunded) leg was described as safely arrived
@@ -225,7 +211,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       const runResume = () => {
         const tr = transfersRef.current.find((x) => x.id === id2);
         if (!tr) return false;
-        const ph = rawPhase(tr);
+        const ph = bannerPhase(tr);
         // recoverRef: `recover` is declared below this effect; the ref keeps
         // the listener stable without a TDZ/order problem.
         if (ph === 'halt-receive' || ph === 'halt-finish') recoverRef.current?.(tr, ph);
@@ -251,7 +237,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       graceOffUntilRef.current = Date.now() + 5 * 60_000;
       const run = () => {
         const tr = transfersRef.current.find((x) => x.id === id2);
-        if (tr && rawPhase(tr) === 'halt-finish') {
+        if (tr && bannerPhase(tr) === 'halt-finish') {
           refundRef.current?.(tr);
           return true;
         }
