@@ -264,11 +264,9 @@ export async function fetchHoldingsSnapshot(savingsTvlUsd: number): Promise<Hold
     { chain: 'stellar', asset: 'USDC', wallets: stellarOk, total: usdcTotal },
   ].filter((h) => h.total > 0);
 
-  return buildHoldingsRows(
-    holdings,
-    savingsTvlUsd,
-    prices,
-    NETWORK,
-    new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z'
-  );
+  // Full run timestamp, NOT day-floored: the table is append-only, so two
+  // runs on the same day (normal during manual setup) would otherwise carry
+  // identical dates and DOUBLE that day's totals in any SUM. The guide's TVL
+  // query takes the latest run per day; the "now" queries take MAX(date).
+  return buildHoldingsRows(holdings, savingsTvlUsd, prices, NETWORK, new Date().toISOString());
 }
