@@ -84,7 +84,9 @@ queries are written and ready; publish them only if you accept that.</div>
       history accumulate without manual runs.)<br/>
       The JSON response lists row counts per table — <code>activity_v2</code>,
       <code>cctp_ops</code>, <code>wallet_chains</code>, <code>holdings_snapshots</code> should
-      all show rows, not ERROR.</li>
+      all show rows, not ERROR. The call can take ~3 minutes: one sync makes ~24 Dune API calls,
+      the free plan rate-limits per minute, and since doc 121 a rate-limited call waits out the
+      window and retries instead of failing with 429.</li>
   <li><strong>Smoke-check in Dune:</strong> New Query →
       <code>SELECT * FROM dune.normalfinance.normal_activity_v2 LIMIT 20</code> → Run. You should
       see soroswap, lifi, cctp, savings rows side by side.</li>

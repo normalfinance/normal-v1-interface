@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cronAuthVerdict } from '@/server/cron-auth';
-import { duneClear, duneInsert } from '@/lib/dune/client';
 import { fetchSupabaseUsers } from '@/services/supabase-sync';
 import { recordCronHeartbeat } from '@/server/cron-heartbeat';
+import { duneClear, duneInsert, resetDuneRetryBudget } from '@/lib/dune/client';
 import {
   fetchCctpOps,
   fetchActivityV2,
@@ -43,6 +43,10 @@ export async function GET(req: Request) {
     console.error('[cron] refused:', auth.error);
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
+
+  // The 429-retry budget is shared module state (doc 121) and serverless
+  // instances stay warm between cron runs — reset it so every run starts full.
+  resetDuneRetryBudget();
 
   const results: Record<string, string> = {};
 
