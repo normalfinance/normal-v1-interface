@@ -65,7 +65,16 @@ queries are written and ready; publish them only if you accept that.</div>
       the current dashboard updates (the sync uses it today). Env vars on Vercel:
       <code>DUNE_API_KEY</code>, and <code>DUNE_NAMESPACE</code> only if your team handle is not
       <code>normalfinance</code>.</li>
-  <li><strong>Run one sync by hand</strong> so the new tables exist before you build queries.
+  <li><strong>Create the four new tables first</strong> — Dune&rsquo;s insert/clear API returns
+      404 for a table that was never created, so the sync <em>cannot</em> make them appear on its
+      own (that is exactly the &ldquo;Table &hellip; does not exist&rdquo; error in the query
+      editor). One-time bootstrap, same as the original 8 tables (doc 120 explains):<br/>
+      <code>cd packages/web</code><br/>
+      <code>.\scripts\create-dune-tables-v2.ps1 -ApiKey "&lt;DUNE_API_KEY from .env&gt;"</code><br/>
+      Expect four green <code>OK</code> lines: <code>normal_activity_v2</code>,
+      <code>normal_cctp_ops</code>, <code>normal_wallet_chains</code>,
+      <code>normal_holdings_snapshots</code>.</li>
+  <li><strong>Run one sync by hand</strong> to fill the tables before you build queries.
       No deploy needed for this: localhost works, because the dev server runs this branch, the
       local .env has the Dune key, and localhost shares the production database — so real data
       uploads. Your usual command:<br/>
