@@ -60,7 +60,11 @@ be read retroactively. <b>3.</b> On Dune&rsquo;s free plan there are no private 
 queries are written and ready; publish them only if you accept that. <b>4.</b> (doc 122)
 Savings rows are a truth-merge: app DB rows (with real fees) plus on-chain vault events the DB
 never recorded — those carry fee 0, so volume is chain-complete while revenue stays exactly
-what was charged.</div>
+what was charged. <b>5.</b> (doc 123) The holdings snapshot includes a
+<code>treasury/FEES</code> bucket — Normal&rsquo;s collected LI.FI swap fees sitting in the fee
+wallets. It is deliberately its own bucket so any query can exclude company money with
+<code>WHERE asset != 'FEES'</code>. The Solana pot joins once
+<code>LIFI_FEE_WALLET_SVM</code> is set in env.</div>
 
 <h2>2 &middot; One-time setup (15 minutes)</h2>
 <ol>
@@ -185,10 +189,11 @@ moment in time. Swaps do not add to TVL — they convert one held asset into ano
 result is already counted in the holdings snapshot. Savings IS included in TVL, as its own
 stacked band.</div>
 <h3>3.11 Combined TVL over time <span class="viz">Area — X: day, Y: usd, stack by bucket</span></h3>
-<p><i>What users HOLD on Normal at each point in time: every known wallet&rsquo;s balances (BTC, ETH, SOL, XLM, USDC) plus the savings vault, stacked. A STOCK number — it falls when people withdraw or send out.</i></p>
+<p><i>What is HELD on Normal at each point in time: every known wallet&rsquo;s balances (BTC, ETH, SOL, XLM, USDC), the savings vault, and Normal&rsquo;s collected swap fees, stacked. A STOCK number — it falls when people withdraw or send out.</i></p>
 <pre>WITH runs AS (
   SELECT snapshot_date,
          CASE WHEN asset = 'SAVINGS' THEN 'Savings (DeFindex)'
+              WHEN asset = 'FEES' THEN 'Collected fees (Normal)'
               ELSE 'Wallet holdings' END AS bucket,
          SUM(usd_total) AS usd
   FROM dune.normalfinance.normal_holdings_snapshots
@@ -208,14 +213,14 @@ all&rdquo;. It grows from deploy day; the old savings-only chart (existing
 <code>normal_vault_snapshots</code> query) can stay beside it for deep history.</p>
 
 <h3>3.12 Current combined TVL <span class="viz">Counter</span></h3>
-<p><i>One number: everything users hold right now — all wallets plus savings.</i></p>
+<p><i>One number: everything held on Normal right now — all wallets, savings, and collected fees. Append <code>AND asset != 'FEES'</code> for a strictly-user-money version.</i></p>
 <pre>SELECT SUM(usd_total) AS combined_tvl_usd
 FROM dune.normalfinance.normal_holdings_snapshots
 WHERE snapshot_date = (SELECT MAX(snapshot_date)
                        FROM dune.normalfinance.normal_holdings_snapshots);</pre>
 
 <h3>3.13 Total holdings by asset, right now <span class="viz">Bar, horizontal — Y: asset, X: usd_total</span></h3>
-<p><i>ALL wallets combined, per asset: how much BTC, ETH, SOL, XLM, USDC and savings people hold at this moment — token amounts and USD side by side.</i></p>
+<p><i>ALL wallets combined, per asset: how much BTC, ETH, SOL, XLM, USDC and savings people hold at this moment — token amounts and USD side by side. The FEES bar (chain &lsquo;treasury&rsquo;, doc 123) is Normal&rsquo;s collected LI.FI swap fees — company money, not user holdings; add <code>WHERE asset != 'FEES'</code> to any query that should exclude it.</i></p>
 <pre>SELECT asset, SUM(balance_total) AS balance, SUM(usd_total) AS usd_total
 FROM dune.normalfinance.normal_holdings_snapshots
 WHERE snapshot_date = (SELECT MAX(snapshot_date)

@@ -385,9 +385,17 @@ export interface ChainHoldings {
   total: number; // token units
 }
 
+export interface FeeTreasury {
+  /** USD value of all integrator fee-wallet balances read this run. */
+  usd: number;
+  /** How many wallet-chain reads succeeded (informational). */
+  wallets: number;
+}
+
 export function buildHoldingsRows(
   holdings: ChainHoldings[],
   savingsTvlUsd: number,
+  feeTreasury: FeeTreasury,
   prices: PriceMap,
   network: string,
   snapshotDate: string
@@ -409,6 +417,20 @@ export function buildHoldingsRows(
       wallets_counted: 0,
       balance_total: savingsTvlUsd,
       usd_total: savingsTvlUsd,
+      network,
+    });
+  }
+  // Collected integrator fees (doc 123) — Normal's revenue sitting in the
+  // LI.FI fee wallets, forwarded there on-chain per swap. Its own bucket so
+  // any query can include or exclude company money from user holdings.
+  if (feeTreasury.usd > 0) {
+    rows.push({
+      snapshot_date: snapshotDate,
+      chain: 'treasury',
+      asset: 'FEES',
+      wallets_counted: feeTreasury.wallets,
+      balance_total: feeTreasury.usd,
+      usd_total: feeTreasury.usd,
       network,
     });
   }

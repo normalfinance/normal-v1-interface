@@ -272,6 +272,7 @@ describe('buildHoldingsRows', () => {
         { chain: 'stellar', asset: 'USDC', wallets: 10, total: 250 },
       ],
       14_621.52,
+      { usd: 0, wallets: 0 },
       PRICES,
       'mainnet',
       '2026-08-28T00:00:00.000Z'
@@ -279,5 +280,24 @@ describe('buildHoldingsRows', () => {
     expect(rows[0].usd_total).toBe(5000);
     expect(rows[1].usd_total).toBe(250);
     expect(rows[2]).toMatchObject({ asset: 'SAVINGS', usd_total: 14_621.52 });
+    expect(rows).toHaveLength(3); // no FEES row when nothing was read
+  });
+
+  it('collected integrator fees land as their own treasury bucket', () => {
+    const rows = buildHoldingsRows(
+      [],
+      0,
+      { usd: 7.35, wallets: 3 },
+      PRICES,
+      'mainnet',
+      '2026-08-28T00:00:00.000Z'
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      chain: 'treasury',
+      asset: 'FEES',
+      wallets_counted: 3,
+      usd_total: 7.35,
+    });
   });
 });

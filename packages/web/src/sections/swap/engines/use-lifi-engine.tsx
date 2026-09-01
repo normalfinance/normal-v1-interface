@@ -386,6 +386,9 @@ export function useLifiEngine({
         toSymbol,
         amountIn: amount.toFixed(),
         amountOut: (toAmount ?? BigNumber(0)).toFixed(),
+        // The applied integrator fee (doc 123) — undefined when the quote
+        // carried none (1011 fallback), so the record stores null, not a lie.
+        feeAmount: feePercent > 0 ? amount.times(feePercent).toFixed() : undefined,
       });
       setStatusOpen(true);
       // Source tx is broadcast and recorded — surface the row NOW, not at

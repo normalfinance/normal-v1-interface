@@ -8,6 +8,7 @@ import type { ChainSavingsEvent } from '@/lib/dune/savings-merge';
 import type {
   PriceMap,
   CctpOpsRow,
+  FeeTreasury,
   ActivityV2Row,
   ChainHoldings,
   WalletChainRow,
@@ -358,9 +359,83 @@ export async function fetchHoldingsSnapshot(savingsTvlUsd: number): Promise<Hold
     { chain: 'stellar', asset: 'USDC', wallets: stellarOk, total: usdcTotal },
   ].filter((h) => h.total > 0);
 
+  const feeTreasury = await fetchFeeTreasury(prices, ethUrl, solUrl);
+
   // Full run timestamp, NOT day-floored: the table is append-only, so two
   // runs on the same day (normal during manual setup) would otherwise carry
   // identical dates and DOUBLE that day's totals in any SUM. The guide's TVL
   // query takes the latest run per day; the "now" queries take MAX(date).
-  return buildHoldingsRows(holdings, savingsTvlUsd, prices, NETWORK, new Date().toISOString());
+  return buildHoldingsRows(
+    holdings,
+    savingsTvlUsd,
+    feeTreasury,
+    prices,
+    NETWORK,
+    new Date().toISOString()
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Collected integrator fees (doc 123). LI.FI forwards our per-swap fee
+// on-chain to the fee wallets (Fee Forwarder — since 8 Apr 2026 on EVM,
+// always on SOL/BTC), so the money never appears in any API balance of ours
+// except the wallets themselves. Each read is best-effort: a dead RPC skips
+// that wallet, never the snapshot.
+// ---------------------------------------------------------------------------
+
+async function fetchFeeTreasury(
+  prices: PriceMap,
+  ethUrl: string,
+  solUrl: string
+): Promise<FeeTreasury> {
+  const treasury: FeeTreasury = { usd: 0, wallets: 0 };
+
+  const evmWallet = process.env.LIFI_FEE_WALLET_EVM;
+  if (evmWallet) {
+    // Base's native asset is ETH, so both chains price with prices.ETH.
+    const evmUrls = [ethUrl, process.env.CCTP_RPC_URL_BASE].filter((u): u is string => !!u);
+    for (const url of evmUrls) {
+      try {
+        const hex: string = await rpcCall(url, 'eth_getBalance', [evmWallet, 'latest']);
+        treasury.usd += (Number(BigInt(hex)) / 1e18) * (prices.ETH ?? 0);
+        treasury.wallets += 1;
+      } catch {
+        /* skip this chain's read */
+      }
+    }
+  }
+
+  const btcWallet = process.env.LIFI_FEE_WALLET_BTC;
+  if (btcWallet) {
+    try {
+      const res = await fetch(`https://mempool.space/api/address/${btcWallet}`, {
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const btc =
+          (Number(d.chain_stats?.funded_txo_sum ?? 0) - Number(d.chain_stats?.spent_txo_sum ?? 0)) /
+          1e8;
+        treasury.usd += btc * (prices.BTC ?? 0);
+        treasury.wallets += 1;
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  // Set LIFI_FEE_WALLET_SVM (the portal's Default SVM wallet) to count the
+  // Solana fee pot — until then SOL-side fees exist on-chain but not here.
+  const svmWallet = process.env.LIFI_FEE_WALLET_SVM;
+  if (svmWallet) {
+    try {
+      const result = await rpcCall(solUrl, 'getBalance', [svmWallet]);
+      treasury.usd += (Number(result?.value ?? 0) / 1e9) * (prices.SOL ?? 0);
+      treasury.wallets += 1;
+    } catch {
+      /* skip */
+    }
+  }
+
+  return treasury;
 }

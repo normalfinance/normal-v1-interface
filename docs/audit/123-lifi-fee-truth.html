@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LI.FI Fee Truth</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:980px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:42px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15px; margin:24px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12px; line-height:1.5; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.warn { border-left-color:#d97706; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+</style>
+</head>
+<body>
+<h1>LI.FI Fee Truth</h1>
+<p class="subtitle">2026-09-01 &mdash; Normal HAS been earning LI.FI fees all along; they land
+on-chain in the fee wallets and nothing on our side ever saw them. This run makes future swaps
+record their fee, and puts the fee-wallet balances into the holdings snapshot. Run 123, branch
+<code>chore/console-hygiene</code>. Follows doc 122.</p>
+
+<h2>1 &middot; The corrected picture (I was wrong in the doc-122 conversation)</h2>
+<p>I had claimed &ldquo;Normal earned $0 on LI.FI, proven by the empty integrator
+endpoint&rdquo;. Wrong proof: that endpoint shows only the legacy <b>Fee Collector</b> pot.
+Since 8 Apr 2026 on EVM (and always on SOL/BTC) LI.FI uses a <b>Fee Forwarder</b> — every
+swap&rsquo;s integrator fee is sent straight to our fee wallets on-chain and never accumulates
+anywhere queryable. On-chain check of the wallets:</p>
+<table>
+  <tr><th>wallet</th><th>evidence</th><th>held now</th></tr>
+  <tr><td>EVM <code>0xC4d9…2aD5</code> (Ethereum)</td><td>19 incoming internal transfers —
+      the forwarder&rsquo;s signature</td><td>0.000926 ETH ≈ $2.29</td></tr>
+  <tr><td>same, on Base</td><td>—</td><td>0 (free Etherscan tier can&rsquo;t list Base history;
+      balance read via RPC works)</td></tr>
+  <tr><td>BTC <code>bc1qmv…4mfm</code></td><td>9 incoming txs</td><td>0.00002646 BTC ≈ $2.08</td></tr>
+  <tr><td>SVM <code>4cBW9k…TYiu</code> (portal)</td><td>11 of 20 LI.FI swaps were SOL-side —
+      likely the biggest pot</td><td>unknown — address not in .env yet (see &sect;4)</td></tr>
+</table>
+<div class="box warn"><div class="label">Why the Dune donut showed no lifi row anyway</div>
+Two independent gaps stacked: (1) the fee is delivered on-chain, so no API of ours holds it;
+(2) <code>/api/lifi/record</code> never wrote <code>feeAmount</code> — even a charged fee
+landed as 0 in swap_logs. The portal itself is configured correctly (EVM/SVM/BTC/Sui receivers
+set; &ldquo;Collectable $0.00&rdquo; is the empty LEGACY pot and stays $0 forever). The
+&ldquo;2 unset&rdquo; wallets are Tron and Stellar — chains LI.FI never carries for us.</div>
+
+<h2>2 &middot; Change A — every future LI.FI swap records its fee</h2>
+<table>
+  <tr><th>file</th><th>change</th></tr>
+  <tr><td><code>src/lib/lifi/record-fee.ts</code> (+5 tests)</td><td><b>NEW</b> —
+      <code>sanitizeRecordedFee(feeAmount, amountIn)</code>: canonical string, or null for
+      absent/junk/non-positive/&gt;10%-of-amount values. A bad fee degrades to
+      &ldquo;no fee recorded&rdquo;, never fails the record (the record is the swap&rsquo;s
+      only activity row — doc 90 W2).</td></tr>
+  <tr><td><code>use-lifi-engine.tsx</code></td><td>The tracked tx now carries
+      <code>feeAmount = amount × feePercent</code> (BigNumber math) — and
+      <code>undefined</code> when the 1011 fallback stripped the fee, so a feeless swap stores
+      null, not a lie.</td></tr>
+  <tr><td><code>lifi-tracker.ts</code></td><td>Passes <code>feeAmount</code> through to
+      <code>/api/lifi/record</code>.</td></tr>
+  <tr><td><code>api/lifi/record/route.ts</code></td><td>Sanitizes and stores it in
+      <code>swap_logs.feeAmount</code> — the same field the Dune donut reads. Historical swaps
+      cannot be backfilled per-swap (the strip happened at quote time, unrecorded); the wallets
+      above stay the audit source for the ~$5–8 already earned.</td></tr>
+</table>
+<p>Effect: <b>the next completed LI.FI swap puts a <code>lifi</code> slice in the revenue
+donut</b> (doc 119 &sect;3.3) and counts into total fees (&sect;3.2).</p>
+
+<h2>3 &middot; Change B — fee wallets join the holdings snapshot (the TVL ask)</h2>
+<p><code>fetchHoldingsSnapshot</code> now reads the fee wallets (ETH mainnet + Base via RPC,
+BTC via mempool, SOL when the env var exists — each best-effort) and appends ONE row:
+<code>chain='treasury', asset='FEES'</code>, USD-valued, mirroring the SAVINGS row pattern.
+Combined-TVL (3.11/3.12) and holdings-now (3.13) pick it up automatically as its own bucket —
+and because it is its own bucket, any query can exclude company money from user holdings with
+<code>WHERE asset != 'FEES'</code>. <code>turbo.jsonc</code> declares the three
+<code>LIFI_FEE_WALLET_*</code> vars (the env-audit gate caught that).</p>
+
+<h2>4 &middot; Verified live + what remains for you</h2>
+<pre>holdings_snapshots: "7 rows"        &larr; was 6 — the FEES row landed (≈ $4.37 today)
+activity_v2: "434 rows (savings: db+chain events (16/16 wallets))"   &larr; a 16th depositor appeared live</pre>
+<ol>
+  <li><b>Add the Solana fee wallet:</b> portal → Receivers → Default SVM → copy the full
+      address → add <code>LIFI_FEE_WALLET_SVM=&lt;address&gt;</code> to
+      <code>packages/web/.env</code> AND Vercel. Next sync counts the SOL pot automatically.</li>
+  <li><b>Ask LI.FI support one question:</b> is their &ldquo;LI.FI fee 25 BPS FIXED&rdquo;
+      deducted from our 50 bps (net 0.25% to Normal) or charged on top? It changes revenue
+      math.</li>
+  <li><b>Company-account migration list</b> gains: Etherscan plan that can list Base
+      history.</li>
+  <li>Do a LI.FI swap (any pair, small) → the donut gains a <code>lifi</code> slice after the
+      next sync (QA R82).</li>
+</ol>
+<div class="box good"><div class="label">If you do X &rarr; you will see Y</div>
+If you re-run the holdings-now query (doc 119 &sect;3.13) &rarr; a FEES bar ≈ $4 appears
+beside the assets. If you complete one LI.FI swap and sync &rarr; the revenue donut (3.3)
+shows a lifi slice worth 0.5% of that swap. If the SVM env var is added &rarr; the FEES bar
+grows by the Solana pot on the next sync.</div>
+
+<h2>5 &middot; Gates</h2>
+<p>531 tests / 62 suites green (7 new), lint 0 errors, prettier clean, <code>tsc</code> clean,
+env-audit satisfied (turbo.jsonc), isolated <code>.next-verify</code> build green. Sync
+verified live against the shared production DB.</p>
+
+</body>
+</html>
