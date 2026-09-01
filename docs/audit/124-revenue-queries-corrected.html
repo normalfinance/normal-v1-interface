@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Revenue Queries Corrected</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:980px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:42px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15px; margin:24px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12px; line-height:1.5; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; font-family:"Consolas",monospace; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.warn { border-left-color:#d97706; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+</style>
+</head>
+<body>
+<h1>Revenue Queries Corrected</h1>
+<p class="subtitle">2026-09-01 &mdash; &ldquo;so 3.3 is useless?&rdquo; It was misleading, and
+that was my fault: it showed only fees we record per swap while real revenue sat on-chain
+unshown. Every query in doc 119 is now correct <b>by itself</b>, with no footnote needed. Run
+124, branch <code>chore/console-hygiene</code>.</p>
+
+<h2>1 &middot; The thing I had not told you: two fee mechanisms, one shared pot</h2>
+<table>
+  <tr><th>product</th><th>how the fee is taken</th><th>where the money is</th><th>recorded per swap?</th></tr>
+  <tr><td>savings</td><td>we charge it ourselves</td><td>our own account</td><td>yes</td></tr>
+  <tr><td>soroswap</td><td>we charge it ourselves</td><td>our own account</td><td>yes</td></tr>
+  <tr><td>cctp</td><td><b>LI.FI integrator fee</b> on the pivot leg
+      (<code>api/cctp/quote/route.ts</code>: &ldquo;where our single 0.5% integrator fee
+      lives&rdquo;)</td><td>the 3 fee wallets</td><td>yes ($6.91)</td></tr>
+  <tr><td>lifi</td><td>the same LI.FI integrator fee</td><td>the same 3 fee wallets</td>
+      <td><b>no</b> — not until doc 123 shipped</td></tr>
+</table>
+<div class="box warn"><div class="label">Why the obvious fix would have been wrong</div>
+The tempting move was &ldquo;show the fee-wallet balance as the LI.FI slice&rdquo;. That would
+have <b>double-counted CCTP</b>: its $6.91 is already recorded in the database AND sitting in
+those same wallets. Attributing the whole $7.99 balance to LI.FI would have inflated total
+revenue by nearly the entire CCTP figure. I checked the CCTP quote route before writing any
+SQL &mdash; this is exactly the kind of thing that silently corrupts a money dashboard.</div>
+
+<h2>2 &middot; The rule the corrected queries follow</h2>
+<p>Two independent measurements exist for the shared integrator pot &mdash; what we recorded
+per swap, and what the wallets hold. Neither is complete on its own: recording only starts with
+doc 123, and a wallet balance drops the day you withdraw it. So the queries take
+<b>GREATEST(recorded, wallet balance)</b> for that pot, and add the self-charged fees on top:</p>
+<pre>total = savings + soroswap                       (recorded, ours)
+      + GREATEST(cctp + lifi recorded, fee wallets)   (the shared pot)</pre>
+<p>This double-counts nothing, undercounts nothing, and self-corrects: every new LI.FI swap
+raises the recorded side and the wallet side by the same amount, and if you ever withdraw the
+wallets, the recorded figure takes over as the floor.</p>
+
+<h2>3 &middot; What changed in doc 119</h2>
+<table>
+  <tr><th>query</th><th>before</th><th>now</th></tr>
+  <tr><td><b>3.2</b> total fees</td><td>summed recorded fees only &mdash; missed every LI.FI
+      fee ever earned</td><td>self-charged fees + GREATEST(recorded integrator pot, fee
+      wallets). <b>$190.80</b></td></tr>
+  <tr><td><b>3.3</b> revenue donut</td><td>3 slices; LI.FI silently absent</td><td>4 slices
+      that sum <b>exactly</b> to 3.2, including a labelled
+      <code>lifi (on-chain, pre-recording)</code> slice for the part that predates per-swap
+      recording</td></tr>
+  <tr><td><b>3.4 / 3.5</b> daily + cumulative</td><td>implied they were all revenue</td>
+      <td>unchanged SQL, honest descriptions: per-day attribution exists only for recorded
+      fees, so LI.FI joins from its first recorded swap</td></tr>
+  <tr><td><b>3.11 / 3.12 / 3.13</b> TVL</td><td>after doc 123 they quietly included company fee
+      money, needing a <code>WHERE</code> you had to remember</td><td>exclude
+      <code>asset = 'FEES'</code> themselves &mdash; TVL is user money, always</td></tr>
+  <tr><td><b>3.14</b> NEW</td><td>—</td><td>&ldquo;Fees sitting in the fee wallets&rdquo;
+      counter: withdrawable revenue, <b>$7.99</b>. Old 3.14 Keepers &rarr; 3.15.</td></tr>
+</table>
+<p>Code: two comments corrected (the FEES bucket is the <i>shared</i> integrator pot, not
+&ldquo;LI.FI fees&rdquo;), and doc 123 carries a correction box. No behaviour changed &mdash;
+the data was already right; the queries reading it were not.</p>
+
+<h2>4 &middot; The numbers, reconciled independently</h2>
+<p>Recomputed straight from the database and the three chains (not from Dune), so the guide
+states real figures:</p>
+<table>
+  <tr><th>slice</th><th>usd</th><th>source</th></tr>
+  <tr><td>savings</td><td class="num">179.11</td><td>recorded</td></tr>
+  <tr><td>cctp</td><td class="num">6.91</td><td>recorded</td></tr>
+  <tr><td>soroswap</td><td class="num">3.71</td><td>recorded</td></tr>
+  <tr><td>lifi (on-chain, pre-recording)</td><td class="num">1.07</td><td>fee wallets $7.99 &minus; recorded pot $6.91</td></tr>
+  <tr><td><b>3.2 total</b></td><td class="num"><b>190.80</b></td><td>slices sum exactly</td></tr>
+  <tr><td>3.14 fee wallets</td><td class="num">7.99</td><td>0.000926 ETH + 0.0376 SOL + 0.0000265 BTC</td></tr>
+</table>
+
+<h2>5 &middot; What you do</h2>
+<ol>
+  <li><b>No sync needed</b> &mdash; the data on Dune is already correct; only the SQL you paste
+      changed.</li>
+  <li>In Dune, update the queries you already saved (3.2, 3.3, 3.11, 3.12, 3.13) with the new
+      text from doc 119, and create 3.14. Press <b>Run</b>, then <b>Save</b>.</li>
+  <li>Sanity check: 3.3&rsquo;s slices should add up to 3.2&rsquo;s counter. If they do not,
+      the paste is stale.</li>
+</ol>
+<div class="box good"><div class="label">If you do X &rarr; you will see Y</div>
+If you paste the new 3.3 &rarr; four slices, with LI.FI revenue finally visible as
+&ldquo;on-chain, pre-recording&rdquo; $1.07. If you then complete one LI.FI swap and sync
+&rarr; a fifth, plain <code>lifi</code> slice appears with that swap&rsquo;s 0.5%, while the
+pre-recording slice stays frozen at $1.07 forever &mdash; it is history, and it stops
+growing.</div>
+
+<h2>6 &middot; Gates</h2>
+<p>531 tests / 62 suites green, lint 0 errors, prettier clean, <code>tsc</code> clean, isolated
+<code>.next-verify</code> build green. Revenue figures reconciled live against the production
+database and Ethereum / Solana / Bitcoin.</p>
+
+</body>
+</html>

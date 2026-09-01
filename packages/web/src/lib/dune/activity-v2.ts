@@ -420,9 +420,11 @@ export function buildHoldingsRows(
       network,
     });
   }
-  // Collected integrator fees (doc 123) — Normal's revenue sitting in the
-  // LI.FI fee wallets, forwarded there on-chain per swap. Its own bucket so
-  // any query can include or exclude company money from user holdings.
+  // Collected integrator fees (docs 123-124) — Normal's revenue sitting in the
+  // fee wallets, forwarded there on-chain per swap. The pot is SHARED: the
+  // CCTP flow's 0.5% is the same LI.FI integrator fee (api/cctp/quote), so
+  // this must never be attributed to LI.FI alone. Its own bucket so revenue
+  // queries can count it while TVL queries exclude company money.
   if (feeTreasury.usd > 0) {
     rows.push({
       snapshot_date: snapshotDate,

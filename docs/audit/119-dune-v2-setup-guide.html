@@ -60,11 +60,12 @@ be read retroactively. <b>3.</b> On Dune&rsquo;s free plan there are no private 
 queries are written and ready; publish them only if you accept that. <b>4.</b> (doc 122)
 Savings rows are a truth-merge: app DB rows (with real fees) plus on-chain vault events the DB
 never recorded — those carry fee 0, so volume is chain-complete while revenue stays exactly
-what was charged. <b>5.</b> (doc 123) The holdings snapshot includes a
-<code>treasury/FEES</code> bucket — Normal&rsquo;s collected LI.FI swap fees sitting in the fee
-wallets. It is deliberately its own bucket so any query can exclude company money with
-<code>WHERE asset != 'FEES'</code>. The Solana pot joins once
-<code>LIFI_FEE_WALLET_SVM</code> is set in env.</div>
+what was charged. <b>5.</b> (docs 123–124) The holdings snapshot carries a
+<code>treasury/FEES</code> row — the integrator fees LI.FI forwarded on-chain into our fee
+wallets (both LI.FI-engine and CCTP swaps share that pot). Every query below already puts it
+where it belongs: counted in revenue (3.2/3.3/3.14), excluded from user TVL
+(3.11/3.12/3.13). It needs <code>LIFI_FEE_WALLET_EVM/BTC/SVM</code> in env — all three are set
+today.</div>
 
 <h2>2 &middot; One-time setup (15 minutes)</h2>
 <ol>
@@ -112,21 +113,69 @@ next to the chart on the dashboard.</p>
 FROM dune.normalfinance.normal_activity_v2
 WHERE status = 'completed';</pre>
 
+<div class="box warn"><div class="label">Read this before the three revenue queries</div>
+Normal charges fees through <b>two different mechanisms</b>, and only one of them is recorded
+per swap. <b>Soroswap and savings fees</b> we take ourselves and write into the database — fully
+recorded, attributable to a day and a product. <b>LI.FI-engine and CCTP fees are the same thing
+under the hood</b>: one 0.5% LI.FI integrator fee (see
+<code>api/cctp/quote/route.ts</code> — the CCTP flow&rsquo;s fee lives in its LI.FI leg). LI.FI
+forwards that fee <b>on-chain</b> into three fee wallets; we recorded the CCTP side in the
+database but, until doc 123, never the LI.FI-engine side. So the fee wallets are the ground
+truth for that shared pot, and the queries below take <b>the larger of what we recorded and
+what the wallets hold</b> — which double-counts nothing, undercounts nothing, and self-corrects
+as new swaps start recording.</div>
+
 <h3>3.2 Total protocol fees, all-time <span class="viz">Counter</span></h3>
-<p><i>Everything Normal has earned, all time: Soroswap 0.5% swap fees, CCTP swap fees, LI.FI integrator fees, and savings deposit fees.</i></p>
-<pre>SELECT SUM(fee_usd) AS total_fees_usd
-FROM dune.normalfinance.normal_activity_v2
-WHERE status = 'completed';</pre>
+<p><i>Everything Normal has earned, all time: savings deposit fees and Soroswap swap fees (recorded per swap), plus the LI.FI/CCTP integrator fee pot measured from the fee wallets themselves. Today ≈ $190.80.</i></p>
+<pre>WITH recorded AS (
+  SELECT product, SUM(fee_usd) AS fees_usd
+  FROM dune.normalfinance.normal_activity_v2
+  WHERE status = 'completed' AND fee_usd &gt; 0
+  GROUP BY 1
+), fee_wallets AS (
+  SELECT COALESCE(SUM(usd_total), 0) AS usd
+  FROM dune.normalfinance.normal_holdings_snapshots
+  WHERE asset = 'FEES'
+    AND snapshot_date = (SELECT MAX(snapshot_date)
+                         FROM dune.normalfinance.normal_holdings_snapshots)
+)
+SELECT
+  COALESCE((SELECT SUM(fees_usd) FROM recorded WHERE product NOT IN ('lifi','cctp')), 0)
+  + GREATEST(
+      COALESCE((SELECT SUM(fees_usd) FROM recorded WHERE product IN ('lifi','cctp')), 0),
+      (SELECT usd FROM fee_wallets)
+    ) AS total_fees_usd;</pre>
 
 <h3>3.3 Fee revenue by product <span class="viz">Pie/Donut — label: product, value: fees_usd</span></h3>
-<p><i>The same all-time revenue, split by product — which product actually earns.</i></p>
-<pre>SELECT product, SUM(fee_usd) AS fees_usd
-FROM dune.normalfinance.normal_activity_v2
-WHERE status = 'completed' AND fee_usd &gt; 0
-GROUP BY 1 ORDER BY 2 DESC;</pre>
+<p><i>The same all-time revenue, split by product. The last slice is the part of the on-chain integrator pot that predates per-swap fee recording — real money we earned but cannot attribute to individual LI.FI swaps. It stops growing now that swaps record their fee, and the slices always add up to 3.2 exactly.</i></p>
+<pre>WITH recorded AS (
+  SELECT product, SUM(fee_usd) AS fees_usd
+  FROM dune.normalfinance.normal_activity_v2
+  WHERE status = 'completed' AND fee_usd &gt; 0
+  GROUP BY 1
+), fee_wallets AS (
+  SELECT COALESCE(SUM(usd_total), 0) AS usd
+  FROM dune.normalfinance.normal_holdings_snapshots
+  WHERE asset = 'FEES'
+    AND snapshot_date = (SELECT MAX(snapshot_date)
+                         FROM dune.normalfinance.normal_holdings_snapshots)
+)
+SELECT * FROM (
+  SELECT product, fees_usd FROM recorded
+  UNION ALL
+  SELECT 'lifi (on-chain, pre-recording)',
+         GREATEST(0, (SELECT usd FROM fee_wallets)
+                     - COALESCE((SELECT SUM(fees_usd) FROM recorded
+                                 WHERE product IN ('lifi','cctp')), 0))
+) AS t
+WHERE fees_usd &gt; 0
+ORDER BY 2 DESC;</pre>
+<p><i>Today that reads: savings $179.11 · cctp $6.91 · soroswap $3.71 · lifi (on-chain,
+pre-recording) $1.07 — and the moment your next LI.FI swap completes, a plain
+<code>lifi</code> slice joins them.</i></p>
 
 <h3>3.4 Daily fee revenue by product <span class="viz">Bar — X: day, Y: fees_usd, stack by product ("Enable stacking")</span></h3>
-<p><i>Revenue per day, stacked by product — what is earning NOW, not just historically.</i></p>
+<p><i>Revenue per day, stacked by product — what is earning NOW. Per-day attribution only exists for fees recorded per swap, so LI.FI appears here from its first swap under doc 123 onward; the older on-chain LI.FI fees have no date and live in 3.3&rsquo;s last slice instead.</i></p>
 <pre>SELECT date_trunc('day', CAST(date AS timestamp)) AS day,
        product, SUM(fee_usd) AS fees_usd
 FROM dune.normalfinance.normal_activity_v2
@@ -134,7 +183,7 @@ WHERE status = 'completed'
 GROUP BY 1, 2 ORDER BY 1;</pre>
 
 <h3>3.5 Cumulative revenue <span class="viz">Area — X: day, Y: cumulative_fees</span></h3>
-<p><i>All-time earnings as a running total — the up-and-to-the-right line.</i></p>
+<p><i>Recorded earnings as a running total — the up-and-to-the-right line. It ends slightly below 3.2 by exactly 3.3&rsquo;s last slice (the undated on-chain LI.FI fees), so read 3.2 for the true all-time figure and this for the shape.</i></p>
 <pre>WITH daily AS (
   SELECT date_trunc('day', CAST(date AS timestamp)) AS day, SUM(fee_usd) AS fees
   FROM dune.normalfinance.normal_activity_v2
@@ -187,16 +236,17 @@ withdrawal, send and ramp — it includes all the swaps and only ever grows. <b>
 3.12) counts <i>holdings</i>: what sits in users&rsquo; wallets plus the savings vault at a
 moment in time. Swaps do not add to TVL — they convert one held asset into another, and the
 result is already counted in the holdings snapshot. Savings IS included in TVL, as its own
-stacked band.</div>
+stacked band; Normal&rsquo;s own fee wallets are NOT — that is company revenue, and it has its
+own counter (3.14).</div>
 <h3>3.11 Combined TVL over time <span class="viz">Area — X: day, Y: usd, stack by bucket</span></h3>
-<p><i>What is HELD on Normal at each point in time: every known wallet&rsquo;s balances (BTC, ETH, SOL, XLM, USDC), the savings vault, and Normal&rsquo;s collected swap fees, stacked. A STOCK number — it falls when people withdraw or send out.</i></p>
+<p><i>What USERS hold on Normal at each point in time: every known wallet&rsquo;s balances (BTC, ETH, SOL, XLM, USDC) plus the savings vault, stacked. A STOCK number — it falls when people withdraw or send out. Normal&rsquo;s own fee wallets are deliberately excluded; they are company money, and they have their own counter (3.14).</i></p>
 <pre>WITH runs AS (
   SELECT snapshot_date,
          CASE WHEN asset = 'SAVINGS' THEN 'Savings (DeFindex)'
-              WHEN asset = 'FEES' THEN 'Collected fees (Normal)'
               ELSE 'Wallet holdings' END AS bucket,
          SUM(usd_total) AS usd
   FROM dune.normalfinance.normal_holdings_snapshots
+  WHERE asset != 'FEES'          -- company fee money, not user holdings
   GROUP BY 1, 2
 ), ranked AS (
   SELECT date_trunc('day', CAST(snapshot_date AS timestamp)) AS day, bucket, usd,
@@ -213,21 +263,31 @@ all&rdquo;. It grows from deploy day; the old savings-only chart (existing
 <code>normal_vault_snapshots</code> query) can stay beside it for deep history.</p>
 
 <h3>3.12 Current combined TVL <span class="viz">Counter</span></h3>
-<p><i>One number: everything held on Normal right now — all wallets, savings, and collected fees. Append <code>AND asset != 'FEES'</code> for a strictly-user-money version.</i></p>
+<p><i>One number: everything users hold right now — all wallets plus savings. Company fee money excluded (3.14 has it).</i></p>
 <pre>SELECT SUM(usd_total) AS combined_tvl_usd
 FROM dune.normalfinance.normal_holdings_snapshots
-WHERE snapshot_date = (SELECT MAX(snapshot_date)
+WHERE asset != 'FEES'
+  AND snapshot_date = (SELECT MAX(snapshot_date)
                        FROM dune.normalfinance.normal_holdings_snapshots);</pre>
 
 <h3>3.13 Total holdings by asset, right now <span class="viz">Bar, horizontal — Y: asset, X: usd_total</span></h3>
-<p><i>ALL wallets combined, per asset: how much BTC, ETH, SOL, XLM, USDC and savings people hold at this moment — token amounts and USD side by side. The FEES bar (chain &lsquo;treasury&rsquo;, doc 123) is Normal&rsquo;s collected LI.FI swap fees — company money, not user holdings; add <code>WHERE asset != 'FEES'</code> to any query that should exclude it.</i></p>
+<p><i>ALL user wallets combined, per asset: how much BTC, ETH, SOL, XLM, USDC and savings people hold at this moment — token amounts and USD side by side.</i></p>
 <pre>SELECT asset, SUM(balance_total) AS balance, SUM(usd_total) AS usd_total
 FROM dune.normalfinance.normal_holdings_snapshots
-WHERE snapshot_date = (SELECT MAX(snapshot_date)
+WHERE asset != 'FEES'
+  AND snapshot_date = (SELECT MAX(snapshot_date)
                        FROM dune.normalfinance.normal_holdings_snapshots)
 GROUP BY 1 ORDER BY 3 DESC;</pre>
 
-<h3>3.14 Keepers</h3>
+<h3>3.14 Fees sitting in the fee wallets <span class="viz">Counter</span></h3>
+<p><i>Normal&rsquo;s uncollected revenue: the 0.5% integrator fees LI.FI has forwarded on-chain (from both LI.FI-engine and CCTP swaps) into our EVM, Solana and Bitcoin fee wallets, valued at spot. This is money you can withdraw — the number drops when you do, which is why it is a counter of its own and never part of TVL. Today ≈ $7.99.</i></p>
+<pre>SELECT SUM(usd_total) AS fees_in_wallets_usd
+FROM dune.normalfinance.normal_holdings_snapshots
+WHERE asset = 'FEES'
+  AND snapshot_date = (SELECT MAX(snapshot_date)
+                       FROM dune.normalfinance.normal_holdings_snapshots);</pre>
+
+<h3>3.15 Keepers</h3>
 <p>Total registered users, signups over time, savings TVL history, total yield — the existing
 queries stay exactly as they are.</p>
 
@@ -239,7 +299,8 @@ queries stay exactly as they are.</p>
   <li><b>Add visualization</b> → pick each saved query. Suggested order:
       <b>Row 1</b> counters — users · total volume (3.1) · total fees (3.2) · combined TVL
       (3.12). <b>Row 2</b> — daily volume by product (3.6) · product mix (3.7).
-      <b>Row 3</b> — daily fees (3.4) · fee donut (3.3) · cumulative revenue (3.5).
+      <b>Row 3</b> — daily fees (3.4) · fee donut (3.3) · cumulative revenue (3.5) · fees in
+      wallets (3.14).
       <b>Row 4</b> — combined TVL area (3.11) · holdings-now bar (3.13).
       <b>Row 5</b> — active wallets (3.9) · wallets by chain (3.10) · top routes (3.8).
       <b>Row 6</b> — the kept savings charts.</li>
@@ -270,8 +331,12 @@ GROUP BY 1 ORDER BY 2 DESC;</pre>
   <li>The manual cron call&rsquo;s JSON shows non-ERROR row counts for all four new tables.</li>
   <li><code>activity_v2</code> row count ≈ confirmed swaps + confirmed deposits + terminal CCTP
       + confirmed sends + arrived ramps + completed MoneyGram (compare against the DB).</li>
-  <li>3.1 total volume ≥ the old dashboard&rsquo;s $56k (it now includes CCTP + LI.FI + ramps);
-      3.2 fees ≥ the old $183 (it now includes CCTP fees).</li>
+  <li>3.1 total volume ≈ $55.8k — near the old dashboard&rsquo;s $56k but built differently: it
+      adds CCTP, LI.FI, sends, ramps and the on-chain savings actions the app never logged (doc
+      122), and drops the old chart&rsquo;s XLM-counted-as-dollars inflation.</li>
+  <li>3.2 total fees ≈ $190.80, and 3.3&rsquo;s slices add up to exactly that number
+      (savings $179.11 · cctp $6.91 · soroswap $3.71 · lifi on-chain $1.07). 3.14 ≈ $7.99 on its
+      own.</li>
   <li>After two daily syncs, 3.11 shows two points and 3.12/3.13 move with real balances.</li>
 </ol>
 

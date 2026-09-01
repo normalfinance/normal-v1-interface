@@ -376,11 +376,12 @@ export async function fetchHoldingsSnapshot(savingsTvlUsd: number): Promise<Hold
 }
 
 // ---------------------------------------------------------------------------
-// Collected integrator fees (doc 123). LI.FI forwards our per-swap fee
+// Collected integrator fees (docs 123-124). LI.FI forwards our per-swap fee
 // on-chain to the fee wallets (Fee Forwarder — since 8 Apr 2026 on EVM,
 // always on SOL/BTC), so the money never appears in any API balance of ours
-// except the wallets themselves. Each read is best-effort: a dead RPC skips
-// that wallet, never the snapshot.
+// except the wallets themselves. Both engines feed this one pot: the CCTP
+// flow's 0.5% IS a LI.FI integrator fee. Each read is best-effort: a dead RPC
+// skips that wallet, never the snapshot.
 // ---------------------------------------------------------------------------
 
 async function fetchFeeTreasury(

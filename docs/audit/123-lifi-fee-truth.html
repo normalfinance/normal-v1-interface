@@ -76,6 +76,13 @@ set; &ldquo;Collectable $0.00&rdquo; is the empty LEGACY pot and stays $0 foreve
 <p>Effect: <b>the next completed LI.FI swap puts a <code>lifi</code> slice in the revenue
 donut</b> (doc 119 &sect;3.3) and counts into total fees (&sect;3.2).</p>
 
+<div class="box warn"><div class="label">Correction, added by doc 124</div>
+This document calls the fee wallets &ldquo;LI.FI fees&rdquo;. They are <b>integrator</b> fees,
+and the pot is shared: the CCTP flow&rsquo;s 0.5% is itself a LI.FI integrator fee
+(<code>api/cctp/quote/route.ts</code>), so CCTP&rsquo;s recorded $6.91 is inside that same
+balance. Doc 124 rewrites the revenue queries accordingly — attributing the whole wallet
+balance to LI.FI would have double-counted CCTP.</div>
+
 <h2>3 &middot; Change B — fee wallets join the holdings snapshot (the TVL ask)</h2>
 <p><code>fetchHoldingsSnapshot</code> now reads the fee wallets (ETH mainnet + Base via RPC,
 BTC via mempool, SOL when the env var exists — each best-effort) and appends ONE row:
