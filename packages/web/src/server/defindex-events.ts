@@ -30,7 +30,13 @@ export async function fetchAllVaultEvents(
     });
 
     if (!res.ok) {
-      throw new Error(`DeFindex events API ${res.status}: ${await res.text()}`);
+      // Carry the HTTP status so callers can tell "no history" (404) from
+      // "throttled, retry" (429) without parsing the message (doc 122).
+      const err: Error & { status?: number } = new Error(
+        `DeFindex events API ${res.status}: ${await res.text()}`
+      );
+      err.status = res.status;
+      throw err;
     }
 
     const data = await res.json();

@@ -7,6 +7,8 @@ import type {
 } from '@/lib/dune/tables';
 
 import { prisma } from '@/lib/prisma';
+import { usdOf } from '@/lib/dune/activity-v2';
+import { getSpotPrices } from '@/lib/portfolio/aggregate';
 
 const NETWORK =
   process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() === 'mainnet' ? 'mainnet' : 'testnet';
@@ -21,19 +23,27 @@ const CONFIRMED = { status: 'confirmed' } as const;
 // ---------------------------------------------------------------------------
 
 export async function fetchSwapVolume(): Promise<VolumeDailyRow[]> {
-  const swaps = await prisma.swapLog.findMany({
-    where: CONFIRMED,
-    select: { createdAt: true, amountIn: true, feeAmount: true },
-    orderBy: { createdAt: 'asc' },
-  });
+  // Doc 122: amounts used to be summed in RAW TOKEN UNITS as if they were
+  // dollars — 1 XLM counted as $1, inflating the public volume counter ~6x on
+  // XLM swaps. Every amount and fee is now valued at spot via usdOf (stables
+  // 1:1, unknown symbols 0 — never an invented number).
+  const [spot, swaps] = await Promise.all([
+    getSpotPrices(),
+    prisma.swapLog.findMany({
+      where: CONFIRMED,
+      select: { createdAt: true, amountIn: true, feeAmount: true, tokenInSymbol: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ]);
 
   const byDay = new Map<string, { volume: number; fee: number; count: number }>();
 
   for (const swap of swaps) {
     const day = swap.createdAt.toISOString().slice(0, 10) + 'T00:00:00.000Z';
     const existing = byDay.get(day) ?? { volume: 0, fee: 0, count: 0 };
-    existing.volume += Number(swap.amountIn ?? 0);
-    existing.fee += Number(swap.feeAmount ?? 0);
+    const sym = swap.tokenInSymbol ?? 'UNKNOWN';
+    existing.volume += usdOf(sym, Number(swap.amountIn ?? 0), spot.prices);
+    existing.fee += usdOf(sym, Number(swap.feeAmount ?? 0), spot.prices);
     existing.count += 1;
     byDay.set(day, existing);
   }

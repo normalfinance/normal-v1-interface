@@ -152,8 +152,10 @@ export async function GET(req: Request) {
   try {
     const activity = await fetchActivityV2();
     await duneClear('normal_activity_v2');
-    await duneInsert('normal_activity_v2', activity);
-    results.activity_v2 = `${activity.length} rows`;
+    await duneInsert('normal_activity_v2', activity.rows);
+    // savingsSource says whether the chain-event union worked or the step fell
+    // back to DB-only rows (doc 122) — watch it in the cron logs.
+    results.activity_v2 = `${activity.rows.length} rows (savings: ${activity.savingsSource})`;
   } catch (e: any) {
     results.activity_v2 = `ERROR: ${e.message}`;
   }

@@ -57,7 +57,10 @@ non-stable rows (XLM/BTC/ETH/SOL legs) are valued at today&rsquo;s price. USDC f
 the volume — are exact. <b>2.</b> Holdings history starts the day this deploys; balances cannot
 be read retroactively. <b>3.</b> On Dune&rsquo;s free plan there are no private dashboards — an
 &ldquo;ops&rdquo; dashboard is public to anyone with the URL. Section 5&rsquo;s reliability
-queries are written and ready; publish them only if you accept that.</div>
+queries are written and ready; publish them only if you accept that. <b>4.</b> (doc 122)
+Savings rows are a truth-merge: app DB rows (with real fees) plus on-chain vault events the DB
+never recorded — those carry fee 0, so volume is chain-complete while revenue stays exactly
+what was charged.</div>
 
 <h2>2 &middot; One-time setup (15 minutes)</h2>
 <ol>
@@ -100,7 +103,7 @@ query&rsquo;s <b>Description</b> field in Dune (it shows on hover) or add it as 
 next to the chart on the dashboard.</p>
 
 <h3>3.1 Total volume, all-time <span class="viz">Counter</span></h3>
-<p><i>Every dollar that has moved through Normal since launch — all three swap engines (Soroswap, LI.FI, CCTP), savings deposits and withdrawals, sends, and on/off-ramps. Completed actions only. This is a FLOW number: it only ever grows.</i></p>
+<p><i>Every dollar that has moved through Normal since launch — all three swap engines (Soroswap, LI.FI, CCTP), savings deposits and withdrawals (including direct on-chain vault actions the app never logged), sends, and on/off-ramps. Completed actions only. This is a FLOW number: it only ever grows.</i></p>
 <pre>SELECT SUM(amount_usd) AS total_volume_usd
 FROM dune.normalfinance.normal_activity_v2
 WHERE status = 'completed';</pre>

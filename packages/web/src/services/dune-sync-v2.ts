@@ -4,19 +4,25 @@
 // DeFindex TVL, spot prices) and hands the data to the builders.
 // ---------------------------------------------------------------------------
 
+import type { ChainSavingsEvent } from '@/lib/dune/savings-merge';
 import type {
   PriceMap,
   CctpOpsRow,
   ActivityV2Row,
   ChainHoldings,
   WalletChainRow,
+  VaultDepositInput,
   HoldingsSnapshotRow,
 } from '@/lib/dune/activity-v2';
 
 import { prisma } from '@/lib/prisma';
 import { getSpotPrices } from '@/lib/portfolio/aggregate';
+import { mergeSavingsSources } from '@/lib/dune/savings-merge';
+import { fetchAllDepositWallets } from '@/services/prisma-sync';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
+import { fetchVaultWalletsFromHorizon } from '@/services/defindex-sync';
 import { fetchStellarBalancesFromPool } from '@/lib/stellar/horizon-pool';
+import { fetchAllVaultEvents, normalizeVaultEvents } from '@/server/defindex-events';
 import {
   buildCctpOpsRows,
   buildHoldingsRows,
@@ -49,8 +55,101 @@ const CCTP_SELECT = {
 
 const CCTP_TERMINAL = ['COMPLETED', 'FAILED', 'REFUNDED'];
 
-export async function fetchActivityV2(): Promise<ActivityV2Row[]> {
-  const [prices, swaps, deposits, cctp, sends, ramps, mgi] = await Promise.all([
+// ---------------------------------------------------------------------------
+// Savings truth-merge (doc 122). The DB alone missed ~$14.8k of on-chain vault
+// activity (external wallets 403 on log-transaction; direct interactions), so
+// activity_v2 unions DB rows (they carry the real fees) with per-wallet
+// DeFindex chain events (fee-0 where we never charged one). A wallet whose
+// events call fails simply keeps its DB rows — the union degrades, never
+// breaks.
+// ---------------------------------------------------------------------------
+
+const VAULT_ADDRESS = process.env.NEXT_PUBLIC_MAINNET_DEFINDEX_VAULT!;
+const DEFINDEX_API_KEY = process.env.DEFINDEX_API_KEY;
+
+const EVENTS_GAP_MS = 300;
+const EVENTS_RETRY_MS = [2_000, 5_000, 10_000]; // waits after a 429
+
+/** One wallet's chain events: [] is a real answer (404 = never touched the
+ *  vault), null means we could not get one (429s exhausted / network) — the
+ *  caller then keeps that wallet's DB rows and reports the degraded count. */
+async function fetchWalletEventsWithRetry(wallet: string): Promise<ChainSavingsEvent[] | null> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const raw = await fetchAllVaultEvents(wallet, VAULT_ADDRESS, NETWORK, DEFINDEX_API_KEY);
+      return normalizeVaultEvents(raw).map((e) => ({
+        wallet,
+        type: e.type,
+        amount: e.amount,
+        timestamp: e.timestamp,
+      }));
+    } catch (e: any) {
+      if (e?.status === 404) return [];
+      if (e?.status === 429 && attempt < EVENTS_RETRY_MS.length) {
+        await new Promise((r) => setTimeout(r, EVENTS_RETRY_MS[attempt]));
+        continue;
+      }
+      return null;
+    }
+  }
+}
+
+async function fetchSavingsMerged(): Promise<{ deposits: VaultDepositInput[]; source: string }> {
+  const dbRows = await prisma.vaultDeposit.findMany({
+    where: { status: 'confirmed' },
+    select: {
+      createdAt: true,
+      walletAddress: true,
+      type: true,
+      amount: true,
+      feeAmount: true,
+      txHash: true,
+      network: true,
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  let wallets: string[];
+  try {
+    const [dbWallets, horizonWallets] = await Promise.all([
+      fetchAllDepositWallets(),
+      fetchVaultWalletsFromHorizon(),
+    ]);
+    wallets = Array.from(new Set([...dbWallets, ...horizonWallets]));
+  } catch {
+    wallets = Array.from(new Set(dbRows.map((r) => r.walletAddress)));
+  }
+
+  // Sequential on purpose: DeFindex throttles hard (429s appear ~10 rapid
+  // calls in — verified live, doc 122), so parallel batches starve the very
+  // wallets that hold the missing volume. At today's depositor count this is
+  // seconds; if depositors ever reach the hundreds this fan-out must move to
+  // an incremental sync — labelled trade-off, not an accident.
+  const events: ChainSavingsEvent[] = [];
+  let ok = 0;
+  for (const [i, wallet] of wallets.entries()) {
+    const walletEvents = await fetchWalletEventsWithRetry(wallet);
+    if (walletEvents !== null) {
+      events.push(...walletEvents);
+      ok += 1;
+    }
+    if (i < wallets.length - 1) await new Promise((r) => setTimeout(r, EVENTS_GAP_MS));
+  }
+
+  if (ok === 0 && wallets.length > 0) {
+    return { deposits: dbRows, source: 'db-only (events API unavailable)' };
+  }
+  return {
+    deposits: mergeSavingsSources(dbRows, events, NETWORK),
+    source: `db+chain events (${ok}/${wallets.length} wallets)`,
+  };
+}
+
+export async function fetchActivityV2(): Promise<{
+  rows: ActivityV2Row[];
+  savingsSource: string;
+}> {
+  const [prices, swaps, savings, cctp, sends, ramps, mgi] = await Promise.all([
     priceMap(),
     prisma.swapLog.findMany({
       where: { status: 'confirmed' },
@@ -67,19 +166,7 @@ export async function fetchActivityV2(): Promise<ActivityV2Row[]> {
       },
       orderBy: { createdAt: 'asc' },
     }),
-    prisma.vaultDeposit.findMany({
-      where: { status: 'confirmed' },
-      select: {
-        createdAt: true,
-        walletAddress: true,
-        type: true,
-        amount: true,
-        feeAmount: true,
-        txHash: true,
-        network: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    }),
+    fetchSavingsMerged(),
     prisma.cctpTransfer.findMany({
       where: { status: { in: CCTP_TERMINAL } },
       select: CCTP_SELECT,
@@ -126,7 +213,14 @@ export async function fetchActivityV2(): Promise<ActivityV2Row[]> {
     }),
   ]);
 
-  return buildActivityV2Rows({ swaps, deposits, cctp, sends, ramps, mgi }, prices, NETWORK);
+  return {
+    rows: buildActivityV2Rows(
+      { swaps, deposits: savings.deposits, cctp, sends, ramps, mgi },
+      prices,
+      NETWORK
+    ),
+    savingsSource: savings.source,
+  };
 }
 
 export async function fetchCctpOps(): Promise<CctpOpsRow[]> {

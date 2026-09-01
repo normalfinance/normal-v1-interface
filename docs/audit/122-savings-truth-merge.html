@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Savings Truth-Merge</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:980px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:42px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15px; margin:24px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12px; line-height:1.5; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.warn { border-left-color:#d97706; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+</style>
+</head>
+<body>
+<h1>Savings Truth-Merge</h1>
+<p class="subtitle">2026-09-01 &mdash; why the new volume counter showed $41,296 against the old
+$56,131, and how activity_v2 now carries the chain&rsquo;s truth. Run 122, branch
+<code>chore/console-hygiene</code>. Follows docs 120 (bootstrap) and 121 (Dune 429 retry).</p>
+
+<h2>1 &middot; The question and the evidence</h2>
+<p>The reconciliation (both sides reproduced to the cent against Dune) showed the $14,835 gap
+was NOT deposit&ndash;withdraw cycles &mdash; both counters count every leg of a cycle. It was
+two real defects:</p>
+<table>
+  <tr><th>defect</th><th>size</th><th>which counter is wrong</th></tr>
+  <tr><td>Old swap volume summed <b>raw token units as dollars</b> &mdash; 2,986 XLM entered as
+      &ldquo;$2,986&rdquo; when it is worth ~$526</td><td>~$1,700 inflated</td>
+      <td>the OLD one</td></tr>
+  <tr><td>New savings rows came from our app DB, which <b>missed ~$14.8k of on-chain vault
+      activity</b> &mdash; above all a <b>$13,113.19 withdrawal on 2026-08-26</b> (Justin
+      pulling out directly / logging 403&rsquo;d), which the chain saw and we never
+      recorded</td><td>~$14.8k missing</td><td>the NEW one</td></tr>
+</table>
+<div class="box warn"><div class="label">Cause &rarr; effect (the missing withdrawals)</div>
+If an action reaches the vault without going through the app &mdash; an external wallet (they
+403 on the log-transaction routes, a known regression), or a direct DeFindex interaction &rarr;
+the chain records it but <code>vault_deposits</code> gets no row &rarr; any table built from the
+DB alone under-counts &rarr; the &ldquo;all-time volume&rdquo; counter reads low and nobody can
+say why. DB rows: $38,000 of savings volume. Chain truth: $52,481.</div>
+
+<h2>2 &middot; The fix &mdash; union, not replacement</h2>
+<p>Chain events carry <b>no fee and no tx hash</b>, and the revenue queries live off
+<code>fee_usd</code> &mdash; so blindly replacing DB rows with chain events would zero out
+recorded revenue. Instead activity_v2&rsquo;s savings rows are now a <b>truth-merge</b>:</p>
+<ul>
+  <li>Every DB row survives as-is &mdash; it holds the fee we actually charged.</li>
+  <li>Every chain event (DeFindex events API, per wallet) that matches a DB row
+      (same wallet + type, amount within max($0.02, 1%), time within 24h, one-to-one
+      nearest-first) is absorbed &mdash; no double row.</li>
+  <li>Every chain event that matches nothing becomes a <b>fee-0</b> row &mdash; real volume,
+      but we never charged revenue on it, and inventing a fee would lie to the revenue
+      queries.</li>
+</ul>
+<table>
+  <tr><th>file</th><th>change</th></tr>
+  <tr><td><code>src/lib/dune/savings-merge.ts</code></td><td><b>NEW</b> pure merge —
+      <code>mergeSavingsSources(db, chain, network)</code> + <code>amountsMatch</code>; the 1%
+      tolerance absorbs the 0.5% deposit fee drift.</td></tr>
+  <tr><td><code>src/lib/dune/savings-merge.test.ts</code></td><td><b>NEW</b> — 7 tests: match
+      absorbs, unmatched event becomes fee-0 row, unmatched DB row survives, 24h window,
+      identical deposits on different days pair one-to-one, never across wallets/types.</td></tr>
+  <tr><td><code>src/services/dune-sync-v2.ts</code></td><td><code>fetchSavingsMerged()</code>:
+      DB rows + per-wallet chain events (wallet list = DB depositors ∪ Horizon-discovered),
+      <b>sequential</b> fan-out with a 429-retry ladder (2s/5s/10s) — DeFindex throttles ~10
+      rapid calls in (verified live: parallel batches got 9/15 wallets 429&rsquo;d, and the
+      starved wallet was exactly the one holding the $13k withdrawal). 404 = &ldquo;wallet never
+      touched the vault&rdquo; = empty, not an error. If the events API is fully down the step
+      falls back to DB-only and says so. <code>fetchActivityV2</code> now returns
+      <code>{ rows, savingsSource }</code>.</td></tr>
+  <tr><td><code>src/server/defindex-events.ts</code></td><td>The shared fetcher&rsquo;s error
+      now carries <code>err.status</code> so callers can tell 404 from 429 without parsing
+      message text.</td></tr>
+  <tr><td><code>src/app/api/cron/dune-sync/route.ts</code></td><td>Reports the savings source
+      in the sync JSON: <code>"429 rows (savings: db+chain events (15/15 wallets))"</code>.</td></tr>
+  <tr><td><code>src/services/prisma-sync.ts</code></td><td><code>fetchSwapVolume</code> (OLD
+      dashboard&rsquo;s <code>normal_volume_daily</code>) now values amounts and fees at spot
+      via <code>usdOf</code> instead of raw token units — the old public counter stops counting
+      1 XLM as $1. It will drop to ≈$54.5k on its next refresh; that drop is the inflation
+      leaving, not data loss.</td></tr>
+</table>
+<div class="box"><div class="label">Labelled trade-off: sequential events fan-out</div>
+15 depositors today &rarr; seconds. At hundreds of depositors this fan-out outgrows the
+cron&rsquo;s 300s budget and must become an incremental sync (only wallets with activity since
+the last run). Written at the call site so nobody trips over it silently.</div>
+
+<h2>3 &middot; Proof &mdash; sync result and an independent recount</h2>
+<pre>activity_v2: "429 rows (savings: db+chain events (15/15 wallets))"   &larr; was 424 db-only</pre>
+<p>An independent re-implementation of the merge (plain JS against the DB + events API) found
+exactly the same 5 chain-only rows the sync added:</p>
+<pre>+deposit    248.75 USDC  GCDGQK…  2026-05-11
++withdraw     5.00 USDC  GAXSNC…  2026-05-15
++deposit    995.52 USDC  GCVCVO…  2026-05-15
++withdraw   118.84 USDC  GAXSNC…  2026-06-26
++withdraw 13113.19 USDC  GCVCVO…  2026-08-26   &larr; the missing &ldquo;pulled all out&rdquo;
+
+savings volume: db 37,999.63 + chain-only 14,481.29 = 52,480.93
+expected 3.1 counter ≈ 52,481 + swaps 1,672 + cctp 1,533 + sends 91 ≈ $55,778</pre>
+<div class="box good"><div class="label">If you do X &rarr; you will see Y</div>
+If you re-run the total-volume query (doc 119 &sect;3.1) &rarr; ~$55.8k (spot prices move it a
+little). It sits near the old $56.1k not by coincidence but because both now measure the same
+reality: the old one had ~$1.7k of fake XLM dollars the new one refuses to count, and the new
+one has ~$1.6k of CCTP/sends the old one never saw. If Justin deposits again directly on-chain
+&rarr; the next sync picks it up as a fee-0 savings row automatically — no DB row needed.</div>
+
+<h2>4 &middot; Gates</h2>
+<p>525 tests / 61 suites green (7 new), lint 0 errors, prettier clean, <code>tsc</code> clean,
+isolated <code>.next-verify</code> build green. Verified live twice against the shared
+production DB.</p>
+
+</body>
+</html>
