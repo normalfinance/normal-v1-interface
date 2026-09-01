@@ -3,6 +3,7 @@
 import type { AddressField } from '@/lib/chains/registry';
 
 import { buildAuthHeaders } from '@/utils/http';
+import { abortTimeout } from '@/utils/abort-timeout';
 
 // ---------------------------------------------------------------------------
 // Cached lookup of the user's Turnkey wallet (subOrgId + addresses).
@@ -72,7 +73,7 @@ async function loadWalletInfo(): Promise<TurnkeyWalletInfo | null> {
           const headers = await buildAuthHeaders();
           const res = await fetch('/api/turnkey/wallet', {
             headers,
-            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+            signal: abortTimeout(REQUEST_TIMEOUT_MS),
           });
           if (!res.ok) throw new TurnkeyWalletInfoUnavailableError(`HTTP ${res.status}`);
           const data = await res.json();

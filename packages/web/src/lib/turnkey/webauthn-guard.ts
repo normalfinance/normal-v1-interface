@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from '@/utils/logger';
+
 // ---------------------------------------------------------------------------
 // Serializes WebAuthn ceremonies and absorbs the transient NotAllowedError.
 //
@@ -56,7 +58,7 @@ async function attempt<T>(ceremony: () => Promise<T>): Promise<T> {
     if (isNotAllowed(error) && elapsed < FAST_FAIL_MS) {
       // Refused before any human interaction — teardown/collision noise.
       // One quiet retry after the platform has had a moment to settle.
-      console.warn(`[webauthn-guard] ceremony fast-failed after ${elapsed}ms — retrying once`);
+      logger.warn(`[webauthn-guard] ceremony fast-failed after ${elapsed}ms — retrying once`);
       await sleep(RETRY_DELAY_MS);
       return ceremony();
     }
@@ -71,7 +73,7 @@ async function attempt<T>(ceremony: () => Promise<T>): Promise<T> {
         msg
       )
     ) {
-      console.warn('[webauthn-guard] network blip mid-ceremony — retrying once');
+      logger.warn('[webauthn-guard] network blip mid-ceremony — retrying once');
       await sleep(RETRY_DELAY_MS);
       return ceremony();
     }

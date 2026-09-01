@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Hero Card Connection</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>The Hero Card Connection</h1>
+<p class="subtitle">Addendum to doc 115 (2026-08-28) &mdash; the iPhone screenshot traced to its
+exact mechanism, a correction to my first assessment, and one hardening fix.</p>
+
+<h2>1 &middot; I said &ldquo;probably not their bug&rdquo;. I was wrong.</h2>
+<p>My first read: the hero&rsquo;s crypto rows come from a fetch that never used the broken API, so
+the Safari fix &ldquo;probably&rdquo; did not cover the screenshot. That analysis stopped one layer
+too early — at the <em>data</em>, without checking the <em>paint gate</em>. The full chain, each
+link now verified in code:</p>
+<pre>1  The account is hybrid (Lobstr connected — visible in the screenshot's own labels),
+   so the savings hook mounts its COMPANION lookup.
+2  That lookup calls wallet-info → AbortSignal.timeout → on Safari &lt; 16 it throws a
+   synchronous TypeError. SWR retries 5×; every retry fails the same way instantly.
+3  companionAddr.data stays undefined forever (a phone's first visit has no cache seed),
+   so companionPositionLoading is stuck TRUE — by design, its "still loading" test is
+   data === undefined, precisely so error retries don't flash a wrong $0.
+4  The hero card deliberately waits for ALL slices before first paint
+   ("so all assets paint together"): firstPaintDone requires
+   !companionPositionLoading… which never comes.
+5  → The entire card skeletons forever. The crypto rows — whose own fetch
+   succeeded — never paint.  <span class="no">That is the screenshot.</span></pre>
+<div class="box good"><div class="label">So, straight</div>
+<strong>The AbortSignal fix from doc 115 very likely IS the coworker&rsquo;s bug.</strong> Deploy,
+have them reload; if their iOS is &lt; 16 the card comes back. The iOS-version + console ask stays
+only as the fallback if it somehow does not.</div>
+
+<h2>2 &middot; The hardening: one slice can never blank the card again</h2>
+<p>Even with the data bug fixed, the design coupling remains: <em>any</em> future failure in the
+savings/companion chain that leaves its loading flag up would blank every row again. The
+first-paint gate now has a cap: <strong>after 8 seconds, the card paints what it has</strong> —
+crypto rows immediately, savings joining whenever its read lands. Aesthetic coupling is worth 8
+seconds, never an infinite blank.</p>
+
+<h2>3 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R76</span></td>
+      <td>On the coworker&rsquo;s iPhone after deploy: reload the home page.</td>
+      <td>The portfolio card paints with all assets.</td></tr>
+  <tr><td>2</td>
+      <td>Any browser, hybrid account: block <code>/api/turnkey/wallet</code> in devtools and
+      load the home page.</td>
+      <td>Crypto rows paint within ~8s regardless (previously: skeletons forever). Savings
+      appears once the route is unblocked.</td></tr>
+</table>
+
+<h2>4 &middot; Commit</h2>
+<p><code>fix(hero): cap the first-paint gate — one slice can no longer blank the card</code>
+(full message in chat).</p>
+
+</body>
+</html>

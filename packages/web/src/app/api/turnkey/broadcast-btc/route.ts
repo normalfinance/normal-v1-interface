@@ -1,8 +1,8 @@
 import type { NextRequest } from 'next/server';
 
+import { logger } from '@/utils/logger';
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/with-auth';
-import { logger } from '@normalfinance/utils';
 import { Psbt, networks } from 'bitcoinjs-lib';
 
 // ---------------------------------------------------------------------------

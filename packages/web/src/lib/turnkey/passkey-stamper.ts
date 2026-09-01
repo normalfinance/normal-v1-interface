@@ -1,5 +1,7 @@
 'use client';
 
+import { logger } from '@/utils/logger';
+
 // One place that builds a passkey stamper, and one place that turns Turnkey's
 // raw errors into something a person can act on.
 //
@@ -74,7 +76,7 @@ async function fetchCredentialsOnce(): Promise<PasskeyCredential[]> {
         ? data.credentialIds.map((id: string) => ({ id, transports: [] }))
         : [];
     if (!creds.length) {
-      console.warn('[passkey] no credentials returned — prompt NOT restricted to this account');
+      logger.warn('[passkey] no credentials returned — prompt NOT restricted to this account');
     }
     cached = { creds, at: Date.now() };
     return creds;
@@ -82,7 +84,7 @@ async function fetchCredentialsOnce(): Promise<PasskeyCredential[]> {
     // Fail-open by design (a lookup must never block signing) — but SAY so.
     // Without this, a 500ing or not-yet-deployed route is indistinguishable
     // from the original bug: same unrestricted prompt, same failure.
-    console.warn('[passkey] credential lookup failed — prompt NOT restricted to this account', e);
+    logger.warn('[passkey] credential lookup failed — prompt NOT restricted to this account', e);
     return [];
   }
 }
@@ -150,7 +152,7 @@ export function friendlyTurnkeyError(e: unknown): string {
     // fact — and distinguishes the two causes below, which need different
     // fixes and which cost several debugging rounds to tell apart.
     const presented = /credentialId=([A-Za-z0-9_-]+)/.exec(raw)?.[1];
-    console.warn('[passkey] Turnkey rejected the credential the browser used', {
+    logger.warn('[passkey] Turnkey rejected the credential the browser used', {
       presented,
       expected: lastCredentialIds,
       rpId: lastRpId,

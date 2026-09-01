@@ -114,6 +114,14 @@ export default function PortfolioView() {
     if (!balancesLoading && !savings.positionLoading && !savings.companionPositionLoading)
       setFirstPaintDone(true);
   }, [balancesLoading, savings.positionLoading, savings.companionPositionLoading]);
+  // Doc 117: same cap as the landing hero (doc 116). companionPositionLoading
+  // is deliberately sticky (data === undefined, so error-retry gaps never
+  // flash $0) — but a permanently dead companion lookup then held this page's
+  // skeletons forever, crypto rows included. After 8s, paint what we have.
+  useEffect(() => {
+    const id = setTimeout(() => setFirstPaintDone(true), 8_000);
+    return () => clearTimeout(id);
+  }, []);
 
   // ONE source for every chain, including XLM/USDC.
   //
@@ -312,7 +320,10 @@ export default function PortfolioView() {
         // The totals here sum BOTH sources — native-chain balances and the
         // Stellar token store. Gating on savings alone let the figure paint
         // before XLM/USDC landed, so the number visibly jumped a beat later.
-        loading={savingsLoading || balancesLoading}
+        // Doc 117: gated on the CAPPED first paint, like Holdings below.
+        // This was the live flag — a stuck companion lookup would spin the
+        // page hero forever, even after every other row had painted.
+        loading={!firstPaintDone && (savingsLoading || balancesLoading)}
         holdingsData={holdingsData}
         balancesError={!!walletBalances.error}
         onRetry={() => walletBalances.refresh()}

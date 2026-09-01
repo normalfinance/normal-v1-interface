@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dune Dashboard v2</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:980px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.warn { border-left-color:#d97706; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .keep { color:var(--green); font-weight:600; }
+  .upd { color:#1d4ed8; font-weight:600; }
+  .new { color:#7a4a00; font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Dune Dashboard v2</h1>
+<p class="subtitle">Plan, 2026-08-28 &mdash; from &ldquo;Stellar savings + Soroswap&rdquo; to the
+full product: Turnkey multi-chain wallets, LI.FI swaps, CCTP bridges, sends and ramps. Every
+chart listed with its type and its exact data source. Awaiting GO.</p>
+
+<h2>1 &middot; What we have to work with (verified in the DB today)</h2>
+<table>
+  <tr><th>table</th><th>feeds</th></tr>
+  <tr><td><code>swap_logs</code></td><td>Soroswap AND LI.FI swaps (both write here; engine is
+      inferable from the pair — XLM↔USDC = Soroswap, anything BTC/ETH/SOL = LI.FI — so no schema
+      change needed; the sync job labels each row)</td></tr>
+  <tr><td><code>cctp_transfers</code></td><td>every CCTP swap with full status machine
+      (COMPLETED/FAILED/REFUNDED&hellip;), direction, amounts, timestamps, and the
+      <em>failure-class fields</em> (which bridge/DEX reverted) from this week&rsquo;s work</td></tr>
+  <tr><td><code>send_logs</code></td><td>BTC/ETH/SOL/Stellar sends with status</td></tr>
+  <tr><td><code>ramp_transfers</code>, <code>offramp_fills</code>,
+      <code>moneygram_transactions</code></td><td>on/off-ramp flows, provider, amounts,
+      status</td></tr>
+  <tr><td><code>turnkey_wallets</code></td><td>per-chain address provisioning → wallets by
+      chain</td></tr>
+  <tr><td><code>vault_deposits</code> + existing snapshots</td><td>savings (already synced)</td></tr>
+</table>
+<p>Current sync (<code>dune-sync</code> cron) uploads 4 tables:
+<code>normal_vault_snapshots</code>, <code>normal_volume_daily</code>,
+<code>normal_wallet_activity</code>, <code>normal_yield_snapshots</code>. Stellar isn&rsquo;t
+natively indexed by Dune, so everything arrives via this upload path — that stays the
+architecture.</p>
+
+<h2>2 &middot; Data plumbing — the one structural change</h2>
+<div class="box"><div class="label">One unified activity table instead of many</div>
+Extend <code>dune-sync</code> to build <code>normal_activity_v2</code>: one row per completed
+action across ALL products, with columns<br/>
+<code>date · wallet · product (soroswap|lifi|cctp|savings|send|ramp) · direction ·
+chain_in · chain_out · asset_in · asset_out · amount_usd · fee_usd · status · tx_hash</code>.<br/>
+Almost every chart below is a one-line query over this table. Two small companion tables:
+<code>normal_cctp_ops</code> (per-transfer status, duration, revert tool — for the ops charts)
+and <code>normal_wallet_chains</code> (per-chain provisioning counts). Savings/yield snapshots
+stay as they are.</div>
+<ul>
+  <li><strong>Honesty rules baked into the sync:</strong> volume counts COMPLETED/confirmed rows
+      only; CCTP uses the <em>realized</em> delivered amount where recorded (the Wave-5 work);
+      fee_usd is the collected fee, not the quoted one, where the two differ.</li>
+  <li><strong>USD conversion</strong> happens in the sync job at upload time from our own price
+      source, stamped once — so charts never re-price history.</li>
+  <li><strong>Free-plan caveat</strong> (the &ldquo;plan changes in 13 days&rdquo; banner):
+      uploads and query counts are limited, which is exactly why v2 CONSOLIDATES into one wide
+      table + two small ones rather than a table per product.</li>
+</ul>
+
+<h2>3 &middot; The charts — keep / update / new</h2>
+
+<h3>A · Growth</h3>
+<table>
+  <tr><th>chart</th><th>type</th><th>status</th><th>notes</th></tr>
+  <tr><td>Total registered users</td><td>Counter</td><td class="keep">KEEP</td><td>as is</td></tr>
+  <tr><td>User signups over time</td><td>Bar</td><td class="keep">KEEP</td><td>as is</td></tr>
+  <tr><td>Wallets by chain over time</td><td>Stacked area</td><td class="new">NEW</td>
+      <td>Stellar / BTC / ETH / SOL provisioned addresses — shows multi-chain adoption, the
+      whole point of the Turnkey work</td></tr>
+  <tr><td>Daily active wallets</td><td>Line</td><td class="upd">UPDATE</td>
+      <td>currently Stellar-only; v2 counts activity across ALL products from the unified
+      table</td></tr>
+</table>
+
+<h3>B · Volume &amp; product mix</h3>
+<table>
+  <tr><th>chart</th><th>type</th><th>status</th><th>notes</th></tr>
+  <tr><td>Total volume all-time</td><td>Counter</td><td class="upd">UPDATE</td>
+      <td>definition widens: + CCTP + LI.FI + ramps (was savings+Soroswap only)</td></tr>
+  <tr><td>Daily volume by product</td><td>Stacked bar</td><td class="new">NEW</td>
+      <td>soroswap / lifi / cctp / savings-deposits / ramps — the headline chart of v2</td></tr>
+  <tr><td>Product mix, last 30d</td><td>Donut</td><td class="new">NEW</td>
+      <td>share of volume by product</td></tr>
+  <tr><td>Top asset routes</td><td>Horizontal bar</td><td class="new">NEW</td>
+      <td>XLM↔USDC, USDC→ETH, BTC→USDC&hellip; by count and USD — shows what people actually
+      swap</td></tr>
+  <tr><td>Sends by chain</td><td>Stacked bar</td><td class="new">NEW</td>
+      <td>from send_logs; small but completes the picture</td></tr>
+</table>
+
+<h3>C · Revenue</h3>
+<table>
+  <tr><th>chart</th><th>type</th><th>status</th><th>notes</th></tr>
+  <tr><td>Total protocol fees</td><td>Counter</td><td class="upd">UPDATE</td>
+      <td>+ CCTP 0.5% + LI.FI integrator fees (currently invisible!)</td></tr>
+  <tr><td>Fee revenue by product</td><td>Donut</td><td class="upd">UPDATE</td>
+      <td>was swaps-vs-savings; becomes soroswap / cctp / lifi / savings</td></tr>
+  <tr><td>Daily fee revenue</td><td>Stacked bar</td><td class="upd">UPDATE</td>
+      <td>stacked by product instead of a single series</td></tr>
+  <tr><td>Cumulative revenue</td><td>Area line</td><td class="new">NEW</td>
+      <td>the up-and-to-the-right chart for investors</td></tr>
+</table>
+
+<h3>D · Savings (mostly keep)</h3>
+<table>
+  <tr><th>chart</th><th>type</th><th>status</th><th>notes</th></tr>
+  <tr><td>TVL over time / current TVL / total yield</td><td>Area + counters</td>
+      <td class="keep">KEEP</td><td>as is (TVL bar → area for readability)</td></tr>
+  <tr><td>Active savers over time</td><td>Line</td><td class="new">NEW</td>
+      <td>wallets with a &gt;0 position per day — retention at a glance</td></tr>
+</table>
+
+<h3>E · Bridge reliability (all NEW — this week&rsquo;s data pays off)</h3>
+<table>
+  <tr><th>chart</th><th>type</th><th>status</th><th>notes</th></tr>
+  <tr><td>CCTP transfers by final status</td><td>Stacked bar (weekly)</td><td class="new">NEW</td>
+      <td>COMPLETED / REFUNDED / FAILED — the reliability trend line of the whole hardening
+      project</td></tr>
+  <tr><td>Bridge success rate, 30d</td><td>Counter (%)</td><td class="new">NEW</td>
+      <td>completed ÷ terminal</td></tr>
+  <tr><td>Median completion time</td><td>Bar (in vs out)</td><td class="new">NEW</td>
+      <td>createdAt → completion on COMPLETED rows</td></tr>
+  <tr><td>Route failures by tool</td><td>Horizontal bar</td><td class="new">NEW</td>
+      <td>which LI.FI bridge/DEX reverts, from the failure-class fields — the &ldquo;fly&rdquo;
+      incident would have been visible here in one glance</td></tr>
+</table>
+
+<h3>F · Ramps</h3>
+<table>
+  <tr><th>chart</th><th>type</th><th>status</th><th>notes</th></tr>
+  <tr><td>Ramp volume by provider &amp; direction</td><td>Stacked bar</td><td class="new">NEW</td>
+      <td>MoneyGram / Coinbase, on vs off</td></tr>
+</table>
+
+<h2>4 &middot; One decision for you before GO</h2>
+<div class="box warn"><div class="label">Public vs private</div>
+Dune dashboards are <strong>public</strong>. Sections A–D and F are marketing-friendly. Section E
+(failure rates, which routes revert, refund counts) is operationally gold but also shows the
+world our failure numbers. Recommendation: <strong>two dashboards</strong> — the public one gets
+A–D + F and the success-rate counter only; a second, unlisted one gets the full E section for us.
+Same tables, two dashboards, no extra sync cost. Say which you want.</div>
+
+<h2>5 &middot; Build plan (on GO)</h2>
+<ol>
+  <li>Extend <code>defindex-sync.ts</code>: build + upload <code>normal_activity_v2</code>,
+      <code>normal_cctp_ops</code>, <code>normal_wallet_chains</code> (jest-covered row-builder
+      functions, pure). Keep the 4 existing tables.</li>
+  <li>Deploy → let the cron populate → verify row counts against the DB.</li>
+  <li>Write the ~18 Dune queries + arrange the two dashboards (I draft every query; you paste
+      them in Dune — queries live in Dune, not in the repo, so this part is click-work I
+      script for you).</li>
+  <li>Retire the old Stellar-only queries once v2 matches.</li>
+</ol>
+
+</body>
+</html>

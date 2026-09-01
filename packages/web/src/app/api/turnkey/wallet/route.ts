@@ -1,9 +1,9 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
 import { turnkey, buildPasskeyRootUser } from '@/lib/turnkey/server';
 import { CHAINS, pickAddresses, ADDRESS_SELECT } from '@/lib/chains/registry';
 import {

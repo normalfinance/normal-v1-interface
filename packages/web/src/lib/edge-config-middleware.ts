@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 
+import { logger } from '@/utils/logger';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
 
 import {
   getApiConfig,

@@ -3,6 +3,7 @@
 import type { LifiQuote } from '@/lib/lifi/execute';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
+import { logger } from '@/utils/logger';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
@@ -400,7 +401,7 @@ export function useLifiEngine({
         setShortfall({ tried: amount.toFixed(), affordable: maxAffordableEth(err) });
         return;
       }
-      console.error('[lifi engine] execute failed:', err); // surface stack
+      logger.error('[lifi engine] execute failed:', err); // surface stack
       enqueueSnackbar(
         isInsufficientGasError(err)
           ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dune v2 Setup Guide</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:980px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:42px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15px; margin:24px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12px; line-height:1.5; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.warn { border-left-color:#d97706; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .viz { font-size:12px; color:#1d4ed8; font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Dune v2 Setup Guide</h1>
+<p class="subtitle">2026-08-28 &mdash; the complete walkthrough: what shipped in code, every SQL
+query ready to paste, and the exact clicks to assemble the dashboard. Amendments applied:
+all-time only, combined TVL, updated revenue, current total holdings.</p>
+
+<h2>1 &middot; What the code now uploads (shipped this run, 13 new tests)</h2>
+<table>
+  <tr><th>Dune table</th><th>contents</th><th>refresh</th></tr>
+  <tr><td><code>normal_activity_v2</code></td><td>ONE row per terminal action across every
+      product — soroswap, lifi (split by the <code>lifi:</code> marker in swap_logs), cctp,
+      savings, send, ramp (Coinbase + MoneyGram). Columns: date, wallet, product, action,
+      provider, chain, assets, amount_token, amount_usd, fee_usd, status, tx_hash.</td>
+      <td>rebuilt each sync</td></tr>
+  <tr><td><code>normal_cctp_ops</code></td><td>per-transfer reliability: status, direction,
+      duration, and the reverted bridge/DEX parsed from the failure-class detail</td>
+      <td>rebuilt each sync</td></tr>
+  <tr><td><code>normal_wallet_chains</code></td><td>per-day count of newly provisioned
+      BTC/ETH/SOL/Stellar addresses</td><td>rebuilt each sync</td></tr>
+  <tr><td><code>normal_holdings_snapshots</code></td><td>daily snapshot of what all known
+      wallets hold per asset (live balance fan-out: Turnkey + linked Stellar wallets), plus one
+      SAVINGS row carrying the vault TVL — the source for combined TVL and
+      &ldquo;holdings now&rdquo;</td><td><strong>append-only</strong> (history builds daily)</td></tr>
+  <tr><td colspan="3">The 8 existing tables (vault/yield snapshots, users, referrals&hellip;)
+      are untouched.</td></tr>
+</table>
+<div class="box warn"><div class="label">Three honest caveats — also worth a note on the dashboard</div>
+<b>1.</b> <code>amount_usd</code> is stamped at sync time from current spot prices, so historical
+non-stable rows (XLM/BTC/ETH/SOL legs) are valued at today&rsquo;s price. USDC flows — most of
+the volume — are exact. <b>2.</b> Holdings history starts the day this deploys; balances cannot
+be read retroactively. <b>3.</b> On Dune&rsquo;s free plan there are no private dashboards — an
+&ldquo;ops&rdquo; dashboard is public to anyone with the URL. Section 5&rsquo;s reliability
+queries are written and ready; publish them only if you accept that. <b>4.</b> (doc 122)
+Savings rows are a truth-merge: app DB rows (with real fees) plus on-chain vault events the DB
+never recorded — those carry fee 0, so volume is chain-complete while revenue stays exactly
+what was charged.</div>
+
+<h2>2 &middot; One-time setup (15 minutes)</h2>
+<ol>
+  <li><strong>API key:</strong> dune.com → Settings → API → create a key. It already exists if
+      the current dashboard updates (the sync uses it today). Env vars on Vercel:
+      <code>DUNE_API_KEY</code>, and <code>DUNE_NAMESPACE</code> only if your team handle is not
+      <code>normalfinance</code>.</li>
+  <li><strong>Create the four new tables first</strong> — Dune&rsquo;s insert/clear API returns
+      404 for a table that was never created, so the sync <em>cannot</em> make them appear on its
+      own (that is exactly the &ldquo;Table &hellip; does not exist&rdquo; error in the query
+      editor). One-time bootstrap, same as the original 8 tables (doc 120 explains):<br/>
+      <code>cd packages/web</code><br/>
+      <code>.\scripts\create-dune-tables-v2.ps1 -ApiKey "&lt;DUNE_API_KEY from .env&gt;"</code><br/>
+      Expect four green <code>OK</code> lines: <code>normal_activity_v2</code>,
+      <code>normal_cctp_ops</code>, <code>normal_wallet_chains</code>,
+      <code>normal_holdings_snapshots</code>.</li>
+  <li><strong>Run one sync by hand</strong> to fill the tables before you build queries.
+      No deploy needed for this: localhost works, because the dev server runs this branch, the
+      local .env has the Dune key, and localhost shares the production database — so real data
+      uploads. Your usual command:<br/>
+      <code>Invoke-RestMethod -Uri "http://localhost:8082/api/cron/dune-sync" -Method GET
+      -Headers @{ Authorization = "Bearer &lt;CRON_SECRET&gt;" }</code><br/>
+      (After the merge, the deployed cron takes over — that is what makes the DAILY holdings
+      history accumulate without manual runs.)<br/>
+      The JSON response lists row counts per table — <code>activity_v2</code>,
+      <code>cctp_ops</code>, <code>wallet_chains</code>, <code>holdings_snapshots</code> should
+      all show rows, not ERROR. The call can take ~3 minutes: one sync makes ~24 Dune API calls,
+      the free plan rate-limits per minute, and since doc 121 a rate-limited call waits out the
+      window and retries instead of failing with 429.</li>
+  <li><strong>Smoke-check in Dune:</strong> New Query →
+      <code>SELECT * FROM dune.normalfinance.normal_activity_v2 LIMIT 20</code> → Run. You should
+      see soroswap, lifi, cctp, savings rows side by side.</li>
+</ol>
+
+<h2>3 &middot; The queries — paste each into a New Query, add the visualization, Save</h2>
+<p>For every block: Dune → <b>New Query</b> → paste → <b>Run</b> → <b>New visualization</b> →
+set the type/fields shown in blue → rename the query to the title → <b>Save</b>. The italic
+line under each heading is that query&rsquo;s plain-language description — paste it into the
+query&rsquo;s <b>Description</b> field in Dune (it shows on hover) or add it as a text widget
+next to the chart on the dashboard.</p>
+
+<h3>3.1 Total volume, all-time <span class="viz">Counter</span></h3>
+<p><i>Every dollar that has moved through Normal since launch — all three swap engines (Soroswap, LI.FI, CCTP), savings deposits and withdrawals (including direct on-chain vault actions the app never logged), sends, and on/off-ramps. Completed actions only. This is a FLOW number: it only ever grows.</i></p>
+<pre>SELECT SUM(amount_usd) AS total_volume_usd
+FROM dune.normalfinance.normal_activity_v2
+WHERE status = 'completed';</pre>
+
+<h3>3.2 Total protocol fees, all-time <span class="viz">Counter</span></h3>
+<p><i>Everything Normal has earned, all time: Soroswap 0.5% swap fees, CCTP swap fees, LI.FI integrator fees, and savings deposit fees.</i></p>
+<pre>SELECT SUM(fee_usd) AS total_fees_usd
+FROM dune.normalfinance.normal_activity_v2
+WHERE status = 'completed';</pre>
+
+<h3>3.3 Fee revenue by product <span class="viz">Pie/Donut — label: product, value: fees_usd</span></h3>
+<p><i>The same all-time revenue, split by product — which product actually earns.</i></p>
+<pre>SELECT product, SUM(fee_usd) AS fees_usd
+FROM dune.normalfinance.normal_activity_v2
+WHERE status = 'completed' AND fee_usd &gt; 0
+GROUP BY 1 ORDER BY 2 DESC;</pre>
+
+<h3>3.4 Daily fee revenue by product <span class="viz">Bar — X: day, Y: fees_usd, stack by product ("Enable stacking")</span></h3>
+<p><i>Revenue per day, stacked by product — what is earning NOW, not just historically.</i></p>
+<pre>SELECT date_trunc('day', CAST(date AS timestamp)) AS day,
+       product, SUM(fee_usd) AS fees_usd
+FROM dune.normalfinance.normal_activity_v2
+WHERE status = 'completed'
+GROUP BY 1, 2 ORDER BY 1;</pre>
+
+<h3>3.5 Cumulative revenue <span class="viz">Area — X: day, Y: cumulative_fees</span></h3>
+<p><i>All-time earnings as a running total — the up-and-to-the-right line.</i></p>
+<pre>WITH daily AS (
+  SELECT date_trunc('day', CAST(date AS timestamp)) AS day, SUM(fee_usd) AS fees
+  FROM dune.normalfinance.normal_activity_v2
+  WHERE status = 'completed' GROUP BY 1
+)
+SELECT day, SUM(fees) OVER (ORDER BY day) AS cumulative_fees FROM daily ORDER BY day;</pre>
+
+<h3>3.6 Daily volume by product <span class="viz">Bar — X: day, Y: volume_usd, stack by product</span></h3>
+<p><i>Dollars moved per day, stacked by product — the day-to-day picture of what people actually use.</i></p>
+<pre>SELECT date_trunc('day', CAST(date AS timestamp)) AS day,
+       product, SUM(amount_usd) AS volume_usd
+FROM dune.normalfinance.normal_activity_v2
+WHERE status = 'completed'
+GROUP BY 1, 2 ORDER BY 1;</pre>
+
+<h3>3.7 Product mix, all-time <span class="viz">Pie/Donut</span></h3>
+<p><i>Share of all-time volume by product.</i></p>
+<pre>SELECT product, SUM(amount_usd) AS volume_usd
+FROM dune.normalfinance.normal_activity_v2
+WHERE status = 'completed'
+GROUP BY 1 ORDER BY 2 DESC;</pre>
+
+<h3>3.8 Top swap routes, all-time <span class="viz">Bar, horizontal — Y: route, X: volume_usd</span></h3>
+<p><i>The most-traded pairs since launch — which conversions people actually make (XLM↔USDC, USDC→ETH, BTC→USDC…).</i></p>
+<pre>SELECT asset_in || ' → ' || asset_out AS route,
+       SUM(amount_usd) AS volume_usd, COUNT(*) AS swaps
+FROM dune.normalfinance.normal_activity_v2
+WHERE status = 'completed' AND action = 'swap'
+GROUP BY 1 ORDER BY 2 DESC LIMIT 15;</pre>
+
+<h3>3.9 Daily active wallets <span class="viz">Line</span></h3>
+<p><i>Unique wallets that completed at least one action that day, across ALL products. (The old chart counted Stellar activity only.)</i></p>
+<pre>SELECT date_trunc('day', CAST(date AS timestamp)) AS day,
+       COUNT(DISTINCT wallet_address) AS active_wallets
+FROM dune.normalfinance.normal_activity_v2
+WHERE status = 'completed'
+GROUP BY 1 ORDER BY 1;</pre>
+
+<h3>3.10 Wallets by chain (cumulative) <span class="viz">Area — X: day, Y: wallets, stack by chain</span></h3>
+<p><i>How many wallets hold each chain address over time — multi-chain (Turnkey) adoption.</i></p>
+<pre>SELECT date_trunc('day', CAST(date AS timestamp)) AS day, chain,
+       SUM(SUM(wallets_added)) OVER (PARTITION BY chain
+         ORDER BY date_trunc('day', CAST(date AS timestamp))) AS wallets
+FROM dune.normalfinance.normal_wallet_chains
+GROUP BY date_trunc('day', CAST(date AS timestamp)), chain ORDER BY 1;</pre>
+
+<div class="box"><div class="label">TVL vs. volume — the distinction, once</div>
+<b>Volume</b> (3.1, 3.6) counts <i>flows</i>: every swap on every engine, every deposit,
+withdrawal, send and ramp — it includes all the swaps and only ever grows. <b>TVL</b> (3.11,
+3.12) counts <i>holdings</i>: what sits in users&rsquo; wallets plus the savings vault at a
+moment in time. Swaps do not add to TVL — they convert one held asset into another, and the
+result is already counted in the holdings snapshot. Savings IS included in TVL, as its own
+stacked band.</div>
+<h3>3.11 Combined TVL over time <span class="viz">Area — X: day, Y: usd, stack by bucket</span></h3>
+<p><i>What users HOLD on Normal at each point in time: every known wallet&rsquo;s balances (BTC, ETH, SOL, XLM, USDC) plus the savings vault, stacked. A STOCK number — it falls when people withdraw or send out.</i></p>
+<pre>WITH runs AS (
+  SELECT snapshot_date,
+         CASE WHEN asset = 'SAVINGS' THEN 'Savings (DeFindex)'
+              ELSE 'Wallet holdings' END AS bucket,
+         SUM(usd_total) AS usd
+  FROM dune.normalfinance.normal_holdings_snapshots
+  GROUP BY 1, 2
+), ranked AS (
+  SELECT date_trunc('day', CAST(snapshot_date AS timestamp)) AS day, bucket, usd,
+         row_number() OVER (PARTITION BY date_trunc('day', CAST(snapshot_date AS timestamp)),
+                            bucket ORDER BY snapshot_date DESC) AS rn
+  FROM runs
+)
+SELECT day, bucket, usd FROM ranked WHERE rn = 1 ORDER BY day;</pre>
+<p><i>Why the ranking: the holdings table is append-only and each run stamps its full time, so
+running the sync several times in one day (normal during setup) is harmless — this query keeps
+only the latest run per day.</i></p>
+<p>This is savings TVL + everything users hold in their wallets, stacked — &ldquo;TVL combining
+all&rdquo;. It grows from deploy day; the old savings-only chart (existing
+<code>normal_vault_snapshots</code> query) can stay beside it for deep history.</p>
+
+<h3>3.12 Current combined TVL <span class="viz">Counter</span></h3>
+<p><i>One number: everything users hold right now — all wallets plus savings.</i></p>
+<pre>SELECT SUM(usd_total) AS combined_tvl_usd
+FROM dune.normalfinance.normal_holdings_snapshots
+WHERE snapshot_date = (SELECT MAX(snapshot_date)
+                       FROM dune.normalfinance.normal_holdings_snapshots);</pre>
+
+<h3>3.13 Total holdings by asset, right now <span class="viz">Bar, horizontal — Y: asset, X: usd_total</span></h3>
+<p><i>ALL wallets combined, per asset: how much BTC, ETH, SOL, XLM, USDC and savings people hold at this moment — token amounts and USD side by side.</i></p>
+<pre>SELECT asset, SUM(balance_total) AS balance, SUM(usd_total) AS usd_total
+FROM dune.normalfinance.normal_holdings_snapshots
+WHERE snapshot_date = (SELECT MAX(snapshot_date)
+                       FROM dune.normalfinance.normal_holdings_snapshots)
+GROUP BY 1 ORDER BY 3 DESC;</pre>
+
+<h3>3.14 Keepers</h3>
+<p>Total registered users, signups over time, savings TVL history, total yield — the existing
+queries stay exactly as they are.</p>
+
+<h2>4 &middot; Assemble the dashboard (10 minutes)</h2>
+<ol>
+  <li>Dune → <b>Create → Dashboard</b> (or edit the existing one).</li>
+  <li>Add text widgets as section headers: <i>Growth · Volume · Revenue · TVL &amp; Holdings ·
+      Savings</i>.</li>
+  <li><b>Add visualization</b> → pick each saved query. Suggested order:
+      <b>Row 1</b> counters — users · total volume (3.1) · total fees (3.2) · combined TVL
+      (3.12). <b>Row 2</b> — daily volume by product (3.6) · product mix (3.7).
+      <b>Row 3</b> — daily fees (3.4) · fee donut (3.3) · cumulative revenue (3.5).
+      <b>Row 4</b> — combined TVL area (3.11) · holdings-now bar (3.13).
+      <b>Row 5</b> — active wallets (3.9) · wallets by chain (3.10) · top routes (3.8).
+      <b>Row 6</b> — the kept savings charts.</li>
+  <li>Drag to size; counters look best at quarter-width, time series at half-width.</li>
+</ol>
+
+<h2>5 &middot; Reliability queries — ready when you want them (public-URL caveat above)</h2>
+<p><i>Reliability, from the CCTP ops table: how often bridges complete, how long they take by direction, and which LI.FI bridge/DEX reverts most — the chart that would have exposed the &ldquo;fly&rdquo; incident at a glance.</i></p>
+<pre>-- Success rate, all-time (Counter)
+SELECT ROUND(100.0 * SUM(CASE WHEN status='COMPLETED' THEN 1 ELSE 0 END) / COUNT(*), 1)
+  AS success_rate_pct FROM dune.normalfinance.normal_cctp_ops;
+
+-- Transfers by final status per week (Bar, stack by status)
+SELECT date_trunc('week', CAST(created_at AS timestamp)) AS week, status, COUNT(*) AS transfers
+FROM dune.normalfinance.normal_cctp_ops GROUP BY 1,2 ORDER BY 1;
+
+-- Median completion time by direction (Bar)
+SELECT direction, approx_percentile(duration_seconds, 0.5) / 60.0 AS median_minutes
+FROM dune.normalfinance.normal_cctp_ops WHERE duration_seconds IS NOT NULL GROUP BY 1;
+
+-- Which routes revert (Bar, horizontal)
+SELECT COALESCE(revert_tool, 'unknown') AS tool, COUNT(*) AS reverts
+FROM dune.normalfinance.normal_cctp_ops WHERE revert_tool IS NOT NULL OR revert_exchanges IS NOT NULL
+GROUP BY 1 ORDER BY 2 DESC;</pre>
+
+<h2>6 &middot; Verify (QA R78)</h2>
+<ol>
+  <li>The manual cron call&rsquo;s JSON shows non-ERROR row counts for all four new tables.</li>
+  <li><code>activity_v2</code> row count ≈ confirmed swaps + confirmed deposits + terminal CCTP
+      + confirmed sends + arrived ramps + completed MoneyGram (compare against the DB).</li>
+  <li>3.1 total volume ≥ the old dashboard&rsquo;s $56k (it now includes CCTP + LI.FI + ramps);
+      3.2 fees ≥ the old $183 (it now includes CCTP fees).</li>
+  <li>After two daily syncs, 3.11 shows two points and 3.12/3.13 move with real balances.</li>
+</ol>
+
+</body>
+</html>

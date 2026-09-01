@@ -1,6 +1,7 @@
 'use client';
 
 import { paths } from '@/routes/paths';
+import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
@@ -127,7 +128,7 @@ const AuthLoginModal = ({
       await persistTosAcceptance();
       await signInWithGoogle();
     } catch (err) {
-      console.error('Error signing in with Google:', err);
+      logger.error('Error signing in with Google:', err);
       const message = err instanceof Error ? err.message : 'Unable to start Google sign-in.';
       setError(message);
       setLoading(false);
@@ -169,7 +170,7 @@ const AuthLoginModal = ({
           onClose();
         }
       } catch (err) {
-        console.error('Error signing in with password:', err);
+        logger.error('Error signing in with password:', err);
         const message =
           err instanceof Error ? err.message : t('Unable to sign in. Please try again.');
         setError(message);
@@ -185,7 +186,7 @@ const AuthLoginModal = ({
         setOtpSent(true);
         setLoading(false);
       } catch (err) {
-        console.error('Error sending magic link:', err);
+        logger.error('Error sending magic link:', err);
         const message =
           err instanceof Error ? err.message : t('Unable to send magic link. Please try again.');
         setError(message);
@@ -213,7 +214,7 @@ const AuthLoginModal = ({
       await verifyOtp(email.trim(), codeToVerify.trim());
       onClose();
     } catch (err) {
-      console.error('Error verifying OTP:', err);
+      logger.error('Error verifying OTP:', err);
       const message = err instanceof Error ? err.message : t('Invalid code. Please try again.');
       setError(message);
       setLoading(false);
@@ -246,11 +247,11 @@ const AuthLoginModal = ({
 
     try {
       const result = await resetPassword(email.trim(), captchaToken);
-      console.log('Password reset request result:', result);
+      logger.log('Password reset request result:', result);
       setResetEmailSent(true);
       setLoading(false);
     } catch (err) {
-      console.error('Error sending password reset email:', err);
+      logger.error('Error sending password reset email:', err);
       const message =
         err instanceof Error
           ? err.message

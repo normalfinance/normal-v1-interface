@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { logger } from '@normalfinance/utils';
+import { logger } from '@/utils/logger';
 import { useReferralTracking } from '@/hooks/use-referral-tracking';
 
 interface ReferralProviderProps {

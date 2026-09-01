@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
 // Vercel Cron: keep in-flight ramp transfers honest when no tab is open
 // (doc 89 F2d). Two jobs, both rules of the status machine:
 //
@@ -13,7 +14,6 @@ import { prisma } from '@/lib/prisma';
 //
 // Same auth pattern as the other crons (CRON_SECRET), same heartbeat.
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
 import { cronAuthVerdict } from '@/server/cron-auth';
 import { recordCronHeartbeat } from '@/server/cron-heartbeat';
 import { ABANDON_AFTER_MS, balanceShowsArrival } from '@/lib/ramp/status';

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dune 429 Retry</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:980px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:42px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15px; margin:24px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12px; line-height:1.5; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.warn { border-left-color:#d97706; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+</style>
+</head>
+<body>
+<h1>Dune 429 Retry</h1>
+<p class="subtitle">2026-08-31 &mdash; the v2 tables existed but stayed empty: Dune&rsquo;s
+free-plan rate limit was killing the last third of every sync. Run 121, branch
+<code>chore/console-hygiene</code>. Follows doc 120 (table bootstrap).</p>
+
+<h2>1 &middot; What you saw, and the evidence</h2>
+<p>After the doc-120 create script (four green OKs) and a sync, the query
+<code>SELECT SUM(amount_usd) FROM &hellip; normal_activity_v2</code> ran without error but
+returned a <b>blank cell</b> &mdash; SQL&rsquo;s <code>SUM</code> over an empty table is NULL.
+Table exists, zero rows. I re-ran the sync myself against your dev server and the JSON response
+was the smoking gun:</p>
+<pre>"users":            "674 rows",           &larr; old tables fine
+"transaction_log":  "323 rows",
+"activity_v2":   "ERROR: Dune clear failed &hellip; 429 Too many requests. Please upgrade your plan"
+"cctp_ops":      "ERROR: &hellip; 429"
+"wallet_chains": "ERROR: &hellip; 429"
+"holdings_snapshots": "6 rows"             &larr; survived — see why below</pre>
+<div class="box warn"><div class="label">Cause &rarr; effect chain</div>
+One sync makes ~24 Dune API calls in sequence (8 old tables &times; clear+insert, then the 4 v2
+steps). Dune&rsquo;s free plan rate-limits requests per minute &rarr; the old tables, running
+first, spend the whole window &rarr; by the time the v2 steps fire, every call gets
+<code>429 Too many requests</code> &rarr; the v2 <code>clear</code> throws, the step&rsquo;s
+try/catch records ERROR and skips the insert &rarr; the tables stay empty &rarr; your query
+returns NULL. <code>holdings_snapshots</code> escaped because it is append-only: no clear call,
+one request instead of two, fired last &mdash; by then a slot had freed up. The v2 steps
+weren&rsquo;t unlucky; they are structurally LAST in line, so they will lose this race every
+single run. That is why this needed a code fix, not a re-run.</div>
+
+<h2>2 &middot; The fix &mdash; wait out the window instead of dying</h2>
+<table>
+  <tr><th>file</th><th>change</th></tr>
+  <tr><td><code>src/lib/dune/client.ts</code></td><td>Both <code>duneClear</code> and
+      <code>duneInsert</code> now go through one <code>duneFetch</code> with 429-aware retry:
+      on 429, wait (Dune&rsquo;s <code>Retry-After</code> header if sent, capped at 60s;
+      otherwise a 5s &rarr; 15s &rarr; 30s ladder) and try again, up to 3 retries per call.
+      A shared per-run budget caps TOTAL retry sleep at 120s so the cron can never outgrow its
+      <code>maxDuration = 300</code>. The decision lives in a pure function,
+      <code>duneRetryDelayMs(status, attempt, retryAfterHeader, remainingBudgetMs)</code>.</td></tr>
+  <tr><td><code>src/lib/dune/client.test.ts</code></td><td><b>NEW</b> &mdash; 4 tests: the
+      backoff ladder then give-up, Retry-After honoured and capped, non-429 never retried,
+      budget refusal. Suite is now 518 tests / 60 suites.</td></tr>
+  <tr><td><code>src/app/api/cron/dune-sync/route.ts</code></td><td>Calls
+      <code>resetDuneRetryBudget()</code> at the start of each run &mdash; serverless instances
+      stay warm between cron runs, so without the reset a second run would inherit a spent
+      budget.</td></tr>
+</table>
+<div class="box"><div class="label">Deliberate choice, labelled: ONLY 429 is retried</div>
+A 429 is rejected at Dune&rsquo;s gate &mdash; nothing was written, so retrying is always safe.
+A 5xx is different: the request MAY have committed server-side before the error, and blindly
+retrying an <b>insert</b> would then duplicate rows &mdash; deadly for the append-only holdings
+table, where duplicated rows double that day&rsquo;s totals in every SUM. So a 5xx still fails
+the step loudly, exactly as before. Trade-off: a transient Dune outage still shows ERROR for
+that step and heals on the next daily run &mdash; honest and safe beats silently wrong.</div>
+
+<h2>3 &middot; Proof &mdash; the same sync, after the fix</h2>
+<pre>took 178s          &larr; the retries waiting out the windows; cap is 300s
+"activity_v2":        "424 rows",
+"cctp_ops":           "91 rows",
+"wallet_chains":      "65 rows",
+"holdings_snapshots": "6 rows"</pre>
+<p>424 activity rows = every terminal action across Soroswap + LI.FI + CCTP + savings + sends +
+ramps. The holdings table has been appended a few times today (manual setup runs) &mdash; that
+is exactly the case the guide&rsquo;s TVL query was hardened for: query 3.11 takes the latest
+run per day via <code>row_number()</code>, and the &ldquo;holdings now&rdquo; queries take
+<code>MAX(snapshot_date)</code>, so repeated same-day runs can never double a chart.</p>
+
+<h2>4 &middot; What you do now</h2>
+<ol>
+  <li>Nothing to re-run on the sync side &mdash; I already ran it and the tables are full.</li>
+  <li>Go back to the Dune query from your screenshot and press <b>Run</b> again &rarr; it now
+      returns a number &ge; the old $56,131 (activity_v2 also counts LI.FI, CCTP, sends and
+      ramps the old table never saw).</li>
+  <li>Continue with doc 119 section 3 &mdash; paste the remaining queries, assemble the
+      dashboard.</li>
+</ol>
+<div class="box good"><div class="label">If you do X &rarr; you will see Y</div>
+If you re-run the query &rarr; one row with a real <code>total_volume_usd</code>. If a future
+sync hits the rate limit &rarr; it takes up to ~2 minutes longer instead of erroring; only if
+Dune stays limited past the 120s retry budget will a step report ERROR &mdash; and the next
+daily run heals it, because clear+insert rebuilds those tables from scratch every time.</div>
+
+<h2>5 &middot; Gates</h2>
+<p>518 tests / 60 suites green (4 new), lint 0 errors, prettier clean, <code>tsc</code> clean,
+isolated <code>.next-verify</code> build green.</p>
+
+</body>
+</html>

@@ -10,6 +10,7 @@ import type { NetworkType } from '@normalfinance/utils';
 import { buildAuthHeaders } from '@/utils/http';
 import { wireToUsdc } from '@/lib/cctp/decimals';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
+import { abortTimeout } from '@/utils/abort-timeout';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 
@@ -88,7 +89,7 @@ export async function runCctpRefund(args: {
         headers,
         credentials: 'include',
         body: JSON.stringify({ transferId: newId }),
-        signal: AbortSignal.timeout(300_000),
+        signal: abortTimeout(300_000),
       });
       const apData = await apRes.json().catch(() => null);
       if (apRes.ok && apData?.success && apData?.burnTxHash) {

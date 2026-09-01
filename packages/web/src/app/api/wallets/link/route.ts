@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
 import { faucetRateLimiter } from '@/server/faucet-rate-limiter';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
 

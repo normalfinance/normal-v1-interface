@@ -3,7 +3,7 @@
 // proxy and the autopilot pivot (which must quote in-process — a server route
 // cannot fetch itself). Callers own rate limiting and HTTP mapping.
 
-import { logger } from '@normalfinance/utils';
+import { logger } from '@/utils/logger';
 
 export const LIFI_ASSETS: Record<string, { chainId: number; token: string }> = {
   BTC: { chainId: 20000000000001, token: 'bitcoin' },

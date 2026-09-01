@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -72,7 +73,7 @@ const ResetPasswordPage = () => {
           }
         } catch (err) {
           if (!mounted) return;
-          console.error('Error setting session:', err);
+          logger.error('Error setting session:', err);
           setStatus('error');
           setError(t('Invalid or expired reset link. Please request a new one.'));
         }

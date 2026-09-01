@@ -3,6 +3,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { SwapMode, SwapQuote, SwapDisplayMeta } from '@/types/swap';
 
+import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useState, useCallback } from 'react';
@@ -171,7 +172,7 @@ export function useSwap(
         setQuote(newQuote);
         return newQuote;
       } catch (err: any) {
-        console.error('Error getting swap quote:', err);
+        logger.error('Error getting swap quote:', err);
         setError(err.message || 'Failed to get quote');
         setQuote(null);
         return null;
@@ -443,7 +444,7 @@ export function useSwap(
           setError('Your wallet session expired — reconnect your wallet and try again.');
           return '';
         }
-        console.error('Error executing swap:', err);
+        logger.error('Error executing swap:', err);
         const errorMessage = friendlyAppError(err);
         setError(errorMessage);
         enqueueSnackbar(errorMessage, { variant: 'error' });

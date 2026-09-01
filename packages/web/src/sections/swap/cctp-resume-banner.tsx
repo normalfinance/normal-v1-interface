@@ -22,6 +22,7 @@
 
 import type { NetworkType } from '@normalfinance/utils';
 
+import { logger } from '@/utils/logger';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { EVM_USDC } from '@/lib/cctp/config';
@@ -413,7 +414,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         }
         refresh();
       } catch (e: any) {
-        console.error('[cctp recovery] failed:', e); // surface stack
+        logger.error('[cctp recovery] failed:', e); // surface stack
         // A classified revert records the failed bridge so the NEXT retry
         // quotes without it (failover applies here too, not just in-run).
         if (e?.__pivotRevert) {
@@ -469,7 +470,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         );
         refresh();
       } catch (e: any) {
-        console.error('[cctp refund] failed:', e); // surface stack
+        logger.error('[cctp refund] failed:', e); // surface stack
         enqueueSnackbar(friendlyAppError(e), {
           variant: 'error',
         });

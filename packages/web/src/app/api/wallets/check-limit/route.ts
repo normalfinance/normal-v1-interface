@@ -1,8 +1,8 @@
 import type { NextRequest } from 'next/server';
 
+import { logger } from '@/utils/logger';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
 import { faucetRateLimiter } from '@/server/faucet-rate-limiter';
 
 /**

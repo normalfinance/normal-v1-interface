@@ -3,6 +3,7 @@
 import type { VaultInfo, SavingsPosition } from '@/types/savings';
 
 import useSWR from 'swr';
+import { logger } from '@/utils/logger';
 import { useMemo, useEffect } from 'react';
 import { reconcileSavingsPosition } from '@/lib/portfolio/normalize';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
@@ -319,7 +320,7 @@ export function useSavingsPosition(enabled = true): UseSavingsPositionResult {
           setTimeout(() => {
             pos
               .mutate(fetchUserPosition(address, network, true), { revalidate: false })
-              .catch((e2) => console.warn('[savings] post-action confirm read failed twice:', e2));
+              .catch((e2) => logger.warn('[savings] post-action confirm read failed twice:', e2));
           }, 5_000);
         });
       }

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Silent Consoles</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Silent Consoles</h1>
+<p class="subtitle">Branch <code>chore/console-hygiene</code> (2026-08-28) &mdash; no app output in
+any real user&rsquo;s browser console, enforced by lint so it stays that way.</p>
+
+<h2>1 &middot; What was exposed, concretely</h2>
+<p>Anyone pressing F12 on the production app could watch it narrate itself. The audit found
+<strong>129 raw <code>console.*</code> calls in 58 files</strong>. The client-side ones printed,
+among other things:</p>
+<table>
+  <tr><th>what</th><th>example source</th></tr>
+  <tr><td>Your balances, before/after every swap</td><td>the <code>[balance-gate]</code> diagnostics</td></tr>
+  <tr><td>Transaction hashes and swap routing</td><td><code>[lifi-swap]</code>, the CCTP engine&rsquo;s failure dumps</td></tr>
+  <tr><td class="no">Raw error objects that can embed the keyed RPC / Horizon URLs</td>
+      <td>every <code>console.error(&hellip;, err)</code> in a fetch-failure path &mdash; the
+      Alchemy and Validation Cloud keys ride inside those URLs</td></tr>
+  <tr><td>Passkey/credential diagnostics</td><td><code>[passkey]</code>, <code>[webauthn-guard]</code></td></tr>
+</table>
+
+<h2>2 &middot; The rule the sweep enforced</h2>
+<div class="box"><div class="label">One sentence</div>
+<strong>Browser consoles are silent in production; server logs stay, because they go to Vercel,
+not to users.</strong> Client code logs through a dev-gated <code>logger</code> — every method is
+a no-op unless <code>NODE_ENV === 'development'</code> — so we keep full diagnostics on
+localhost and users get nothing.</div>
+<p>File by file, all 129 sites, three buckets:</p>
+<table>
+  <tr><th>bucket</th><th>count</th><th>action</th></tr>
+  <tr><td><strong>Client code</strong> (components, hooks, sections, lib used by the browser)</td>
+      <td>~50 call sites in 27 files</td>
+      <td>→ <code>logger.*</code>. Dev keeps every diagnostic (the QA docs that reference
+      <code>[balance-gate]</code> console lines still work on localhost); production browsers get
+      silence.</td></tr>
+  <tr><td><strong>Server code</strong> (API routes, cron, relayer, aggregator, middleware)</td>
+      <td>~79 call sites</td>
+      <td>Kept as real console — these are the Vercel operational logs
+      (<code>[cron] refused</code>, <code>[portfolio] eth source failed</code>, the Horizon
+      failover warning, fee-escrow RECEIVABLE alerts). Silencing them would blind production.
+      Each line&rsquo;s <em>content</em> was audited too — see &sect;3.</td></tr>
+  <tr><td><strong>Comments</strong> that merely mention console (JSDoc examples)</td>
+      <td>5</td><td>Untouched — they are documentation, not output.</td></tr>
+</table>
+
+<h2>3 &middot; One real leak found by the content audit</h2>
+<p>The MoneyGram deposit route logged the SEP-24 <em>interactive URL</em> on the server — and
+that URL carries a one-time authentication token in its query string. Vercel logs are
+team-visible, not public, but a credential does not belong in any log. It now logs the
+destination without the query string: where it went, never the token.</p>
+
+<h2>4 &middot; Enforcement — why this cannot rot back</h2>
+<p>ESLint&rsquo;s <code>no-console</code> is now an <strong>error</strong> across the app, with a
+narrow, documented exemption list: the API/server/services directories, the five server-only lib
+modules whose warnings must reach Vercel logs, tests, and the logger sink itself. Consequence:
+<em>if anyone writes <code>console.log</code> in client code, the lint gate fails the build.</em>
+The sweep is a state; the lint rule is what makes it permanent.</p>
+
+<h2>5 &middot; A trap hit and fixed mid-run — worth remembering</h2>
+<div class="box warn"><div class="label">The heavy-barrel trap, second encounter</div>
+The first sweep imported <code>logger</code> from the <code>@normalfinance/utils</code> barrel —
+which drags <code>@stellar/stellar-sdk</code> and ESM-only packages along. Three jest suites for
+small pure modules (passkey-stamper, wallet-kit-guard, webauthn-guard) immediately failed to even
+parse. The fix is a <strong>dependency-free local logger</strong> (<code>src/utils/logger.ts</code>,
+behaviorally identical), and the swap turned out to matter beyond this sweep: <strong>49
+files</strong> across the app had standalone barrel imports just for logging — all now use the
+light module, which also trims what the client bundle drags in. Same lesson as the
+network-cookie test in run 7: never import a barrel for one small thing.</div>
+
+<h2>6 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R74</span></td>
+      <td>On <strong>staging or production</strong> (a real build): open F12 → Console, then use
+      the app hard — sign in, a Stellar swap, a cross-chain swap, savings, sends.</td>
+      <td>The console stays <strong>empty of app output</strong> — no balances, no hashes, no
+      [tags], no error dumps. (Browser-native notices and third-party SDK lines are outside our
+      control; nothing from our code.)</td></tr>
+  <tr><td>2</td>
+      <td>On <strong>localhost</strong>, do the same.</td>
+      <td>All diagnostics still there — <code>[balance-gate]</code>, <code>[lifi-swap]</code>,
+      the engine errors. Dev debugging is unchanged.</td></tr>
+  <tr><td>3</td>
+      <td>Add a <code>console.log('x')</code> to any component and run <code>npm run lint</code>.</td>
+      <td><span class="no">Lint fails</span> with <code>no-console</code>. Delete it again.</td></tr>
+</table>
+
+<h2>7 &middot; Commit</h2>
+<p><code>chore(console): browser consoles are silent in production — enforced by lint</code>
+(full message in chat). Suite: <strong>499 passing, 57 suites</strong>; lint (with the new rule),
+prettier, tsc and build all clean.</p>
+
+</body>
+</html>

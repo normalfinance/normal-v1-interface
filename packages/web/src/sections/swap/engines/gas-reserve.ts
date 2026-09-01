@@ -26,6 +26,7 @@ const GAS_PRICE_BUFFER_DEN = 10n; // click and the actual signature/broadcast.
  *   the CCTP path is a bridge and passes more (400k) for safety headroom.
  */
 import useSWR from 'swr';
+import { abortTimeout } from '@/utils/abort-timeout';
 
 /**
  * Live ETH gas reserve as a hook — the swap card holds this back from
@@ -56,7 +57,7 @@ export async function ethGasReserve(gasLimit: bigint = 250_000n): Promise<number
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_gasPrice', params: [] }),
-      signal: AbortSignal.timeout(6000),
+      signal: abortTimeout(6000),
     });
     const data = await res.json();
     const gasPriceWei = BigInt(data.result);

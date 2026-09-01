@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { cronAuthVerdict } from '@/server/cron-auth';
-import { duneClear, duneInsert } from '@/lib/dune/client';
 import { fetchSupabaseUsers } from '@/services/supabase-sync';
 import { recordCronHeartbeat } from '@/server/cron-heartbeat';
+import { duneClear, duneInsert, resetDuneRetryBudget } from '@/lib/dune/client';
+import {
+  fetchCctpOps,
+  fetchActivityV2,
+  fetchWalletChains,
+  fetchHoldingsSnapshot,
+} from '@/services/dune-sync-v2';
 import {
   fetchSavingsVolume,
   fetchVaultSnapshots,
@@ -37,6 +43,10 @@ export async function GET(req: Request) {
     console.error('[cron] refused:', auth.error);
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
+
+  // The 429-retry budget is shared module state (doc 121) and serverless
+  // instances stay warm between cron runs — reset it so every run starts full.
+  resetDuneRetryBudget();
 
   const results: Record<string, string> = {};
 
@@ -130,6 +140,59 @@ export async function GET(req: Request) {
     results.transaction_log = `${txLog.length} rows`;
   } catch (e: any) {
     results.transaction_log = `ERROR: ${e.message}`;
+  }
+
+  // -------------------------------------------------------------------
+  // Dashboard v2 (doc 119): one wide activity table across every product,
+  // CCTP ops detail, per-chain wallet provisioning, and an append-only daily
+  // holdings snapshot (combined-TVL charts join it with the savings
+  // snapshots — holdings history starts the day this shipped).
+  // -------------------------------------------------------------------
+  let latestSavingsTvl = 0;
+  try {
+    const activity = await fetchActivityV2();
+    await duneClear('normal_activity_v2');
+    await duneInsert('normal_activity_v2', activity.rows);
+    // savingsSource says whether the chain-event union worked or the step fell
+    // back to DB-only rows (doc 122) — watch it in the cron logs.
+    results.activity_v2 = `${activity.rows.length} rows (savings: ${activity.savingsSource})`;
+  } catch (e: any) {
+    results.activity_v2 = `ERROR: ${e.message}`;
+  }
+
+  try {
+    const ops = await fetchCctpOps();
+    await duneClear('normal_cctp_ops');
+    await duneInsert('normal_cctp_ops', ops);
+    results.cctp_ops = `${ops.length} rows`;
+  } catch (e: any) {
+    results.cctp_ops = `ERROR: ${e.message}`;
+  }
+
+  try {
+    const chains = await fetchWalletChains();
+    await duneClear('normal_wallet_chains');
+    await duneInsert('normal_wallet_chains', chains);
+    results.wallet_chains = `${chains.length} rows`;
+  } catch (e: any) {
+    results.wallet_chains = `ERROR: ${e.message}`;
+  }
+
+  try {
+    // Reuse the TVL the vault-snapshot step just fetched (last point) so the
+    // holdings snapshot never disagrees with the savings chart.
+    try {
+      const snaps = await fetchVaultSnapshots();
+      latestSavingsTvl = snaps.length ? snaps[snaps.length - 1].tvl_usd : 0;
+    } catch {
+      /* holdings still upload without the savings row */
+    }
+    const holdings = await fetchHoldingsSnapshot(latestSavingsTvl);
+    // Append-only: each day's snapshot extends the history.
+    await duneInsert('normal_holdings_snapshots', holdings);
+    results.holdings_snapshots = `${holdings.length} rows`;
+  } catch (e: any) {
+    results.holdings_snapshots = `ERROR: ${e.message}`;
   }
 
   const heartbeat = await recordCronHeartbeat('dune-sync');

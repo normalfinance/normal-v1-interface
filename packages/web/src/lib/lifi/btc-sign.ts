@@ -2,6 +2,7 @@
 
 import type { TurnkeyClient } from '@turnkey/http';
 
+import { logger } from '@/utils/logger';
 import { buildAuthHeaders } from '@/utils/http';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { psbtSpendVerdict } from '@/lib/lifi/btc-spend-verdict';
@@ -163,7 +164,7 @@ export async function signLifiBtcPsbt(
           `${expectedDepositSat} sats (limit ${verdict.limit})`
       );
     }
-    console.info(
+    logger.info(
       `[btc-sign] spending ${verdict.spent} sats for a ${expectedDepositSat} sat swap ` +
         `(${unsignedTx.outs.length} outputs, ${backToUs} back to us)`
     );

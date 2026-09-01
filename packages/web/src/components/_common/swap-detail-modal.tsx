@@ -14,6 +14,7 @@ import type { Activity } from '@/types/activity';
 
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
+import { abortTimeout } from '@/utils/abort-timeout';
 import { useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
@@ -189,7 +190,7 @@ export function SwapDetailModal({
         const res = await fetch(`/api/cctp/transfers/${transferId}?noAdvance=1`, {
           headers,
           credentials: 'include',
-          signal: AbortSignal.timeout(12_000),
+          signal: abortTimeout(12_000),
         });
         const data = await res.json();
         if (cancelled) return;

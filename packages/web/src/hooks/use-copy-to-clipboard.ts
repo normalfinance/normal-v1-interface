@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { logger } from '@normalfinance/utils';
+import { logger } from '@/utils/logger';
 
 // ----------------------------------------------------------------------
 

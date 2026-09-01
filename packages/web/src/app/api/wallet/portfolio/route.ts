@@ -4,10 +4,10 @@ import type { NetworkType } from '@normalfinance/utils';
 import type { PortfolioAsset, PortfolioPayload } from '@/types/portfolio';
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { redis } from '@/server/rateLimiter';
-import { logger } from '@normalfinance/utils';
 import { CHAIN_IDS, ADDRESS_SELECT, getChainAddress } from '@/lib/chains/registry';
 import {
   aggregatePortfolio,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
-import { logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';

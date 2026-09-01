@@ -76,6 +76,14 @@ function WalletConnected({
   // Savings load like any other asset: the skeleton holds until EVERY source
   // (slot + companion) has answered — never a confident $0 mid-load.
   const savingsFetching = savings.positionLoading || savings.companionPositionLoading;
+  // Doc 117: companionPositionLoading can stick forever on a dead lookup
+  // (deliberately — see use-savings-position). Cap it here so the drawer's
+  // savings row can never spin for eternity: after 8s, show what we have.
+  const [savingsGateCapped, setSavingsGateCapped] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setSavingsGateCapped(true), 8_000);
+    return () => clearTimeout(id);
+  }, []);
   const savingsRef = useRef(savings);
   useEffect(() => {
     savingsRef.current = savings;
@@ -272,7 +280,7 @@ function WalletConnected({
         address={address}
         balance={assetsBalance.toNumber()}
         savingsValue={savingsValue}
-        savingsFetching={savingsFetching && !savingsLoaded}
+        savingsFetching={savingsFetching && !savingsLoaded && !savingsGateCapped}
         tokensFetching={walletBalances.isLoading}
         percentageChange={0}
         tokens={allTokens}

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dune Table Bootstrap Fix</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:980px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:42px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15px; margin:24px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12px; line-height:1.5; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.warn { border-left-color:#d97706; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+</style>
+</head>
+<body>
+<h1>Dune Table Bootstrap Fix</h1>
+<p class="subtitle">2026-08-31 &mdash; why the new queries said
+&ldquo;Table &hellip; does not exist&rdquo; while the old ones worked, and the one command that
+fixes it. Run 120, branch <code>chore/console-hygiene</code>.</p>
+
+<h2>1 &middot; What you saw</h2>
+<p>Two query editors, side by side:</p>
+<table>
+  <tr><th>query</th><th>table</th><th>result</th></tr>
+  <tr><td>old &ldquo;Total volume all time&rdquo;</td><td><code>normal_volume_daily</code></td>
+      <td>works &mdash; returns 56,131.49</td></tr>
+  <tr><td>new 3.1 from doc 119</td><td><code>normal_activity_v2</code></td>
+      <td><span style="color:var(--red)">line 2:6: Table
+      'dune.normalfinance.normal_activity_v2' does not exist</span></td></tr>
+</table>
+
+<h2>2 &middot; The cause &mdash; my gap, in one sentence</h2>
+<p>Dune&rsquo;s upload API has <b>three</b> endpoints &mdash; <code>create</code>,
+<code>insert</code>, <code>clear</code> &mdash; and our sync only ever calls the last two
+(<code>packages/web/src/lib/dune/client.ts</code>). <b>Insert and clear never create a table;
+they return 404 if it was never created.</b> The 8 original tables exist because a one-time
+bootstrap script (<code>packages/web/scripts/create-dune-tables.ps1</code>) POSTed their schemas
+once, back when the first dashboard was built. When I shipped the four v2 tables, I wired the
+sync and wrote the queries &mdash; but never shipped the matching create step. So:</p>
+<div class="box warn"><div class="label">Cause &rarr; effect chain</div>
+If the table was never created &rarr; the sync&rsquo;s <code>duneClear('normal_activity_v2')</code>
+gets a 404 &rarr; the try/catch records <code>activity_v2: "ERROR: Dune clear failed &hellip;
+404"</code> in the sync response and skips the insert &rarr; nothing is ever uploaded &rarr;
+the Dune query editor truthfully says the table does not exist. The old tables keep working
+because they were created years-of-runs ago &mdash; which is exactly why one screenshot worked
+and the other errored.</div>
+<p>You can confirm this was already happening: look at the JSON your
+<code>Invoke-RestMethod</code> call returned &mdash; the four v2 keys will say
+<code>ERROR: &hellip; 404</code> while the old keys show row counts.</p>
+
+<h2>3 &middot; The fix shipped this run</h2>
+<table>
+  <tr><th>file</th><th>change</th></tr>
+  <tr><td><code>packages/web/scripts/create-dune-tables-v2.ps1</code></td>
+      <td><b>NEW</b> &mdash; one-time bootstrap for the four v2 tables, an exact mirror of the
+      v1 script: same endpoint, same auth, same error reporting. Schemas are copied field-for-field
+      from the row interfaces in <code>src/lib/dune/activity-v2.ts</code> (14 columns for
+      activity_v2, 11 for cctp_ops, 4 for wallet_chains, 7 for holdings_snapshots).</td></tr>
+  <tr><td><code>docs/audit/119-dune-v2-setup-guide.html</code></td>
+      <td>Setup section gained the missing first step: run the create script <em>before</em> the
+      first sync; the sync step no longer claims it creates tables.</td></tr>
+</table>
+<div class="box"><div class="label">Deliberate non-change, labelled</div>
+I did <b>not</b> make the cron auto-create tables on 404. The create endpoint needs an explicit
+column schema either way (it cannot be inferred from rows), so auto-create would duplicate the
+schema knowledge inside the cron for a case that occurs exactly once per table&rsquo;s lifetime
+&mdash; and a loud <code>ERROR: &hellip; 404</code> in the sync response is the honest signal
+that bootstrap was skipped. This matches how the original 8 tables work. Trade-off: any future
+new table needs its create step added to the v2 script first, or its sync step will 404 the same
+way &mdash; that rule is now written at the top of the script.</div>
+
+<h2>4 &middot; What you run now (2 minutes, in order)</h2>
+<ol>
+  <li>Create the tables (key is <code>DUNE_API_KEY</code> in <code>packages/web/.env</code>):
+<pre>cd packages\web
+.\scripts\create-dune-tables-v2.ps1 -ApiKey "&lt;DUNE_API_KEY&gt;"</pre>
+      &rarr; you will see four green <code>OK</code> lines. (A repeat run later would show
+      FAILED &ldquo;already exists&rdquo; &mdash; harmless.)</li>
+  <li>Fill them &mdash; your usual sync call against the running dev server:
+<pre>Invoke-RestMethod -Uri "http://localhost:8082/api/cron/dune-sync" -Method GET `
+  -Headers @{ Authorization = "Bearer &lt;CRON_SECRET&gt;" }</pre>
+      &rarr; the response now shows row counts (not ERROR) for <code>activity_v2</code>,
+      <code>cctp_ops</code>, <code>wallet_chains</code>, <code>holdings_snapshots</code>.</li>
+  <li>Re-run the failing query in Dune &mdash; it returns numbers now. Continue with doc 119
+      section 3 as written.</li>
+</ol>
+<div class="box good"><div class="label">If you do X &rarr; you will see Y</div>
+If you run step 1 then step 2 &rarr; the exact query from your screenshot returns one row with
+<code>total_volume_usd</code> &mdash; and it will be <b>larger</b> than the old counter&rsquo;s
+56,131, because activity_v2 also counts LI.FI swaps, CCTP swaps, sends and ramps that
+<code>normal_volume_daily</code> never recorded. If you skip step 1 &rarr; step 2 keeps
+reporting 404 ERRORs and the query keeps failing &mdash; the order matters.</div>
+
+<h2>5 &middot; No TypeScript changed this run</h2>
+<p>The fix is one PowerShell script plus two docs &mdash; app code, tests and the cron route are
+untouched. Gates were still run on the workspace and stay green (514 tests / 59 suites, lint,
+prettier, tsc, isolated build).</p>
+
+</body>
+</html>
