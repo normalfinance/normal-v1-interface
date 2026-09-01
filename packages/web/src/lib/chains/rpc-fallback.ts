@@ -20,10 +20,19 @@ export const ETH_RPC_URLS: string[] = [
   'https://eth.llamarpc.com',
 ];
 
+// One keyed Solana endpoint, two historical variable names (doc 126): the app
+// reads NEXT_PUBLIC_SOLANA_RPC_URL everywhere, but the send paths used to read
+// NEXT_PUBLIC_SOL_RPC_URL — which was never set, so sends silently ran on the
+// rate-limited public node. Both names resolve here now; the current one wins.
+export const SOLANA_RPC_URL: string =
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL ??
+  process.env.NEXT_PUBLIC_SOL_RPC_URL ??
+  'https://solana-rpc.publicnode.com';
+
 export const SOL_RPC_URLS: string[] = [
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://solana-rpc.publicnode.com',
+  SOLANA_RPC_URL,
   'https://api.mainnet-beta.solana.com',
-];
+].filter((u, i, all) => all.indexOf(u) === i);
 
 /** viem fallback transport over the Base list (mainnet only). */
 export async function baseFallbackTransport() {

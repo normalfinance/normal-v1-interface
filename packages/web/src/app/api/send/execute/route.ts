@@ -119,8 +119,10 @@ async function broadcastEvm(signedTx: string): Promise<BroadcastOutcome> {
 async function broadcastSol(signedTxB64: string): Promise<BroadcastOutcome> {
   const { Connection } = await import('@solana/web3.js');
   const { Buffer } = await import('buffer');
-  const rpcUrl = process.env.NEXT_PUBLIC_SOL_RPC_URL ?? 'https://api.mainnet-beta.solana.com';
-  const connection = new Connection(rpcUrl, 'confirmed');
+  // doc 126: one resolver for both historical Solana env names — broadcasting a
+  // user's send over the throttled public node was never intended.
+  const { SOLANA_RPC_URL } = await import('@/lib/chains/rpc-fallback');
+  const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
   try {
     await connection.sendRawTransaction(Buffer.from(signedTxB64, 'base64'), {
       skipPreflight: false,
