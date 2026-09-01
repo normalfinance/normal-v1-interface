@@ -291,6 +291,22 @@ WHERE asset = 'FEES'
 <p>Total registered users, signups over time, savings TVL history, total yield — the existing
 queries stay exactly as they are.</p>
 
+<h3>3.16 Recent activity, raw log <span class="viz">Table</span></h3>
+<p><i>Every action, newest first — one row per swap (all three engines), savings deposit and withdrawal, send and ramp, with both the token amount and its USD value. This replaces the old <code>normal_transaction_log</code> query, which could only see Soroswap swaps and savings.</i></p>
+<pre>SELECT date, wallet_address, product, action, chain,
+       asset_in, asset_out, amount_token, amount_usd, fee_usd, status, tx_hash
+FROM dune.normalfinance.normal_activity_v2
+ORDER BY date DESC
+LIMIT 500;</pre>
+<div class="box"><div class="label">About the old <code>normal_transaction_log</code></div>
+It is no longer stale — since doc 125 it is built from these same rows, so it now carries CCTP,
+sends and ramps too, and its <code>fee_usd</code> column finally holds real dollars instead of
+raw token units. Old widgets keep working: <code>action_type</code> is still
+<code>'swap'</code> for Soroswap and <code>'savings_deposit'/'savings_withdraw'</code>, with
+<code>'swap_lifi'</code>, <code>'swap_cctp'</code>, <code>'send'</code>, <code>'onramp'</code>
+and <code>'offramp'</code> added. It stays a narrower view though — no product, status,
+chain or USD amount columns — so prefer the query above for anything new.</div>
+
 <h2>4 &middot; Assemble the dashboard (10 minutes)</h2>
 <ol>
   <li>Dune → <b>Create → Dashboard</b> (or edit the existing one).</li>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cronAuthVerdict } from '@/server/cron-auth';
 import { fetchSupabaseUsers } from '@/services/supabase-sync';
 import { recordCronHeartbeat } from '@/server/cron-heartbeat';
+import { buildTransactionLogRows } from '@/lib/dune/transaction-log';
 import { duneClear, duneInsert, resetDuneRetryBudget } from '@/lib/dune/client';
 import {
   fetchCctpOps,
@@ -20,7 +21,6 @@ import {
   fetchSwapVolume,
   fetchLinkedWallets,
   fetchWalletActivity,
-  fetchTransactionLog,
   fetchAllDepositWallets,
 } from '@/services/prisma-sync';
 
@@ -132,15 +132,8 @@ export async function GET(req: Request) {
     results.linked_wallets = `ERROR: ${e.message}`;
   }
 
-  try {
-    // 9. Transaction log (every on-chain action through Normal, per wallet)
-    const txLog = await fetchTransactionLog();
-    await duneClear('normal_transaction_log');
-    await duneInsert('normal_transaction_log', txLog);
-    results.transaction_log = `${txLog.length} rows`;
-  } catch (e: any) {
-    results.transaction_log = `ERROR: ${e.message}`;
-  }
+  // 9. Transaction log now derives from the v2 activity rows (doc 125) — see
+  // the block below, so both tables tell the same story from one fetch.
 
   // -------------------------------------------------------------------
   // Dashboard v2 (doc 119): one wide activity table across every product,
@@ -156,8 +149,20 @@ export async function GET(req: Request) {
     // savingsSource says whether the chain-event union worked or the step fell
     // back to DB-only rows (doc 122) — watch it in the cron logs.
     results.activity_v2 = `${activity.rows.length} rows (savings: ${activity.savingsSource})`;
+
+    // The legacy transaction log is the same rows in the old table's shape
+    // (doc 125): one fetch, one truth — it used to miss CCTP, sends and ramps.
+    try {
+      const txLog = buildTransactionLogRows(activity.rows);
+      await duneClear('normal_transaction_log');
+      await duneInsert('normal_transaction_log', txLog);
+      results.transaction_log = `${txLog.length} rows`;
+    } catch (e: any) {
+      results.transaction_log = `ERROR: ${e.message}`;
+    }
   } catch (e: any) {
     results.activity_v2 = `ERROR: ${e.message}`;
+    results.transaction_log = `SKIPPED: activity fetch failed`;
   }
 
   try {
