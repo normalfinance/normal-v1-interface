@@ -8,7 +8,7 @@ import type { ChainSavingsEvent } from '@/lib/dune/savings-merge';
 import type {
   PriceMap,
   CctpOpsRow,
-  FeeTreasury,
+  TreasuryEntry,
   ActivityV2Row,
   ChainHoldings,
   WalletChainRow,
@@ -359,7 +359,13 @@ export async function fetchHoldingsSnapshot(savingsTvlUsd: number): Promise<Hold
     { chain: 'stellar', asset: 'USDC', wallets: stellarOk, total: usdcTotal },
   ].filter((h) => h.total > 0);
 
-  const feeTreasury = await fetchFeeTreasury(prices, ethUrl, solUrl);
+  const [fees, gas] = await Promise.all([
+    fetchFeeTreasury(prices, ethUrl, solUrl),
+    fetchGasFloat(prices, ethUrl, horizonUrls, cfg.USDC_ISSUER),
+  ]);
+  // Fees at zero mean "nothing collected yet" and are not worth a row; gas at
+  // zero is a finding and always gets one.
+  const treasury = [...(fees.usd > 0 ? [fees] : []), ...gas];
 
   // Full run timestamp, NOT day-floored: the table is append-only, so two
   // runs on the same day (normal during manual setup) would otherwise carry
@@ -368,7 +374,7 @@ export async function fetchHoldingsSnapshot(savingsTvlUsd: number): Promise<Hold
   return buildHoldingsRows(
     holdings,
     savingsTvlUsd,
-    feeTreasury,
+    treasury,
     prices,
     NETWORK,
     new Date().toISOString()
@@ -388,8 +394,8 @@ async function fetchFeeTreasury(
   prices: PriceMap,
   ethUrl: string,
   solUrl: string
-): Promise<FeeTreasury> {
-  const treasury: FeeTreasury = { usd: 0, wallets: 0 };
+): Promise<TreasuryEntry> {
+  const treasury: TreasuryEntry = { asset: 'FEES', token: 0, usd: 0, wallets: 0 };
 
   const evmWallet = process.env.LIFI_FEE_WALLET_EVM;
   if (evmWallet) {
@@ -438,5 +444,62 @@ async function fetchFeeTreasury(
     }
   }
 
+  treasury.token = treasury.usd; // mixed assets — the USD total IS the amount
   return treasury;
+}
+
+// ---------------------------------------------------------------------------
+// Relayer gas float (doc 128). The relayer pays the CCTP mint on the
+// destination chain; if it runs dry, a user's money is burned on the source
+// chain and waits. ONE ROW PER CHAIN on purpose: an aggregate reads "healthy"
+// while one chain sits at zero. Addresses come from PUBLIC env vars — the
+// analytics path never imports signing material.
+// ---------------------------------------------------------------------------
+
+async function fetchGasFloat(
+  prices: PriceMap,
+  ethUrl: string,
+  horizonUrls: string[],
+  usdcIssuer: string
+): Promise<TreasuryEntry[]> {
+  const entries: TreasuryEntry[] = [];
+  const evm = process.env.CCTP_RELAYER_EVM_ADDRESS;
+
+  if (evm) {
+    const chains: [string, string | undefined][] = [
+      ['GAS_ETHEREUM', process.env.CCTP_RPC_URL_ETHEREUM || ethUrl],
+      ['GAS_BASE', process.env.CCTP_RPC_URL_BASE],
+    ];
+    for (const [asset, url] of chains) {
+      if (!url) continue;
+      try {
+        const hex: string = await rpcCall(url, 'eth_getBalance', [evm, 'latest']);
+        const eth = Number(BigInt(hex)) / 1e18;
+        // Zero is a REAL reading here, not a missing one — an empty relayer is
+        // exactly what this row exists to show, so it is not filtered out.
+        entries.push({ asset, token: eth, usd: eth * (prices.ETH ?? 0), wallets: 1 });
+      } catch {
+        /* a dead RPC skips this chain, never the snapshot */
+      }
+    }
+  }
+
+  const stellar = process.env.CCTP_RELAYER_STELLAR_ADDRESS;
+  if (stellar) {
+    try {
+      const { xlm } = await fetchStellarBalancesFromPool(horizonUrls, stellar, usdcIssuer, {
+        timeoutMs: 6_000,
+      });
+      entries.push({
+        asset: 'GAS_STELLAR',
+        token: xlm,
+        usd: xlm * (prices.XLM ?? 0),
+        wallets: 1,
+      });
+    } catch {
+      /* skip */
+    }
+  }
+
+  return entries;
 }

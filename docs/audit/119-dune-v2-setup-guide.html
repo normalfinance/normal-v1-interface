@@ -246,7 +246,7 @@ own counter (3.14).</div>
               ELSE 'Wallet holdings' END AS bucket,
          SUM(usd_total) AS usd
   FROM dune.normalfinance.normal_holdings_snapshots
-  WHERE asset != 'FEES'          -- company fee money, not user holdings
+  WHERE chain != 'treasury'      -- company money (fees + relayer gas), not user holdings
   GROUP BY 1, 2
 ), ranked AS (
   SELECT date_trunc('day', CAST(snapshot_date AS timestamp)) AS day, bucket, usd,
@@ -266,7 +266,7 @@ all&rdquo;. It grows from deploy day; the old savings-only chart (existing
 <p><i>One number: everything users hold right now — all wallets plus savings. Company fee money excluded (3.14 has it).</i></p>
 <pre>SELECT SUM(usd_total) AS combined_tvl_usd
 FROM dune.normalfinance.normal_holdings_snapshots
-WHERE asset != 'FEES'
+WHERE chain != 'treasury'
   AND snapshot_date = (SELECT MAX(snapshot_date)
                        FROM dune.normalfinance.normal_holdings_snapshots);</pre>
 
@@ -274,7 +274,7 @@ WHERE asset != 'FEES'
 <p><i>ALL user wallets combined, per asset: how much BTC, ETH, SOL, XLM, USDC and savings people hold at this moment — token amounts and USD side by side.</i></p>
 <pre>SELECT asset, SUM(balance_total) AS balance, SUM(usd_total) AS usd_total
 FROM dune.normalfinance.normal_holdings_snapshots
-WHERE asset != 'FEES'
+WHERE chain != 'treasury'
   AND snapshot_date = (SELECT MAX(snapshot_date)
                        FROM dune.normalfinance.normal_holdings_snapshots)
 GROUP BY 1 ORDER BY 3 DESC;</pre>
@@ -287,11 +287,76 @@ WHERE asset = 'FEES'
   AND snapshot_date = (SELECT MAX(snapshot_date)
                        FROM dune.normalfinance.normal_holdings_snapshots);</pre>
 
-<h3>3.15 Keepers</h3>
+<h3>3.15 Relayer gas float — with a top-up verdict <span class="viz">Table</span></h3>
+<p><i>Every wallet that pays gas for CCTP, what is left in it, and whether it needs topping up. The relayer submits the mint on the destination chain; if it runs dry, a user&rsquo;s money is burned on the source chain and waits. Read this one before a busy week.</i></p>
+<pre>WITH latest AS (
+  SELECT asset, balance_total, usd_total
+  FROM dune.normalfinance.normal_holdings_snapshots
+  WHERE chain = 'treasury' AND asset LIKE 'GAS%'
+    AND snapshot_date = (SELECT MAX(snapshot_date)
+                         FROM dune.normalfinance.normal_holdings_snapshots)
+)
+SELECT
+  CASE asset WHEN 'GAS_BASE'     THEN 'Base relayer (ETH) — pays every mint'
+             WHEN 'GAS_STELLAR'  THEN 'Stellar relayer (XLM) — pays inbound mints'
+             WHEN 'GAS_ETHEREUM' THEN 'Ethereum relayer (ETH) — not used today'
+             ELSE asset END              AS wallet,
+  -- Address to send the top-up to. It is a LABEL, not data from the table:
+  -- the same EVM key serves Base and Ethereum. If the relayer key is ever
+  -- rotated, update it here too (see the note under this query).
+  CASE asset
+    WHEN 'GAS_BASE'     THEN '0xc88a61BE2D640653978BC481A89D56c4A26a7b43'
+    WHEN 'GAS_ETHEREUM' THEN '0xc88a61BE2D640653978BC481A89D56c4A26a7b43'
+    WHEN 'GAS_STELLAR'  THEN 'GDNDWW4ZHDSRRYSVO6XTFIX2UTMZGKPVNELZLZWY4SACLLJHGNZCUI5M'
+  END                                    AS top_up_address,
+  balance_total                          AS balance,
+  usd_total                              AS usd,
+  CASE
+    WHEN asset = 'GAS_STELLAR'  AND balance_total &lt; 20    THEN 'TOP UP — under ~40 mints left'
+    WHEN asset = 'GAS_BASE'     AND balance_total &lt; 0.002 THEN 'TOP UP — under ~2,500 mints left'
+    WHEN asset = 'GAS_ETHEREUM' THEN 'ignore — the CCTP pivot is always Base'
+    ELSE 'ok'
+  END                                    AS status
+FROM latest
+ORDER BY usd DESC;</pre>
+<div class="box"><div class="label">Where the thresholds come from (measured, not guessed)</div>
+<b>Base:</b> 65 relayer transactions have cost 0.000052 ETH in total &mdash; about
+0.0000008 ETH each, so 0.002 ETH is still thousands of mints. <b>Stellar:</b> Soroban fees run
+0.05–0.5 XLM per mint and the account must keep 1 XLM as its reserve, so 20 XLM is roughly 40
+mints in the worst case. <b>Ethereum:</b> never used &mdash; the pivot is hardcoded to Base and
+zero of the 96 transfers so far had an Ethereum destination.</div>
+<div class="box warn"><div class="label">The address column is a label, not data — the trade-off</div>
+<code>normal_holdings_snapshots</code> has no address column and a Dune table&rsquo;s schema is
+fixed at creation, so the address is written into the query with a <code>CASE</code>. It costs
+nothing and works today. What it cannot do is follow a <b>key rotation</b>: rotate the relayer
+key and the balances would come from the new wallet while this column still printed the old
+address — worse than showing nothing, because it would send a top-up into a dead wallet. Two
+rules follow: rotate the relayer key &rarr; update this query in the same sitting, and never
+copy the address from an old saved screenshot. If you would rather have it as real data, the
+table can be recreated with an <code>address</code> column — the cheapest moment is now, while
+the holdings history is only a few days old, at the cost of losing that history and one
+resync.</div>
+
+<h3>3.16 Gas float over time <span class="viz">Line — X: day, Y: usd, one line per wallet</span></h3>
+<p><i>How fast the gas is actually being spent. One point per day per wallet; the slope is your burn rate, which answers &ldquo;how many days until I must top up&rdquo; far better than today&rsquo;s number alone.</i></p>
+<pre>WITH ranked AS (
+  SELECT date_trunc('day', CAST(snapshot_date AS timestamp)) AS day,
+         asset, balance_total, usd_total,
+         row_number() OVER (PARTITION BY date_trunc('day', CAST(snapshot_date AS timestamp)),
+                            asset ORDER BY snapshot_date DESC) AS rn
+  FROM dune.normalfinance.normal_holdings_snapshots
+  WHERE chain = 'treasury' AND asset LIKE 'GAS%'
+)
+SELECT day, asset, balance_total AS balance, usd_total AS usd
+FROM ranked WHERE rn = 1 ORDER BY day;</pre>
+<p><i>History starts the day this shipped (2026-09-02) — balances cannot be read retroactively.
+After a few daily syncs the line becomes useful; before that it is a single dot.</i></p>
+
+<h3>3.17 Keepers</h3>
 <p>Total registered users, signups over time, savings TVL history, total yield — the existing
 queries stay exactly as they are.</p>
 
-<h3>3.16 Recent activity, raw log <span class="viz">Table</span></h3>
+<h3>3.18 Recent activity, raw log <span class="viz">Table</span></h3>
 <p><i>Every action, newest first — one row per swap (all three engines), savings deposit and withdrawal, send and ramp, with both the token amount and its USD value. This replaces the old <code>normal_transaction_log</code> query, which could only see Soroswap swaps and savings.</i></p>
 <pre>SELECT date, wallet_address, product, action, chain,
        asset_in, asset_out, amount_token, amount_usd, fee_usd, status, tx_hash
@@ -317,6 +382,10 @@ chain or USD amount columns — so prefer the query above for anything new.</div
       (3.12). <b>Row 2</b> — daily volume by product (3.6) · product mix (3.7).
       <b>Row 3</b> — daily fees (3.4) · fee donut (3.3) · cumulative revenue (3.5) · fees in
       wallets (3.14).
+      <b>Row 3b — Ops:</b> relayer gas float table (3.15) · gas over time (3.16), with a text
+      widget holding the top-up addresses: EVM
+      <code>0xc88a61BE2D640653978BC481A89D56c4A26a7b43</code> (fund on <b>Base</b>), Stellar
+      <code>GDNDWW4ZHDSRRYSVO6XTFIX2UTMZGKPVNELZLZWY4SACLLJHGNZCUI5M</code>.
       <b>Row 4</b> — combined TVL area (3.11) · holdings-now bar (3.13).
       <b>Row 5</b> — active wallets (3.9) · wallets by chain (3.10) · top routes (3.8).
       <b>Row 6</b> — the kept savings charts.</li>

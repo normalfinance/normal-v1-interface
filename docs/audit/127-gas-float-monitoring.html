@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gas Float Monitoring</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:1000px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:42px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15px; margin:24px 0 6px; }
+  p, li { color:#23232b; }
+  li { margin-bottom:5px; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12px; line-height:1.55; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; font-family:"Consolas",monospace; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.warn { border-left-color:#d97706; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+</style>
+</head>
+<body>
+<h1>Gas Float Monitoring</h1>
+<p class="subtitle">2026-09-02 &mdash; putting the relayer&rsquo;s remaining gas on the Dune
+dashboard: why it matters more than it sounds, what the balances are today, and the exact plan.
+Run 127 (plan + live findings; <b>no app code touched</b> — a swap was in flight). Branch
+<code>chore/console-hygiene</code>.</p>
+
+<div class="box warn"><div class="label">Correction to this document&rsquo;s first draft</div>
+The first version of this page called the empty Ethereum relayer urgent (&ldquo;fund it
+first&rdquo;). That was <b>overstated</b>, and the follow-up check proved it: the app&rsquo;s
+CCTP pivot is hardcoded to <b>Base</b>
+(<code>use-cctp-engine.tsx:857</code>), and all <b>96</b> transfers ever recorded are
+base&harr;stellar — <b>zero</b> with an Ethereum destination. The Ethereum relayer account has
+<b>never</b> been funded or used (0 transactions, nonce 0). So nothing is broken and no user can
+reach that path today. It is a <b>latent</b> trap, not a live outage: the
+<code>destChain === 'ethereum'</code> branch exists in the state machine, so the day anyone
+enables an Ethereum destination, the first transfer would burn on the source chain and stall at
+the mint. Track it, guard it, do not panic about it.<br/><br/>
+Also corrected: an earlier check in this project looked at
+<code>0xC4d9…2aD5</code>, the <b>LI.FI fee wallet</b> (revenue). The relayer is
+<code>0xc88a…7b43</code> — a different wallet entirely. Two wallets, two purposes; naming them
+loosely is what produced the false alarm.</div>
+
+<div class="box"><div class="label">What actually deserves attention</div>
+<b>Stellar: 7.11 XLM.</b> That account pays the mint fee for every <i>inbound</i> transfer
+(base&rarr;stellar — 50 of the 96 so far), and roughly 6 XLM is usable after the 1 XLM account
+reserve. At 0.05–0.5 XLM per mint that is ~12–120 more transfers: worth topping up to ~50 XLM
+soon, not an emergency. <b>Base: 0.0107 ETH ($25.79)</b> after 65 relayer transactions —
+healthy, and it is the wallet doing all the real work.</div>
+
+<h2>1 &middot; What the relayer gas float is, and today&rsquo;s numbers</h2>
+<p>Every CCTP transfer ends with our own relayer submitting the mint transaction on the
+destination chain, paying that chain&rsquo;s gas from a hot wallet. One EVM key serves both
+Ethereum and Base; a separate Stellar account pays Soroban fees for Stellar-bound transfers.</p>
+<table>
+  <tr><th>chain</th><th>balance</th><th>≈ usd</th><th>roughly covers</th><th>state</th></tr>
+  <tr><td>Base</td><td class="num">0.010691 ETH</td><td class="num">25.79</td>
+      <td>hundreds of mints (~$0.05 each)</td><td>healthy</td></tr>
+  <tr><td>Ethereum</td><td class="num">0.000000 ETH</td><td class="num">0.00</td>
+      <td><b>nothing</b> (~$5 each)</td><td>never funded, never used — and never reached: the
+      pivot is always Base</td></tr>
+  <tr><td>Stellar</td><td class="num">7.1136 XLM</td><td class="num">1.25</td>
+      <td>~12–120 transfers (0.05–0.5 XLM each, minus the 1 XLM account reserve)</td>
+      <td>thin</td></tr>
+</table>
+<div class="box"><div class="label">How these were read (no key material printed or stored)</div>
+The addresses are <b>derived</b> from <code>CCTP_RELAYER_EVM_PRIVATE_KEY</code> and
+<code>CCTP_RELAYER_STELLAR_SECRET</code> in a local read-only script; only the public addresses
+and balances were output. The implementation below deliberately does <b>not</b> repeat that
+trick — see &sect;2.</div>
+
+<h2>1b &middot; Where gas actually comes from — three wallets, not one</h2>
+<table>
+  <tr><th>who pays</th><th>for what</th><th>funded how</th></tr>
+  <tr><td>Relayer EVM <code>0xc88a…7b43</code> (Base)</td><td>the CCTP <b>mint</b> on Base, and
+      small ETH top-ups sent to users so they can pay pivot-swap gas</td>
+      <td>funded once, 2026-07-07</td></tr>
+  <tr><td>Relayer Stellar <code>GDNDWW…I5M</code></td><td>the CCTP <b>mint + forward</b> on
+      Stellar (Soroban fees) for every inbound transfer</td><td>7.11 XLM left</td></tr>
+  <tr><td><b>The user&rsquo;s own Turnkey EVM wallet</b></td><td>the <b>LI.FI pivot swap</b> —
+      it runs from the user&rsquo;s own address and they sign it, so that gas is theirs
+      (<code>use-cctp-engine.tsx:267</code>)</td><td>their own balance, plus the relayer&rsquo;s
+      top-up</td></tr>
+</table>
+<h3>Full accounting of the relayer wallet (every wei, from chain)</h3>
+<table>
+  <tr><th>event</th><th>eth</th><th>usd</th></tr>
+  <tr><td>funded 2026-07-07 (two transfers)</td><td class="num">0.011141</td>
+      <td class="num">$20.04 <span style="color:var(--muted)">at that day&rsquo;s ETH price of
+      $1,798</span></td></tr>
+  <tr><td>spent on gas — <b>65 transactions</b></td><td class="num">0.000052</td>
+      <td class="num">$0.12</td></tr>
+  <tr><td>sent out as user top-ups (21 transfers)</td><td class="num">0.000398</td>
+      <td class="num">$0.96</td></tr>
+  <tr><td><b>balance today</b></td><td class="num"><b>0.010691</b></td>
+      <td class="num"><b>$25.73</b> <span style="color:var(--muted)">— higher in USD than the
+      day it was funded because ETH rose to $2,406</span></td></tr>
+</table>
+<div class="box good"><div class="label">Why the float has barely moved</div>
+Base gas is fractions of a cent: <b>65 relayer transactions cost twelve cents in total</b>. That
+is the whole reason a $20 float has survived three months of testing — and why the dashboard
+tile matters more for <i>Stellar</i> (XLM per mint is 100&times; the Base cost) than for Base.</div>
+
+<h2>2 &middot; The plan (one pass, when no swap is in flight)</h2>
+<h3>Least privilege: addresses, not secrets</h3>
+<p>The Dune sync must never import signing material. Two new <b>public</b> env vars carry the
+addresses instead — they are public information, safe in env and in logs:</p>
+<pre>CCTP_RELAYER_EVM_ADDRESS=0xc88a61BE2D640653978BC481A89D56c4A26a7b43
+CCTP_RELAYER_STELLAR_ADDRESS=GDNDWW4ZHDSRRYSVO6XTFIX2UTMZGKPVNELZLZWY4SACLLJHGNZCUI5M</pre>
+<p>Both must also be declared in <code>turbo.jsonc</code>&rsquo;s <code>globalEnv</code> — the
+env-audit test fails the build otherwise (it caught the LI.FI wallet vars the same way).</p>
+<h3>Rows</h3>
+<p><code>fetchGasFloat()</code> in <code>services/dune-sync-v2.ts</code> reads the three
+balances (Ethereum + Base via the keyed RPCs, Stellar via the Horizon pool), each best-effort,
+and <code>buildHoldingsRows</code> appends one row per chain:</p>
+<pre>chain='treasury'  asset='GAS_ETHEREUM'  balance_total=&lt;ETH&gt;  usd_total=…
+chain='treasury'  asset='GAS_BASE'      balance_total=&lt;ETH&gt;  usd_total=…
+chain='treasury'  asset='GAS_STELLAR'   balance_total=&lt;XLM&gt;  usd_total=…</pre>
+<p><b>Per-chain, not one total</b> — deliberately. Today&rsquo;s aggregate reads &ldquo;$27,
+fine&rdquo; while Ethereum is at zero; a single number would have hidden exactly the problem
+this tile exists to catch.</p>
+<div class="box warn"><div class="label">The filter change that must land in the SAME run</div>
+The TVL queries currently exclude company money with <code>asset != 'FEES'</code>. Add gas rows
+without touching them and the relayer&rsquo;s ETH silently inflates &ldquo;user TVL&rdquo;. So
+3.11/3.12/3.13 switch to <code>chain != 'treasury'</code> — one condition that covers FEES, GAS
+and any future treasury bucket. (Run 15/16&rsquo;s lesson: a new category must reach every
+classifier in the same run, not the next one.)</div>
+
+<h3>New dashboard queries</h3>
+<pre>-- Gas float now, per chain (Bar — Y: asset, X: usd_total)
+SELECT asset, SUM(balance_total) AS balance, SUM(usd_total) AS usd_total
+FROM dune.normalfinance.normal_holdings_snapshots
+WHERE chain = 'treasury' AND asset LIKE 'GAS%'
+  AND snapshot_date = (SELECT MAX(snapshot_date)
+                       FROM dune.normalfinance.normal_holdings_snapshots)
+GROUP BY 1 ORDER BY 3 DESC;
+
+-- Gas float over time (Line — X: day, Y: usd, one line per chain)
+WITH ranked AS (
+  SELECT date_trunc('day', CAST(snapshot_date AS timestamp)) AS day, asset, usd_total,
+         row_number() OVER (PARTITION BY date_trunc('day', CAST(snapshot_date AS timestamp)),
+                            asset ORDER BY snapshot_date DESC) AS rn
+  FROM dune.normalfinance.normal_holdings_snapshots
+  WHERE chain = 'treasury' AND asset LIKE 'GAS%'
+)
+SELECT day, asset, usd_total FROM ranked WHERE rn = 1 ORDER BY day;</pre>
+<p>The second one is the point of the whole exercise: the table is append-only, so after a few
+daily syncs the slope tells you the <b>burn rate</b> — how many days of gas remain — instead of
+just today&rsquo;s number.</p>
+
+<h2>3 &middot; Why this was not built during the swap</h2>
+<p>A BTC&rarr;USDC swap was in flight on the dev server. Editing anything under
+<code>packages/web/src</code> triggers a Next fast-refresh: <b>funds are never at risk</b> (the
+transfer is on-chain and the relayer runs server-side), but a remount can lose the client-side
+tracker that records the swap into <code>swap_logs</code> and drives the progress UI — leaving a
+completed swap missing from activity and from Dune. Docs live outside the module graph, so this
+file is safe to write. Implementation waits for a quiet moment.</p>
+
+<h2>4 &middot; Ops note beyond the dashboard</h2>
+<p>A chart shows you the problem only when you look at it. Once the rows exist, a Dune
+<b>alert</b> on the gas-float query (Dune &rarr; the query &rarr; Alerts) can notify when any
+chain drops below a threshold — the real fix for &ldquo;the relayer ran dry and nobody
+noticed&rdquo;. Suggested thresholds: Ethereum &lt; 0.01 ETH, Base &lt; 0.002 ETH,
+Stellar &lt; 20 XLM.</p>
+
+</body>
+</html>

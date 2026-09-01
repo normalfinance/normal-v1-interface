@@ -385,17 +385,23 @@ export interface ChainHoldings {
   total: number; // token units
 }
 
-export interface FeeTreasury {
-  /** USD value of all integrator fee-wallet balances read this run. */
+/** Company money, as opposed to user holdings: collected fees and the relayer
+ *  gas floats. Every entry lands under chain='treasury', which is the single
+ *  condition TVL queries exclude (docs 124, 128). */
+export interface TreasuryEntry {
+  /** FEES | GAS_BASE | GAS_ETHEREUM | GAS_STELLAR */
+  asset: string;
+  /** Native token units (ETH, XLM…); for FEES this is the USD total. */
+  token: number;
   usd: number;
-  /** How many wallet-chain reads succeeded (informational). */
+  /** How many wallet reads succeeded for this entry (informational). */
   wallets: number;
 }
 
 export function buildHoldingsRows(
   holdings: ChainHoldings[],
   savingsTvlUsd: number,
-  feeTreasury: FeeTreasury,
+  treasury: TreasuryEntry[],
   prices: PriceMap,
   network: string,
   snapshotDate: string
@@ -420,19 +426,23 @@ export function buildHoldingsRows(
       network,
     });
   }
-  // Collected integrator fees (docs 123-124) — Normal's revenue sitting in the
-  // fee wallets, forwarded there on-chain per swap. The pot is SHARED: the
-  // CCTP flow's 0.5% is the same LI.FI integrator fee (api/cctp/quote), so
-  // this must never be attributed to LI.FI alone. Its own bucket so revenue
-  // queries can count it while TVL queries exclude company money.
-  if (feeTreasury.usd > 0) {
+  // Company money (docs 123-124, 128): collected integrator fees — a pot SHARED
+  // by the LI.FI engine and CCTP pivots, so never attributed to LI.FI alone —
+  // and the relayer gas floats, one row per chain because an aggregate hides an
+  // empty chain behind a healthy one. All under chain='treasury' so revenue
+  // queries can count them while TVL queries exclude them with one condition.
+  for (const entry of treasury) {
+    // A ZERO balance is kept: an empty relayer is precisely what the gas rows
+    // exist to show. The caller decides what is worth reporting; only broken
+    // readings are dropped here.
+    if (!Number.isFinite(entry.usd) || entry.usd < 0) continue;
     rows.push({
       snapshot_date: snapshotDate,
       chain: 'treasury',
-      asset: 'FEES',
-      wallets_counted: feeTreasury.wallets,
-      balance_total: feeTreasury.usd,
-      usd_total: feeTreasury.usd,
+      asset: entry.asset,
+      wallets_counted: entry.wallets,
+      balance_total: entry.token,
+      usd_total: entry.usd,
       network,
     });
   }
