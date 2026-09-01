@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { sanitizeRecordedFee } from '@/lib/lifi/record-fee';
 
 // ---------------------------------------------------------------------------
 // POST /api/lifi/record
@@ -12,7 +13,7 @@ import { NextResponse } from 'next/server';
 // Received legs on each chain). Keyed under the user's Stellar address — the
 // same key the activity feed already queries.
 //
-// Body: { fromSymbol, toSymbol, amountIn, amountOut, txHash }
+// Body: { fromSymbol, toSymbol, amountIn, amountOut, txHash, feeAmount? }
 // ---------------------------------------------------------------------------
 
 export const POST = withAuth(async (request: NextRequest, { user }) => {
@@ -22,6 +23,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     amountIn?: string;
     amountOut?: string;
     txHash?: string;
+    feeAmount?: string;
   };
   try {
     body = await request.json();
@@ -56,6 +58,9 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
         amountIn: String(amountIn),
         amountOut: String(amountOut),
         txHash: String(txHash),
+        // Doc 123: the applied integrator fee, in source-token units. A bad
+        // value degrades to null — the record itself must never fail on it.
+        feeAmount: sanitizeRecordedFee(body.feeAmount, amountIn),
       },
     });
     return NextResponse.json({ success: true, recorded: true });

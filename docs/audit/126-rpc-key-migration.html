@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RPC Key Migration</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:1000px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:42px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15px; margin:24px 0 6px; }
+  p, li { color:#23232b; }
+  li { margin-bottom:5px; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12px; line-height:1.55; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.warn { border-left-color:#d97706; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .pub { color:var(--red); font-weight:600; }
+  .srv { color:var(--green); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>RPC Key Migration</h1>
+<p class="subtitle">2026-09-01 &mdash; moving Alchemy and Helius from your personal accounts to
+the company ones: which keys to create, how to lock them down, every env var to change, and how
+to prove it worked. Run 126, branch <code>chore/console-hygiene</code>.</p>
+
+<h2>1 &middot; What the app actually uses (verified in code, not from memory)</h2>
+<table>
+  <tr><th>env var</th><th>provider / network</th><th>who reads it</th><th>exposure</th></tr>
+  <tr><td><code>NEXT_PUBLIC_ETH_RPC_URL</code></td><td>Alchemy &mdash; Ethereum mainnet</td>
+      <td>portfolio balances, chain-portfolio hook, EVM send broadcast, ramp watcher, Dune
+      holdings snapshot</td><td class="pub">PUBLIC &mdash; shipped in the browser bundle</td></tr>
+  <tr><td><code>NEXT_PUBLIC_SOLANA_RPC_URL</code></td><td>Helius &mdash; Solana mainnet</td>
+      <td>portfolio balances, chain-portfolio hook, Solana send broadcast + confirmation, Dune
+      holdings</td><td class="pub">PUBLIC</td></tr>
+  <tr><td><code>CCTP_RPC_URL_ETHEREUM</code></td><td>Alchemy &mdash; Ethereum mainnet</td>
+      <td>CCTP relayer mints, fee-wallet reads</td><td class="srv">server only</td></tr>
+  <tr><td><code>CCTP_RPC_URL_BASE</code></td><td>Alchemy &mdash; <b>Base</b> mainnet</td>
+      <td>CCTP relayer mints on Base, fee-wallet reads &mdash; this is the &ldquo;Base thing we
+      went back to add&rdquo;</td><td class="srv">server only</td></tr>
+  <tr><td><code>HELIUS_API_KEY</code></td><td>Helius &mdash; Enhanced Transactions REST API
+      (<code>api.helius.xyz/v0</code>), not RPC</td><td>the Solana activity feed route</td>
+      <td class="srv">server only</td></tr>
+  <tr><td><code>NEXT_PUBLIC_SOL_RPC_URL</code></td><td>—</td><td><b>legacy name — do not
+      set.</b> See &sect;5</td><td>—</td></tr>
+  <tr><td><code>NEXT_PUBLIC_BASE_RPC_URL</code></td><td>—</td><td>optional browser-side Base
+      URL; nothing in the browser touches Base today. Leave unset.</td><td>—</td></tr>
+</table>
+<div class="box bad"><div class="label">Why you need FOUR keys, not two</div>
+Two of these variables are <code>NEXT_PUBLIC_*</code>, which means their value is compiled into
+the JavaScript every visitor downloads. Anyone can read them and spend your quota. The two
+server-only variables are never sent to a browser. So the right split is <b>one restricted
+browser key + one unrestricted server key per provider</b> — if you reuse a single key, you
+must either leave it open to the world or apply a domain allowlist that would break your
+server-side calls (Vercel functions send no browser <code>Origin</code>).</div>
+
+<h2>2 &middot; Alchemy (company account)</h2>
+<ol>
+  <li>Log into the company Alchemy account &rarr; <b>Apps</b> &rarr; <b>Create new app</b>.
+      Name it <code>normal-web</code>. Under networks enable <b>Ethereum Mainnet</b> and
+      <b>Base Mainnet</b> (one Alchemy key serves several networks — you just swap the
+      subdomain, which is exactly how your current key already serves both).</li>
+  <li>Create a <b>second</b> app called <code>normal-server</code>, same two networks. This is
+      the one whose key never leaves your infrastructure.</li>
+  <li>Copy both API keys (the string after <code>/v2/</code> in the app&rsquo;s HTTPS URL).</li>
+  <li><b>Lock down the browser key only:</b> open <code>normal-web</code> &rarr; Security /
+      app settings &rarr; add an <b>allowed-domains (referrer) rule</b>:
+      <code>normalfinance.io</code>, <code>*.normalfinance.io</code>, your Vercel preview
+      domain, and <code>localhost</code>. Leave <code>normal-server</code> with <b>no domain
+      rule</b> — a Vercel function would be rejected by one.</li>
+  <li>Set a usage alert on both apps (Alchemy &rarr; Usage &rarr; alerts) so a leak or a
+      runaway loop pages you instead of surprising you on an invoice.</li>
+</ol>
+
+<h2>3 &middot; Helius (company account)</h2>
+<ol>
+  <li>Company Helius dashboard &rarr; <b>API Keys</b> &rarr; create <code>normal-web</code>.
+      In its settings add the same <b>allowed domains</b> list as above.</li>
+  <li>Create a second key <code>normal-server</code> with <b>no domain restriction</b> — the
+      activity feed calls Helius from the server, where there is no browser origin to check.</li>
+  <li>Copy both keys. The RPC URL form is
+      <code>https://mainnet.helius-rpc.com/?api-key=&lt;KEY&gt;</code>; the activity route uses
+      the bare key against <code>api.helius.xyz</code>.</li>
+  <li>Set a usage alert here too.</li>
+</ol>
+
+<h2>4 &middot; The exact env changes</h2>
+<p>Replace these five lines in <code>packages/web/.env</code> (local) <b>and</b> in Vercel
+&rarr; Project &rarr; Settings &rarr; Environment Variables, for <b>every</b> environment you
+run (Production, Preview, and Development if present):</p>
+<pre>NEXT_PUBLIC_ETH_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/&lt;ALCHEMY_WEB_KEY&gt;
+NEXT_PUBLIC_SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=&lt;HELIUS_WEB_KEY&gt;
+
+CCTP_RPC_URL_ETHEREUM=https://eth-mainnet.g.alchemy.com/v2/&lt;ALCHEMY_SERVER_KEY&gt;
+CCTP_RPC_URL_BASE=https://base-mainnet.g.alchemy.com/v2/&lt;ALCHEMY_SERVER_KEY&gt;
+HELIUS_API_KEY=&lt;HELIUS_SERVER_KEY&gt;</pre>
+<div class="box warn"><div class="label">Two Vercel gotchas that waste an afternoon</div>
+<b>1. <code>NEXT_PUBLIC_*</code> values are baked in at BUILD time.</b> Changing them in the
+Vercel UI does nothing until you <b>redeploy</b> — and a redeploy of the <em>existing</em> build
+is not enough if it is served from cache; trigger a fresh deployment.
+<b>2. Nothing is picked up mid-deployment</b> either: server vars come from the deployment&rsquo;s
+env snapshot. Rule of thumb: change env &rarr; redeploy &rarr; verify &rarr; only then disable
+the old keys.</div>
+<p>These variables are all declared in <code>turbo.jsonc</code>&rsquo;s <code>globalEnv</code>,
+so changing a value correctly invalidates the build cache — no stale bundle carrying the old
+key. (An env-audit test enforces that; it is why the LI.FI wallet vars had to be added there
+last run.)</p>
+
+<h2>5 &middot; A real bug this audit found, fixed in this run</h2>
+<div class="box bad"><div class="label">Solana sends were running on the free public node</div>
+The app reads <code>NEXT_PUBLIC_SOLANA_RPC_URL</code> everywhere — <b>except</b> the two send
+paths (<code>api/send/execute</code> broadcast and <code>server/send-records</code>
+confirmation), which read <code>NEXT_PUBLIC_SOL_RPC_URL</code>, a name that has never been set
+in your <code>.env</code>. Cause &rarr; effect: a user sends SOL &rarr; the broadcast goes to
+<code>api.mainnet-beta.solana.com</code>, the heavily rate-limited public endpoint &rarr; under
+load it throttles, and a send can fail or its confirmation probe can stall — on the one path
+where money is actually leaving. Your Helius quota was never used for it.</div>
+<p>Fixed: one resolver, <code>SOLANA_RPC_URL</code> in
+<code>lib/chains/rpc-fallback.ts</code>, reads the current name first and the legacy name second
+(so a value set under either keeps working), then the public node. Both send paths now use it,
+and 5 tests pin the precedence so the two names cannot drift apart again. <b>You only ever set
+<code>NEXT_PUBLIC_SOLANA_RPC_URL</code></b>; if <code>NEXT_PUBLIC_SOL_RPC_URL</code> exists in
+Vercel, delete it.</p>
+
+<h2>6 &middot; Verify (do these in order)</h2>
+<h3>a) Locally, before touching Vercel</h3>
+<pre>cd packages/web
+# Ethereum + Base through the new keys — expect two block numbers
+node -e "const f=async(u)=>{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_blockNumber'})});const j=await r.json();console.log(u.split('/v2/')[0], j.result??j.error)};f(process.argv[1]);f(process.argv[2])" \
+  "https://eth-mainnet.g.alchemy.com/v2/&lt;KEY&gt;" "https://base-mainnet.g.alchemy.com/v2/&lt;KEY&gt;"
+
+# Solana through Helius — expect a slot number
+node -e "fetch('https://mainnet.helius-rpc.com/?api-key=&lt;KEY&gt;',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getSlot'})}).then(r=&gt;r.json()).then(j=&gt;console.log(j.result??j.error))"</pre>
+<p>Then <code>npm run dev</code> and: open the portfolio &mdash; ETH and SOL balances must load;
+open DevTools &rarr; Network and confirm the requests go to the <b>new</b> host/key.</p>
+<h3>b) After deploying</h3>
+<ol>
+  <li>Portfolio loads ETH + SOL balances on production.</li>
+  <li>Do one <b>small SOL send</b> — this is the path that was silently on the public node.
+      It should confirm normally, and Helius usage should tick up.</li>
+  <li>Trigger the Dune cron once; <code>holdings_snapshots</code> still reports rows (it reads
+      ETH, Base and Solana through these same vars).</li>
+  <li>Watch the CCTP relayer on the next cross-chain swap — mints use
+      <code>CCTP_RPC_URL_*</code>.</li>
+  <li>Check both provider dashboards show traffic on the <b>company</b> keys.</li>
+</ol>
+<h3>c) Only then, retire the old keys</h3>
+<p>Wait ~24h after a clean deploy, confirm the personal accounts show near-zero traffic, then
+delete/disable those keys. <b>Do not skip this</b>: the old browser key has been public in the
+bundle for months, so it stays spendable by anyone who saved it until you disable it.</p>
+
+<h2>7 &middot; Same sitting, while you are in there</h2>
+<table>
+  <tr><th>service</th><th>env var</th><th>why it belongs on a company account</th></tr>
+  <tr><td>Validation Cloud (Stellar Horizon)</td><td><code>NEXT_PUBLIC_MAINNET_HORIZON_URL</code></td>
+      <td>keyed + public; carries every Stellar balance read</td></tr>
+  <tr><td>Lightsail (Soroban RPC)</td><td><code>NEXT_PUBLIC_MAINNET_RPC_URL</code></td>
+      <td>keyed + public; carries swaps and savings</td></tr>
+  <tr><td>LI.FI</td><td><code>LIFI_API_KEY</code></td><td>server; higher quotas + the
+      integrator relationship</td></tr>
+  <tr><td>Dune</td><td><code>DUNE_API_KEY</code></td><td>server; the dashboard uploads</td></tr>
+  <tr><td>Etherscan</td><td><code>ETHERSCAN_API_KEY</code></td><td>a plan that can list
+      <b>Base</b> history — the free tier refused it during the fee-wallet audit (doc 123)</td></tr>
+  <tr><td>Cron</td><td><code>CRON_SECRET</code></td><td>rotate it: it was pasted into a chat
+      earlier in this project</td></tr>
+</table>
+
+<h2>8 &middot; Gates</h2>
+<p>541 tests / 64 suites green (5 new), lint 0 errors, prettier clean, <code>tsc</code> clean,
+isolated <code>.next-verify</code> build green.</p>
+
+</body>
+</html>

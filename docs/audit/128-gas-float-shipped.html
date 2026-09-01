@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gas Float Shipped</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:1000px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:42px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15px; margin:24px 0 6px; }
+  p, li { color:#23232b; }
+  li { margin-bottom:5px; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12px; line-height:1.55; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; font-family:"Consolas",monospace; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.warn { border-left-color:#d97706; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+</style>
+</head>
+<body>
+<h1>Gas Float Shipped</h1>
+<p class="subtitle">2026-09-02 &mdash; the CCTP relayer&rsquo;s remaining gas is now on the
+dashboard: one row per wallet, a top-up verdict, and a burn-rate line. Run 128, branch
+<code>chore/console-hygiene</code>. Implements the plan in doc 127.</p>
+
+<h2>1 &middot; Which wallets, and which does NOT pay gas</h2>
+<table>
+  <tr><th>wallet</th><th>role</th><th>spends?</th></tr>
+  <tr><td>Relayer EVM <code>0xc88a…7b43</code></td><td>submits the CCTP <b>mint</b> on Base;
+      also sends small ETH top-ups so a user can pay their pivot-swap gas</td>
+      <td><b>yes</b> — this is the gas wallet</td></tr>
+  <tr><td>Relayer Stellar <code>GDNDWW…I5M</code></td><td>mint + forward on Stellar (Soroban
+      fees) for every inbound transfer</td><td><b>yes</b></td></tr>
+  <tr><td>LI.FI fee wallet <code>0xC4d9…2aD5</code></td><td>receives the 0.5% integrator fee
+      (revenue)</td><td><b>no</b> — verified on chain: <b>0 outgoing transfers, ever</b>.
+      Money only ever flows in. Gas has never come from here.</td></tr>
+  <tr><td>The user&rsquo;s own Turnkey wallet</td><td>the LI.FI pivot swap runs from the
+      user&rsquo;s address and they sign it</td><td>their own ETH, not ours</td></tr>
+</table>
+
+<h2>2 &middot; What shipped</h2>
+<table>
+  <tr><th>file</th><th>change</th></tr>
+  <tr><td><code>lib/dune/activity-v2.ts</code></td><td><code>FeeTreasury</code> generalised to
+      <code>TreasuryEntry[]</code> — one concept for all company money (fees today, gas now,
+      anything later), every entry written under <code>chain='treasury'</code>. A
+      <b>zero</b> balance is kept (an empty relayer is the finding); only a NaN or negative
+      reading is dropped.</td></tr>
+  <tr><td><code>services/dune-sync-v2.ts</code></td><td>new <code>fetchGasFloat()</code> reads
+      the relayer balances — Ethereum + Base by RPC, Stellar through the Horizon pool — each
+      best-effort, and emits <code>GAS_ETHEREUM</code>, <code>GAS_BASE</code>,
+      <code>GAS_STELLAR</code>. Addresses come from <b>public</b> env vars; the analytics path
+      never imports the relayer private keys.</td></tr>
+  <tr><td><code>.env</code>, <code>.env.example</code>, <code>turbo.jsonc</code></td>
+      <td><code>CCTP_RELAYER_EVM_ADDRESS</code> and
+      <code>CCTP_RELAYER_STELLAR_ADDRESS</code> added and declared (the env-audit test requires
+      the declaration).</td></tr>
+  <tr><td><code>lib/dune/activity-v2.test.ts</code></td><td>+2 tests: an empty gas row survives;
+      a broken reading is dropped. 543 tests / 64 suites.</td></tr>
+  <tr><td>doc 119 &sect;3.15, &sect;3.16</td><td>the gas table with a top-up verdict, and the
+      gas-over-time line. Raw activity log renumbered to &sect;3.18.</td></tr>
+</table>
+<div class="box warn"><div class="label">The filter change that had to land in the same run</div>
+The TVL queries excluded company money with <code>asset != 'FEES'</code>. Gas rows would have
+sailed straight past that and inflated &ldquo;user TVL&rdquo;. &sect;3.11, &sect;3.12 and
+&sect;3.13 now use <code>chain != 'treasury'</code> — one condition covering fees, gas and any
+future company wallet. (Run 15/16&rsquo;s lesson: a new category must reach every classifier in
+the same run.)</div>
+
+<h2>3 &middot; Verified live</h2>
+<pre>holdings_snapshots: 7 rows → 10 rows      (+GAS_ETHEREUM, GAS_BASE, GAS_STELLAR)</pre>
+<table>
+  <tr><th>wallet</th><th>balance</th><th>usd</th><th>verdict</th></tr>
+  <tr><td>Base relayer</td><td class="num">0.010691 ETH</td><td class="num">$25.73</td>
+      <td>ok — thousands of mints left</td></tr>
+  <tr><td>Stellar relayer</td><td class="num">7.11 XLM</td><td class="num">$1.25</td>
+      <td><b>TOP UP</b> — ~40 mints at worst case</td></tr>
+  <tr><td>Ethereum relayer</td><td class="num">0.000000 ETH</td><td class="num">$0.00</td>
+      <td>ignore — the pivot is always Base; 0 of 96 transfers ever went there</td></tr>
+</table>
+
+<h2>4 &middot; Thresholds — measured, not guessed</h2>
+<ul>
+  <li><b>Base:</b> 65 relayer transactions have cost <b>0.000052 ETH in total</b> (~$0.12) —
+      about 0.0000008 ETH each. The 0.002 ETH threshold is still thousands of mints of
+      headroom.</li>
+  <li><b>Stellar:</b> Soroban fees run 0.05–0.5 XLM per mint and 1 XLM is locked as the account
+      reserve, so 20 XLM ≈ 40 mints in the worst case. Suggested top-up: 50 XLM.</li>
+  <li><b>Ethereum:</b> excluded from alerting — the CCTP pivot is hardcoded to Base
+      (<code>use-cctp-engine.tsx:857</code>) and the account has never been funded or used. If
+      an Ethereum destination is ever enabled, this row turns into a real threshold.</li>
+</ul>
+<div class="box good"><div class="label">If you do X &rarr; you will see Y</div>
+Paste &sect;3.15 into Dune and Run &rarr; three rows with a status column, Stellar reading
+&ldquo;TOP UP&rdquo;. Send 50 XLM to
+<code>GDNDWW4ZHDSRRYSVO6XTFIX2UTMZGKPVNELZLZWY4SACLLJHGNZCUI5M</code>, run the sync, Run again
+&rarr; that row flips to &ldquo;ok&rdquo;. After a few daily syncs, &sect;3.16&rsquo;s slope
+tells you the burn rate — the number that actually predicts the next top-up.</div>
+
+<h2>5 &middot; Worth doing next</h2>
+<p>A chart only helps when someone looks. Dune &rarr; open the &sect;3.15 query &rarr;
+<b>Alerts</b> &rarr; notify when the Stellar balance drops below 20 XLM. That is the real fix
+for &ldquo;the relayer ran dry and nobody noticed&rdquo;, and it costs nothing on the free
+plan.</p>
+
+<h2>6 &middot; Gates</h2>
+<p>543 tests / 64 suites green, lint 0 errors, prettier clean, <code>tsc</code> clean, isolated
+<code>.next-verify</code> build green. Sync verified live against the shared production
+database.</p>
+
+</body>
+</html>

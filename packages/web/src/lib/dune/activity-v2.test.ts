@@ -272,6 +272,7 @@ describe('buildHoldingsRows', () => {
         { chain: 'stellar', asset: 'USDC', wallets: 10, total: 250 },
       ],
       14_621.52,
+      [],
       PRICES,
       'mainnet',
       '2026-08-28T00:00:00.000Z'
@@ -279,5 +280,58 @@ describe('buildHoldingsRows', () => {
     expect(rows[0].usd_total).toBe(5000);
     expect(rows[1].usd_total).toBe(250);
     expect(rows[2]).toMatchObject({ asset: 'SAVINGS', usd_total: 14_621.52 });
+    expect(rows).toHaveLength(3); // no treasury rows when none were read
+  });
+
+  it('collected integrator fees land as their own treasury bucket', () => {
+    const rows = buildHoldingsRows(
+      [],
+      0,
+      [{ asset: 'FEES', token: 7.35, usd: 7.35, wallets: 3 }],
+      PRICES,
+      'mainnet',
+      '2026-08-28T00:00:00.000Z'
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      chain: 'treasury',
+      asset: 'FEES',
+      wallets_counted: 3,
+      usd_total: 7.35,
+    });
+  });
+
+  it('keeps an EMPTY gas row — an unfunded relayer is the finding, not noise', () => {
+    const rows = buildHoldingsRows(
+      [],
+      0,
+      [
+        { asset: 'GAS_BASE', token: 0.0107, usd: 25.73, wallets: 1 },
+        { asset: 'GAS_ETHEREUM', token: 0, usd: 0, wallets: 1 },
+        { asset: 'GAS_STELLAR', token: 7.11, usd: 1.25, wallets: 1 },
+      ],
+      PRICES,
+      'mainnet',
+      '2026-08-28T00:00:00.000Z'
+    );
+    expect(rows.map((r) => r.asset)).toEqual(['GAS_BASE', 'GAS_ETHEREUM', 'GAS_STELLAR']);
+    // token units survive alongside USD — "0.0107 ETH" is what you top up, not "$25"
+    expect(rows[0]).toMatchObject({ chain: 'treasury', balance_total: 0.0107, usd_total: 25.73 });
+    expect(rows[1].usd_total).toBe(0);
+  });
+
+  it('drops a broken reading rather than charting a negative or NaN balance', () => {
+    const rows = buildHoldingsRows(
+      [],
+      0,
+      [
+        { asset: 'GAS_BASE', token: Number.NaN, usd: Number.NaN, wallets: 1 },
+        { asset: 'GAS_STELLAR', token: -1, usd: -1, wallets: 1 },
+      ],
+      PRICES,
+      'mainnet',
+      '2026-08-28T00:00:00.000Z'
+    );
+    expect(rows).toHaveLength(0);
   });
 });

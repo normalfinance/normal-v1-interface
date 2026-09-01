@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { SOLANA_RPC_URL } from '@/lib/chains/rpc-fallback';
 import { decideRecordSettlement } from '@/server/tx-records';
 
 // ---------------------------------------------------------------------------
@@ -238,10 +239,9 @@ const PUBLIC_FALLBACK: Record<SendChain, string> = {
  * tests.
  */
 export function rpcCandidatesFor(chain: SendChain): string[] {
-  const configured =
-    chain === 'ethereum'
-      ? process.env.NEXT_PUBLIC_ETH_RPC_URL
-      : process.env.NEXT_PUBLIC_SOL_RPC_URL;
+  // doc 126: Solana resolves through the shared helper so both historical env
+  // names work; Ethereum keeps its single, always-used variable.
+  const configured = chain === 'ethereum' ? process.env.NEXT_PUBLIC_ETH_RPC_URL : SOLANA_RPC_URL;
   const fallback = PUBLIC_FALLBACK[chain];
   return configured && configured !== fallback ? [configured, fallback] : [fallback];
 }

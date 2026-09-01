@@ -30,6 +30,9 @@ export interface LifiTrackedTx {
   toSymbol: string;
   amountIn: string;
   amountOut: string;
+  /** Integrator fee in source-token units — absent when the quote carried no
+   *  fee (1011 fallback). Recorded so revenue charts see LI.FI (doc 123). */
+  feeAmount?: string;
 }
 
 const CHAIN = {
@@ -214,7 +217,16 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
     }
 
     (async () => {
-      const { txHash, fromChainId, toChainId, fromSymbol, toSymbol, amountIn, amountOut } = tx;
+      const {
+        txHash,
+        fromChainId,
+        toChainId,
+        fromSymbol,
+        toSymbol,
+        amountIn,
+        amountOut,
+        feeAmount,
+      } = tx;
       log(`Submitted ${fromSymbol}→${toSymbol}`, txHash);
 
       // 1) Confirm the source-chain transaction actually landed.
@@ -238,7 +250,7 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
           await fetch('/api/lifi/record', {
             method: 'POST',
             headers: { ...headers, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fromSymbol, toSymbol, amountIn, amountOut, txHash }),
+            body: JSON.stringify({ fromSymbol, toSymbol, amountIn, amountOut, txHash, feeAmount }),
           });
           log('recorded swap');
           break;
