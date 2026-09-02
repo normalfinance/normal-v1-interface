@@ -46,7 +46,21 @@ describe('SOLANA_RPC_URL — one endpoint, two historical names', () => {
       NEXT_PUBLIC_SOLANA_RPC_URL: 'https://api.mainnet-beta.solana.com',
       NEXT_PUBLIC_SOL_RPC_URL: undefined,
     });
-    expect(SOL_RPC_URLS).toEqual(['https://api.mainnet-beta.solana.com']);
+    // The keyed entry leads; the duplicate public entry is dropped, publicnode
+    // stays as the browser-safe backup (mainnet-beta 403s browser requests).
+    expect(SOL_RPC_URLS).toEqual([
+      'https://api.mainnet-beta.solana.com',
+      'https://solana-rpc.publicnode.com',
+    ]);
+  });
+
+  it('gives a keyed endpoint two independent backups', async () => {
+    const { SOL_RPC_URLS } = await loadWith({
+      NEXT_PUBLIC_SOLANA_RPC_URL: 'https://mainnet.helius-rpc.com/?api-key=abc',
+      NEXT_PUBLIC_SOL_RPC_URL: undefined,
+    });
+    expect(SOL_RPC_URLS).toHaveLength(3);
+    expect(SOL_RPC_URLS[0]).toContain('helius');
   });
 });
 

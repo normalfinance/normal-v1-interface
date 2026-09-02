@@ -14,7 +14,9 @@
 // ---------------------------------------------------------------------------
 
 import { useMemo } from 'react';
+import { rpcFromPool } from '@/lib/portfolio/rpc-pool';
 import { nativeAssetToToken } from '@/lib/portfolio/native-token';
+import { ETH_RPC_URLS, SOL_RPC_URLS } from '@/lib/chains/rpc-fallback';
 
 import { useTurnkeyWallet } from './use-turnkey-wallet';
 import { useWalletBalances } from './use-wallet-balances';
@@ -39,16 +41,20 @@ async function rpc(url: string, method: string, params: unknown[]): Promise<any>
   return data.result;
 }
 
-/** ACTION-TIME live read (off-ramp preflight) — not for display paths. */
+/** ACTION-TIME live read (off-ramp preflight) — not for display paths.
+ *  Pooled since 2026-09-02: a provider hiccup here reads as "you don't have
+ *  the funds", which is worse than a slow answer from a fallback. */
 export async function fetchEthBalance(address: string): Promise<number> {
-  const hex: string = await rpc(ETH_RPC_URL, 'eth_getBalance', [address, 'latest']);
-  return Number(BigInt(hex)) / 1e18;
+  const { value } = await rpcFromPool(ETH_RPC_URLS, (url) =>
+    rpc(url, 'eth_getBalance', [address, 'latest'])
+  );
+  return Number(BigInt(value as string)) / 1e18;
 }
 
 /** ACTION-TIME live read (off-ramp preflight) — not for display paths. */
 export async function fetchSolBalance(address: string): Promise<number> {
-  const result = await rpc(SOL_RPC_URL, 'getBalance', [address]);
-  return (result?.value ?? 0) / 1e9;
+  const { value } = await rpcFromPool(SOL_RPC_URLS, (url) => rpc(url, 'getBalance', [address]));
+  return ((value as any)?.value ?? 0) / 1e9;
 }
 
 function useChainPortfolio(chain: 'ethereum' | 'solana', enabled = true) {
