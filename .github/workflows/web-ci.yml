@@ -10,11 +10,15 @@ name: Web CI
 # exist (Vercel builds every push with real env and is the authoritative
 # build signal today). Details: docs/audit/50-ci-and-withauth-plan.md.
 
+# A commit is checked ONCE. `pull_request` covers everything on its way in;
+# `push` is master-only so that post-merge state is still verified. Listing
+# develop under both meant an open develop -> master PR made every develop push
+# run this workflow twice over the same commit.
 on:
   pull_request:
     branches: [develop, master]
   push:
-    branches: [develop, master]
+    branches: [master]
 
 # A force-push or rapid follow-up commit cancels the superseded run instead of
 # queueing behind it.
