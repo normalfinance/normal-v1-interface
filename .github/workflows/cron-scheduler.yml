@@ -46,6 +46,13 @@ on:
     # Upstash QStash schedule (same account as our Redis), or — the real fix —
     # merge develop into master so Vercel's own 2-minute crons take over.
     - cron: '*/15 * * * *'
+    # Once a day: dune-sync (production only — staging shares the same Dune
+    # tables, running it twice would double the append-only holdings rows).
+    # Verified 2026-09-02 via heartbeats: the three fast jobs were beating
+    # every 15 min while dune-sync had NEVER been scheduled — the dashboard's
+    # daily history (holdings, gas float, combined TVL) was not accumulating.
+    # 05:07 UTC, off the hour, because GitHub delays on-the-hour schedules.
+    - cron: '7 5 * * *'
   workflow_dispatch:
     inputs:
       target:
@@ -54,6 +61,11 @@ on:
         default: both
         type: choice
         options: [staging, production, both]
+      include_dune_sync:
+        description: 'Also refresh the Dune dashboard tables (~3 min)'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -66,7 +78,7 @@ concurrency:
 jobs:
   poke:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Poke cron endpoints
         env:
@@ -74,6 +86,8 @@ jobs:
           STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
           PROD_BASE_URL: ${{ secrets.PROD_BASE_URL }}
           TARGET: ${{ github.event.inputs.target || 'both' }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          INCLUDE_DUNE: ${{ github.event.inputs.include_dune_sync || 'false' }}
         run: |
           set -uo pipefail
 
@@ -84,6 +98,21 @@ jobs:
 
           # cctp-advance first: it is the one that finishes bridges.
           JOBS="cctp-advance fee-escrow-sweep ramp-reconcile"
+          CURL_MAX=110
+
+          # The daily firing runs ONLY dune-sync: it makes ~24 Dune API calls
+          # against a per-minute rate limit, so every 15 minutes would starve
+          # itself (doc 121) for zero benefit — the dashboard needs one honest
+          # snapshot per day. Its route waits out 429s (maxDuration 300), so
+          # the curl deadline must cover that.
+          if [ "${EVENT_SCHEDULE:-}" = "7 5 * * *" ]; then
+            JOBS="dune-sync"
+            CURL_MAX=300
+            TARGET="production"
+          elif [ "${INCLUDE_DUNE}" = "true" ]; then
+            JOBS="$JOBS dune-sync"
+            CURL_MAX=300
+          fi
 
           failures=0
           called=0
@@ -93,7 +122,7 @@ jobs:
             called=$((called+1))
             local url="${base%/}/api/cron/${job}/"
             local body status
-            body=$(curl -sS -m 110 -w '\n%{http_code}' \
+            body=$(curl -sS -m "${CURL_MAX}" -w '\n%{http_code}' \
               -H "Authorization: Bearer ${CRON_SECRET}" \
               "$url" 2>&1) || { echo "::warning::${label} ${job}: request failed"; failures=$((failures+1)); return; }
             status=$(printf '%s' "$body" | tail -n1)
@@ -115,6 +144,12 @@ jobs:
               return
             fi
             for job in $JOBS; do
+              if [ "$job" = "dune-sync" ] && [ "$label" = "staging" ]; then
+                # Staging shares the production Dune tables; a second sync
+                # would double the append-only holdings rows for the day.
+                echo "⏭️  staging dune-sync skipped — production owns the Dune upload"
+                continue
+              fi
               poke "$label" "$base" "$job"
             done
           }
