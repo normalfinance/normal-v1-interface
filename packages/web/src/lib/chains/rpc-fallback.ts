@@ -29,8 +29,12 @@ export const SOLANA_RPC_URL: string =
   process.env.NEXT_PUBLIC_SOL_RPC_URL ??
   'https://solana-rpc.publicnode.com';
 
+// publicnode sits between the keyed endpoint and mainnet-beta because
+// api.mainnet-beta.solana.com 403s browser requests — on the client it is the
+// last resort that actually works.
 export const SOL_RPC_URLS: string[] = [
   SOLANA_RPC_URL,
+  'https://solana-rpc.publicnode.com',
   'https://api.mainnet-beta.solana.com',
 ].filter((u, i, all) => all.indexOf(u) === i);
 

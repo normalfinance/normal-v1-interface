@@ -2,7 +2,9 @@ import type { NetworkType } from '@normalfinance/utils';
 import type { PortfolioAsset, PortfolioPayload } from '@/types/portfolio';
 
 import { redis } from '@/server/rateLimiter';
+import { rpcFromPool } from '@/lib/portfolio/rpc-pool';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
+import { ETH_RPC_URLS, SOL_RPC_URLS } from '@/lib/chains/rpc-fallback';
 import { fetchStellarBalancesFromPool } from '@/lib/stellar/horizon-pool';
 
 import { buildAsset } from './normalize';
@@ -133,16 +135,31 @@ async function fetchBtcBalance(address: string): Promise<number> {
   return (funded - spent) / 1e8;
 }
 
+/** Warn only when the primary did NOT answer — a silent failover reads as
+ *  "everything is fine" while one provider is dark (doc 98's rule). */
+function warnOnFailover(chain: string, urls: string[], servedBy: string) {
+  if (urls.length > 1 && servedBy !== urls[0]) {
+    console.warn(`[portfolio] ${chain} primary RPC failed — served by fallback ${servedBy}`);
+  }
+}
+
 async function fetchEthBalance(address: string): Promise<number> {
-  const url = process.env.NEXT_PUBLIC_ETH_RPC_URL || 'https://ethereum-rpc.publicnode.com';
-  const hex: string = await rpc(url, 'eth_getBalance', [address, 'latest']);
-  return Number(BigInt(hex)) / 1e18;
+  const { value, servedBy } = await rpcFromPool(ETH_RPC_URLS, (url) =>
+    rpc(url, 'eth_getBalance', [address, 'latest'])
+  );
+  warnOnFailover('ethereum', ETH_RPC_URLS, servedBy);
+  return Number(BigInt(value as string)) / 1e18;
 }
 
 async function fetchSolBalance(address: string): Promise<number> {
-  const url = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://solana-rpc.publicnode.com';
-  const result = await rpc(url, 'getBalance', [address]);
-  return (result?.value ?? 0) / 1e9;
+  // 2026-09-02: Helius answered getHealth fine while 500-ing 2 of 5 getBalance
+  // calls. One URL here meant a just-arrived SOL balance kept displaying the
+  // pre-swap number.
+  const { value, servedBy } = await rpcFromPool(SOL_RPC_URLS, (url) =>
+    rpc(url, 'getBalance', [address])
+  );
+  warnOnFailover('solana', SOL_RPC_URLS, servedBy);
+  return ((value as any)?.value ?? 0) / 1e9;
 }
 
 /** One Horizon call → XLM (native) + USDC (trustline) balances. 404 = unfunded. */
