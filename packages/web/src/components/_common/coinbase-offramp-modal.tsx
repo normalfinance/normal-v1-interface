@@ -3,13 +3,14 @@
 import type { Token } from '@normalfinance/types';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
+import { useSnackbar } from 'notistack';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
-import { buildAuthHeaders } from '@/utils/http';
-import { usePersistStore } from '@normalfinance/state';
+import { authedFetch } from '@/utils/authed-fetch';
 import { useState, useEffect, useCallback } from 'react';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { fetchSolBalance, fetchEthBalance } from '@/hooks/use-chain-portfolio';
+import { saveOfframpFill, fetchOfframpFills, removeOfframpFill } from '@/lib/offramp-fills';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -76,34 +77,35 @@ interface CoinbaseOfframpModalProps {
   token: Token;
 }
 
-const LS_KEY = 'nf:cb-offramp-fills';
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function readFills(): Record<string, string> {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) || '{}');
-  } catch {
-    return {};
-  }
+// #24: fills are DB-backed now (lib/offramp-fills — survives cleared
+// browsers and device switches; localStorage entries migrate on first
+// fetch). The module-level cache keeps every call site synchronous, exactly
+// as before; hydrateFills() refreshes it when the modal opens, and writes go
+// through to the server fire-and-forget (the upsert is idempotent).
+let fillsCache: Record<string, string> = {};
+async function hydrateFills(): Promise<void> {
+  fillsCache = await fetchOfframpFills();
 }
 function getFill(id: string): string | undefined {
-  return readFills()[id];
+  return fillsCache[id];
 }
 function markFill(id: string, value: string) {
-  const all = readFills();
-  all[id] = value;
-  localStorage.setItem(LS_KEY, JSON.stringify(all));
+  fillsCache[id] = value;
+  void saveOfframpFill(id, value);
 }
 function clearFill(id: string) {
-  const all = readFills();
-  delete all[id];
-  localStorage.setItem(LS_KEY, JSON.stringify(all));
+  delete fillsCache[id];
+  void removeOfframpFill(id);
 }
 
 async function fetchTransactions(): Promise<PendingTxn[]> {
-  const headers = await buildAuthHeaders();
-  const r = await fetch('/api/coinbase/offramp-status', { headers });
-  if (!r.ok) return [];
+  // Doc 90 W2: a failed status fetch used to be indistinguishable from "no
+  // order" — the modal announced "No pending cash-out" right after a real
+  // sale. THROW so callers can tell outage from empty; 401 rides authedFetch.
+  const r = await authedFetch('/api/coinbase/offramp-status');
+  if (!r.ok) throw new Error(`offramp status ${r.status}`);
   const data = await r.json();
   return (data.transactions ?? []) as PendingTxn[];
 }
@@ -132,11 +134,11 @@ export function CoinbaseOfframpModal({
   token,
 }: CoinbaseOfframpModalProps) {
   const { t } = useTranslate();
+  const { enqueueSnackbar } = useSnackbar();
   const config = useStellarConfig();
   const { send: sendStellar } = useSendToken();
   // Stellar (USDC/XLM) balances live in the token store, which the chain-portfolio
   // refresh event doesn't cover — refresh it directly after a Stellar off-ramp.
-  const getAllTokens = usePersistStore((s) => s.getAllTokens);
   const [stage, setStage] = useState<Stage>('searching');
   const [txn, setTxn] = useState<PendingTxn | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -145,35 +147,43 @@ export function CoinbaseOfframpModal({
 
   // The pending sell that needs us to send crypto: STARTED, for this asset,
   // with a deposit address + amount, and not already fulfilled by us.
-  const findPending = useCallback((list: PendingTxn[]): PendingTxn | null => {
-    const balance = parseFloat(token.balance || '0');
-    const candidates = list
-      .filter(
-        (x) =>
-          x.status === 'TRANSACTION_STATUS_STARTED' &&
-          x.toAddress &&
-          x.amount &&
-          String(x.asset).toUpperCase() === symbol.toUpperCase() &&
-          // Safety: the amount MUST be denominated in the crypto, not fiat —
-          // Coinbase sometimes returns sell_amount in EUR, which we must never
-          // send as a crypto amount.
-          String(x.currency).toUpperCase() === symbol.toUpperCase() &&
-          // Only orders the wallet can actually fulfill. Crucially, this skips
-          // stale/abandoned STARTED orders from earlier attempts after the user
-          // has already cashed out (balance dropped) — otherwise the modal would
-          // re-prompt to send an amount that's no longer in the wallet.
-          parseFloat(x.amount) <= balance &&
-          !x.txHash && // Coinbase already saw an on-chain send for it
-          getFill(x.transactionId) === undefined // we haven't sent for it
-      )
-      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    return candidates[0] ?? null;
-  }, [symbol, token.balance]);
+  const findPending = useCallback(
+    (list: PendingTxn[]): PendingTxn | null => {
+      const balance = parseFloat(token.balance || '0');
+      const candidates = list
+        .filter(
+          (x) =>
+            x.status === 'TRANSACTION_STATUS_STARTED' &&
+            x.toAddress &&
+            x.amount &&
+            String(x.asset).toUpperCase() === symbol.toUpperCase() &&
+            // Safety: the amount MUST be denominated in the crypto, not fiat —
+            // Coinbase sometimes returns sell_amount in EUR, which we must never
+            // send as a crypto amount.
+            String(x.currency).toUpperCase() === symbol.toUpperCase() &&
+            // Only orders the wallet can actually fulfill. Crucially, this skips
+            // stale/abandoned STARTED orders from earlier attempts after the user
+            // has already cashed out (balance dropped) — otherwise the modal would
+            // re-prompt to send an amount that's no longer in the wallet.
+            parseFloat(x.amount) <= balance &&
+            !x.txHash && // Coinbase already saw an on-chain send for it
+            getFill(x.transactionId) === undefined // we haven't sent for it
+        )
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      return candidates[0] ?? null;
+    },
+    [symbol, token.balance]
+  );
 
   const pollSettle = useCallback(async (id: string) => {
     for (let i = 0; i < 30; i += 1) {
       await delay(10_000);
-      const list = await fetchTransactions();
+      let list: PendingTxn[];
+      try {
+        list = await fetchTransactions();
+      } catch {
+        continue; // outage tick — keep polling
+      }
       const found = list.find((x) => x.transactionId === id);
       if (found?.status === 'TRANSACTION_STATUS_SUCCESS') {
         setStage('done');
@@ -203,8 +213,20 @@ export function CoinbaseOfframpModal({
     setTxn(null);
 
     (async () => {
+      // Load this user's fills from the DB BEFORE matching orders — getFill
+      // below decides which sales are already claimed/fulfilled (#24).
+      await hydrateFills();
+      if (cancelled) return;
+      let sawError = false;
       for (let i = 0; i < 10 && !cancelled; i += 1) {
-        const list = await fetchTransactions();
+        let list: PendingTxn[];
+        try {
+          list = await fetchTransactions();
+        } catch {
+          sawError = true;
+          await delay(3000);
+          continue;
+        }
         if (cancelled) return;
         const match = findPending(list);
         if (match) {
@@ -227,13 +249,23 @@ export function CoinbaseOfframpModal({
         }
         await delay(3000);
       }
-      if (!cancelled) setStage('none');
+      if (!cancelled) {
+        if (sawError) {
+          enqueueSnackbar(
+            t(
+              'Could not reach Coinbase to check for a pending cash-out — close this and try again.'
+            ),
+            { variant: 'warning' }
+          );
+        }
+        setStage('none');
+      }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [open, findPending, pollSettle, symbol]);
+  }, [open, findPending, pollSettle, symbol, enqueueSnackbar, t]);
 
   const handleSend = async () => {
     if (!txn) return;
@@ -248,7 +280,9 @@ export function CoinbaseOfframpModal({
     if (isStellar) {
       if (!txn.memo && (await destinationRequiresMemo(config.HORIZON_URL, txn.toAddress))) {
         setError(
-          t('This destination requires a memo, but Coinbase didn’t provide one — we can’t safely send. Please contact support.')
+          t(
+            'This destination requires a memo, but Coinbase didn’t provide one — we can’t safely send. Please contact support.'
+          )
         );
         return;
       }
@@ -267,8 +301,9 @@ export function CoinbaseOfframpModal({
         return;
       }
       markFill(txn.transactionId, hash);
-      window.dispatchEvent(new Event('nf:activity-updated'));
-      getAllTokens(true).catch(() => {}); // refresh USDC/XLM balance in the store
+      // No dispatch here: useSendToken announces the send itself now
+      // (pending row + refresh) — a second event would double-fetch.
+      // Balances refresh via the aggregate on the activity event.
       setStage('confirming');
       pollSettle(txn.transactionId);
       return;
@@ -334,7 +369,8 @@ export function CoinbaseOfframpModal({
     }
 
     markFill(txn.transactionId, txHash);
-    window.dispatchEvent(new Event('nf:activity-updated'));
+    // No dispatch here: the send adapter announces the send itself now
+    // (pending row + refresh) — a second event would double-fetch.
     setStage('confirming');
     pollSettle(txn.transactionId);
   };
@@ -349,36 +385,92 @@ export function CoinbaseOfframpModal({
           : t('Finish your {{symbol}} cash-out', { symbol });
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: '22px' } } }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+    >
       <DialogContent sx={{ px: '22px', py: '26px' }}>
         <Stack spacing={2.5}>
           <Box sx={{ textAlign: 'center' }}>
-            <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+            <Typography
+              sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+            >
               {title}
             </Typography>
             <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
               {stage === 'searching' && t('Looking for your Coinbase sell order…')}
               {stage === 'ready' &&
-                t('To complete your sale, send the crypto to Coinbase. This needs one passkey confirmation.')}
+                t(
+                  'To complete your sale, send the crypto to Coinbase. This needs one passkey confirmation.'
+                )}
               {stage === 'sending' && t('Approve the send with your passkey…')}
               {stage === 'confirming' &&
-                t('Crypto sent. Coinbase will pay out your cash once it confirms — you can close this.')}
-              {stage === 'done' && t('Your crypto is on its way to Coinbase. Cash payout follows automatically.')}
-              {stage === 'failed' && t('We couldn’t complete the send. No funds were moved — you can try again.')}
+                t(
+                  'Crypto sent. Coinbase will pay out your cash once it confirms — you can close this.'
+                )}
+              {stage === 'done' &&
+                t('Your crypto is on its way to Coinbase. Cash payout follows automatically.')}
+              {stage === 'failed' &&
+                t('We couldn’t complete the send. No funds were moved — you can try again.')}
               {stage === 'none' &&
-                t('We didn’t find a pending Coinbase sell order. If you just confirmed one, give it a moment and reopen.')}
+                t(
+                  'We didn’t find a pending Coinbase sell order. If you just confirmed one, give it a moment and reopen.'
+                )}
             </Typography>
           </Box>
 
-          {(stage === 'ready' || stage === 'sending' || stage === 'confirming' || stage === 'done') && txn && (
-            <Box sx={{ p: '14px', borderRadius: '14px', bgcolor: '#FAFAFB', border: '1px solid rgba(10,10,15,0.08)' }}>
-              <Stack spacing={1}>
-                <Row label={t('Amount')} value={`${txn.amount} ${symbol}`} />
-                <Row label={t('To (Coinbase)')} value={txn.toAddress} mono truncate />
-                {isStellar && txn.memo && <Row label={t('Memo')} value={txn.memo} mono truncate />}
-              </Stack>
-            </Box>
-          )}
+          {(stage === 'ready' ||
+            stage === 'sending' ||
+            stage === 'confirming' ||
+            stage === 'done') &&
+            txn && (
+              <Box
+                sx={{
+                  p: '14px',
+                  borderRadius: '14px',
+                  bgcolor: '#FAFAFB',
+                  border: '1px solid rgba(10,10,15,0.08)',
+                }}
+              >
+                <Stack spacing={1.5}>
+                  {/* Asset + amount in the send-dialog's visual language, with
+                      the dollar equivalent (Niko, 2026-08-13). */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Box
+                      component="img"
+                      src={token.icon}
+                      alt={symbol}
+                      sx={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0 }}
+                    />
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography
+                        sx={{
+                          fontSize: '17px',
+                          fontWeight: 700,
+                          color: '#0A0A0F',
+                          letterSpacing: '-0.01em',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        {txn.amount} {symbol}
+                      </Typography>
+                      {Number(token.price) > 0 && (
+                        <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)' }}>
+                          ≈ ${(parseFloat(txn.amount) * Number(token.price)).toFixed(2)}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                  <Row label={t('To (Coinbase)')} value={txn.toAddress} mono truncate />
+                  {isStellar && txn.memo && (
+                    <Row label={t('Memo')} value={txn.memo} mono truncate />
+                  )}
+                </Stack>
+              </Box>
+            )}
 
           {(stage === 'searching' || stage === 'sending' || stage === 'confirming') && (
             <Stack alignItems="center" sx={{ py: 1 }}>
@@ -387,8 +479,18 @@ export function CoinbaseOfframpModal({
           )}
 
           {error && (
-            <Box sx={{ px: '12px', py: '10px', borderRadius: '10px', bgcolor: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.15)' }}>
-              <Typography sx={{ fontSize: '12.5px', color: '#B91C1C', lineHeight: 1.5 }}>{error}</Typography>
+            <Box
+              sx={{
+                px: '12px',
+                py: '10px',
+                borderRadius: '10px',
+                bgcolor: 'rgba(220,38,38,0.05)',
+                border: '1px solid rgba(220,38,38,0.15)',
+              }}
+            >
+              <Typography sx={{ fontSize: '12.5px', color: '#B91C1C', lineHeight: 1.5 }}>
+                {error}
+              </Typography>
             </Box>
           )}
 
@@ -398,7 +500,13 @@ export function CoinbaseOfframpModal({
                 variant="contained"
                 onClick={handleSend}
                 startIcon={<Iconify icon="solar:shield-keyhole-bold" width={18} />}
-                sx={{ borderRadius: '12px', bgcolor: '#0A0A0F', textTransform: 'none', fontWeight: 700, '&:hover': { bgcolor: '#1a1a25' } }}
+                sx={{
+                  borderRadius: '12px',
+                  bgcolor: '#0A0A0F',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  '&:hover': { bgcolor: '#1a1a25' },
+                }}
               >
                 {t('Send with passkey')}
               </Button>
@@ -407,7 +515,13 @@ export function CoinbaseOfframpModal({
               <Button
                 variant="contained"
                 onClick={handleSend}
-                sx={{ borderRadius: '12px', bgcolor: '#0A0A0F', textTransform: 'none', fontWeight: 700, '&:hover': { bgcolor: '#1a1a25' } }}
+                sx={{
+                  borderRadius: '12px',
+                  bgcolor: '#0A0A0F',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  '&:hover': { bgcolor: '#1a1a25' },
+                }}
               >
                 {t('Try again')}
               </Button>
@@ -416,9 +530,19 @@ export function CoinbaseOfframpModal({
               variant="outlined"
               onClick={onClose}
               disabled={stage === 'sending'}
-              sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 500, borderColor: 'rgba(10,10,15,0.16)', color: '#0A0A0F' }}
+              sx={{
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontWeight: 500,
+                borderColor: 'rgba(10,10,15,0.16)',
+                color: '#0A0A0F',
+              }}
             >
-              {stage === 'confirming' || stage === 'done' ? t('Close') : stage === 'ready' ? t('Cancel') : t('Close')}
+              {stage === 'confirming' || stage === 'done'
+                ? t('Close')
+                : stage === 'ready'
+                  ? t('Cancel')
+                  : t('Close')}
             </Button>
           </Stack>
         </Stack>
@@ -427,17 +551,33 @@ export function CoinbaseOfframpModal({
   );
 }
 
-function Row({ label, value, mono, truncate }: { label: string; value: string; mono?: boolean; truncate?: boolean }) {
+function Row({
+  label,
+  value,
+  mono,
+  truncate,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  truncate?: boolean;
+}) {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-      <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', flexShrink: 0 }}>{label}</Typography>
+    <Box
+      sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
+    >
+      <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', flexShrink: 0 }}>
+        {label}
+      </Typography>
       <Typography
         sx={{
           fontSize: '12.5px',
           fontWeight: 600,
           color: '#0A0A0F',
           fontFamily: mono ? '"Geist Mono", monospace' : 'inherit',
-          ...(truncate ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 } : {}),
+          ...(truncate
+            ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }
+            : {}),
         }}
       >
         {value}

@@ -79,7 +79,8 @@ export const NormalNavbarDefaults: Props = {
           badge: 'New post',
           title: 'Making crypto Normal: simple, safe, and stable',
           meta: '5 min read',
-          image: 'https://cdn.normalapi.com/blog/6aceaec9-3a28-4c77-b830-40111bd8dc83_5824x4192.webp',
+          image:
+            'https://cdn.normalapi.com/blog/6aceaec9-3a28-4c77-b830-40111bd8dc83_5824x4192.webp',
           buttonLabel: 'Read →',
           buttonHref: 'https://normalfi.substack.com/p/making-crypto-normal-simple-safe',
           buttonTarget: '_blank',

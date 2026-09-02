@@ -20,64 +20,8 @@ export async function detectWalletEnv(): Promise<WalletEnvInfo> {
       info.publicKey = await w.freighterApi.getPublicKey();
     }
 
-    // xBull (APIs vary by version; try a few)
-    if (!info.network && w.xbull?.getNetwork) {
-      try {
-        info.network = await w.xbull.getNetwork();
-      } catch (err) {
-        // ignore
-      }
-    }
-    if (!info.publicKey && w.xbull?.getPublicKey) {
-      try {
-        info.publicKey = await w.xbull.getPublicKey();
-      } catch (err) {
-        // ignore
-      }
-    }
-    if (!info.network && w.xBull?.getNetwork) {
-      try {
-        info.network = await w.xBull.getNetwork();
-      } catch (err) {
-        // ignore
-      }
-    }
-    if (!info.publicKey && w.xBull?.getPublicKey) {
-      try {
-        info.publicKey = await w.xBull.getPublicKey();
-      } catch (err) {
-        // ignore
-      }
-    }
-
-    // Lobstr
-    if (!info.publicKey && w.lobstr?.getPublicKey) {
-      try {
-        info.publicKey = await w.lobstr.getPublicKey();
-      } catch (err) {
-        // ignore
-      }
-    }
-
-    // Hana / Wallet Standard
-    if (w.hana?.stellar?.request) {
-      if (!info.publicKey) {
-        try {
-          const r = await w.hana.stellar.request({ method: 'getPublicKey' });
-          if (r?.publicKey) info.publicKey = r.publicKey;
-        } catch (err) {
-          // ignore
-        }
-      }
-      if (!info.network) {
-        try {
-          const r = await w.hana.stellar.request({ method: 'getNetwork' });
-          if (r?.network) info.network = r.network;
-        } catch (err) {
-          // ignore
-        }
-      }
-    }
+    // (xBull / Hana probes removed 2026-08-07 — finding #43: those wallets
+    // are not connectable in this app, so their diagnostics were dead weight.)
 
     // Generic Wallet Standard (if present)
     if (w.stellar?.request) {
@@ -85,7 +29,7 @@ export async function detectWalletEnv(): Promise<WalletEnvInfo> {
         try {
           const r = await w.stellar.request({ method: 'stellar_getPublicKey' });
           if (r?.publicKey) info.publicKey = r.publicKey;
-        } catch (err) {
+        } catch {
           // ignore
         }
       }
@@ -93,12 +37,12 @@ export async function detectWalletEnv(): Promise<WalletEnvInfo> {
         try {
           const r = await w.stellar.request({ method: 'stellar_getNetwork' });
           if (r?.network) info.network = r.network;
-        } catch (err) {
+        } catch {
           // ignore
         }
       }
     }
-  } catch (err) {
+  } catch {
     // ignore outer failures
   }
 

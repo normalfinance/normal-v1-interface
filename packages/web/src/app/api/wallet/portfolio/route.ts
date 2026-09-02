@@ -1,14 +1,19 @@
 import type { NextRequest } from 'next/server';
+import type { ChainId } from '@/lib/chains/registry';
 import type { NetworkType } from '@normalfinance/utils';
-import type { PortfolioAsset } from '@/types/portfolio';
+import type { PortfolioAsset, PortfolioPayload } from '@/types/portfolio';
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { redis } from '@/server/rateLimiter';
-import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { aggregatePortfolio, applyStaleFallback } from '@/lib/portfolio/aggregate';
+import { CHAIN_IDS, ADDRESS_SELECT, getChainAddress } from '@/lib/chains/registry';
+import {
+  aggregatePortfolio,
+  applyStaleFallback,
+  aggregateStellarOnly,
+} from '@/lib/portfolio/aggregate';
 
 // ---------------------------------------------------------------------------
 // GET /api/wallet/portfolio?stellar=<G…>&network=<mainnet|testnet>
@@ -24,14 +29,14 @@ import { aggregatePortfolio, applyStaleFallback } from '@/lib/portfolio/aggregat
 export const dynamic = 'force-dynamic';
 
 const RESPONSE_TTL_SECONDS = 15;
-const SNAPSHOT_TTL_SECONDS = 3600;
+// 24h, not 1h (2026-08-28): the user was away for a few hours, the snapshot
+// expired, and a Horizon outage then rendered as BLANK XLM/USDC instead of
+// day-old values honestly marked `stale`. An outage should degrade the data's
+// age, never its existence.
+const SNAPSHOT_TTL_SECONDS = 86_400;
 
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req: NextRequest, { user }) => {
   try {
-    const token = getAccessToken(req);
-    const user = await getAuthenticatedUser(token);
-    if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-
     const networkParam = req.nextUrl.searchParams.get('network');
     const network: NetworkType = networkParam === 'testnet' ? 'testnet' : 'mainnet';
     const stellarParam = req.nextUrl.searchParams.get('stellar');
@@ -40,38 +45,104 @@ export async function GET(req: NextRequest) {
     // connected wallets), falling back to the DB stellarAddress.
     const wallet = await prisma.turnkeyWallet.findUnique({
       where: { supabaseUid: user.id },
-      select: {
-        bitcoinAddress: true,
-        ethereumAddress: true,
-        solanaAddress: true,
-        stellarAddress: true,
-      },
+      select: ADDRESS_SELECT,
     });
 
     const stellar =
       stellarParam && /^[GC][A-Z2-7]{55}$/.test(stellarParam)
         ? stellarParam
-        : wallet?.stellarAddress ?? null;
+        : getChainAddress(wallet, 'stellar');
 
+    // One entry per registry chain, so a new chain is aggregated without
+    // editing this map. Stellar keeps its override: the query param covers a
+    // connected (non-Turnkey) wallet, falling back to the stored address.
     const addresses = {
-      bitcoin: wallet?.bitcoinAddress ?? null,
-      ethereum: wallet?.ethereumAddress ?? null,
-      solana: wallet?.solanaAddress ?? null,
+      ...(Object.fromEntries(CHAIN_IDS.map((id) => [id, getChainAddress(wallet, id)])) as Record<
+        ChainId,
+        string | null
+      >),
       stellar,
     };
 
+    // #32 chunk 2: when the connected wallet is EXTERNAL (the stellar param
+    // differs from the user's Turnkey Stellar address), also return the
+    // companion Normal wallet's XLM/USDC so the drawer can show both wallets.
+    const turnkeyStellar = getChainAddress(wallet, 'stellar');
+    const includeCompanion = !!turnkeyStellar && turnkeyStellar !== stellar;
+
     const cacheKey = `portfolio:${user.id}:${network}:${stellar ?? 'none'}`;
     const snapshotKey = `portfolio:snap:${user.id}:${network}:${stellar ?? 'none'}`;
+    const floorKey = `portfolio:floor:${user.id}`;
+    const wantsFresh = req.nextUrl.searchParams.get('refresh') === '1';
 
     // Fresh response still cached → return immediately (dedups bursts of views).
+    //
+    // `refresh=1` skips the cached copy so a just-made send/swap shows its new
+    // balance at once — the same bypass the four activity routes have, and the
+    // reason a send used to need a page reload (docs/audit/48). Floored per
+    // user so the bypass can't be leaned on to hammer the chain sources.
     try {
-      const cached = await redis.get<{ updatedAt: number; assets: PortfolioAsset[] }>(cacheKey);
-      if (cached) return NextResponse.json({ success: true, ...cached });
+      const withinFloor = wantsFresh ? await redis.get(floorKey) : null;
+      if (!wantsFresh || withinFloor) {
+        const cached = await redis.get<PortfolioPayload>(cacheKey);
+        // `floored` = "you asked for fresh and we gave you the cache anyway".
+        // Without it the client could only GUESS whether a response was fresh,
+        // by checking whether a number had moved — and that guess is wrong
+        // exactly when two actions land inside the same floor window (live
+        // 2026-08-27: two Stellar swaps, balances stuck until a page reload).
+        if (cached) {
+          // ...and how long it has left. Without this the client had to
+          // assume a FULL floor window (5.6s) before asking again, so a read
+          // that arrived 4.5s into the window still waited the whole 5.6s —
+          // which is the 5-10s lag Niko saw at "Updating balances" even once
+          // the retry itself was working. `ttl` is seconds remaining; -1/-2
+          // mean "no expiry"/"gone", both of which fall back client-side.
+          let retryAfterMs: number | undefined;
+          if (wantsFresh && withinFloor) {
+            const ttl = await redis.ttl(floorKey).catch(() => -2);
+            if (typeof ttl === 'number' && ttl > 0) retryAfterMs = ttl * 1000 + 300;
+          }
+          return NextResponse.json({
+            success: true,
+            ...cached,
+            floored: !!(wantsFresh && withinFloor),
+            ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
+          });
+        }
+      }
+      if (wantsFresh && !withinFloor) await redis.set(floorKey, 1, { ex: 5 });
     } catch {
       /* cache unavailable — aggregate fresh */
     }
 
-    const fresh = await aggregatePortfolio(addresses, network, Date.now());
+    const [fresh, companionAssets] = await Promise.all([
+      aggregatePortfolio(addresses, network, Date.now()),
+      includeCompanion
+        ? aggregateStellarOnly(turnkeyStellar!, network).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    // Doc 90 W3: one Horizon blip used to erase the companion Normal wallet
+    // from the drawer, Holdings and the savings deposit balance. Mirror the
+    // main assets' stale machinery with a last-good companion copy.
+    let companionFinal = companionAssets;
+    if (includeCompanion && turnkeyStellar) {
+      const companionKey = `portfolio:companion:${network}:${turnkeyStellar}`;
+      if (companionFinal && companionFinal.length > 0) {
+        try {
+          await redis.set(companionKey, companionFinal, { ex: SNAPSHOT_TTL_SECONDS });
+        } catch {
+          /* non-fatal */
+        }
+      } else {
+        try {
+          const saved = await redis.get<PortfolioAsset[]>(companionKey);
+          if (saved?.length) companionFinal = saved;
+        } catch {
+          /* no last-good copy */
+        }
+      }
+    }
 
     // Backfill any failed chains from the last-good snapshot (marked `stale`).
     let lastGood: Record<string, PortfolioAsset> | null = null;
@@ -82,16 +153,31 @@ export async function GET(req: NextRequest) {
     }
     const { merged, snapshot } = applyStaleFallback(fresh, lastGood);
 
+    // Companion rides the response cache but stays OUT of the stale-snapshot
+    // machinery: a failed companion read returns empty assets and self-heals
+    // on the next 15s cycle — simpler than threading a second wallet through
+    // the fallback merge, and the drawer degrades to a loading row.
+    const body: PortfolioPayload = {
+      ...merged,
+      companionStellar:
+        includeCompanion && turnkeyStellar
+          ? { address: turnkeyStellar, assets: companionFinal ?? [] }
+          : null,
+    };
+
     try {
-      await redis.set(cacheKey, merged, { ex: RESPONSE_TTL_SECONDS });
+      await redis.set(cacheKey, body, { ex: RESPONSE_TTL_SECONDS });
       await redis.set(snapshotKey, snapshot, { ex: SNAPSHOT_TTL_SECONDS });
     } catch {
       /* cache write non-fatal */
     }
 
-    return NextResponse.json({ success: true, ...merged });
+    return NextResponse.json({ success: true, ...body });
   } catch (error) {
     logger.error('[wallet/portfolio] error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to load portfolio' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Failed to load portfolio' },
+      { status: 500 }
+    );
   }
-}
+});

@@ -1,7 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars --
+   Parked implementations kept on purpose: geo-blocking (BLOCKED_COUNTRIES,
+   lookup, parseGeoCookie, cache helpers) awaits the team decision in finding
+   #35, and referral tracking is wired but disabled. Remove this directive
+   when #35 lands. */
 import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
-// import { logger } from '@normalfinance/utils';
+// import { logger } from '@/utils/logger';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -200,9 +205,7 @@ export async function middleware(req: NextRequest) {
   }
 
   let ip =
-    req.headers.get('x-real-ip') ||
-    req.headers.get('X-Forwarded-For')?.split(',')[0] ||
-    req.ip;
+    req.headers.get('x-real-ip') || req.headers.get('X-Forwarded-For')?.split(',')[0] || req.ip;
 
   if (process.env.NODE_ENV === 'development' && (ip === '::1' || ip === '127.0.0.1')) {
     ip = '8.8.8.8';

@@ -3,14 +3,18 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { SwapMode, SwapQuote, SwapDisplayMeta } from '@/types/swap';
 
+import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useState, useCallback } from 'react';
+import { buildAuthHeaders } from '@/utils/http';
 import { usePersistStore } from '@normalfinance/state';
 import { getSwapFeeAmount } from '@/utils/normal-fees';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
-import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
+import { FEE_PAIR_TIMEOUT_SECONDS } from '@/lib/build-fee-payment';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
+import { submitFeePair, getTransactionSequence } from '@/lib/stellar/fee-pair';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -41,7 +45,36 @@ interface UseSwapReturn {
 
 // ----------------------------------------------------------------------
 
-export function useSwap(): UseSwapReturn {
+/** Execution milestones for the progress modal ('refetch'/'done' are added
+ *  by the engine after the hash — the hook's job ends at submission). */
+export type SoroswapStage =
+  | 'build'
+  | 'sign-swap'
+  | 'sign-fee'
+  | 'submit'
+  | 'refetch'
+  | 'done'
+  // Not a step: fired the moment the embedded build DEGRADES to the fee-pair
+  // (sweep 2026-08-21: the first prompt used to still claim "one signature").
+  | 'degraded';
+
+/**
+ * #32 chunk 4f: `targetAddress` retargets the whole swap — build, both
+ * signatures, fee caller — to that wallet (the hybrid case: external wallet in
+ * the slot, swap runs from the companion Normal wallet). Same contract as
+ * `useDefindexSavings(targetAddress)`: the override is EXPLICIT, never a
+ * silent fallback, and the universal signer routes by the tx's source account
+ * (Turnkey-managed target → passkey prompt).
+ *
+ * `opts.onStage` (the Stellar-swap progress modal): fired at each execution
+ * milestone. When provided, the success SNACKBAR is suppressed — the modal
+ * owns the ending, including the explorer link. Error snackbars remain.
+ */
+export function useSwap(
+  targetAddress?: string,
+  opts?: { onStage?: (stage: SoroswapStage) => void }
+): UseSwapReturn {
+  const onStage = opts?.onStage;
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
@@ -54,6 +87,12 @@ export function useSwap(): UseSwapReturn {
     publicKey: normalPublicKey,
     canSign: normalCanSign,
   } = useNormalWallet();
+
+  const connectedAddress =
+    wallet.walletType === 'normal-wallet'
+      ? normalPublicKey || wallet.address
+      : stellarPublicKey || wallet.address;
+  const overrideActive = !!targetAddress && targetAddress !== connectedAddress;
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -85,11 +124,14 @@ export function useSwap(): UseSwapReturn {
 
         const response = await fetch('/api/swap/quote', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             token_in_address: tokenIn,
             token_out_address: tokenOut,
             amount: amountInStroops,
+            // #33: full amount for the embedded-fee path — the server skims
+            // the fee inside the quote when SOROSWAP_EMBEDDED_FEE is on.
+            gross_amount: Math.floor(parsedAmount * 10_000_000).toString(),
             mode,
             // No sender here — quote is just for display
           }),
@@ -107,6 +149,12 @@ export function useSwap(): UseSwapReturn {
         const amountOut = (parseInt(data.amount_out, 10) / 10_000_000).toFixed(7);
         const minAmountOut = (parseInt(data.min_amount_out || '0', 10) / 10_000_000).toFixed(7);
 
+        // Embedded fee: the API already skimmed our bps inside the quote —
+        // display ITS fee figure; nothing is subtracted client-side.
+        const embedded = !!data.embedded_fee;
+        const embeddedFeeTokens = embedded
+          ? (parseInt(data.embedded_fee.feeAmount || '0', 10) / 10_000_000).toFixed(7)
+          : null;
         const newQuote: SwapQuote = {
           path: data.path || [],
           tokenIn,
@@ -116,14 +164,15 @@ export function useSwap(): UseSwapReturn {
           estimatedAmountOut: amountOut,
           minAmountOut,
           priceImpact: 0,
-          fee: feeAmount.toFixed(7),
+          fee: embedded ? (embeddedFeeTokens ?? '0') : feeAmount.toFixed(7),
           xdr: data.xdr || '',
+          embedded,
         };
 
         setQuote(newQuote);
         return newQuote;
       } catch (err: any) {
-        console.error('Error getting swap quote:', err);
+        logger.error('Error getting swap quote:', err);
         setError(err.message || 'Failed to get quote');
         setQuote(null);
         return null;
@@ -147,28 +196,113 @@ export function useSwap(): UseSwapReturn {
 
         const walletType = wallet.walletType;
         const isNormalWallet = walletType === 'normal-wallet';
-        if (isNormalWallet && !normalCanSign) {
+        // Under an override the target signs via the universal signer below —
+        // the slot wallet's local-key state is irrelevant to this swap.
+        if (!overrideActive && isNormalWallet && !normalCanSign) {
           throw new Error(NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE);
         }
-        const walletAddress = isNormalWallet
-          ? normalPublicKey || wallet.address
-          : stellarPublicKey || wallet.address;
+        // #32: with an active override every transaction is BUILT for and
+        // SIGNED BY the target wallet — sender, fee caller and both
+        // signatures all follow it, so the swap can never mix wallets.
+        const walletAddress = overrideActive
+          ? targetAddress!
+          : isNormalWallet
+            ? normalPublicKey || wallet.address
+            : stellarPublicKey || wallet.address;
         const signTransaction = isNormalWallet ? signNormalWallet : signOrReconnect;
 
-        const horizonServer = new Horizon.Server(config.HORIZON_URL, {
-          allowHttp: config.HORIZON_URL.startsWith('http://'),
-        });
-
-        const signAndSubmit = async (xdr: string) => {
-          const signResult = await signTransaction(xdr, config.NETWORK_PASSPHRASE);
+        // Sign WITHOUT submitting — submission happens server-side as a pair
+        // (#26 sign-both-first, see lib/stellar/fee-pair.ts).
+        // Lazy import: kit-signer pulls the wallets-kit ESM graph, which jsdom
+        // test suites can't parse — same pattern as normal-wallet-setup.
+        const signOnly = async (xdr: string) => {
+          const signResult = overrideActive
+            ? await (
+                await import('@/lib/mgi/kit-signer')
+              ).signStellarTxForMgi(xdr, config.NETWORK_PASSPHRASE, walletAddress)
+            : await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signed = normalizeSignedXDR(signResult);
           if (!signed) throw new Error('Transaction signing failed — no signed XDR returned');
-          const signedTx = TransactionBuilder.fromXDR(
-            signed,
-            config.NETWORK_PASSPHRASE
-          );
-          return horizonServer.submitTransaction(signedTx);
+          return signed;
         };
+
+        // #33 Stage 1 — embedded fee: ONE build, ONE signature, ONE tx.
+        // Record-before-broadcast lives inside /api/swap/submit-single.
+        // DEGRADES, never dies: the one-signature path runs ONLY when the
+        // response provably carries our fee (embedded_fee present). If the
+        // server signals embedded_unavailable (upstream fee-build defect,
+        // doc 76 §7) — or returns any shape without the fee — we fall
+        // through to the fee-pair path below: two signatures, fee intact.
+        onStage?.('build');
+        if (swapQuote.embedded) {
+          const buildRes = await fetch('/api/swap/quote', {
+            method: 'POST',
+            headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token_in_address: swapQuote.tokenIn,
+              token_out_address: swapQuote.tokenOut,
+              amount: Math.floor(parseFloat(swapQuote.amountIn) * 10_000_000).toString(),
+              gross_amount: Math.floor(parseFloat(swapQuote.amountIn) * 10_000_000).toString(),
+              sender: walletAddress,
+            }),
+          });
+          const buildData = await buildRes.json();
+          // Real failure (not the degrade signal) still surfaces as an error.
+          if (!buildData.success && !buildData.embedded_unavailable)
+            throw new Error(buildData.error || 'Failed to build swap transaction');
+          const oneSignature = !!buildData.success && !!buildData.xdr && !!buildData.embedded_fee;
+          if (!oneSignature) onStage?.('degraded');
+          if (oneSignature) {
+            onStage?.('sign-swap');
+            const signedSwap = await signOnly(buildData.xdr);
+            onStage?.('submit');
+            const submitRes = await fetch('/api/swap/submit-single', {
+              method: 'POST',
+              headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                signedXdr: signedSwap,
+                record: {
+                  tokenInAddress: swapQuote.tokenIn,
+                  tokenOutAddress: swapQuote.tokenOut,
+                  tokenInSymbol: display?.tokenInSymbol,
+                  tokenOutSymbol: display?.tokenOutSymbol,
+                  amountIn: swapQuote.amountIn,
+                  amountOut: swapQuote.amountOut,
+                  feeAmount: swapQuote.fee,
+                },
+              }),
+            });
+            const submitData = await submitRes.json();
+            if (!submitData.success || !submitData.hash)
+              throw new Error(submitData.error || 'Swap submission failed');
+            if (!onStage) {
+              const url1 = createStellarExpertUrl('tx', submitData.hash);
+              enqueueSnackbar(
+                <Box component="span">
+                  {t('Swap successful!')}{' '}
+                  <Button
+                    size="small"
+                    onClick={() => window.open(url1, '_blank', 'noopener,noreferrer')}
+                    sx={{
+                      textTransform: 'none',
+                      minWidth: 'auto',
+                      p: 0,
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    {t('View More')}
+                  </Button>
+                </Box>,
+                { variant: 'success', persist: false, autoHideDuration: 7500 }
+              );
+            }
+            setQuote(null);
+            return submitData.hash;
+          }
+          // Degraded: any success without embedded_fee (e.g. a tripped server
+          // breaker built the GROSS amount) is discarded unsigned — the
+          // fee-pair path below re-quotes the NET amount itself.
+        }
 
         // Resolve the fee asset from the swap quote's tokenIn contract address
         const xlmAddress = config.XLM_ADDRESS;
@@ -188,43 +322,20 @@ export function useSwap(): UseSwapReturn {
         }
 
         const feeAmount = parseFloat(swapQuote.fee || '0');
-        if (feeAmount <= 0) {
+        // Doc 95 Wave 5: `NaN <= 0` is FALSE, so a non-numeric fee sailed
+        // straight through this guard and became `amount: "NaN"` on the wire.
+        if (!Number.isFinite(feeAmount) || feeAmount <= 0) {
           throw new Error('Swap fee was not computed — please refresh the quote');
         }
 
-        // 1. Build + sign + submit the Normal fee payment first
-        const feeResponse = await fetch('/api/fees/build-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            caller: walletAddress,
-            amount: feeAmount.toFixed(7),
-            assetCode: feeAssetCode,
-          }),
-        });
-        const feeData = await feeResponse.json();
-        if (!feeData.success || !feeData.xdr) {
-          throw new Error(feeData.error || 'Failed to build Normal fee transaction');
-        }
-
-        let feeResult: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
-        try {
-          feeResult = await signAndSubmit(feeData.xdr);
-        } catch (feeErr: any) {
-          throw new Error(
-            feeErr?.message
-              ? `Fee payment failed: ${feeErr.message}`
-              : 'Fee payment failed — swap not submitted'
-          );
-        }
-
-        // 2. Re-fetch the Soroswap quote with sender and NET amount (fresh seq)
+        // 1. Build the Soroswap swap tx with sender and NET amount — it
+        // carries the account's next sequence; the fee tx chains behind it.
         const netAmountIn = parseFloat(swapQuote.amountIn) - feeAmount;
         const amountInStroops = Math.floor(netAmountIn * 10_000_000).toString();
 
         const quoteResponse = await fetch('/api/swap/quote', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             token_in_address: swapQuote.tokenIn,
             token_out_address: swapQuote.tokenOut,
@@ -236,80 +347,105 @@ export function useSwap(): UseSwapReturn {
         const quoteData = await quoteResponse.json();
 
         if (!quoteData.success) {
-          throw new Error(
-            `${quoteData.error || 'Failed to build swap transaction'} (Normal fee already charged — tx ${feeResult.hash})`
-          );
+          throw new Error(quoteData.error || 'Failed to build swap transaction');
         }
 
         if (!quoteData.xdr) {
-          throw new Error(
-            'Swap aggregator did not return a transaction. Ensure SOROSWAP_API_KEY is set on the server.'
-          );
+          throw new Error('The exchange route is unavailable right now — try again in a moment.');
         }
 
-        // 3. Sign + submit the Soroban swap
-        let result: Awaited<ReturnType<Horizon.Server['submitTransaction']>>;
-        try {
-          result = await signAndSubmit(quoteData.xdr);
-        } catch (swapErr: any) {
-          throw new Error(
-            swapErr?.message
-              ? `${swapErr.message} (Normal fee already charged — tx ${feeResult.hash})`
-              : 'Swap failed after fee was charged'
-          );
-        }
-
-        fetch('/api/swap/log-transaction', {
+        // 2. Build the Normal fee payment directly behind the swap (#26:
+        // consecutive sequences — the fee can only apply if the swap did).
+        const feeResponse = await fetch('/api/fees/build-payment', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            walletAddress,
+            caller: walletAddress,
+            amount: feeAmount.toFixed(7),
+            assetCode: feeAssetCode,
+            sourceSequence: getTransactionSequence(quoteData.xdr, config.NETWORK_PASSPHRASE),
+            timeoutSeconds: FEE_PAIR_TIMEOUT_SECONDS,
+          }),
+        });
+        const feeData = await feeResponse.json();
+        if (!feeData.success || !feeData.xdr) {
+          throw new Error(feeData.error || 'Failed to build Normal fee transaction');
+        }
+
+        // 3. Collect BOTH signatures before anything is submitted — rejecting
+        // either prompt aborts the whole swap with nothing charged.
+        onStage?.('sign-swap');
+        const signedSwapXdr = await signOnly(quoteData.xdr);
+        onStage?.('sign-fee');
+        const signedFeeXdr = await signOnly(feeData.xdr);
+
+        // 4. Server submits the pair: it records the swap BEFORE broadcasting
+        // (#27 — no client-side logging anymore), then swap first, fee
+        // escrowed + collected after it (cron sweeper as backstop).
+        onStage?.('submit');
+        const pair = await submitFeePair({
+          signedServiceXdr: signedSwapXdr,
+          signedFeeXdr,
+          kind: 'swap',
+          record: {
             tokenInAddress: swapQuote.tokenIn,
             tokenOutAddress: swapQuote.tokenOut,
             tokenInSymbol: display?.tokenInSymbol,
             tokenOutSymbol: display?.tokenOutSymbol,
             amountIn: netAmountIn.toFixed(7),
+            // Doc 95 Wave 5 — KNOWN GAP, deliberately not faked: this is the
+            // QUOTED output, not the realized one. Reading the true figure
+            // means parsing the Soroban invocation's return value, which
+            // differs per protocol (soroswap/phoenix/aqua/sdex); the CCTP
+            // paths get real amounts because LI.FI reports them. Tracked for
+            // a later wave rather than guessed at here.
             amountOut: swapQuote.amountOut,
-            txHash: result.hash,
             feeAmount: feeAmount.toFixed(7),
-            feeTxHash: feeResult.hash,
-          }),
-        }).catch(console.error);
+          },
+          config,
+        });
 
-        const stellarExpertUrl = createStellarExpertUrl('tx', result.hash);
-
-        enqueueSnackbar(
-          <Box component="span">
-            {t('Swap successful!')}{' '}
-            <Button
-              size="small"
-              onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
-              sx={{
-                textTransform: 'none',
-                minWidth: 'auto',
-                p: 0,
-                textDecoration: 'underline',
-                '&:hover': {
+        if (!onStage) {
+          const stellarExpertUrl = createStellarExpertUrl('tx', pair.serviceHash);
+          enqueueSnackbar(
+            <Box component="span">
+              {t('Swap successful!')}{' '}
+              <Button
+                size="small"
+                onClick={() => window.open(stellarExpertUrl, '_blank', 'noopener,noreferrer')}
+                sx={{
+                  textTransform: 'none',
+                  minWidth: 'auto',
+                  p: 0,
                   textDecoration: 'underline',
-                  backgroundColor: 'transparent',
-                },
-              }}
-            >
-              {t('View More')}
-            </Button>
-          </Box>,
-          {
-            variant: 'success',
-            persist: false,
-            autoHideDuration: 7500,
-          }
-        );
+                  '&:hover': {
+                    textDecoration: 'underline',
+                    backgroundColor: 'transparent',
+                  },
+                }}
+              >
+                {t('View More')}
+              </Button>
+            </Box>,
+            {
+              variant: 'success',
+              persist: false,
+              autoHideDuration: 7500,
+            }
+          );
+        }
         setQuote(null);
-        return result.hash;
+        return pair.serviceHash;
       } catch (err: any) {
-        if (err instanceof WalletSessionExpiredError) return '';
-        console.error('Error executing swap:', err);
-        const errorMessage = err.message || 'Swap failed';
+        if (err instanceof WalletSessionExpiredError) {
+          // Doc 90 W2: the silent '' return left the progress modal spinning
+          // on "Preparing the swap" forever. Surface it — the modal shows
+          // this with Try again; the reconnect snackbar already fired.
+          setError('Your wallet session expired — reconnect your wallet and try again.');
+          return '';
+        }
+        logger.error('Error executing swap:', err);
+        const errorMessage = friendlyAppError(err);
         setError(errorMessage);
         enqueueSnackbar(errorMessage, { variant: 'error' });
         return '';
@@ -326,6 +462,9 @@ export function useSwap(): UseSwapReturn {
       stellarPublicKey,
       signNormalWallet,
       signOrReconnect,
+      overrideActive,
+      targetAddress,
+      onStage,
       enqueueSnackbar,
       t,
     ]

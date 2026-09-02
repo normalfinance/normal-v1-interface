@@ -2,11 +2,11 @@
 
 import { useStellarConfig } from '@/hooks';
 import { useState, useEffect, useCallback } from 'react';
-import { logger, fetchAccount, checkTrustline } from '@normalfinance/utils';
+import { logger, checkTrustline, fetchAccountStrict } from '@normalfinance/utils';
 
 export interface AccountStatus {
   isLoading: boolean;
-  accountExists: boolean;
+  accountExists: boolean | null; // null = unknown (check failed/loading)
   xlmBalance: string;
   hasUsdcTrustline: boolean;
   error: Error | null;
@@ -32,7 +32,7 @@ export function useAccountStatus(
   const assetCode = options.assetCode || 'USDC';
   const assetIssuer = options.assetIssuer || config.USDC_ISSUER;
   const [isLoading, setIsLoading] = useState(true);
-  const [accountExists, setAccountExists] = useState(false);
+  const [accountExists, setAccountExists] = useState<boolean | null>(null);
   const [xlmBalance, setXlmBalance] = useState('0');
   const [hasUsdcTrustline, setHasUsdcTrustline] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -50,8 +50,12 @@ export function useAccountStatus(
     setError(null);
 
     try {
-      // Fetch account from Horizon
-      const account = await fetchAccount(walletAddress, config);
+      // Strict fetch: a Horizon 404 (unfunded) is `null`; a FAILED lookup
+      // throws and lands in `error` below — so "not activated" is only ever
+      // asserted from a real answer, never from a network blip. (The lenient
+      // fetchAccount maps failures to undefined, which readers would show as
+      // a confident "account doesn't exist".)
+      const account = await fetchAccountStrict(walletAddress, config);
 
       if (!account) {
         // Account doesn't exist on the network
@@ -81,9 +85,10 @@ export function useAccountStatus(
     } catch (err: any) {
       logger.error('[useAccountStatus] Error checking account status:', err);
       setError(err);
-      setAccountExists(false);
-      setXlmBalance('0');
-      setHasUsdcTrustline(false);
+      // Doc 90 W3: a Horizon blip is NOT "this account does not exist" —
+      // keep the last known answer (or null = unknown on first load) instead
+      // of flipping a set-up account into the "Activate your account" nag
+      // and silently disarming the XLM fee semaphore.
     } finally {
       setIsLoading(false);
     }

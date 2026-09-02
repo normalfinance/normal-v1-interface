@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>53-component-tests-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>53 — Component tests, explained through the swap gate</h1>
+<p>The app's first component test exists: <code>src/sections/swap/swap-card.test.tsx</code>,</p>
+<p>five cases pinning the external-wallet swap gate. This explains what a</p>
+<p>component test is, why this gate earned the first one, and how to copy the</p>
+<p>pattern — because the whole point of the first one is that every later one is</p>
+<p>cheap.</p>
+<hr />
+<h2>1. The three layers of testing, and where this fits</h2>
+<ul>
+<li><strong>Unit tests</strong> call a pure function with inputs and check outputs</li>
+</ul>
+<p>  (<code>normalize.test.ts</code> — money math).</p>
+<ul>
+<li><strong>Conformance tests</strong> scan the codebase for structural promises</li>
+</ul>
+<p>  (<code>route-auth-conformance.test.ts</code> — every route authenticates).</p>
+<ul>
+<li><strong>Component tests</strong> — this layer — render a real piece of UI in a simulated</li>
+</ul>
+<p>  browser and assert <strong>what a user would actually see and touch</strong>: this</p>
+<p>  button is disabled, this warning is visible, this text says why.</p>
+<p>The third layer catches what the first two can't: logic that lives in the</p>
+<p>wiring between state and screen. The swap gate is exactly that — a <code>useMemo</code></p>
+<p>and a ternary inside a component. No pure function to unit-test; no file</p>
+<p>pattern to scan for. Either you render the card, or you don't test it.</p>
+<h2>2. Why the swap gate got the first one</h2>
+<p>It is the only code in this project that was **written, shipped, silently</p>
+<p>deleted by a squash-merge (PR #466, July 2026), and rewritten a month</p>
+<p>later**. Nobody noticed the deletion for weeks, because nothing was watching.</p>
+<p>Every guard built since — CI, merge-commit policy, the auth conformance test</p>
+<p>— lowers the odds of a repeat. This test makes the odds zero: any change that</p>
+<p>drops the gate turns CI red <strong>on the PR that drops it</strong>, with a test name</p>
+<p>that explains what was lost.</p>
+<p>That's the deeper idea worth internalizing: **a component test protects a</p>
+<p>decision, not just code.** "External wallets are Stellar-only" is a product</p>
+<p>decision. Code implementing a decision can be lost in a refactor by someone</p>
+<p>who never knew the decision existed. A failing test named after the decision</p>
+<p>is how the decision defends itself.</p>
+<h2>3. What the five cases pin — including the invisible half</h2>
+<ol>
+<li>External wallet + BTC pair → the CTA is the <strong>disabled</strong> gate button with</li>
+</ol>
+<p>   the explanation text, and the engine's own button is unreachable.</p>
+<ol>
+<li>External wallet + BTC pair → <strong>quote fetching is switched off</strong> — the</li>
+</ol>
+<p>   mocks capture the props the card passes to its engines and assert</p>
+<p>   <code>enabled: false</code>. This is the half of the gate no screenshot shows: a</p>
+<p>   hybrid user would otherwise burn LI.FI quota on quotes the button will</p>
+<p>   never execute. UI tests can and should assert invisible contracts too.</p>
+<ol>
+<li>External wallet + XLM↔USDC → <strong>no gate, fully enabled.</strong> Protecting what</li>
+</ol>
+<p>   must keep working is as important as protecting what must be blocked —</p>
+<p>   without this case, someone could "fix" a bug by gating everything.</p>
+<ol>
+<li>Normal wallet + BTC → no gate. The decision's other side.</li>
+<li>Signed in with no wallet at all → no gate, engines enabled — documents</li>
+</ol>
+<p>   that the per-chain setup dialogs own that scenario, so nobody "helpfully"</p>
+<p>   extends the gate over it later.</p>
+<h2>4. How it's built — the pattern to copy</h2>
+<p><strong>Render the real component; mock its boundaries.</strong> The gate lives in</p>
+<p><code>SwapCard</code>, so the card must be real — a mocked card tests nothing. Around</p>
+<p>it, everything that talks to the world is replaced: the three engines (they</p>
+<p>fetch quotes), the balance hooks, the stores, the translation hook. The mocks</p>
+<p>are <em>contract-faithful</em> — the first run failed because the stub returned a</p>
+<p>string where the engine contract says BigNumber. A mock that violates the</p>
+<p>contract tests a component that doesn't exist.</p>
+<p>Mechanics a copier needs to know (all learned the hard way, all already</p>
+<p>paid for):</p>
+<ul>
+<li><code>@jest-environment jsdom</code> docblock at the top — components need a DOM;</li>
+</ul>
+<p>  logic tests stay on node.</p>
+<ul>
+<li><strong>Mock-then-require</strong>: <code>jest.mock(...)</code> calls first, then</li>
+</ul>
+<p>  <code>require('./swap-card')</code> — this repo's transform doesn't reliably hoist</p>
+<p>  mocks above ESM imports (documented in 47-testing-plan.md).</p>
+<ul>
+<li>Mutable state the factories close over must be <code>mock</code>-prefixed</li>
+</ul>
+<p>  (<code>mockWalletState</code>) — tests then flip <code>walletType</code> per case instead of</p>
+<p>  re-mocking.</p>
+<ul>
+<li>Import <code>@testing-library/jest-dom/jest-globals</code> — the <code>/jest-globals</code></li>
+</ul>
+<p>  entry, because our tests import <code>expect</code> from <code>@jest/globals</code>; the default</p>
+<p>  entry only types the ambient global.</p>
+<ul>
+<li>Drive scenarios through <strong>props</strong> (<code>initial="BTC"</code>), not click</li>
+</ul>
+<p>  choreography, when the same code path is reached either way — clicking</p>
+<p>  through pickers adds brittleness without adding proof.</p>
+<h2>5. What this unlocks</h2>
+<p>The expensive part of the first component test is the scaffolding — the</p>
+<p>environment, the boundary mocks, the entry-point quirks. That's now paid.</p>
+<p>Queued candidates that copy this file almost line for line: the memo-required</p>
+<p>send gate (finding #48's UI), the pending-send badge, the savings-card</p>
+<p>loading states.</p>
+<h2>6. A bonus fix that rode along</h2>
+<p>The recurring "N files fail Prettier that nobody touched" churn on Windows</p>
+<p>was diagnosed and permanently fixed: committed content is LF (CI proves it —</p>
+<p>prettier passes there), but Windows checkouts were materializing CRLF, which</p>
+<p>local Prettier flags. A <code>.gitattributes</code> (<code>* text=auto eol=lf</code>) now pins</p>
+<p>checkouts to LF on every machine. That class of noise is over.</p>
+</body></html>

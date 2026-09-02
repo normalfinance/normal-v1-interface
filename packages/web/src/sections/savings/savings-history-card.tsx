@@ -61,7 +61,15 @@ function TypeBadge({ type }: { type: SavingsActivity['type'] }) {
 
 function EmptyState() {
   return (
-    <Box sx={{ py: '48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+    <Box
+      sx={{
+        py: '48px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '8px',
+      }}
+    >
       <Box
         sx={{
           width: 44,
@@ -75,13 +83,20 @@ function EmptyState() {
         }}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2v20M2 12h20" stroke="rgba(10,10,15,0.25)" strokeWidth="2" strokeLinecap="round" />
+          <path
+            d="M12 2v20M2 12h20"
+            stroke="rgba(10,10,15,0.25)"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
         </svg>
       </Box>
       <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F' }}>
         No transactions yet
       </Typography>
-      <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.45)', textAlign: 'center', maxWidth: 240 }}>
+      <Typography
+        sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.45)', textAlign: 'center', maxWidth: 240 }}
+      >
         Your deposits and withdrawals will appear here.
       </Typography>
     </Box>
@@ -176,8 +191,18 @@ function PaginationBar({
 
       {left > 1 && (
         <>
-          <Box component="button" onClick={() => onPage(1)} sx={{ ...btnBase, color: 'rgba(10,10,15,0.6)', '&:hover': { bgcolor: '#F4F4F7' } }}>1</Box>
-          {left > 2 && <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.3)', px: '4px' }}>…</Typography>}
+          <Box
+            component="button"
+            onClick={() => onPage(1)}
+            sx={{ ...btnBase, color: 'rgba(10,10,15,0.6)', '&:hover': { bgcolor: '#F4F4F7' } }}
+          >
+            1
+          </Box>
+          {left > 2 && (
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.3)', px: '4px' }}>
+              …
+            </Typography>
+          )}
         </>
       )}
 
@@ -200,8 +225,18 @@ function PaginationBar({
 
       {right < totalPages && (
         <>
-          {right < totalPages - 1 && <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.3)', px: '4px' }}>…</Typography>}
-          <Box component="button" onClick={() => onPage(totalPages)} sx={{ ...btnBase, color: 'rgba(10,10,15,0.6)', '&:hover': { bgcolor: '#F4F4F7' } }}>{totalPages}</Box>
+          {right < totalPages - 1 && (
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.3)', px: '4px' }}>
+              …
+            </Typography>
+          )}
+          <Box
+            component="button"
+            onClick={() => onPage(totalPages)}
+            sx={{ ...btnBase, color: 'rgba(10,10,15,0.6)', '&:hover': { bgcolor: '#F4F4F7' } }}
+          >
+            {totalPages}
+          </Box>
         </>
       )}
 
@@ -228,12 +263,12 @@ interface SavingsHistoryCardProps {
 }
 
 export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
-  const { recentActivity, isLoading } = useUserActivity(walletAddress);
+  const { recentActivity, isLoading, error: historyError } = useUserActivity(walletAddress);
+  const historyFailed = !!historyError && recentActivity.length === 0 && !isLoading;
   const [page, setPage] = useState(1);
 
   const savingsActivity = recentActivity.filter(
-    (a): a is SavingsActivity =>
-      a.type === 'Savings Deposit' || a.type === 'Savings Withdraw'
+    (a): a is SavingsActivity => a.type === 'Savings Deposit' || a.type === 'Savings Withdraw'
   );
 
   const totalPages = Math.max(1, Math.ceil(savingsActivity.length / PAGE_SIZE));
@@ -252,7 +287,8 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
         border: '1px solid rgba(10,10,15,0.08)',
         bgcolor: '#FFFFFF',
         overflow: 'clip',
-        boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 24px 60px rgba(10,10,15,0.08), 0 2px 8px rgba(10,10,15,0.04)',
+        boxShadow:
+          '0 1px 0 rgba(255,255,255,0.6) inset, 0 24px 60px rgba(10,10,15,0.08), 0 2px 8px rgba(10,10,15,0.04)',
       }}
     >
       {/* Header */}
@@ -265,9 +301,21 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
         <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F' }}>
           Transaction History
         </Typography>
+        {historyFailed && (
+          <Typography sx={{ fontSize: '11.5px', color: '#B45309' }}>
+            {`Couldn't load — retrying…`}
+          </Typography>
+        )}
         {savingsActivity.length > 0 && (
           <Box sx={{ px: '8px', py: '2px', borderRadius: '20px', bgcolor: '#F4F4F7' }}>
-            <Typography sx={{ fontSize: '11px', fontWeight: 500, color: 'rgba(10,10,15,0.5)', fontFamily: MONO }}>
+            <Typography
+              sx={{
+                fontSize: '11px',
+                fontWeight: 500,
+                color: 'rgba(10,10,15,0.5)',
+                fontFamily: MONO,
+              }}
+            >
               {savingsActivity.length}
             </Typography>
           </Box>
@@ -277,115 +325,129 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
       {/* Scrollable table */}
       <Box sx={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <Box sx={{ minWidth: 480 }}>
-
-      {/* Column headers */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: COLS,
-          alignItems: 'center',
-          gap: '16px',
-          px: '20px',
-          py: '10px',
-          bgcolor: '#FAFAFB',
-          borderBottom: '1px solid rgba(10,10,15,0.06)',
-        }}
-      >
-        {['Date', 'Type', 'Amount', 'Tx'].map((h, i) => (
-          <Typography
-            key={h}
+          {/* Column headers */}
+          <Box
             sx={{
-              fontSize: '11px',
-              fontWeight: 600,
-              color: 'rgba(10,10,15,0.4)',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              textAlign: i >= 2 ? 'right' : 'left',
+              display: 'grid',
+              gridTemplateColumns: COLS,
+              alignItems: 'center',
+              gap: '16px',
+              px: '20px',
+              py: '10px',
+              bgcolor: '#FAFAFB',
+              borderBottom: '1px solid rgba(10,10,15,0.06)',
             }}
           >
-            {h}
-          </Typography>
-        ))}
-      </Box>
-
-      {/* Rows */}
-      {isLoading ? (
-        <SkeletonRows />
-      ) : savingsActivity.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <>
-          {pageSlice.map((a) => {
-            const url = expertUrl(a);
-            return (
-              <Box
-                key={a.id}
-                onClick={url ? () => window.open(url, '_blank', 'noopener,noreferrer') : undefined}
+            {['Date', 'Type', 'Amount', 'Tx'].map((h, i) => (
+              <Typography
+                key={h}
                 sx={{
-                  display: 'grid',
-                  gridTemplateColumns: COLS,
-                  alignItems: 'center',
-                  gap: '16px',
-                  px: '20px',
-                  py: '14px',
-                  borderBottom: '1px solid rgba(10,10,15,0.05)',
-                  cursor: url ? 'pointer' : 'default',
-                  '&:hover': url ? { bgcolor: '#FAFAFB' } : {},
-                  '&:last-child': { borderBottom: 'none' },
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: 'rgba(10,10,15,0.4)',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  textAlign: i >= 2 ? 'right' : 'left',
                 }}
               >
-                <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.6)' }}>
-                  {formatDate(a.timestamp)}
-                </Typography>
+                {h}
+              </Typography>
+            ))}
+          </Box>
 
-                <TypeBadge type={a.type} />
+          {/* Rows */}
+          {isLoading ? (
+            <SkeletonRows />
+          ) : savingsActivity.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <>
+              {pageSlice.map((a) => {
+                const url = expertUrl(a);
+                return (
+                  <Box
+                    key={a.id}
+                    onClick={
+                      url ? () => window.open(url, '_blank', 'noopener,noreferrer') : undefined
+                    }
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: COLS,
+                      alignItems: 'center',
+                      gap: '16px',
+                      px: '20px',
+                      py: '14px',
+                      borderBottom: '1px solid rgba(10,10,15,0.05)',
+                      cursor: url ? 'pointer' : 'default',
+                      '&:hover': url ? { bgcolor: '#FAFAFB' } : {},
+                      '&:last-child': { borderBottom: 'none' },
+                    }}
+                  >
+                    <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.6)' }}>
+                      {formatDate(a.timestamp)}
+                    </Typography>
 
-                <Typography
-                  sx={{
-                    fontSize: '13.5px',
-                    fontWeight: 400,
-                    fontFamily: MONO,
-                    letterSpacing: '-0.02em',
-                    color: '#0A0A0F',
-                    textAlign: 'right',
-                  }}
-                >
-                  {formatAmount(a.amount)} USDC
-                </Typography>
+                    <TypeBadge type={a.type} />
 
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  {url ? (
-                    <Box
+                    <Typography
                       sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '12px',
+                        fontSize: '13.5px',
                         fontWeight: 400,
-                        color: 'rgba(10,10,15,0.35)',
                         fontFamily: MONO,
+                        letterSpacing: '-0.02em',
+                        color: '#0A0A0F',
+                        textAlign: 'right',
                       }}
                     >
-                      View
-                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                        <path d="M2.5 9.5L9.5 2.5M9.5 2.5H5M9.5 2.5V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </Box>
-                  ) : (
-                    <Typography sx={{ fontSize: '12px', fontWeight: 400, color: 'rgba(10,10,15,0.2)', fontFamily: MONO }}>
-                      —
+                      {formatAmount(a.amount)} USDC
                     </Typography>
-                  )}
-                </Box>
-              </Box>
-            );
-          })}
 
-        </>
-      )}
-
-        </Box>{/* minWidth */}
-      </Box>{/* overflowX */}
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      {url ? (
+                        <Box
+                          sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '12px',
+                            fontWeight: 400,
+                            color: 'rgba(10,10,15,0.35)',
+                            fontFamily: MONO,
+                          }}
+                        >
+                          View
+                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                            <path
+                              d="M2.5 9.5L9.5 2.5M9.5 2.5H5M9.5 2.5V7"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </Box>
+                      ) : (
+                        <Typography
+                          sx={{
+                            fontSize: '12px',
+                            fontWeight: 400,
+                            color: 'rgba(10,10,15,0.2)',
+                            fontFamily: MONO,
+                          }}
+                        >
+                          —
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                );
+              })}
+            </>
+          )}
+        </Box>
+        {/* minWidth */}
+      </Box>
+      {/* overflowX */}
 
       {totalPages > 1 && (
         <PaginationBar

@@ -3,6 +3,7 @@ import type { PortfolioAsset, PortfolioPayload } from '@/types/portfolio';
 
 import { redis } from '@/server/rateLimiter';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
+import { fetchStellarBalancesFromPool } from '@/lib/stellar/horizon-pool';
 
 import { buildAsset } from './normalize';
 
@@ -81,12 +82,28 @@ export async function getSpotPrices(): Promise<SpotData> {
       changes.USDC = d['usd-coin']?.usd_24h_change ?? 0;
       try {
         await redis.set(key, { prices, changes }, { ex: SPOT_TTL_SECONDS });
+        // Doc 90 W3: long-TTL last-good copy — an outage serves week-old
+        // prices with a warning instead of pricing real holdings at $0.
+        await redis.set('prices:spot:lastgood', { prices, changes }, { ex: 7 * 24 * 3600 });
       } catch {
         /* non-fatal */
       }
     }
   } catch {
-    /* upstream failed — return what we have (USDC=1) */
+    /* upstream failed — fall through to last-good below */
+  }
+  if (!prices.BTC) {
+    // Doc 90 W3: a CoinGecko outage must not make BTC/ETH/SOL holdings read
+    // as worth $0 — serve the last-good spot set instead.
+    try {
+      const lastGood = await redis.get<SpotData>('prices:spot:lastgood');
+      if (lastGood?.prices?.BTC) {
+        console.warn('[prices] CoinGecko unavailable — serving last-good spot prices');
+        return lastGood;
+      }
+    } catch {
+      /* nothing cached either */
+    }
   }
   return { prices, changes };
 }
@@ -133,23 +150,66 @@ async function fetchStellarBalances(
   address: string,
   network: NetworkType
 ): Promise<{ xlm: number; usdc: number }> {
+  // 2026-08-28: one URL and no fallback here meant an unreachable
+  // horizon.stellar.org blanked XLM/USDC for every user of this deployment
+  // while BTC/ETH/SOL (other providers) kept loading. The pool logic is the
+  // tested module lib/stellar/horizon-pool.ts.
   const cfg = getStellarConfigForNetwork(network);
-  const res = await withTimeout(fetch(`${cfg.HORIZON_URL}/accounts/${address}`));
-  if (!res.ok) {
-    if (res.status === 404) return { xlm: 0, usdc: 0 };
-    throw new Error(`stellar ${res.status}`);
-  }
-  const d = await res.json();
-  const balances: any[] = d.balances ?? [];
-  const xlm = parseFloat(balances.find((b) => b.asset_type === 'native')?.balance ?? '0');
-  const usdc = parseFloat(
-    balances.find((b) => b.asset_code === 'USDC' && b.asset_issuer === cfg.USDC_ISSUER)?.balance ??
-      '0'
+  const urls = cfg.HORIZON_URLS ?? [cfg.HORIZON_URL];
+  const { xlm, usdc, servedBy } = await fetchStellarBalancesFromPool(
+    urls,
+    address,
+    cfg.USDC_ISSUER,
+    {
+      timeoutMs: SOURCE_TIMEOUT_MS,
+    }
   );
+  // Loud only when the primary did NOT answer — a silent failover reads as
+  // "everything is fine" while one provider is dark (doc 98's rule).
+  if (urls.length > 1 && servedBy !== urls[0].replace(/\/+$/, '')) {
+    console.warn(`[portfolio] stellar primary Horizon failed — served by fallback ${servedBy}`);
+  }
   return { xlm, usdc };
 }
 
 // ------------------------------ orchestration ------------------------------
+
+/**
+ * #32 chunk 2: XLM/USDC of ONE additional Stellar address — the companion
+ * Normal wallet, fetched when the connected wallet is external. Same fetcher
+ * and normalization as the main aggregate; spot prices come from the shared
+ * Redis-cached read, so this adds exactly one Horizon call.
+ */
+export async function aggregateStellarOnly(
+  address: string,
+  network: NetworkType
+): Promise<PortfolioAsset[]> {
+  const [pricesR, stellarR] = await Promise.allSettled([
+    getSpotPrices(),
+    fetchStellarBalances(address, network),
+  ]);
+  const spot = pricesR.status === 'fulfilled' ? pricesR.value : { prices: {}, changes: {} };
+  const priceOf = (s: string): number | null => (s in spot.prices ? spot.prices[s] : null);
+  const changeOf = (s: string): number | null => (s in spot.changes ? spot.changes[s] : null);
+  const stellar = stellarR.status === 'fulfilled' ? stellarR.value : null;
+  const failed = stellarR.status === 'rejected';
+  return [
+    buildAsset(
+      'XLM',
+      address,
+      failed ? null : (stellar?.xlm ?? 0),
+      priceOf('XLM'),
+      changeOf('XLM')
+    ),
+    buildAsset(
+      'USDC',
+      address,
+      failed ? null : (stellar?.usdc ?? 0),
+      priceOf('USDC'),
+      changeOf('USDC')
+    ),
+  ];
+}
 
 /** Orchestrates all sources in parallel and returns the normalized payload. */
 export async function aggregatePortfolio(
@@ -171,6 +231,21 @@ export async function aggregatePortfolio(
   const priceOf = (s: string): number | null => (s in spot.prices ? spot.prices[s] : null);
   const changeOf = (s: string): number | null => (s in spot.changes ? spot.changes[s] : null);
 
+  // A failed source must be VISIBLE in the log (2026-08-28: an ETH balance
+  // flashed to 0 and nothing anywhere said which layer had failed — the
+  // aggregate was silently marking the row errored).
+  const named: [string, PromiseSettledResult<unknown>][] = [
+    ['btc', btcR],
+    ['eth', ethR],
+    ['sol', solR],
+    ['stellar', stellarR],
+  ];
+  for (const [name, r] of named) {
+    if (r.status === 'rejected') {
+      console.warn(`[portfolio] ${name} source failed:`, String(r.reason).slice(0, 200));
+    }
+  }
+
   // number on success, null on error — `undefined` never happens (settled).
   const settledBalance = (r: PromiseSettledResult<number | null>): number | null =>
     r.status === 'fulfilled' ? r.value : null;
@@ -185,14 +260,14 @@ export async function aggregatePortfolio(
     buildAsset(
       'XLM',
       addresses.stellar,
-      addresses.stellar ? (stellarFailed ? null : stellar?.xlm ?? 0) : null,
+      addresses.stellar ? (stellarFailed ? null : (stellar?.xlm ?? 0)) : null,
       priceOf('XLM'),
       changeOf('XLM')
     ),
     buildAsset(
       'USDC',
       addresses.stellar,
-      addresses.stellar ? (stellarFailed ? null : stellar?.usdc ?? 0) : null,
+      addresses.stellar ? (stellarFailed ? null : (stellar?.usdc ?? 0)) : null,
       priceOf('USDC'),
       changeOf('USDC')
     ),

@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 
+import { logger } from '@/utils/logger';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
 
 import {
   getApiConfig,
@@ -21,10 +21,10 @@ export interface EdgeConfigMiddlewareOptions {
 }
 
 export async function withEdgeConfig(
-  handler: (req: NextRequest) => Promise<NextResponse>,
+  handler: (req: NextRequest) => Promise<Response>,
   options: EdgeConfigMiddlewareOptions
 ) {
-  return async (req: NextRequest): Promise<NextResponse> => {
+  return async (req: NextRequest): Promise<Response> => {
     try {
       if (!options.skipMaintenanceCheck) {
         const maintenanceEnabled = await isMaintenanceMode();
@@ -76,11 +76,11 @@ export async function withEdgeConfig(
 }
 
 export function createEdgeConfigHandler(
-  handler: (req: NextRequest) => Promise<NextResponse>,
+  handler: (req: NextRequest) => Promise<Response>,
   endpoint: string,
   requireFeatureFlag?: string
 ) {
-  return async (req: NextRequest): Promise<NextResponse> => {
+  return async (req: NextRequest): Promise<Response> => {
     const wrappedHandler = await withEdgeConfig(handler, {
       endpoint,
       requireFeatureFlag,
@@ -121,7 +121,7 @@ export async function logWithConfig(level: 'info' | 'warn' | 'error', message: s
 }
 
 export function createNodeConfigHandler(
-  handler: (req: NextRequest) => Promise<NextResponse>,
+  handler: (req: NextRequest) => Promise<Response>,
   name: string
 ) {
   return async (req: NextRequest) => {

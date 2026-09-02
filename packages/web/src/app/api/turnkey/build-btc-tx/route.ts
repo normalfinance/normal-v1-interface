@@ -1,11 +1,10 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { Psbt, networks, payments } from 'bitcoinjs-lib';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -43,11 +42,7 @@ function p2wpkhOutputScript(addr: string): Buffer {
 // Body: { destination: string, amountSat: number }
 // Response: { psbtHex, subOrgId, estimatedFeeSat, feeRateSatPerVbyte, changeAmountSat }
 // ---------------------------------------------------------------------------
-export async function POST(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   let body: { destination: string; amountSat: number };
   try {
     body = await request.json();
@@ -94,12 +89,8 @@ export async function POST(request: NextRequest) {
     let estimatedFeeSat = Math.ceil(feeRateSatPerVbyte * estimatedVsize);
 
     // Coin selection — prefer confirmed UTXOs, sort by value descending
-    const confirmed = utxos
-      .filter((u) => u.status.confirmed)
-      .sort((a, b) => b.value - a.value);
-    const unconfirmed = utxos
-      .filter((u) => !u.status.confirmed)
-      .sort((a, b) => b.value - a.value);
+    const confirmed = utxos.filter((u) => u.status.confirmed).sort((a, b) => b.value - a.value);
+    const unconfirmed = utxos.filter((u) => !u.status.confirmed).sort((a, b) => b.value - a.value);
     const orderedUtxos = [...confirmed, ...unconfirmed];
 
     const selected: MempoolUtxo[] = [];
@@ -120,10 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (totalInput < amountSat + estimatedFeeSat) {
-      return NextResponse.json(
-        { error: 'Insufficient Bitcoin balance' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Insufficient Bitcoin balance' }, { status: 400 });
     }
 
     const changeAmountSat = totalInput - amountSat - estimatedFeeSat;
@@ -136,7 +124,7 @@ export async function POST(request: NextRequest) {
         const res = await fetch(`https://mempool.space/api/tx/${utxo.txid}/hex`);
         if (!res.ok) throw new Error(`Failed to fetch prev tx ${utxo.txid} (${res.status})`);
         return res.text();
-      }),
+      })
     );
 
     // Build PSBT
@@ -186,4 +174,4 @@ export async function POST(request: NextRequest) {
     logger.error('[build-btc-tx] Error:', error);
     return NextResponse.json({ error: 'Failed to build transaction' }, { status: 500 });
   }
-}
+});

@@ -3,16 +3,18 @@
 import type { AssetActionKey } from '@/hooks/use-asset-actions';
 
 import { paths } from '@/routes/paths';
-import { useMemo, useState } from 'react';
 import { cdn } from '@normalfinance/utils';
 import { useRouter } from 'next/navigation';
 import { useVaultApy } from '@/hooks/use-vault-apy';
+import { useMemo, useState, useEffect } from 'react';
 import { usePortfolio } from '@/hooks/use-portfolio';
-import { assetDisplay } from '@/lib/portfolio/display';
+import { usePersistStore } from '@normalfinance/state';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
+import { assetDisplay, connectedWalletLabel } from '@/lib/portfolio/display';
 
 import { Box, Stack, Skeleton, Typography } from '@mui/material';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 
 import { Iconify } from '@/components/template/iconify';
 
@@ -68,16 +70,59 @@ const SAVINGS_ICON = cdn('logo/logo-single.png');
 
 // Logged-out demo — mirrors the marketing mock.
 const DEMO_ROWS: Row[] = [
-  { id: 'btc', name: 'BTC', iconUrl: assetDisplay('BTC').icon, sub: '0.0162 BTC', usd: 1040.04, changePct: 1.8, apyPct: null, group: 'crypto', href: paths.assets.details('BTC') },
-  { id: 'eth', name: 'ETH', iconUrl: assetDisplay('ETH').icon, sub: '0.412 ETH', usd: 1285.44, changePct: 2.6, apyPct: null, group: 'crypto', href: paths.assets.details('ETH') },
-  { id: 'xlm', name: 'XLM', iconUrl: assetDisplay('XLM').icon, sub: '1872.4 XLM', usd: 280.86, changePct: -0.4, apyPct: null, group: 'crypto', href: paths.assets.details('XLM') },
-  { id: 'savings', name: 'USDC Savings', iconUrl: SAVINGS_ICON, sub: 'DeFi · auto-compounding', usd: 700.02, changePct: null, apyPct: 8.09, group: 'defi', href: paths.savings },
+  {
+    id: 'btc',
+    name: 'BTC',
+    iconUrl: assetDisplay('BTC').icon,
+    sub: '0.0162 BTC',
+    usd: 1040.04,
+    changePct: 1.8,
+    apyPct: null,
+    group: 'crypto',
+    href: paths.assets.details('BTC'),
+  },
+  {
+    id: 'eth',
+    name: 'ETH',
+    iconUrl: assetDisplay('ETH').icon,
+    sub: '0.412 ETH',
+    usd: 1285.44,
+    changePct: 2.6,
+    apyPct: null,
+    group: 'crypto',
+    href: paths.assets.details('ETH'),
+  },
+  {
+    id: 'xlm',
+    name: 'XLM',
+    iconUrl: assetDisplay('XLM').icon,
+    sub: '1872.4 XLM',
+    usd: 280.86,
+    changePct: -0.4,
+    apyPct: null,
+    group: 'crypto',
+    href: paths.assets.details('XLM'),
+  },
+  {
+    id: 'savings',
+    name: 'USDC Savings',
+    iconUrl: SAVINGS_ICON,
+    sub: 'DeFi · auto-compounding',
+    usd: 700.02,
+    changePct: null,
+    apyPct: 8.09,
+    group: 'defi',
+    href: paths.savings,
+  },
 ];
 const DEMO_OVERALL_CHANGE = 2.4;
 
-const ACTIONS: { key: AssetActionKey; label: string; icon: string }[] = [
+// 'swap' routes to /swap (it's a full page, not a modal flow); the icon is
+// the SAME MUI glyph the navbar uses so the two entries read as one feature.
+const ACTIONS: { key: AssetActionKey | 'swap'; label: string; icon: string }[] = [
   { key: 'buy', label: 'Buy', icon: 'ic:round-add' },
   { key: 'sell', label: 'Sell', icon: 'ic:round-remove' },
+  { key: 'swap', label: 'Swap', icon: '' },
   { key: 'send', label: 'Send', icon: 'ic:round-arrow-upward' },
   { key: 'receive', label: 'Receive', icon: 'ic:round-arrow-downward' },
 ];
@@ -85,6 +130,7 @@ const ACTIONS: { key: AssetActionKey; label: string; icon: string }[] = [
 export function HeroPortfolioCard() {
   const { user } = useSupabaseAuth();
   const isAuthed = !!user;
+  const { wallet } = usePersistStore();
   const portfolio = usePortfolio(isAuthed);
   const apy = useVaultApy();
   const router = useRouter();
@@ -94,9 +140,20 @@ export function HeroPortfolioCard() {
   const rows = useMemo<Row[]>(() => {
     if (!isAuthed) return [...DEMO_ROWS].sort((a, b) => b.usd - a.usd);
     const out: Row[] = [];
-    portfolio.walletPositions
-      .filter((p) => p.balance != null && Number(p.balance) > 0)
-      .forEach((p) => {
+    // #32 + Niko 2026-08-21: ONE row per asset. On hybrid accounts the two
+    // Stellar wallets' XLM/USDC are COMBINED (the row shows the total; the
+    // subtitle says how much sits in which wallet, by the wallet's real
+    // name — never "External"). Chain assets name their wallet in the
+    // subtitle too. Single-wallet accounts stay exactly as before.
+    const hybrid = !!portfolio.wallet.companionStellar;
+    const slotLabel = connectedWalletLabel(wallet.walletType);
+    const fmtBal = (n: number) =>
+      n.toLocaleString('en-US', { maximumFractionDigits: n < 1 ? 4 : 2 });
+    const positions = portfolio.walletPositions.filter(
+      (p) => p.balance != null && Number(p.balance) > 0
+    );
+    if (!hybrid) {
+      positions.forEach((p) => {
         out.push({
           id: p.id,
           name: p.symbol,
@@ -109,6 +166,74 @@ export function HeroPortfolioCard() {
           href: paths.assets.details(p.symbol),
         });
       });
+    } else {
+      // Stellar: combine slot + companion per symbol.
+      const stellarBySym = new Map<
+        string,
+        {
+          total: number;
+          usd: number;
+          change: number | null;
+          icon: string;
+          parts: { label: string; bal: number }[];
+        }
+      >();
+      positions
+        .filter((p) => p.chain === 'stellar')
+        .forEach((p) => {
+          const isCompanion = p.id.startsWith('companion:');
+          const entry = stellarBySym.get(p.symbol) ?? {
+            total: 0,
+            usd: 0,
+            change: null,
+            icon: p.iconUrl,
+            parts: [],
+          };
+          entry.total += Number(p.balance);
+          entry.usd += p.usdValue ? Number(p.usdValue) : 0;
+          entry.change = entry.change ?? p.change24h ?? null;
+          entry.parts[isCompanion ? 0 : 1] = {
+            label: isCompanion ? 'Normal wallet' : slotLabel,
+            bal: Number(p.balance),
+          };
+          stellarBySym.set(p.symbol, entry);
+        });
+      stellarBySym.forEach((e, sym) => {
+        const parts = e.parts.filter(Boolean);
+        out.push({
+          id: `stellar:${sym}`,
+          name: sym,
+          iconUrl: e.icon,
+          // Two wallets → the split IS the subtitle; one wallet → the plain
+          // amount plus who holds it.
+          sub:
+            parts.length > 1
+              ? parts.map((pt) => `${pt.label} ${fmtBal(pt.bal)}`).join(' · ')
+              : `${fmtCoin(e.total, sym)} · ${parts[0]?.label ?? ''}`,
+          usd: e.usd,
+          changePct: e.change,
+          apyPct: null,
+          group: 'crypto',
+          href: paths.assets.details(sym),
+        });
+      });
+      // Chain assets live in the Normal wallet — say so in the subtitle.
+      positions
+        .filter((p) => p.chain !== 'stellar')
+        .forEach((p) => {
+          out.push({
+            id: p.id,
+            name: p.symbol,
+            iconUrl: p.iconUrl,
+            sub: `${fmtCoin(Number(p.balance), p.symbol)} · Normal wallet`,
+            usd: p.usdValue ? Number(p.usdValue) : 0,
+            changePct: p.change24h ?? null,
+            apyPct: null,
+            group: 'crypto',
+            href: paths.assets.details(p.symbol),
+          });
+        });
+    }
     if (portfolio.savingsUsd > 0) {
       out.push({
         id: 'savings',
@@ -124,10 +249,23 @@ export function HeroPortfolioCard() {
     }
     // Biggest holdings first (by USD value) — same ordering as the drawer.
     return out.sort((a, b) => b.usd - a.usd);
-  }, [isAuthed, portfolio.walletPositions, portfolio.savingsUsd, apy]);
+  }, [
+    isAuthed,
+    portfolio.walletPositions,
+    portfolio.wallet.companionStellar,
+    wallet.walletType,
+    portfolio.savingsUsd,
+    apy,
+  ]);
 
-  const cryptoUsd = useMemo(() => rows.filter((r) => r.group === 'crypto').reduce((a, r) => a + r.usd, 0), [rows]);
-  const defiUsd = useMemo(() => rows.filter((r) => r.group === 'defi').reduce((a, r) => a + r.usd, 0), [rows]);
+  const cryptoUsd = useMemo(
+    () => rows.filter((r) => r.group === 'crypto').reduce((a, r) => a + r.usd, 0),
+    [rows]
+  );
+  const defiUsd = useMemo(
+    () => rows.filter((r) => r.group === 'defi').reduce((a, r) => a + r.usd, 0),
+    [rows]
+  );
   const totalUsd = cryptoUsd + defiUsd;
 
   // Overall portfolio 24h change = value-weighted across holdings (savings ≈ 0).
@@ -144,236 +282,351 @@ export function HeroPortfolioCard() {
   // Same loader technique as the portfolio Holdings card: skeleton on first load
   // (no cache), and kept while savings is still resolving with nothing to show
   // yet — so all assets paint together, never one-by-one or an empty flash.
+  // Savings is one of the rows, so waiting only "while there are no rows yet"
+  // let the coins paint and dropped savings in a couple of seconds later.
+  // Wait for both, but only on the first paint — once real data has rendered a
+  // background refetch must never flash the skeleton back.
+  const [firstPaintDone, setFirstPaintDone] = useState(false);
+  useEffect(() => {
+    if (
+      !portfolio.isLoading &&
+      !portfolio.savings.positionLoading &&
+      !portfolio.savings.companionPositionLoading
+    )
+      setFirstPaintDone(true);
+  }, [
+    portfolio.isLoading,
+    portfolio.savings.positionLoading,
+    portfolio.savings.companionPositionLoading,
+  ]);
+  // Doc 116: the gate above couples EVERY row to the savings/companion reads.
+  // On Safari <16 the companion lookup died instantly (AbortSignal.timeout,
+  // doc 115), its loading flag stuck true, and this gate then blanked the
+  // WHOLE card forever — crypto rows that had loaded fine never painted
+  // (the coworker's iPhone screenshot, 2026-08-28). The data-side bug is
+  // fixed; this cap guarantees the coupling can never blank the card again:
+  // after 8s, paint what we have — savings joins when its read lands.
+  useEffect(() => {
+    const id = setTimeout(() => setFirstPaintDone(true), 8_000);
+    return () => clearTimeout(id);
+  }, []);
+
   const loading =
-    isAuthed && (portfolio.isLoading || (portfolio.savings.positionLoading && rows.length === 0));
+    isAuthed &&
+    !firstPaintDone &&
+    (portfolio.isLoading ||
+      portfolio.savings.positionLoading ||
+      portfolio.savings.companionPositionLoading);
 
   const changeColor = overallChange >= 0 ? UP : DOWN;
 
   return (
     <Box
-        sx={{
-          width: '100%',
-          maxWidth: 440,
-          mx: 'auto',
-          textAlign: 'left',
-          bgcolor: '#fff',
-          border: '1px solid rgba(10,10,15,0.08)',
-          borderRadius: '24px',
-          p: { xs: '18px', sm: '22px' },
-          boxShadow: '0 1px 2px rgba(10,10,15,0.04), 0 30px 60px -20px rgba(10,10,15,0.18)',
-        }}
-      >
-        {/* header */}
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-          <Box>
-            <Typography sx={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9A9AA3', mb: 2 }}>
-              Your Normal Portfolio
-            </Typography>
-            {loading ? (
-              <Skeleton variant="text" width={160} height={40} />
-            ) : (
-              <Typography sx={{ fontSize: 'clamp(28px, 5vw, 34px)', fontWeight: 400, color: INK, lineHeight: 1.1, ...MONO, letterSpacing: '-0.02em' }}>
-                {fmtUsd(totalUsd)}
-              </Typography>
-            )}
-          </Box>
-          <Box
+      sx={{
+        width: '100%',
+        maxWidth: 440,
+        mx: 'auto',
+        textAlign: 'left',
+        bgcolor: '#fff',
+        border: '1px solid rgba(10,10,15,0.08)',
+        borderRadius: '24px',
+        p: { xs: '18px', sm: '22px' },
+        boxShadow: '0 1px 2px rgba(10,10,15,0.04), 0 30px 60px -20px rgba(10,10,15,0.18)',
+      }}
+    >
+      {/* header */}
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+        <Box>
+          <Typography
             sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              px: '8px',
-              py: '4px',
-              borderRadius: '999px',
-              bgcolor: overallChange >= 0 ? 'rgba(26,179,125,0.12)' : 'rgba(229,72,77,0.12)',
+              fontSize: 11,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: '#9A9AA3',
+              mb: 2,
             }}
           >
-            <Typography sx={{ fontSize: 12.5, fontWeight: 400, color: changeColor, lineHeight: 1, ...MONO }}>
-              {fmtPct(overallChange)}
+            Your Normal Portfolio
+          </Typography>
+          {loading ? (
+            <Skeleton variant="text" width={160} height={40} />
+          ) : (
+            <Typography
+              sx={{
+                fontSize: 'clamp(28px, 5vw, 34px)',
+                fontWeight: 400,
+                color: INK,
+                lineHeight: 1.1,
+                ...MONO,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {fmtUsd(totalUsd)}
             </Typography>
-          </Box>
-        </Stack>
+          )}
+        </Box>
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            px: '8px',
+            py: '4px',
+            borderRadius: '999px',
+            bgcolor: overallChange >= 0 ? 'rgba(26,179,125,0.12)' : 'rgba(229,72,77,0.12)',
+          }}
+        >
+          <Typography
+            sx={{ fontSize: 12.5, fontWeight: 400, color: changeColor, lineHeight: 1, ...MONO }}
+          >
+            {fmtPct(overallChange)}
+          </Typography>
+        </Box>
+      </Stack>
 
-        {/* tabs */}
-        <Stack direction="row" spacing={1} sx={{ mt: 3, mb: 0.5 }}>
-          {TABS.map((tb) => {
-            const on = tab === tb.id;
-            return (
-              <Box
-                key={tb.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => setTab(tb.id)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setTab(tb.id); }}
+      {/* tabs */}
+      <Stack direction="row" spacing={1} sx={{ mt: 3, mb: 0.5 }}>
+        {TABS.map((tb) => {
+          const on = tab === tb.id;
+          return (
+            <Box
+              key={tb.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => setTab(tb.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') setTab(tb.id);
+              }}
+              sx={{
+                flex: 1,
+                px: '12px',
+                py: '10px',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                userSelect: 'none',
+                bgcolor: on ? '#fff' : 'rgba(10,10,15,0.035)',
+                border: `1px solid ${on ? 'rgba(10,10,15,0.1)' : 'transparent'}`,
+                transition: 'all .15s ease',
+                // Hover animation for the inactive tabs — mirrors the Buy/Sell/
+                // Send/Receive buttons below (bg lifts, border shows, text darkens).
+                ...(!on && {
+                  '&:hover': { bgcolor: 'rgba(10,10,15,0.06)', borderColor: 'rgba(10,10,15,0.12)' },
+                  '&:hover .tab-label': { color: INK },
+                }),
+              }}
+            >
+              <Typography
+                className="tab-label"
                 sx={{
-                  flex: 1,
-                  px: '12px',
-                  py: '10px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  bgcolor: on ? '#fff' : 'rgba(10,10,15,0.035)',
-                  border: `1px solid ${on ? 'rgba(10,10,15,0.1)' : 'transparent'}`,
-                  transition: 'all .15s ease',
-                  // Hover animation for the inactive tabs — mirrors the Buy/Sell/
-                  // Send/Receive buttons below (bg lifts, border shows, text darkens).
-                  ...(!on && {
-                    '&:hover': { bgcolor: 'rgba(10,10,15,0.06)', borderColor: 'rgba(10,10,15,0.12)' },
-                    '&:hover .tab-label': { color: INK },
-                  }),
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: on ? INK : '#6B6B76',
+                  lineHeight: 1.25,
+                  transition: 'color .15s ease',
                 }}
               >
-                <Typography className="tab-label" sx={{ fontSize: 14, fontWeight: 600, color: on ? INK : '#6B6B76', lineHeight: 1.25, transition: 'color .15s ease' }}>
-                  {tb.label}
-                </Typography>
-                <Typography sx={{ fontSize: 13, color: on ? '#6B6B76' : '#9A9AA3', mt: '3px', ...MONO }}>
-                  {loading ? '—' : fmtUsd0(subtotals[tb.id])}
-                </Typography>
-              </Box>
-            );
-          })}
-        </Stack>
+                {tb.label}
+              </Typography>
+              <Typography
+                sx={{ fontSize: 13, color: on ? '#6B6B76' : '#9A9AA3', mt: '3px', ...MONO }}
+              >
+                {loading ? '—' : fmtUsd0(subtotals[tb.id])}
+              </Typography>
+            </Box>
+          );
+        })}
+      </Stack>
 
-        {/* holdings — capped height so the list scrolls once there are more than
+      {/* holdings — capped height so the list scrolls once there are more than
             ~5 assets (we keep adding more). The container carries the same -8px
             gutter as the rows so the hover bleed stays aligned and the scrollbar
             sits in the margin, clear of the USD amounts. */}
-        <Stack
-          sx={{
-            mt: 2,
-            // Asymmetric gutter: left stays at -8px (row hover bleed aligned),
-            // right is wider so the scrollbar sits further into the margin and
-            // clears the USD amounts. Amounts stay put — only the scrollbar moves.
-            ml: '-8px',
-            pl: '8px',
-            mr: '-14px',
-            pr: '14px',
-            maxHeight: 350,
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            '&::-webkit-scrollbar': { width: '5px' },
-            '&::-webkit-scrollbar-track': { background: 'transparent' },
-            '&::-webkit-scrollbar-thumb': { background: 'rgba(10,10,15,0.14)', borderRadius: '3px' },
-            '&::-webkit-scrollbar-thumb:hover': { background: 'rgba(10,10,15,0.26)' },
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(10,10,15,0.14) transparent',
-          }}
-          divider={<Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />}
-        >
-          {loading ? (
-            [0, 1, 2].map((i) => (
-              <Stack key={i} direction="row" alignItems="center" spacing={1.5} sx={{ py: '15px' }}>
-                <Skeleton variant="circular" width={36} height={36} />
-                <Box sx={{ flex: 1 }}>
-                  <Skeleton variant="text" width="40%" />
-                  <Skeleton variant="text" width="25%" />
-                </Box>
-                <Skeleton variant="text" width={60} />
-              </Stack>
-            ))
-          ) : visibleRows.length === 0 ? (
-            <Typography sx={{ fontSize: 13, color: '#9A9AA3', py: 3, textAlign: 'center' }}>
-              {tab === 'defi' ? 'No DeFi positions yet.' : 'No holdings yet.'}
-            </Typography>
-          ) : (
-            visibleRows.map((r) => (
-              <Stack
-                key={r.id}
-                direction="row"
-                alignItems="center"
-                spacing={1.5}
-                role="button"
-                tabIndex={0}
-                onClick={() => router.push(r.href)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(r.href); }}
-                sx={{
-                  py: '15px',
-                  px: '8px',
-                  mx: '-8px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'background 150ms',
-                  '&:hover': { bgcolor: 'rgba(10,10,15,0.035)' },
-                }}
-              >
-                <Box
-                  component="img"
-                  src={r.iconUrl}
-                  alt={r.name}
-                  sx={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, bgcolor: 'rgba(10,10,15,0.04)' }}
-                />
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontSize: 14.5, fontWeight: 600, color: INK, lineHeight: 1.2 }}>
-                    {r.name}
-                  </Typography>
-                  <Typography sx={{ fontSize: 12, color: '#9A9AA3', mt: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...(r.group === 'crypto' ? MONO : {}) }}>
-                    {r.sub}
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-                  <Typography sx={{ fontSize: 14.5, fontWeight: 400, color: INK, lineHeight: 1.2, ...MONO }}>
-                    {fmtUsd(r.usd)}
-                  </Typography>
-                  {r.apyPct != null ? (
-                    <Typography sx={{ fontSize: 12, fontWeight: 400, color: UP, mt: '1px', ...MONO }}>
-                      {r.apyPct.toFixed(2)}% APY
-                    </Typography>
-                  ) : r.changePct != null ? (
-                    <Typography sx={{ fontSize: 12, fontWeight: 400, color: r.changePct >= 0 ? UP : DOWN, mt: '1px', ...MONO }}>
-                      {fmtPct(r.changePct)}
-                    </Typography>
-                  ) : null}
-                </Box>
-              </Stack>
-            ))
-          )}
-        </Stack>
-
-        {/* actions */}
-        <Stack direction="row" spacing={1} sx={{ mt: 2.5 }}>
-          {ACTIONS.map((a) => (
-            <Box
-              key={a.key}
+      <Stack
+        sx={{
+          mt: 2,
+          // Asymmetric gutter: left stays at -8px (row hover bleed aligned),
+          // right is wider so the scrollbar sits further into the margin and
+          // clears the USD amounts. Amounts stay put — only the scrollbar moves.
+          ml: '-8px',
+          pl: '8px',
+          mr: '-14px',
+          pr: '14px',
+          maxHeight: 350,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          '&::-webkit-scrollbar': { width: '5px' },
+          '&::-webkit-scrollbar-track': { background: 'transparent' },
+          '&::-webkit-scrollbar-thumb': { background: 'rgba(10,10,15,0.14)', borderRadius: '3px' },
+          '&::-webkit-scrollbar-thumb:hover': { background: 'rgba(10,10,15,0.26)' },
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(10,10,15,0.14) transparent',
+        }}
+        divider={<Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />}
+      >
+        {loading ? (
+          [0, 1, 2].map((i) => (
+            <Stack key={i} direction="row" alignItems="center" spacing={1.5} sx={{ py: '15px' }}>
+              <Skeleton variant="circular" width={36} height={36} />
+              <Box sx={{ flex: 1 }}>
+                <Skeleton variant="text" width="40%" />
+                <Skeleton variant="text" width="25%" />
+              </Box>
+              <Skeleton variant="text" width={60} />
+            </Stack>
+          ))
+        ) : visibleRows.length === 0 ? (
+          <Typography sx={{ fontSize: 13, color: '#9A9AA3', py: 3, textAlign: 'center' }}>
+            {tab === 'defi' ? 'No DeFi positions yet.' : 'No holdings yet.'}
+          </Typography>
+        ) : (
+          visibleRows.map((r) => (
+            <Stack
+              key={r.id}
+              direction="row"
+              alignItems="center"
+              spacing={1.5}
               role="button"
               tabIndex={0}
-              onClick={() => startAction(a.key)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') startAction(a.key); }}
+              onClick={() => router.push(r.href)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') router.push(r.href);
+              }}
               sx={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '6px',
-                py: '12px',
-                borderRadius: '14px',
+                py: '15px',
+                px: '8px',
+                mx: '-8px',
+                borderRadius: '12px',
                 cursor: 'pointer',
-                color: '#6B6B76',
-                border: '1px solid rgba(10,10,15,0.08)',
-                transition: 'all .15s ease',
-                '&:hover': { bgcolor: 'rgba(10,10,15,0.03)', color: '#0A0A0F', borderColor: 'rgba(10,10,15,0.14)' },
-                '&:hover .action-icon-box': { bgcolor: '#0A0A0F', color: '#fff' },
+                transition: 'background 150ms',
+                '&:hover': { bgcolor: 'rgba(10,10,15,0.035)' },
               }}
             >
               <Box
-                className="action-icon-box"
+                component="img"
+                src={r.iconUrl}
+                alt={r.name}
                 sx={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: '9px',
-                  bgcolor: '#F4F4F7',
-                  color: '#0A0A0F',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all .15s ease',
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                  bgcolor: 'rgba(10,10,15,0.04)',
                 }}
-              >
-                <Iconify icon={a.icon} width={18} sx={{ color: 'inherit' }} />
+              />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontSize: 14.5, fontWeight: 600, color: INK, lineHeight: 1.2 }}>
+                  {r.name}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    color: '#9A9AA3',
+                    mt: '1px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    ...(r.group === 'crypto' ? MONO : {}),
+                  }}
+                >
+                  {r.sub}
+                </Typography>
               </Box>
-              <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'inherit' }}>{a.label}</Typography>
+              <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                <Typography
+                  sx={{ fontSize: 14.5, fontWeight: 400, color: INK, lineHeight: 1.2, ...MONO }}
+                >
+                  {fmtUsd(r.usd)}
+                </Typography>
+                {r.apyPct != null ? (
+                  <Typography sx={{ fontSize: 12, fontWeight: 400, color: UP, mt: '1px', ...MONO }}>
+                    {r.apyPct.toFixed(2)}% APY
+                  </Typography>
+                ) : r.changePct != null ? (
+                  <Typography
+                    sx={{
+                      fontSize: 12,
+                      fontWeight: 400,
+                      color: r.changePct >= 0 ? UP : DOWN,
+                      mt: '1px',
+                      ...MONO,
+                    }}
+                  >
+                    {fmtPct(r.changePct)}
+                  </Typography>
+                ) : null}
+              </Box>
+            </Stack>
+          ))
+        )}
+      </Stack>
+
+      {/* actions — two fixed rows (Niko: five in one row is too much here):
+          Buy/Sell/Swap on top, Send/Receive wider below. 6-column grid,
+          top buttons span 2, bottom span 3. */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 1, mt: 2.5 }}>
+        {ACTIONS.map((a, idx) => (
+          <Box
+            key={a.key}
+            role="button"
+            tabIndex={0}
+            onClick={() =>
+              a.key === 'swap' ? router.push(paths.swap) : startAction(a.key as AssetActionKey)
+            }
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              if (a.key === 'swap') router.push(paths.swap);
+              else startAction(a.key as AssetActionKey);
+            }}
+            sx={{
+              // All five buttons the SAME size (Niko): 6-col grid, every
+              // button spans 2; the bottom pair starts at columns 2 and 4,
+              // so the second row is centered instead of stretched.
+              gridColumn: idx < 3 ? 'span 2' : idx === 3 ? '2 / span 2' : '4 / span 2',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '6px',
+              py: '12px',
+              borderRadius: '14px',
+              cursor: 'pointer',
+              color: '#6B6B76',
+              border: '1px solid rgba(10,10,15,0.08)',
+              transition: 'all .15s ease',
+              '&:hover': {
+                bgcolor: 'rgba(10,10,15,0.03)',
+                color: '#0A0A0F',
+                borderColor: 'rgba(10,10,15,0.14)',
+              },
+              '&:hover .action-icon-box': { bgcolor: '#0A0A0F', color: '#fff' },
+            }}
+          >
+            <Box
+              className="action-icon-box"
+              sx={{
+                width: 30,
+                height: 30,
+                borderRadius: '9px',
+                bgcolor: '#F4F4F7',
+                color: '#0A0A0F',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all .15s ease',
+              }}
+            >
+              {a.key === 'swap' ? (
+                <SwapVertOutlined sx={{ fontSize: 18, color: 'inherit' }} />
+              ) : (
+                <Iconify icon={a.icon} width={18} sx={{ color: 'inherit' }} />
+              )}
             </Box>
-          ))}
-        </Stack>
+            <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'inherit' }}>
+              {a.label}
+            </Typography>
+          </Box>
+        ))}
       </Box>
+    </Box>
   );
 }
 

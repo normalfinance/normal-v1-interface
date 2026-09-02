@@ -45,7 +45,10 @@ export function GetStartedPicker({ onBringOwnWallet }: GetStartedPickerProps) {
     cursor: 'pointer',
     border: `1.5px solid ${theme.palette.divider}`,
     transition: 'all 0.15s',
-    '&:hover': { borderColor: theme.palette.text.primary, bgcolor: alpha(theme.palette.text.primary, 0.02) },
+    '&:hover': {
+      borderColor: theme.palette.text.primary,
+      bgcolor: alpha(theme.palette.text.primary, 0.02),
+    },
   } as const;
 
   return (
@@ -54,8 +57,14 @@ export function GetStartedPicker({ onBringOwnWallet }: GetStartedPickerProps) {
         <Stack spacing={2.5}>
           <Box>
             <Stack direction="row" alignItems="center" spacing={1.25} mb={0.5}>
-              <Box component="img" src={assetDisplay(asset.symbol).icon} sx={{ width: 28, height: 28, borderRadius: '50%' }} />
-              <Typography variant="h4" fontWeight={700}>{t('Add {{symbol}}', { symbol: asset.symbol })}</Typography>
+              <Box
+                component="img"
+                src={assetDisplay(asset.symbol).icon}
+                sx={{ width: 28, height: 28, borderRadius: '50%' }}
+              />
+              <Typography variant="h4" fontWeight={700}>
+                {t('Add {{symbol}}', { symbol: asset.symbol })}
+              </Typography>
             </Stack>
             <Typography variant="body2" color="text.secondary">
               {t('Buy it in a few taps, or receive it from a wallet or exchange you already use.')}
@@ -79,29 +88,57 @@ export function GetStartedPicker({ onBringOwnWallet }: GetStartedPickerProps) {
             ].map((o) => (
               <Box key={o.title} onClick={o.onClick} sx={{ ...tileSx, p: 2 }}>
                 <Stack direction="row" alignItems="center" spacing={2}>
-                  <Box sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: alpha(theme.palette.text.primary, 0.06), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '10px',
+                      bgcolor: alpha(theme.palette.text.primary, 0.06),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
                     <Iconify icon={o.icon} width={20} sx={{ color: 'text.primary' }} />
                   </Box>
                   <Box flex={1} minWidth={0}>
-                    <Typography variant="subtitle2" fontWeight={700}>{o.title}</Typography>
-                    <Typography variant="caption" color="text.secondary">{o.subtitle}</Typography>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      {o.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {o.subtitle}
+                    </Typography>
                   </Box>
-                  <Iconify icon="mingcute:right-line" sx={{ color: 'text.disabled', flexShrink: 0 }} />
+                  <Iconify
+                    icon="mingcute:right-line"
+                    sx={{ color: 'text.disabled', flexShrink: 0 }}
+                  />
                 </Stack>
               </Box>
             ))}
           </Stack>
 
-          <Button variant="text" size="small" fullWidth onClick={() => setSelected(null)} sx={{ color: 'text.secondary', fontWeight: 500 }}>
+          <Button
+            variant="text"
+            size="small"
+            fullWidth
+            onClick={() => setSelected(null)}
+            sx={{ color: 'text.secondary', fontWeight: 500 }}
+          >
             {t('← Choose a different asset')}
           </Button>
         </Stack>
       ) : (
         <Stack spacing={2.5}>
           <Box>
-            <Typography variant="h4" fontWeight={700} gutterBottom>{t('What do you want to start with?')}</Typography>
+            <Typography variant="h4" fontWeight={700} gutterBottom>
+              {t('What do you want to start with?')}
+            </Typography>
             <Typography variant="body2" color="text.secondary">
-              {t('Pick an asset — we’ll set up your wallet for it in one tap. No seed phrase, no forms.')}
+              {t(
+                'Pick an asset — we’ll set up your wallet for it in one tap. No seed phrase, no forms.'
+              )}
             </Typography>
           </Box>
 
@@ -109,19 +146,36 @@ export function GetStartedPicker({ onBringOwnWallet }: GetStartedPickerProps) {
             {GET_STARTED_ASSETS.map((a) => (
               <Box key={a.symbol} onClick={() => setSelected(a.symbol)} sx={tileSx}>
                 <Stack direction="row" alignItems="center" spacing={1.75}>
-                  <Box component="img" src={assetDisplay(a.symbol).icon} sx={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0 }} />
+                  <Box
+                    component="img"
+                    src={assetDisplay(a.symbol).icon}
+                    sx={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0 }}
+                  />
                   <Box flex={1} minWidth={0}>
-                    <Typography variant="subtitle2" fontWeight={700}>{a.symbol}</Typography>
-                    <Typography variant="caption" color="text.secondary">{a.name}</Typography>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      {a.symbol}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {a.name}
+                    </Typography>
                   </Box>
-                  <Iconify icon="mingcute:right-line" sx={{ color: 'text.disabled', flexShrink: 0 }} />
+                  <Iconify
+                    icon="mingcute:right-line"
+                    sx={{ color: 'text.disabled', flexShrink: 0 }}
+                  />
                 </Stack>
               </Box>
             ))}
           </Stack>
 
           {onBringOwnWallet && (
-            <Button variant="text" size="small" fullWidth onClick={onBringOwnWallet} sx={{ color: 'text.disabled', fontWeight: 500 }}>
+            <Button
+              variant="text"
+              size="small"
+              fullWidth
+              onClick={onBringOwnWallet}
+              sx={{ color: 'text.disabled', fontWeight: 500 }}
+            >
               {t('Bring your own wallet instead')}
             </Button>
           )}

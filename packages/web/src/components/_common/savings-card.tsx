@@ -4,13 +4,18 @@ import type { BoxProps } from '@mui/material';
 
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
+import { useRouter } from 'next/navigation';
+import { chainOfActivityEvent } from '@/lib/tx-events';
 import { usePersistStore } from '@normalfinance/state';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
-import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
+import { xlmFeeStatus, xlmAvailableForFees } from '@/utils/stellar-reserve';
 import {
   getYieldCommission,
   getSavingsDepositFee,
@@ -24,14 +29,7 @@ import {
 } from '@/utils/token-selectors';
 
 import { keyframes } from '@mui/system';
-import {
-  Box,
-  Stack,
-  Button,
-  Skeleton,
-  Typography,
-  CircularProgress,
-} from '@mui/material';
+import { Box, Stack, Button, Skeleton, Typography, CircularProgress } from '@mui/material';
 
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
@@ -52,10 +50,25 @@ interface SavingsCardProps extends BoxProps {}
 
 const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const { t } = useTranslate();
+  const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
-  const { tokenState, wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
+  const stellarTokens = useStellarTokens();
   const config = useStellarConfig();
   const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
+
+  // #32: hybrid users PICK which wallet this card operates on (Niko's
+  // direction — "you can do savings from any wallet"). Default: the Normal
+  // wallet, where a hybrid user's savings usually live and where every
+  // action is passkey-only. EVERYTHING below — position, balances, setup
+  // state, fee semaphore, deposit/withdraw signing — follows the TARGET.
+  const { companionStellar } = useWalletBalances(true);
+  const isExternalConnected = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+  const savingsHybrid = isExternalConnected && !!companionStellar;
+  const [savingsWalletTab, setSavingsWalletTab] = useState<'normal' | 'connected'>('normal');
+  const activeSavingsTab = savingsHybrid ? savingsWalletTab : 'connected';
+  const savingsTargetAddress =
+    savingsHybrid && activeSavingsTab === 'normal' ? companionStellar!.address : undefined;
 
   const {
     isLoading: isCheckingAccount,
@@ -63,7 +76,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     xlmBalance,
     hasUsdcTrustline,
     refetch: refetchAccountStatus,
-  } = useAccountStatus(wallet.address, { assetIssuer: savingsUsdcIssuer });
+  } = useAccountStatus(savingsTargetAddress ?? wallet.address, { assetIssuer: savingsUsdcIssuer });
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
   const { startFlow } = useAssetActionsContext();
 
@@ -73,14 +86,14 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     loading,
     fetching,
     positionFetching,
+    positionError,
     error,
     needsTrustline,
     setNeedsTrustline,
     txStep,
     deposit,
     withdraw,
-    refreshVaultInfo,
-  } = useDefindexSavings();
+  } = useDefindexSavings(savingsTargetAddress);
 
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
@@ -88,8 +101,28 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const [setupOpen, setSetupOpen] = useState(false);
   const setupAutoOpened = useRef(false);
 
-  const rawDepositBalance = getTokenBalance(getSavingsDepositToken(tokenState.tokens, config));
+  // #32: the deposit balance is the TARGET wallet's USDC — the companion's
+  // (from the portfolio aggregate) when the Normal-wallet tab is active,
+  // the connected wallet's token store otherwise.
+  const rawDepositBalance = savingsTargetAddress
+    ? Number(companionStellar?.assets.find((a) => a.symbol === 'USDC')?.balance ?? 0).toFixed(7)
+    : getTokenBalance(getSavingsDepositToken(stellarTokens, config));
   const rawDepositBalanceNum = parseFloat(rawDepositBalance);
+
+  // `spentOnDeposits` optimistically subtracts what the user just deposited, so
+  // the figure drops immediately instead of waiting for the chain. It only ever
+  // increased, and was never cleared — so once the real balance refreshed (and
+  // already reflected the deposit) the same amount was subtracted a SECOND
+  // time. The displayed wallet balance stayed wrong until a page reload threw
+  // the component state away. Clearing it the moment a fresh balance arrives
+  // keeps the optimistic update without letting it double-count.
+  const lastRawBalanceRef = useRef(rawDepositBalance);
+  useEffect(() => {
+    if (rawDepositBalance !== lastRawBalanceRef.current) {
+      lastRawBalanceRef.current = rawDepositBalance;
+      setSpentOnDeposits(0);
+    }
+  }, [rawDepositBalance]);
   const adjustedDepositBalance = Math.max(rawDepositBalanceNum - spentOnDeposits, 0).toFixed(7);
   const savingsDepositBalance = adjustedDepositBalance;
   const savingsDepositLabel = getSavingsDepositTokenLabel(config);
@@ -116,10 +149,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       }
     } else {
       await withdraw(amount);
-      getAllTokens(true);
     }
     setAmount('');
-  }, [mode, amount, deposit, withdraw, getAllTokens]);
+  }, [mode, amount, deposit, withdraw]);
 
   const availableBalance =
     mode === 'deposit' ? savingsDepositBalance : userPosition?.currentValue || '0';
@@ -161,8 +193,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   // made the pop-up close mid-poll: each 2.5s re-check briefly looked like "no
   // longer needs setup", which closed it.)
   const [hasCheckedOnce, setHasCheckedOnce] = useState(false);
-  useEffect(() => { setHasCheckedOnce(false); }, [wallet.address]);
-  useEffect(() => { if (!isCheckingAccount) setHasCheckedOnce(true); }, [isCheckingAccount]);
+  useEffect(() => {
+    setHasCheckedOnce(false);
+  }, [wallet.address]);
+  useEffect(() => {
+    if (!isCheckingAccount) setHasCheckedOnce(true);
+  }, [isCheckingAccount]);
 
   // Savings-specific setup: activate the Stellar account (XLM), then add the USDC
   // trustline. `setupComplete` deliberately ignores isCheckingAccount, so a
@@ -170,18 +206,44 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const needsSetup =
     hasCheckedOnce &&
     !!wallet.address &&
-    (!accountExists || (trustlineRequired && !hasUsdcTrustline));
+    (accountExists === false || (accountExists === true && trustlineRequired && !hasUsdcTrustline));
   const setupComplete =
-    hasCheckedOnce && !!wallet.address && accountExists && (!trustlineRequired || hasUsdcTrustline);
+    hasCheckedOnce &&
+    !!wallet.address &&
+    accountExists === true &&
+    (!trustlineRequired || hasUsdcTrustline);
 
   // Auto-open the guided setup once when it's first needed (the user can reopen
   // it later via the "Set up savings" button).
+  //
+  // #32: NOT for hybrid users. Connecting a fresh external wallet while the
+  // account already owns a working Normal wallet made this pop "Set up Normal
+  // Savings" for the empty external account (observed live 2026-08-15) — the
+  // user's savings-capable wallet exists; nagging them to activate a second
+  // one is noise. Manual setup via the button still works for every wallet.
   useEffect(() => {
-    if (needsSetup && !setupAutoOpened.current) {
-      setupAutoOpened.current = true;
-      setSetupOpen(true);
-    }
-  }, [needsSetup]);
+    if (!needsSetup || setupAutoOpened.current) return undefined;
+    let stale = false;
+    (async () => {
+      const isExternal = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+      if (isExternal) {
+        try {
+          const { getTurnkeyWalletInfo } = await import('@/lib/turnkey/wallet-info');
+          const tk = await getTurnkeyWalletInfo();
+          if (tk?.stellarAddress) return; // companion exists — no nag
+        } catch {
+          /* lookup failed — fall through to today's behavior */
+        }
+      }
+      if (!stale && !setupAutoOpened.current) {
+        setupAutoOpened.current = true;
+        setSetupOpen(true);
+      }
+    })();
+    return () => {
+      stale = true;
+    };
+  }, [needsSetup, wallet.walletType]);
 
   // Close it only when setup is genuinely complete — never while a re-check is in
   // flight — and return the card to the normal deposit UI.
@@ -197,24 +259,31 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   const refetchRef = useRef(refetchAccountStatus);
   refetchRef.current = refetchAccountStatus;
   useEffect(() => {
-    if (!setupOpen || accountExists) return undefined;
+    if (!setupOpen || accountExists === true) return undefined;
     const id = setInterval(() => refetchRef.current(), 2500);
     return () => clearInterval(id);
   }, [setupOpen, accountExists]);
 
   // Re-check the account (XLM balance included) after any buy/receive/setup flow
-  // so the low-XLM warning clears once the user tops up.
+  // so the low-XLM warning clears once the user tops up. A send scoped to a
+  // non-Stellar chain (see lib/tx-events.ts) cannot change this account — skip
+  // those; a Stellar send CAN (it moves XLM), so it still re-checks.
   useEffect(() => {
-    const handler = () => refetchRef.current();
+    const handler = (e: Event) => {
+      const only = chainOfActivityEvent(e);
+      if (only && only !== 'stellar') return;
+      refetchRef.current();
+    };
     window.addEventListener('nf:activity-updated', handler);
     return () => window.removeEventListener('nf:activity-updated', handler);
   }, []);
 
+  // #26 sign-both-first: both signatures are collected BEFORE anything is
+  // submitted, then the pair is submitted server-side in one phase.
   const depositSteps = [
     { id: 'checking', label: t('Checking balance'), sub: t('Verifying USDC on Stellar') },
-    { id: 'fee_sign', label: t('Signing fee payment'), sub: t('Approve in your wallet · 1 of 2') },
-    { id: 'fee_broadcast', label: t('Broadcasting to Stellar'), sub: 'horizon.stellar.org' },
-    { id: 'deposit_sign', label: t('Signing deposit'), sub: t('Approve in your wallet · 2 of 2') },
+    { id: 'deposit_sign', label: t('Signing deposit'), sub: t('Approve in your wallet · 1 of 2') },
+    { id: 'fee_sign', label: t('Signing fee payment'), sub: t('Approve in your wallet · 2 of 2') },
     {
       id: 'deposit_broadcast',
       label: t('Crediting savings vault'),
@@ -230,22 +299,28 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           label: t('Signing withdrawal'),
           sub: t('Approve in your wallet · 1 of 2'),
         },
-        { id: 'withdraw_broadcast', label: t('Processing withdrawal'), sub: 'horizon.stellar.org' },
         {
           id: 'commission_sign',
           label: t('Signing yield commission'),
           sub: t('Approve in your wallet · 2 of 2'),
         },
-        { id: 'commission_broadcast', label: t('Broadcasting to Stellar'), sub: 'horizon.stellar.org' },
+        {
+          id: 'withdraw_broadcast',
+          label: t('Processing withdrawal'),
+          sub: 'horizon.stellar.org',
+        },
       ]
     : [
         { id: 'withdraw_sign', label: t('Signing withdrawal'), sub: t('Approve in your wallet') },
-        { id: 'withdraw_broadcast', label: t('Broadcasting to Stellar'), sub: 'horizon.stellar.org' },
+        {
+          id: 'withdraw_broadcast',
+          label: t('Broadcasting to Stellar'),
+          sub: 'horizon.stellar.org',
+        },
       ];
   const txSteps = mode === 'deposit' ? depositSteps : withdrawSteps;
   const activeStepIdx = txStep ? txSteps.findIndex((s) => s.id === txStep) : -1;
-  const stepsTiming =
-    mode === 'deposit' ? '~30s' : hasWithdrawCommission ? '~20s' : '~10s';
+  const stepsTiming = mode === 'deposit' ? '~30s' : hasWithdrawCommission ? '~20s' : '~10s';
 
   const handleAddTrustline = useCallback(async () => {
     if (!savingsUsdcIssuer) {
@@ -261,7 +336,14 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     } catch (err: any) {
       enqueueSnackbar(err.message || t('Failed to add USDC trustline'), { variant: 'error' });
     }
-  }, [addTrustLine, savingsUsdcIssuer, enqueueSnackbar, t, setNeedsTrustline, refetchAccountStatus]);
+  }, [
+    addTrustLine,
+    savingsUsdcIssuer,
+    enqueueSnackbar,
+    t,
+    setNeedsTrustline,
+    refetchAccountStatus,
+  ]);
 
   const handleTrustlineSuccess = useCallback(async () => {
     setAmount('');
@@ -274,20 +356,28 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   // transaction would fail on-chain — so we warn and block until they top up.
   // Most important for withdrawals: money is locked in savings and can't come
   // out without a little XLM for the fee.
-  const lowXlmForSavings =
-    accountExists && xlmAvailableForFees(xlmBalance).lt(MIN_XLM_FOR_SAVINGS_TX);
+  // #67 semaphore: ONE classifier drives the always-visible light AND the
+  // action block, so they can never disagree — 'blocked' is exactly the old
+  // lowXlmForSavings line (fee-available < MIN_XLM_FOR_SAVINGS_TX).
+  const feeStatus = accountExists ? xlmFeeStatus(xlmBalance) : null;
+  const feeXlmAvailable = xlmAvailableForFees(xlmBalance);
+  const lowXlmForSavings = feeStatus === 'blocked';
 
-  // While XLM is too low to transact, keep re-checking so the warning clears
-  // itself the moment the user tops up — same auto-detect as the setup flow.
+  // While XLM is low or blocked, keep re-checking so the light clears itself
+  // the moment the user tops up — same auto-detect as the setup flow.
   useEffect(() => {
-    if (!lowXlmForSavings) return undefined;
+    if (feeStatus === null || feeStatus === 'ok') return undefined;
     const id = setInterval(() => refetchRef.current(), 4000);
     return () => clearInterval(id);
-  }, [lowXlmForSavings]);
+  }, [feeStatus]);
 
   const isWithdrawPositionLoading = mode === 'withdraw' && positionFetching && !userPosition;
   const isActionDisabled =
-    loading || isWithdrawPositionLoading || lowXlmForSavings || isInsufficientBalance || isAmountMissing;
+    loading ||
+    isWithdrawPositionLoading ||
+    lowXlmForSavings ||
+    isInsufficientBalance ||
+    isAmountMissing;
   const actionButtonText = loading
     ? mode === 'deposit'
       ? t('Depositing...')
@@ -391,6 +481,49 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         )}
       </Stack>
 
+      {/* #32: hybrid accounts pick the wallet this card operates on — the
+          position, balances, fee light and the deposit/withdraw signing all
+          follow the selected wallet (Normal = passkey; the external wallet
+          signs in its own app). Single-wallet users never see this row. */}
+      {savingsHybrid && (
+        <Box sx={{ display: 'flex', gap: '6px', mb: '14px', flexWrap: 'wrap' }}>
+          {(
+            [
+              { key: 'normal', label: t('Normal wallet') },
+              { key: 'connected', label: connectedWalletLabel(wallet.walletType) },
+            ] as const
+          ).map((opt) => {
+            const selected = activeSavingsTab === opt.key;
+            return (
+              <Box
+                key={opt.key}
+                component="button"
+                onClick={() => setSavingsWalletTab(opt.key)}
+                sx={{
+                  appearance: 'none',
+                  border: selected
+                    ? '1px solid rgba(10,10,15,0.9)'
+                    : '1px solid rgba(10,10,15,0.12)',
+                  borderRadius: '999px',
+                  px: '12px',
+                  py: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  bgcolor: selected ? '#0A0A0F' : 'transparent',
+                  color: selected ? '#fff' : '#6B6B76',
+                  transition: 'all .15s ease',
+                  '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.3)' },
+                }}
+              >
+                {opt.label}
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+
       {/* Stats */}
       <Box
         sx={(theme) => ({
@@ -443,7 +576,11 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 >
                   {label}
                 </Typography>
-                {!userPosition ? (
+                {positionError && !userPosition ? (
+                  <Typography sx={{ fontSize: '12px', color: '#B45309' }}>
+                    {t('Unavailable — retrying…')}
+                  </Typography>
+                ) : !userPosition ? (
                   <Skeleton variant="text" width={80} height={18} />
                 ) : (
                   <Typography
@@ -739,14 +876,25 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
 
       {/* Error */}
       {error && (
-        <Typography sx={{ fontSize: '12px', color: 'error.main', mb: '12px' }}>
-          {error}
-        </Typography>
+        <Typography sx={{ fontSize: '12px', color: 'error.main', mb: '12px' }}>{error}</Typography>
       )}
 
-      {/* Low-XLM warning — savings fees are paid in XLM, so you can't
-          deposit or (crucially) withdraw without a little XLM in your wallet. */}
-      {!needsSetup && lowXlmForSavings && (
+      {/* #67 XLM fee semaphore — ALWAYS visible once the account exists.
+          Savings fees are paid in XLM: green = the outflow guard's buffer is
+          intact, yellow = roughly one action left, red = actions are paused
+          (the disable logic keys on the same classifier, so the light and the
+          buttons can never disagree). */}
+      {!needsSetup && feeStatus === 'ok' && (
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: '12px', px: '2px' }}>
+          <Box
+            sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#1AB37D', flexShrink: 0 }}
+          />
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', lineHeight: 1.4 }}>
+            {t('XLM fee reserve healthy — deposits & withdrawals covered.')}
+          </Typography>
+        </Stack>
+      )}
+      {!needsSetup && (feeStatus === 'low' || feeStatus === 'blocked') && (
         <Box
           sx={(theme) => ({
             display: 'flex',
@@ -754,24 +902,63 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             p: '12px 14px',
             mb: '12px',
             borderRadius: '14px',
-            bgcolor: 'rgba(245,158,11,0.08)',
-            border: '1px solid rgba(245,158,11,0.28)',
-            ...theme.applyStyles('dark', { bgcolor: 'rgba(245,158,11,0.12)' }),
+            ...(feeStatus === 'blocked'
+              ? {
+                  bgcolor: 'rgba(220,38,38,0.06)',
+                  border: '1px solid rgba(220,38,38,0.24)',
+                  ...theme.applyStyles('dark', { bgcolor: 'rgba(220,38,38,0.1)' }),
+                }
+              : {
+                  bgcolor: 'rgba(245,158,11,0.08)',
+                  border: '1px solid rgba(245,158,11,0.28)',
+                  ...theme.applyStyles('dark', { bgcolor: 'rgba(245,158,11,0.12)' }),
+                }),
           })}
         >
-          <Iconify icon="eva:alert-triangle-fill" width={18} sx={{ color: '#B26A00', mt: '1px', flexShrink: 0 }} />
+          <Iconify
+            icon="eva:alert-triangle-fill"
+            width={18}
+            sx={{
+              color: feeStatus === 'blocked' ? '#B91C1C' : '#B26A00',
+              mt: '1px',
+              flexShrink: 0,
+            }}
+          />
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#7A4A00', lineHeight: 1.4 }}>
-              {mode === 'withdraw'
-                ? t('You need a little XLM to withdraw')
-                : t('You need a little XLM to deposit')}
+            <Typography
+              sx={{
+                fontSize: '13px',
+                fontWeight: 600,
+                color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
+                lineHeight: 1.4,
+              }}
+            >
+              {feeStatus === 'blocked'
+                ? mode === 'withdraw'
+                  ? t('You need a little XLM to withdraw')
+                  : t('You need a little XLM to deposit')
+                : t('XLM running low')}
             </Typography>
-            <Typography sx={{ fontSize: '12px', color: '#8A6A2E', lineHeight: 1.5, mt: '2px' }}>
-              {t('Savings network fees are paid in XLM. Add some XLM to your wallet to move money in or out of savings.')}
+            <Typography
+              sx={{
+                fontSize: '12px',
+                color: feeStatus === 'blocked' ? '#8A3A3A' : '#8A6A2E',
+                lineHeight: 1.5,
+                mt: '2px',
+              }}
+            >
+              {feeStatus === 'blocked'
+                ? t(
+                    'Savings network fees are paid in XLM. Deposits and withdrawals are paused until you add a little XLM.'
+                  )
+                : t(
+                    'About {{n}} XLM left for fees — roughly one more deposit or withdrawal. Top up a little to stay safe.',
+                    { n: feeXlmAvailable.toFixed(2) }
+                  )}
             </Typography>
-            <Stack direction="row" spacing={1} sx={{ mt: '10px' }}>
+            <Stack direction="row" spacing={1} sx={{ mt: '10px', flexWrap: 'wrap', rowGap: 1 }}>
               <Button
-                onClick={() => startFlow('buy', 'XLM')}
+                onClick={() => router.push('/swap?from=USDC')}
                 sx={{
                   bgcolor: '#0A0A0F',
                   color: '#fff',
@@ -784,21 +971,50 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   '&:hover': { bgcolor: '#1A1A28' },
                 }}
               >
-                {t('Buy XLM')}
+                {t('Swap USDC → XLM')}
               </Button>
               <Button
-                onClick={() => startFlow('receive', 'XLM')}
+                onClick={() => startFlow('buy', 'XLM')}
                 sx={{
                   bgcolor: 'transparent',
-                  color: '#7A4A00',
+                  color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
                   fontSize: '12px',
                   fontWeight: 600,
                   textTransform: 'none',
                   borderRadius: '10px',
                   px: '12px',
                   py: '6px',
-                  border: '1px solid rgba(245,158,11,0.4)',
-                  '&:hover': { bgcolor: 'rgba(245,158,11,0.12)' },
+                  border:
+                    feeStatus === 'blocked'
+                      ? '1px solid rgba(220,38,38,0.35)'
+                      : '1px solid rgba(245,158,11,0.4)',
+                  '&:hover': {
+                    bgcolor:
+                      feeStatus === 'blocked' ? 'rgba(220,38,38,0.08)' : 'rgba(245,158,11,0.12)',
+                  },
+                }}
+              >
+                {t('Buy XLM')}
+              </Button>
+              <Button
+                onClick={() => startFlow('receive', 'XLM')}
+                sx={{
+                  bgcolor: 'transparent',
+                  color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  borderRadius: '10px',
+                  px: '12px',
+                  py: '6px',
+                  border:
+                    feeStatus === 'blocked'
+                      ? '1px solid rgba(220,38,38,0.35)'
+                      : '1px solid rgba(245,158,11,0.4)',
+                  '&:hover': {
+                    bgcolor:
+                      feeStatus === 'blocked' ? 'rgba(220,38,38,0.08)' : 'rgba(245,158,11,0.12)',
+                  },
                 }}
               >
                 {t('Receive XLM')}
@@ -812,7 +1028,15 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       <WalletGate buttonText={t('Connect wallet to save')} fullWidth variant="contained">
         {needsSetup ? (
           <Stack spacing={1.25}>
-            <Typography sx={{ fontSize: '12.5px', color: 'text.secondary', textAlign: 'center', px: 1, lineHeight: 1.55 }}>
+            <Typography
+              sx={{
+                fontSize: '12.5px',
+                color: 'text.secondary',
+                textAlign: 'center',
+                px: 1,
+                lineHeight: 1.55,
+              }}
+            >
               {accountExists
                 ? t('One quick step left — add a USDC trustline to start earning.')
                 : t('Activate your account and add USDC to start earning yield.')}
@@ -1048,7 +1272,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         open={setupOpen}
         onClose={() => setSetupOpen(false)}
         walletAddress={wallet.address || ''}
-        accountExists={accountExists}
+        accountExists={accountExists === true}
         hasUsdcTrustline={hasUsdcTrustline}
         trustlineRequired={!!savingsUsdcIssuer}
         isCheckingAccount={isCheckingAccount}

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Guards That Said Yes</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Guards That Said Yes</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 7 (2026-08-27) &mdash; doc 95
+Wave 6: checks that were supposed to stop you, but waved you through whenever <em>they</em>
+broke.</p>
+
+<h2>1 &middot; What &ldquo;failing open&rdquo; means</h2>
+<p>A guard has two jobs: say <strong>no</strong> when something is wrong, and say <strong>yes</strong>
+when it is fine. There is a third case people forget &mdash; <strong>the guard cannot tell</strong>.
+A missing field, a request that timed out, a number it could not parse.</p>
+<p>Every guard in this wave answered that third case with <em>yes</em>. That is the dangerous
+default, because it makes the check invisible exactly when it matters: the guard is silent whether
+it approved you or simply gave up.</p>
+<div class="box"><div class="label">The rule applied throughout this wave</div>
+<strong>&ldquo;I don&rsquo;t know&rdquo; must never resolve to &ldquo;go ahead.&rdquo;</strong>
+Where we cannot establish that something is safe, we stop &mdash; and we say so <em>before</em>
+anything is signed, so stopping costs the user nothing but a retry.</div>
+
+<h2>2 &middot; The quote that outlived its transaction</h2>
+<p>This is the one that could actually lose coins, so it gets the most space.</p>
+<p>A LI.FI quote is not just a price. It comes with a <strong>built transaction</strong>. For
+Bitcoin that transaction pays into a Chainflip <em>deposit channel</em> &mdash; an address created
+for your swap, which <strong>expires</strong>. For routes on Ethereum the calldata usually carries
+its own deadline.</p>
+<p>The card fetched a quote when you typed an amount, and then kept it. Press Swap forty minutes
+later and we executed <em>that</em> transaction:</p>
+<pre>you open /swap, type 0.01 BTC        → quote fetched, deposit channel opened
+you get distracted for 40 minutes    → channel expires
+you press Swap                       → <span class="no">BTC sent to an address that routes nowhere</span></pre>
+<div class="box bad"><div class="label">Why the safety nets do not catch this one</div>
+There is no bridge to fail over to &mdash; the coins already left. There is no automatic refund
+&mdash; that only covers a CCTP swap whose USDC is sitting at your own Base address. The swap
+never reached a state our system tracks. This is precisely the failure that has to be prevented
+rather than recovered from.</div>
+
+<h3>The fix</h3>
+<p>The quote is now stamped with the moment it was built. On Swap:</p>
+<ul>
+  <li>Younger than <strong>10 minutes</strong> &rarr; execute, exactly as before. Normal use is
+      untouched.</li>
+  <li>Older &rarr; fetch a fresh quote first, then compare it with the number you were shown.</li>
+  <li>New price the same or <em>better</em>, or worse by under 1% &rarr; proceed silently. Asking
+      permission for ordinary movement just trains people to click through the dialog that exists
+      to protect them.</li>
+  <li>Worse by more than 1% &rarr; the card updates to the new number and stops. Pressing Swap
+      again is your consent. <strong>Not a dead end</strong> &mdash; the button is live and the
+      quote is fresh; it is one deliberate press.</li>
+</ul>
+<p>Both decisions are a pure, tested module (<code>lib/lifi/quote-freshness.ts</code>, 9 tests).
+One case is worth calling out:</p>
+<pre>export function isQuoteStale(ageMs: number): boolean {
+  if (!Number.isFinite(ageMs)) return true;   // unknown age = stale
+  return ageMs >= QUOTE_STALE_MS;
+}</pre>
+<p>If we do not know how old a quote is, it is stale. A missing timestamp must never read as
+&ldquo;just now&rdquo; &mdash; that would rebuild the original bug inside the fix for it.</p>
+
+<h2>3 &middot; Two signatures, then a guaranteed failure</h2>
+<p>A Stellar swap through Soroswap is a <strong>Soroban</strong> transaction. Soroban fees run
+<strong>0.05&ndash;0.5+ XLM</strong>. Ordinary Stellar payments cost <strong>0.0002 XLM</strong>
+&mdash; about two thousand times less &mdash; and that smaller number was the only one the app
+held back.</p>
+<p>Two ways it bit, both ending on-chain <em>after</em> you had signed (twice, on the two-signature
+path):</p>
+<table>
+  <tr><th>you did</th><th>what happened</th></tr>
+  <tr><td>Pressed MAX on an XLM &rarr; USDC swap</td>
+      <td>MAX offered everything above the account reserve and the 0.0002 fee. The swap then had
+      to pay a Soroban fee out of money it had just spent. <span class="no">Guaranteed
+      failure</span> &mdash; the card offered an amount the transaction could not afford.</td></tr>
+  <tr><td>Swapped USDC on an account whose XLM sat at the reserve</td>
+      <td>Plenty of USDC, no XLM to pay Soroban with. Nothing checked, so it built, prompted,
+      signed, and failed with <code>tx_insufficient_balance</code>.</td></tr>
+</table>
+<p>Now: MAX keeps the Soroban fee back, and a swap that cannot pay it is blocked at the button with
+<strong>&ldquo;Add XLM to cover the network fee&rdquo;</strong> &mdash; before any prompt. The
+check counts the XLM the swap itself sends, so it is right in both directions
+(<code>utils/stellar-reserve.ts</code>, 6 new tests).</p>
+
+<h2>4 &middot; A transaction that offers the network nothing</h2>
+<p>Ethereum transactions state what they will pay per unit of gas. We took the higher of LI.FI's
+quoted price and the live network price:</p>
+<pre>const maxFeePerGas = max(BigInt(tx.maxFeePerGas ?? '0'), liveFees?.maxFeePerGas ?? 0n);</pre>
+<p>If LI.FI omitted the field <em>and</em> the fee lookup failed, both sides are <code>0</code>
+&mdash; and we signed a transaction offering to pay nothing. That is worse than an error:</p>
+<div class="box warn"><div class="label">Why zero is the worst of the three outcomes</div>
+It does not fail. It does not succeed. It <strong>sits</strong> &mdash; no miner will include it,
+and no error is ever raised, so nothing in the app can react. The user watches a swap that is
+neither done nor broken. We now refuse to sign and say the network fee could not be determined and
+that nothing was signed.</div>
+
+<h2>5 &middot; The Bitcoin spend limit could be switched off by a bad quote</h2>
+<p>Wave 2 added a rule: a Bitcoin transaction may not spend materially more than the quote said.
+It took the limit as an optional argument, and the caller supplied it like this:</p>
+<pre>try { return BigInt(quote.action.fromAmount); }
+catch { return <span class="no">undefined</span>; }   // ← disables the entire check</pre>
+<p>So the one input capable of turning off the Bitcoin spend limit was a quote we could not parse.
+A guard whose off switch is &ldquo;something went wrong&rdquo; is not a guard. Both ends now refuse:
+the caller throws if the amount is unreadable or zero, and the signer itself refuses to sign
+without a limit to check against.</p>
+<div class="box"><div class="label">A related skip that is legitimate &mdash; and stays</div>
+The spend check is still skipped when not every input belongs to us: LI.FI may combine another
+party's UTXOs, and then &ldquo;inputs total minus what came back&rdquo; is not what left
+<em>your</em> wallet, so the arithmetic would be wrong rather than lenient. That path is covered
+by a different rule &mdash; the signer refuses to sign any input it cannot classify. Skipping a
+check that would compute the wrong answer is correct; skipping one because a parse failed is not.
+</div>
+
+<h2>6 &middot; Two smaller ones on the same theme</h2>
+<table>
+  <tr><th>guard</th><th>failed open because</th><th>now</th></tr>
+  <tr><td>Gas-shortfall check before an ETH swap</td>
+      <td>One failed balance read skipped the whole check, so a gas spike surfaced as the node's
+      raw &ldquo;insufficient funds&rdquo; dump <em>after</em> the passkey</td>
+      <td>Reads twice. The transport is already a fallback pool (Wave 4), so the retry usually
+      lands on a different provider</td></tr>
+  <tr><td>Amount rounding when asking for a quote</td>
+      <td>BigNumber rounds <strong>half up</strong> by default, so a typed amount could ask to swap
+      one unit more than the wallet holds &mdash; failing for a reason shown nowhere on screen</td>
+      <td>Rounds down. You can never be quoted more than you have</td></tr>
+</table>
+
+<h3>Typing the full balance walked past the fee reserve</h3>
+<p>MAX held back a little BTC/SOL for the network fee. <em>Typing</em> the same number did not
+&mdash; the balance check only asked &ldquo;is this more than your balance?&rdquo; So a typed full
+balance produced a swap with nothing left to pay the miner. There is now one expression for
+&ldquo;what you can actually spend&rdquo;, used by both the check and MAX, so the two cannot
+disagree.</p>
+
+<h2>7 &middot; A blip that asked for a passkey and built a second wallet</h2>
+<p>This one is not a swap bug and it is the one I would most want fixed.</p>
+<p><code>ensureChainAccount</code> is what adds a chain to your wallet. It began by asking
+&ldquo;what wallet does this user have?&rdquo; using the <em>best-effort</em> lookup &mdash; which
+returns <code>null</code> when the request fails. But down that function, <code>null</code> does
+not mean &ldquo;the lookup failed.&rdquo; It means <strong>&ldquo;this user has no wallet
+yet&rdquo;</strong>, and that branch registers a new passkey and creates a new sub-organisation.</p>
+<pre>lookup times out  →  null  →  "no wallet yet"  →  <span class="no">new passkey + new sub-org
+                                                    beside the one you already have</span></pre>
+<p>The strict variant of the same lookup exists precisely for this &mdash; it throws instead of
+guessing &mdash; and this call site now uses it. A dropped request becomes a failure you can
+retry, not a second wallet.</p>
+<div class="box good"><div class="label">Same shape as the last two waves</div>
+Wave 5: an unreadable amount must not become <code>NaN</code> in a money column. Wave 6: an
+unanswered lookup must not become &ldquo;this user has nothing.&rdquo; In both, the bug is a
+failure being <em>reformatted as data</em> instead of being reported.</div>
+
+<h2>8 &middot; Checked and deliberately left alone</h2>
+<p>Doc 95 also flagged the fee-pair route's 15-minute service window as able to broadcast an
+abandoned swap at a stale quote. I read it rather than patching it, and it does not need a change:</p>
+<ul>
+  <li>The route already refuses a pair with under 60 seconds of runway left.</li>
+  <li>More importantly, the built transaction carries a <strong>minimum output</strong>
+      (Soroswap's <code>otherAmountThreshold</code>). I confirmed the whole quote object &mdash;
+      threshold included &mdash; is what gets built into the XDR, rather than assuming it.</li>
+</ul>
+<p>So a late broadcast at a moved price <em>fails on-chain</em>; it does not fill you at a bad
+rate. The exposure is a failed transaction and its network fee, not your money at a bad price.
+Adding a shorter window would trade a rare wasted fee for more legitimate swaps refused, which is
+the worse deal. Recorded in doc 95 so nobody re-opens it.</p>
+
+<h2>9 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R54</span></td>
+      <td><strong>The headline.</strong> Enter a BTC (or ETH/SOL) swap amount so a quote appears.
+      Leave the tab open <strong>more than 10 minutes</strong>. Then press Swap.</td>
+      <td>A fresh quote is fetched before anything is signed. If the price barely moved it just
+      proceeds; if it moved more than 1% the card updates to the new number and waits for a second
+      press. It must <span class="no">never</span> execute the old quote.</td></tr>
+  <tr><td>2<br><span class="qa">QA R55</span></td>
+      <td>On an account with little XLM (under ~2 XLM), try a USDC &rarr; XLM swap. Then press MAX
+      on an XLM &rarr; USDC swap on a normal account.</td>
+      <td>The low-XLM account shows <strong>&ldquo;Add XLM to cover the network fee&rdquo;</strong>
+      and cannot be signed &mdash; no passkey, no on-chain failure. MAX offers 0.5 XLM less than
+      before, and that swap now succeeds instead of failing at submission.</td></tr>
+  <tr><td>3<br><span class="qa">QA R56</span></td>
+      <td>Type your <em>entire</em> BTC or SOL balance by hand (not MAX) and try to swap.</td>
+      <td>Blocked as insufficient, the same as MAX would have &mdash; the fee reserve applies to
+      typed amounts too. Previously this was accepted and failed later.</td></tr>
+  <tr><td>4<br><span class="qa">QA R57</span></td>
+      <td>Run one ordinary swap of each kind (Stellar, BTC, ETH, SOL) with everything working.</td>
+      <td>No behaviour change at all. Every fix here only fires when a guard cannot establish
+      safety &mdash; a normal swap must feel identical.</td></tr>
+  <tr><td>5<br><span class="qa">QA R58</span></td>
+      <td>Add a chain to your wallet (e.g. set up Bitcoin) with devtools throttling or briefly
+      blocking <code>/api/turnkey/wallet</code>.</td>
+      <td>A clear failure you can retry. It must <span class="no">never</span> prompt for a new
+      passkey and start creating a second wallet beside the one you already have.</td></tr>
+</table>
+
+<h2>10 &middot; Where this leaves the project</h2>
+<p>Wave 6 closes the last group with money at stake. What remains in doc 95 is <strong>Wave 7</strong>
+&mdash; copy collisions, where nothing is lost but the app tells you the wrong thing (the headline:
+&ldquo;not enough ETH for the fee&rdquo; being re-rendered as &ldquo;network didn&rsquo;t answer
+&mdash; try again&rdquo;, which advises a retry that cannot succeed). After that: merge to develop,
+run the staging QA sheet (R25&ndash;R58), then master.</p>
+
+<h2>11 &middot; Commit</h2>
+<p><code>fix(swap): guards must not wave you through when they cannot tell</code> (full message in
+chat). New tests: <code>lib/lifi/quote-freshness.test.ts</code> (9) and 6 added to
+<code>utils/stellar-reserve.test.ts</code>. Suite: <strong>423 passing, 49 suites</strong>; lint,
+prettier, tsc and build all clean.</p>
+
+</body>
+</html>

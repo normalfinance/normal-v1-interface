@@ -1,22 +1,14 @@
 import type { NextRequest } from 'next/server';
 
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { getClientIP } from '@/utils/http';
 import { rateLimiter } from '@/server/rateLimiter';
-import { getClientIP, getAccessToken } from '@/utils/http';
 import { getApiConfig, getRateLimitConfig } from '@/lib/edge-config';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { logWithConfig, createEdgeConfigHandler } from '@/lib/edge-config-middleware';
 
-async function sendHandler(req: NextRequest) {
+const sendHandler = withAuth(async (req: NextRequest, { user }) => {
   try {
-    // Authenticate
-    const token = getAccessToken(req);
-    const user = await getAuthenticatedUser(token);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Validate params
     const { walletAddress } = await req.json();
     if (!walletAddress) {
@@ -76,6 +68,6 @@ async function sendHandler(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 export const POST = createEdgeConfigHandler(sendHandler, 'send');

@@ -99,7 +99,7 @@ export default function BtcSweepPage() {
 
       const res = await fetch('/api/turnkey/broadcast-btc', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
         body: JSON.stringify({ signedTxHex: signedTx }),
       });
       const data = await res.json();
@@ -182,9 +182,7 @@ export default function BtcSweepPage() {
         </div>
       )}
 
-      {error && (
-        <div style={{ marginTop: 18, color: '#b91c1c', fontSize: 13 }}>{error}</div>
-      )}
+      {error && <div style={{ marginTop: 18, color: '#b91c1c', fontSize: 13 }}>{error}</div>}
     </div>
   );
 }

@@ -4,9 +4,15 @@ import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
-import { linkWallet } from '@/services/linked-wallets';
+import { usePersistStore } from '@normalfinance/state';
+import { shouldAdoptIntoSlot } from '@/lib/wallet-slot';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import {
+  linkWallet,
+  checkWalletLinkLimit,
+  describeRateLimitReset,
+} from '@/services/linked-wallets';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -61,19 +67,39 @@ export function ChainSetupDialog({
     setLoading(true);
     setError(null);
     try {
+      // Same pre-flight as the Normal-wallet dialog: only the stellar branch
+      // consumes a wallet-link slot, and discovering the limit AFTER
+      // ensureChainAccount would have already minted a passkey and a sub-org
+      // for a first-timer. A null answer never blocks — the link re-checks.
+      if (chain === 'stellar') {
+        const limit = await checkWalletLinkLimit();
+        if (limit && !limit.allowed) {
+          const wait = limit.reset ? describeRateLimitReset(limit.reset) : null;
+          throw new Error(
+            wait
+              ? t('You can only add 3 wallets per day. Try again in {{wait}}.', { wait })
+              : t('You can only add 3 wallets per day.')
+          );
+        }
+      }
       // Lazy provisioning — derives the chain account on the existing wallet,
       // or creates passkey + sub-org + single-chain wallet for first-timers.
       const result = await ensureChainAccount(chain, userId, userEmail);
-      // Stellar is the app's primary wallet: link it and connect it into the
-      // persist store (sets wallet.address) so the rest of the app recognises
-      // it — mirrors the onboarding wizard's create-wallet step. The other
+      // Stellar is the app's primary wallet: link it, and connect it into the
+      // persist store ONLY when nothing is connected (the signup/onboarding
+      // case — mirrors the wizard's create-wallet step). If an EXTERNAL
+      // wallet occupies the slot, the new Turnkey wallet is a COMPANION:
+      // linked and server-known, but the user's chosen wallet stays put
+      // (#32 chunk 1, invariant I1 — the slot is never stolen). The other
       // chains are read via useTurnkeyWallet, which the caller refetches.
       if (chain === 'stellar') {
         if (!result.stellarAddress) {
           throw new Error(t('Wallet creation did not return a Stellar address'));
         }
         await linkWallet(result.stellarAddress);
-        await connectWalletWithoutKeypair(result.stellarAddress);
+        if (shouldAdoptIntoSlot(usePersistStore.getState().wallet.address)) {
+          await connectWalletWithoutKeypair(result.stellarAddress);
+        }
       }
       onSuccess();
     } catch (e) {
@@ -91,9 +117,11 @@ export function ChainSetupDialog({
       fullWidth
       slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
     >
-      <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
+      <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+          <Typography
+            sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+          >
             {t('Set up your {{chain}} wallet', { chain: label })}
           </Typography>
           <Box
@@ -174,7 +202,14 @@ export function ChainSetupDialog({
               {loading ? t('Setting up…') : t('Set up {{chain}} wallet', { chain: label })}
             </Box>
 
-            <Box sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.4)', textAlign: 'center', lineHeight: 1.5 }}>
+            <Box
+              sx={{
+                fontSize: '11.5px',
+                color: 'rgba(10,10,15,0.4)',
+                textAlign: 'center',
+                lineHeight: 1.5,
+              }}
+            >
               {t('Secured by your device biometrics. No seed phrase required.')}
             </Box>
 

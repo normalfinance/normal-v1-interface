@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Run Explainer — One Transfer, One Share</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>One Transfer, One Share</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 4 (2026-08-27) — doc 95
+Wave 3: races where two things happen at once and money gets attributed to the wrong one.</p>
+
+<h2>1 · The headline bug — found in your own account</h2>
+
+<h3>What happened</h3>
+<p>Two BTC→USDC swaps were started 30 minutes apart. Both bridges delivered USDC to the
+<em>same</em> Base address, because that address is your wallet. Then:</p>
+<pre>row A (20:53)  quoted 15.45 USDC   →  its USDC arrived on Base
+row B (21:24)  quoted 15.17 USDC   →  its burn ran and took 15.59  ← row A's money
+row C (21:35)  quoted 16.75 USDC   →  its burn took 32.40           ← ~2 transfers' worth
+</pre>
+<p>Row A never burned anything and sits in <code>CREATED</code> to this day — permanently stuck,
+because the money it was waiting for had already been carried away under a different row's name.</p>
+
+<div class="box warn"><div class="label">Important: no money was lost</div>
+Every dollar reached your Stellar wallet — it was all your own money going to your own account.
+What broke was <em>attribution</em>: one transfer can never complete, and the Activity feed
+reports the wrong amounts (a row quoting 16.75 showing 32.40).</div>
+
+<h3>Why it happened</h3>
+<p>The burn and pivot steps both asked "how much USDC is at this address?" and moved
+<strong>all of it</strong>. That's correct when one swap is in flight and wrong the moment two
+are. Meanwhile the browser-side code had the <em>opposite</em> bug: it clamped to the quoted
+minimum exactly, so when a route delivered slightly more than quoted, the extra was stranded on
+Base forever.</p>
+
+<h3>The fix — one rule, shared by every leg</h3>
+<p>A new pure function decides how much a transfer may move:</p>
+<pre>take = min(what's actually there, what this row quoted + 5% slippage headroom)</pre>
+<ul>
+  <li>One swap in flight → it takes everything including positive slippage (fixes the stranding).</li>
+  <li>Two swaps in flight → each takes only its own share (fixes the sweeping).</li>
+  <li>Partial arrival → takes what's there.</li>
+  <li>A refund row carries no quote → sweeps everything, as refunds must.</li>
+</ul>
+<p>Used now by all four places that move USDC on Base: the server burn, the server pivot, the
+browser's inbound leg, and the recovery banner. Pinned by <strong>7 tests built from your real
+numbers</strong>, so the two opposite mistakes can't come back.</p>
+
+<h2>2 · A broadcast that succeeded must never be forgotten</h2>
+<p>The server signers used to: broadcast → wait for the receipt → <em>then</em> record the hash.
+If the wait failed (an RPC hiccup, or the serverless function hitting its time limit), a real
+on-chain transaction was thrown away — and the app then signed a <strong>second burn</strong>.
+Now the hash is written to the row the instant it is broadcast, before any waiting.</p>
+
+<h2>3 · Nonce races — the gap I had left open</h2>
+<p>Yesterday I fixed "nonce too low" in the browser signers. I did not port that fix to the
+<em>server</em> ones, so an autopilot leg still died if your tab broadcast something at the same
+moment. Fixed in both server signers — and because the autopilot signs without prompting you,
+those retries cost nothing.</p>
+<p>The same guard now covers the LI.FI Ethereum leg: its nonce is read, then gas checks and a
+10–30 second passkey happen, and anything else your wallet sends in that window claims the nonce
+first. It rebuilds and re-signs once (that one does cost a second prompt — unavoidable, since the
+signature covers the nonce).</p>
+
+<h2>4 · Bitcoin: don't report failure for a transaction that's live</h2>
+<p>If the broadcast request timed out or the response was lost, we reported failure — while the
+transaction was sitting in the mempool. The user would then re-sign, risking a double spend of the
+same coins. Now the transaction ID is computed locally before broadcasting, so on any failure we
+simply ask the network "is this already there?" and report success if it is.</p>
+
+<h2>5 · The double-funding cluster (the 2026-08-22 incident's leftovers)</h2>
+<p>When you fund a swap from Lobstr, a guard records "I already moved 100 USDC for this swap" so a
+retry can't move it twice. Two holes remained:</p>
+<table>
+  <tr><th>hole</th><th>consequence</th><th>fix</th></tr>
+  <tr><td>The guard was cleared by <em>any</em> swap finishing, on any engine</td>
+      <td>Fund from Lobstr → CCTP swap fails → do an unrelated Stellar swap → retry → <span class="no">money moves a second time</span></td>
+      <td>The guard now clears only when the amount itself changes — the real "different swap" signal</td></tr>
+  <tr><td>Verification asked "does the wallet now hold ≥ the amount?"</td>
+      <td>True on the first check whenever it already held enough — so a move could be marked verified before it landed</td>
+      <td>Reads the balance <em>before</em> sending and requires a rise of the amount</td></tr>
+</table>
+
+<h2>6 · Stellar relayer sequence collisions</h2>
+<p>Two different transfers minting at the same moment share one relayer key, and the loser fails
+with a sequence error. The row itself was already protected from double-minting, so the only thing
+missing was a retry: it now rebuilds with a fresh sequence and tries up to three times.</p>
+
+<h2>7 · How to test</h2>
+
+<div class="box good"><div class="label">You do NOT need the cron for this — on localhost or anywhere</div>
+Leave the <strong>/swap page open</strong>. The recovery banner above the swap card refreshes
+every 30 seconds and pokes each in-flight transfer, which advances it server-side (attestation →
+mint). That is what carries a bridge forward while the popup is closed. The cron is the safety net
+for when <em>nobody</em> has the app open at all.</div>
+
+<h3>Test A — the headline: two swaps must not eat each other <span class="qa">(QA R47)</span></h3>
+<p>Any pair of swaps that puts USDC on your Base address twice will do. Two variants:</p>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1</td>
+      <td><strong>Outbound variant.</strong> Swap 15 USDC → ETH. After signing, <em>close the
+      popup</em>. Leave the /swap page open and watch the banner appear — it advances the bridge
+      on its own (~1–2 min to mint). Then swap 15 USDC → BTC and let that one finish in the
+      popup. Finally click <strong>Finish transfer</strong> on the ETH row in the banner.</td>
+      <td>The BTC swap delivers about <strong>$15</strong> of BTC — not ~$30. Then the ETH row's
+      Finish still works and delivers ETH.
+      <br><br><span class="no">The old bug's fingerprint:</span> the BTC swap delivering roughly
+      double, and Finish on the ETH row then failing with <em>"No USDC found on Base"</em> —
+      because its money had been swallowed.</td></tr>
+  <tr><td>2</td>
+      <td><strong>Inbound variant</strong> (closer to the original incident, no Finish click
+      needed): start BTC → USDC, then a few minutes later ETH → USDC, so both bridges deliver
+      USDC to Base around the same time.</td>
+      <td>Both complete. Neither is left stuck in <code>CREATED</code> with nothing to burn.</td></tr>
+</table>
+<p><strong>Expect amounts to be approximate.</strong> The row that goes second takes its own
+share plus 5% slippage headroom, so the first one delivers slightly under its quote (e.g. ~14.25
+instead of ~15). Nothing is lost and nothing is orphaned — that is the trade-off on purpose.</p>
+
+<h3>Test B — the funding guard <span class="qa">(QA R48)</span></h3>
+<p>Fund a CCTP swap from Lobstr, let it fail, then run <em>any</em> unrelated swap (a Stellar
+USDC↔XLM one is quickest), then retry the first swap. The USDC must <strong>not</strong> leave
+Lobstr a second time.</p>
+
+<h3>Test C — slippage and nonces <span class="qa">(QA R49)</span></h3>
+<p>On any completed swap, compare the delivered amount to the quote: it should be a little
+<em>above</em> the quoted minimum, not exactly equal (positive slippage is now bridged instead of
+stranded on Base). In the server logs during an autopilot leg there should be no "nonce too low"
+failure — a race shows up as a silent rebuild.</p>
+
+<h3>If something looks wrong</h3>
+<p>The database is the source of truth: send the transfer rows and I will read the on-chain
+reality against them, the way the original bug was found.</p>
+
+<h2>8 · Commit</h2>
+<p><code>fix(cctp): move only this transfer's share, and never lose a broadcast</code> (full
+message in chat). New tests: <code>lib/cctp/amounts.test.ts</code> (7, built from the live
+incident's numbers).</p>
+
+</body>
+</html>

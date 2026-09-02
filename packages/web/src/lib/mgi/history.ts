@@ -19,7 +19,15 @@ export async function getTransaction(id: string, authToken?: string) {
     credentials: 'include',
     cache: 'no-store',
   });
-  if (!r.ok) throw new Error(`history get failed: ${r.status}`);
+  if (!r.ok) {
+    if (r.status === 401) {
+      // SEP-10 token expired — drop it so the NEXT attempt re-authenticates
+      // instead of failing every poll forever (doc 90 W2).
+      const { clearMgiToken } = await import('./client');
+      clearMgiToken();
+    }
+    throw new Error(`history get failed: ${r.status}`);
+  }
   const data = (await r.json()) as Sep24SingleResponse;
   return data.transaction;
 }

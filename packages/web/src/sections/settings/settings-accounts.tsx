@@ -5,8 +5,14 @@ import type { LinkedWallet } from '@/services/linked-wallets';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useState, useEffect } from 'react';
-import { format } from '@normalfinance/utils';
+import { format, logger } from '@normalfinance/utils';
+import { usePersistStore } from '@normalfinance/state';
+import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
+import { forgetExternalWallet } from '@/lib/wallet-reconnect-memo';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { getTurnkeyWalletInfo, type TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
+import { forgetWalletLink, useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -22,6 +28,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { useSnackbar } from '@/components/template/snackbar';
+import AutopilotCard from '@/components/settings/autopilot-card';
+import WalletExportDialog from '@/components/_common/wallet-export-dialog';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import AddUsdcTrustlineButton from '@/components/settings/add-usdc-trustline-button';
 
@@ -31,6 +39,9 @@ export function SettingsAccounts() {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const config = useStellarConfig();
+  const persist = usePersistStore();
+  const { disconnectWallet: kitDisconnect } = useStellarWalletsKit();
+  const { connectWalletWithoutKeypair } = useNormalWallet();
   const [wallets, setWallets] = useState<LinkedWallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingWallet, setEditingWallet] = useState<string | null>(null);
@@ -41,6 +52,29 @@ export function SettingsAccounts() {
   const [isUnlinking, setIsUnlinking] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  // #32 chunk 2: the Turnkey (Normal) wallet's Stellar address — its card is
+  // labeled and cannot be unlinked (it holds the user's funds; the server
+  // refuses too, this just keeps the button honest).
+  const [turnkeyStellar, setTurnkeyStellar] = useState<string | null>(null);
+  // Niko 2026-08-21: the Normal wallet card lists EVERY chain address it
+  // holds, labeled by chain — not just the Stellar one.
+  const [turnkeyInfo, setTurnkeyInfo] = useState<TurnkeyWalletInfo | null>(null);
+  // doc 83 phase 2 — every Turnkey WALLET (seed) this account owns. Normally
+  // there is exactly one and nothing extra renders; a second appears only when
+  // someone imported a phrase, which is rare and legacy. Each seed is its own
+  // recovery phrase controlling its own addresses, so each gets its own export
+  // button rather than one button that guesses.
+  const [seeds, setSeeds] = useState<
+    {
+      walletId: string;
+      label: string;
+      origin: string;
+      isPrimary: boolean;
+      addresses: Record<string, string | null>;
+    }[]
+  >([]);
+  const [exportWalletId, setExportWalletId] = useState<string | undefined>(undefined);
 
   const loadWallets = async () => {
     try {
@@ -56,6 +90,28 @@ export function SettingsAccounts() {
 
   useEffect(() => {
     loadWallets();
+    getTurnkeyWalletInfo()
+      .then((info) => {
+        setTurnkeyStellar(info?.stellarAddress ?? null);
+        setTurnkeyInfo(info);
+      })
+      .catch(() => {});
+    (async () => {
+      try {
+        const { buildAuthHeaders } = await import('@/utils/http');
+        const res = await fetch('/api/turnkey/wallets', {
+          headers: await buildAuthHeaders(),
+          credentials: 'include',
+        });
+        const data = await res.json();
+        setSeeds(Array.isArray(data?.wallets) ? data.wallets : []);
+      } catch {
+        /* the single-wallet view below is unaffected */
+      }
+    })();
+    // Mount-only load; loadWallets is recreated per render — listing it would refire
+    // the fetch on every render. eslint-disable documents the intent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleEditName = (wallet: LinkedWallet) => {
@@ -92,7 +148,39 @@ export function SettingsAccounts() {
 
     try {
       setIsUnlinking(true);
+      // ORDER IS THE FIX (live 2026-08-22: disconnect → logout → login and
+      // Lobstr was BACK). Unlinking first left the slot holding the external
+      // wallet during an await, and the kit's restore effect fires in that
+      // window: it re-writes the reconnect memo AND calls ensureWalletLinked,
+      // which re-CREATES the linked_wallets row that was just deleted (worse,
+      // forgetWalletLink had cleared the guard that would have stopped it).
+      // Disconnecting locally FIRST makes every restore path inert — they all
+      // require an external wallet in the slot — so nothing can undo the
+      // unlink behind our back.
+      const wasConnected = walletToUnlink === persist.wallet.address;
+      if (wasConnected) {
+        try {
+          await kitDisconnect();
+        } catch {
+          /* kit may already be disconnected — the slot clear below is what matters */
+        }
+        persist.disconnectWallet();
+        forgetWalletLink(walletToUnlink);
+        forgetExternalWallet(); // explicit disconnect: never re-attach at login
+      }
+
       await unlinkWallet(walletToUnlink);
+
+      if (wasConnected && turnkeyStellar) {
+        // Fall back to the Normal wallet: an empty slot leaves savings/swaps/
+        // sends with no Stellar wallet (savings read $0.00). The self-heal
+        // deliberately stays out here (I2/I7), so the end state is explicit.
+        try {
+          await connectWalletWithoutKeypair(turnkeyStellar);
+        } catch (e) {
+          logger.warn('[SETTINGS] Could not fall back to the Normal wallet:', e);
+        }
+      }
       enqueueSnackbar(t('Account unlinked successfully'), { variant: 'success' });
       setUnlinkDialogOpen(false);
       setWalletToUnlink(null);
@@ -122,7 +210,12 @@ export function SettingsAccounts() {
         {[1, 2].map((index) => (
           <Box
             key={index}
-            sx={{ p: '22px', borderRadius: '22px', border: '1px solid rgba(10,10,15,0.08)', bgcolor: '#FFFFFF' }}
+            sx={{
+              p: '22px',
+              borderRadius: '22px',
+              border: '1px solid rgba(10,10,15,0.08)',
+              bgcolor: '#FFFFFF',
+            }}
           >
             <Skeleton variant="text" width={160} height={24} sx={{ mb: '16px' }} />
             <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mb: '16px' }} />
@@ -189,7 +282,11 @@ export function SettingsAccounts() {
             transition: 'border-color 150ms ease',
           }}
         >
-          <Iconify icon="eva:search-fill" width={17} sx={{ color: 'rgba(10,10,15,0.3)', flexShrink: 0 }} />
+          <Iconify
+            icon="eva:search-fill"
+            width={17}
+            sx={{ color: 'rgba(10,10,15,0.3)', flexShrink: 0 }}
+          />
           <Box
             component="input"
             type="text"
@@ -283,25 +380,39 @@ export function SettingsAccounts() {
                 onClick={() => handleSaveName(wallet.walletAddress)}
                 disabled={isSavingName}
                 sx={{
-                  width: 32, height: 32, borderRadius: '8px', border: 'none',
-                  bgcolor: '#0A0A0F', color: '#FFFFFF',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 32,
+                  height: 32,
+                  borderRadius: '8px',
+                  border: 'none',
+                  bgcolor: '#0A0A0F',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   cursor: isSavingName ? 'not-allowed' : 'pointer',
                   opacity: isSavingName ? 0.5 : 1,
                 }}
               >
-                {isSavingName
-                  ? <CircularProgress size={14} color="inherit" />
-                  : <Iconify icon="solar:check-circle-bold" width={16} />}
+                {isSavingName ? (
+                  <CircularProgress size={14} color="inherit" />
+                ) : (
+                  <Iconify icon="solar:check-circle-bold" width={16} />
+                )}
               </Box>
               <Box
                 component="button"
                 onClick={handleCancelEdit}
                 disabled={isSavingName}
                 sx={{
-                  width: 32, height: 32, borderRadius: '8px', border: 'none',
-                  bgcolor: 'rgba(10,10,15,0.06)', color: '#0A0A0F',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 32,
+                  height: 32,
+                  borderRadius: '8px',
+                  border: 'none',
+                  bgcolor: 'rgba(10,10,15,0.06)',
+                  color: '#0A0A0F',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   cursor: isSavingName ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -310,16 +421,48 @@ export function SettingsAccounts() {
             </Stack>
           ) : (
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: '16px' }}>
-              <Typography sx={{ fontSize: '15px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em', flex: 1 }}>
-                {wallet.walletName || t('Unnamed Account')}
+              <Typography
+                sx={{
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  color: '#0A0A0F',
+                  letterSpacing: '-0.01em',
+                  flex: 1,
+                }}
+              >
+                {wallet.walletAddress === turnkeyStellar
+                  ? wallet.walletName || t('Normal wallet')
+                  : wallet.walletName || t('Unnamed Account')}
               </Typography>
+              {wallet.walletAddress === turnkeyStellar && (
+                <Box
+                  sx={{
+                    px: '8px',
+                    py: '2px',
+                    borderRadius: '999px',
+                    bgcolor: 'rgba(10,10,15,0.06)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: '#2A2A33',
+                    flexShrink: 0,
+                  }}
+                >
+                  {t('Normal wallet')}
+                </Box>
+              )}
               <Box
                 component="button"
                 onClick={() => handleEditName(wallet)}
                 sx={{
-                  width: 28, height: 28, borderRadius: '8px', border: 'none',
-                  bgcolor: 'rgba(10,10,15,0.06)', color: '#0A0A0F',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: '8px',
+                  border: 'none',
+                  bgcolor: 'rgba(10,10,15,0.06)',
+                  color: '#0A0A0F',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   cursor: 'pointer',
                   '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
                 }}
@@ -333,20 +476,81 @@ export function SettingsAccounts() {
 
           {/* Details */}
           <Stack spacing={0} sx={{ mb: '16px' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: '10px', borderBottom: '1px solid rgba(10,10,15,0.06)' }}>
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-                {t('Account ID')}
-              </Typography>
-              <Stack direction="row" spacing={0.5} alignItems="center">
-                <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace' }}>
-                  {format.fTruncate(wallet.walletAddress, 20)}
+            {wallet.walletAddress === turnkeyStellar && turnkeyInfo ? (
+              // The Normal wallet holds one address per chain — list them all,
+              // each labeled by its chain (registry-driven: a new chain shows
+              // up here automatically).
+              CHAIN_IDS.filter((id) => !!turnkeyInfo[CHAINS[id].addressField]).map((id) => (
+                <Box
+                  key={id}
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    py: '10px',
+                    borderBottom: '1px solid rgba(10,10,15,0.06)',
+                  }}
+                >
+                  <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                    {t('{{chain}} address', { chain: CHAINS[id].name })}
+                  </Typography>
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Typography
+                      sx={{
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: '#0A0A0F',
+                        fontFamily: '"Geist Mono", "Courier New", monospace',
+                      }}
+                    >
+                      {format.fTruncate(turnkeyInfo[CHAINS[id].addressField]!, 20)}
+                    </Typography>
+                    <CopyIconButton
+                      value={turnkeyInfo[CHAINS[id].addressField]!}
+                      alert={t('Address copied')}
+                    />
+                  </Stack>
+                </Box>
+              ))
+            ) : (
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: '10px',
+                  borderBottom: '1px solid rgba(10,10,15,0.06)',
+                }}
+              >
+                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                  {t('Account ID')}
                 </Typography>
-                <CopyIconButton value={wallet.walletAddress} alert={t('ID copied')} />
-              </Stack>
-            </Box>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <Typography
+                    sx={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: '#0A0A0F',
+                      fontFamily: '"Geist Mono", "Courier New", monospace',
+                    }}
+                  >
+                    {format.fTruncate(wallet.walletAddress, 20)}
+                  </Typography>
+                  <CopyIconButton value={wallet.walletAddress} alert={t('ID copied')} />
+                </Stack>
+              </Box>
+            )}
 
             {wallet.lastUsedAt && (
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: '10px', borderBottom: '1px solid rgba(10,10,15,0.06)' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: '10px',
+                  borderBottom: '1px solid rgba(10,10,15,0.06)',
+                }}
+              >
                 <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
                   {t('Last Used')}
                 </Typography>
@@ -356,6 +560,49 @@ export function SettingsAccounts() {
               </Box>
             )}
           </Stack>
+
+          {/* #33: automatic swap completion (autopilot) */}
+          <AutopilotCard />
+
+          {/* Recovery-phrase export (doc 79) — Normal wallet only; external
+              wallets keep their keys in their own app, nothing to export. */}
+          {wallet.walletAddress === turnkeyStellar && (
+            <Box
+              component="button"
+              onClick={() => setExportOpen(true)}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                mb: '16px',
+                px: '14px',
+                py: '11px',
+                borderRadius: '12px',
+                border: '1px solid rgba(10,10,15,0.12)',
+                bgcolor: 'transparent',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                textAlign: 'left',
+                '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' },
+              }}
+            >
+              <Iconify icon="solar:key-bold" width={18} sx={{ color: '#0A0A0F' }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F' }}>
+                  {t('Export recovery phrase')}
+                </Typography>
+                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                  {t('One phrase backs up all four addresses above — restores in any wallet app')}
+                </Typography>
+              </Box>
+              <Iconify
+                icon="eva:chevron-right-fill"
+                width={18}
+                sx={{ color: 'rgba(10,10,15,0.35)' }}
+              />
+            </Box>
+          )}
 
           {/* Trustline buttons */}
           <Stack spacing={1} sx={{ mb: '16px' }}>
@@ -382,31 +629,39 @@ export function SettingsAccounts() {
             )}
           </Stack>
 
-          {/* Disconnect */}
-          <Box
-            component="button"
-            onClick={() => handleUnlinkClick(wallet.walletAddress)}
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              px: '12px',
-              py: '8px',
-              borderRadius: '10px',
-              border: '1px solid rgba(239,68,68,0.2)',
-              bgcolor: 'rgba(239,68,68,0.04)',
-              color: '#DC2626',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              transition: 'background 150ms ease',
-              '&:hover': { bgcolor: 'rgba(239,68,68,0.08)' },
-            }}
-          >
-            <Iconify icon="solar:trash-bin-trash-bold" width={15} />
-            {t('Disconnect Account')}
-          </Box>
+          {/* Disconnect — never offered for the Normal wallet: it holds the
+              user's funds and backs the ownership checks swap logging uses
+              (the server refuses the unlink as well). */}
+          {wallet.walletAddress === turnkeyStellar ? (
+            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.5 }}>
+              {t('This is your Normal wallet — it stays linked to your account.')}
+            </Typography>
+          ) : (
+            <Box
+              component="button"
+              onClick={() => handleUnlinkClick(wallet.walletAddress)}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                px: '12px',
+                py: '8px',
+                borderRadius: '10px',
+                border: '1px solid rgba(239,68,68,0.2)',
+                bgcolor: 'rgba(239,68,68,0.04)',
+                color: '#DC2626',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'background 150ms ease',
+                '&:hover': { bgcolor: 'rgba(239,68,68,0.08)' },
+              }}
+            >
+              <Iconify icon="solar:trash-bin-trash-bold" width={15} />
+              {t('Disconnect Account')}
+            </Box>
+          )}
         </Box>
       ))}
 
@@ -420,7 +675,9 @@ export function SettingsAccounts() {
       >
         <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}>
+            <Typography
+              sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+            >
               {t('Disconnect Account')}
             </Typography>
             <Box
@@ -428,9 +685,15 @@ export function SettingsAccounts() {
               onClick={() => setUnlinkDialogOpen(false)}
               disabled={isUnlinking}
               sx={{
-                width: 28, height: 28, borderRadius: '8px', border: 'none',
-                bgcolor: 'rgba(10,10,15,0.06)', color: '#0A0A0F',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 28,
+                height: 28,
+                borderRadius: '8px',
+                border: 'none',
+                bgcolor: 'rgba(10,10,15,0.06)',
+                color: '#0A0A0F',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 cursor: isUnlinking ? 'not-allowed' : 'pointer',
                 '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
               }}
@@ -451,7 +714,11 @@ export function SettingsAccounts() {
               border: '1px solid rgba(239,68,68,0.15)',
             }}
           >
-            <Iconify icon="eva:alert-triangle-outline" width={16} sx={{ color: '#DC2626', flexShrink: 0, mt: '1px' }} />
+            <Iconify
+              icon="eva:alert-triangle-outline"
+              width={16}
+              sx={{ color: '#DC2626', flexShrink: 0, mt: '1px' }}
+            />
             <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
               {t('Are you sure you want to disconnect this account? This action cannot be undone.')}
             </Typography>
@@ -464,9 +731,16 @@ export function SettingsAccounts() {
             onClick={() => setUnlinkDialogOpen(false)}
             disabled={isUnlinking}
             sx={{
-              flex: 1, py: '12px', borderRadius: '12px', border: '1px solid rgba(10,10,15,0.12)',
-              bgcolor: '#FFFFFF', color: '#0A0A0F', fontSize: '14px', fontWeight: 600,
-              cursor: isUnlinking ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+              flex: 1,
+              py: '12px',
+              borderRadius: '12px',
+              border: '1px solid rgba(10,10,15,0.12)',
+              bgcolor: '#FFFFFF',
+              color: '#0A0A0F',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: isUnlinking ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
               opacity: isUnlinking ? 0.5 : 1,
               '&:hover': { bgcolor: '#F4F4F7' },
             }}
@@ -477,11 +751,22 @@ export function SettingsAccounts() {
             variant="contained"
             onClick={handleUnlinkConfirm}
             disabled={isUnlinking}
-            startIcon={isUnlinking ? <CircularProgress size={15} color="inherit" /> : <Iconify icon="solar:trash-bin-trash-bold" width={15} />}
+            startIcon={
+              isUnlinking ? (
+                <CircularProgress size={15} color="inherit" />
+              ) : (
+                <Iconify icon="solar:trash-bin-trash-bold" width={15} />
+              )
+            }
             sx={{
-              flex: 1, py: '12px', borderRadius: '12px',
-              bgcolor: '#DC2626', fontWeight: 700, fontSize: '14px',
-              textTransform: 'none', letterSpacing: '-0.01em',
+              flex: 1,
+              py: '12px',
+              borderRadius: '12px',
+              bgcolor: '#DC2626',
+              fontWeight: 700,
+              fontSize: '14px',
+              textTransform: 'none',
+              letterSpacing: '-0.01em',
               '&:hover': { bgcolor: '#B91C1C' },
               '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
             }}
@@ -496,6 +781,89 @@ export function SettingsAccounts() {
         onClose={() => setShowImportNormalWallet(false)}
         onSuccess={handleImportSuccess}
         showLinkedWallets={false}
+      />
+
+      {/* Only when a second wallet exists. One wallet renders exactly as before,
+          so the common path is untouched. */}
+      {seeds.length > 1 && (
+        <Box
+          sx={{
+            border: '1px solid rgba(10,10,15,0.08)',
+            borderRadius: '16px',
+            p: '18px',
+            mt: '16px',
+          }}
+        >
+          <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#0A0A0F', mb: '4px' }}>
+            {t('Your Normal wallets')}
+          </Typography>
+          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.55)', mb: '14px' }}>
+            {t(
+              'Each of these is a separate recovery phrase with its own addresses. Save the phrase for every wallet you hold funds on.'
+            )}
+          </Typography>
+
+          <Stack spacing={2}>
+            {seeds.map((w) => (
+              <Box key={w.walletId}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F' }}>
+                    {w.label}
+                  </Typography>
+                  <Typography
+                    onClick={() => {
+                      setExportWalletId(w.walletId);
+                      setExportOpen(true);
+                    }}
+                    sx={{
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#0A0A0F',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    {t('Export recovery phrase')}
+                  </Typography>
+                </Stack>
+                {CHAIN_IDS.filter((id) => !!w.addresses[id]).map((id) => (
+                  <Stack
+                    key={id}
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    sx={{ py: '6px' }}
+                  >
+                    <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                      {CHAINS[id].name}
+                    </Typography>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Typography
+                        sx={{
+                          fontSize: '11.5px',
+                          color: 'rgba(10,10,15,0.7)',
+                          fontFamily: '"Geist Mono", "Courier New", monospace',
+                        }}
+                      >
+                        {format.fTruncate(w.addresses[id]!, 20)}
+                      </Typography>
+                      <CopyIconButton value={w.addresses[id]!} alert={t('Address copied')} />
+                    </Stack>
+                  </Stack>
+                ))}
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      <WalletExportDialog
+        open={exportOpen}
+        preselectWalletId={exportWalletId}
+        onClose={() => {
+          setExportOpen(false);
+          setExportWalletId(undefined);
+        }}
       />
     </Stack>
   );

@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>43-work-so-far-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>43 — Everything done so far, explained</h1>
+<p>For a developer new to this work. Covers what was changed, why, and the</p>
+<p>reasoning behind the decisions.</p>
+<p><strong>This is the entry point for the staging push.</strong> Read it first, then go</p>
+<p>deeper only where you need to:</p>
+<table>
+<tr><th>Document</th><th>When to read it</th></tr>
+<tr><td><code>40-savings-explained.md</code></td><td>savings in depth (section 3 here summarises it)</td></tr>
+<tr><td><code>45-btc-swap-explained.md</code></td><td>the Bitcoin signing fix, from first principles</td></tr>
+<tr><td><code>46-external-wallets.md</code></td><td>external wallets, the full capability matrix</td></tr>
+<tr><td><code>49-sends-explained.md</code></td><td>the sends work: pending rows + the exchange-memo guard</td></tr>
+<tr><td><code>51-ci-quality-explained.md</code></td><td>CI, withAuth, lint zero, the merge-commit story</td></tr>
+<tr><td><code>20-findings.md</code></td><td>the ranked register, every finding with severity</td></tr>
+<tr><td><code>30-roadmap.md</code></td><td>what is scheduled next, and why in that order</td></tr>
+<tr><td><code>42-tester-guide.html</code></td><td>the tester-facing version, printable to PDF</td></tr>
+</table>
+<p>Everything in sections 1 to 8 below is in the staging push.</p>
+<hr />
+<h2>The starting point</h2>
+<p>The app worked, but it wasn't built to work <em>cheaply or reliably at volume</em>. An</p>
+<p>audit mapped the system and produced a ranked list of findings. The theme:</p>
+<p><strong>every user's browser fetched its own copy of everything</strong>, so cost and load</p>
+<p>grew in step with the user count.</p>
+<p>Work has run in blocks, each shipped and tested before the next.</p>
+<hr />
+<h2>1. Caching — moving fetches onto our server</h2>
+<h3>The pattern</h3>
+<p>Before: browser → paid provider, once per user, per tab.</p>
+<p>After: browser → our server → provider <strong>once</strong>, result shared.</p>
+<p>That difference is the whole point. A limit enforced in the browser is a</p>
+<p><em>request</em>; a cache on the server is a <em>ceiling</em>. Ten tabs, three devices and an</p>
+<p>anonymous caller all share one cached answer.</p>
+<h3>What was cached, and the TTLs</h3>
+<table>
+<tr><th>Data</th><th>TTL</th><th>Why that number</th></tr>
+<tr><td>Solana / Ethereum activity</td><td>300s</td><td>metered API keys; cost dominates</td></tr>
+<tr><td>Stellar activity</td><td>60s</td><td>free provider; the win is timeouts + sharing</td></tr>
+<tr><td>Bitcoin activity</td><td><strong>45s</strong></td><td>carries <em>pending</em> transactions — a longer cache would hide an incoming payment</td></tr>
+<tr><td>Savings vault info</td><td>120s</td><td>APY drifts slowly, and this is <strong>one entry for all users</strong></td></tr>
+<tr><td>Savings position</td><td>30s</td><td>value moves with yield; it's someone's balance</td></tr>
+<tr><td>Savings history</td><td>300s</td><td>append-only — only changes when the user transacts</td></tr>
+</table>
+<p><strong>The principle: cache each thing for as long as it actually stays true.</strong> The</p>
+<p>Bitcoin TTL is the clearest example — copying Solana's 300s would have been</p>
+<p>"consistent" and wrong.</p>
+<h3>The freshness escape hatch</h3>
+<p>A cache makes data stale exactly when it matters most: right after the user</p>
+<p>acts. So every cached route accepts <code>?refresh=1</code>, used only after a send, swap</p>
+<p>or deposit.</p>
+<p>That bypass is <strong>floored</strong> — one forced refresh per address per 30s. These</p>
+<p>routes are public, so an unbounded bypass would be a way for anyone to make our</p>
+<p>server hammer a paid provider on demand. *Whenever you add a way around a</p>
+<p>limit, ask what happens if someone loops it.*</p>
+<h3>Two opposite failure rules</h3>
+<p>When the provider fails:</p>
+<ul>
+<li><strong>Vault info</strong> serves the last known copy. An APY two minutes old beats a</li>
+</ul>
+<p>  broken card.</p>
+<ul>
+<li><strong>A user's balance</strong> never serves a stale copy. An old number is a false</li>
+</ul>
+<p>  statement about someone's money. The UI shows a skeleton and retries.</p>
+<p>Same system, opposite decisions, because the cost of being wrong differs.</p>
+<h3>Rate limiting, and what we chose not to do</h3>
+<p>DeFindex limits <em>per second</em>. A cold savings load fired ~5 calls at once, so we</p>
+<p>tripped it every time. Fixed by honouring their <code>retryAfter</code> with **exactly one</p>
+<p>retry**, and by caching the paginated history separately.</p>
+<p>Three constraints on that retry, each deliberate:</p>
+<ul>
+<li><strong>only 429s</strong> — retrying other errors doubles our traffic during their outage;</li>
+<li><strong>exactly once, never a loop</strong> — a retry loop under rate limiting is how a</li>
+</ul>
+<p>  throttle becomes an outage;</p>
+<ul>
+<li><strong>their delay, capped</strong> — honour their number, but bounded.</li>
+</ul>
+<p>We rejected sequencing the calls: it also stays under the limit, while making</p>
+<p>every cold load slower for everyone to avoid an occasional failure.</p>
+<p><strong>Result:</strong> no 429s; the position route went 8112ms → 146ms warm.</p>
+<hr />
+<h2>2. Loading — why things appeared in stages</h2>
+<p>Five components had the same defect: **a loading flag that covered some of the</p>
+<p>component's data sources but not all of them.** They stopped waiting once <em>any</em></p>
+<p>data arrived, so the rest dropped in seconds later.</p>
+<p>The worst example: the activity feed merges eight sources and reported only one</p>
+<p>of them as loading.</p>
+<p>The fix everywhere: wait for <strong>every</strong> source — but <strong>only on the first paint</strong>.</p>
+<p>Once real data has rendered, a background refresh must never flash a skeleton</p>
+<p>back over it. A skeleton means "I have nothing yet", never "I'm refreshing".</p>
+<p>One structural cause sat underneath: **the portfolio page read balances from a</p>
+<p>different source than the drawer and home hero.** Unified onto one. Two sources</p>
+<p>for one number is why several of these bugs existed at all.</p>
+<hr />
+<h2>3. Correctness bugs found along the way</h2>
+<h3>Optimistic updates computed from live state</h3>
+<p>Three separate bugs, one root cause. An optimistic update (showing a change</p>
+<p>before the blockchain confirms) was computed from a value that a background</p>
+<p>refresh could change underneath it, so the change got applied twice:</p>
+<ul>
+<li>the deposit card's counter was never reset → subtracted the deposit twice;</li>
+<li>deposit and withdraw read the position <em>at the end</em> of the flow → 20 → 15 →</li>
+</ul>
+<p>  <strong>10</strong> → 15 on a withdrawal.</p>
+<p><strong>Fix: snapshot before the operation, write an absolute result.</strong> Running it</p>
+<p>twice now produces the same answer as running it once.</p>
+<h3>A deposit displayed as earnings</h3>
+<p><code>earnings = currentValue − totalDeposited</code>, and those come from different</p>
+<p>sources. A guard existed for a lagging deposits figure, using a threshold:</p>
+<p><code>drop / previousTotal &lt; 0.2</code>. A 4.24 deposit into a 10.67 position was a 28%</p>
+<p>gap — over the cutoff — so the guard missed and the deposit showed as profit.</p>
+<p><strong>Fix: replace the arbitrary percentage with the invariant.</strong> Deposits net of</p>
+<p>withdrawals can only fall if the user withdrew, and a withdrawal also lowers</p>
+<p>current value. So <em>deposits falling while value holds</em> can only mean the source</p>
+<p>is lagging. No magic number, and it can't be outgrown.</p>
+<h3>A wallet address being silently deleted</h3>
+<p>A failed Turnkey lookup returned <code>null</code>, which read as "this isn't your wallet",</p>
+<p>which called <code>disconnectWallet()</code> — clearing the address from <strong>persisted</strong></p>
+<p>storage. XLM, USDC and savings vanished until the user signed in again.</p>
+<p><strong>Fix:</strong> a failed lookup now throws instead of answering "no", so <code>false</code> only</p>
+<p>ever means <em>confirmed</em> not-yours. Plus self-healing that restores the address</p>
+<p>from Turnkey.</p>
+<p><strong>The general rule: never let "I don't know" collapse into "no".</strong></p>
+<hr />
+<h2>4. Security</h2>
+<p>Two routes accepted writes from <strong>anyone</strong> — proven on staging, where an</p>
+<p>unauthenticated POST reached validation instead of being rejected. Anyone could</p>
+<p>fabricate swap and deposit records, which feed the public dashboard and the</p>
+<p><code>totalDeposited</code> figure users read as their savings.</p>
+<p><strong>Authentication alone would not have been enough.</strong> The wallet address arrives</p>
+<p>in the request body, so a logged-in user could still write rows against someone</p>
+<p>else's address. So the rule is: **the claimed address must belong to the</p>
+<p>authenticated user**, checked against linked wallets or their Turnkey wallet.</p>
+<p>Quote routes stay unauthenticated on purpose — prices are shown before a wallet</p>
+<p>is connected — but now carry an IP-based ceiling, since they proxy paid</p>
+<p>services.</p>
+<h3>What this exposed</h3>
+<p>Adding auth surfaced two latent problems:</p>
+<ol>
+<li><strong>A race.</strong> The engines refreshed the activity feed as soon as a transaction</li>
+</ol>
+<p>   returned, racing the fire-and-forget log write. It was hidden by an 800ms</p>
+<p>   delay on the listener. Now the refresh fires <em>after</em> the write succeeds, and</p>
+<p>   the delay is gone.</p>
+<ol>
+<li><strong>Latency.</strong> Every authenticated route verified the session with a **live</li>
+</ol>
+<p>   network call to Supabase, with no timeout.** Now cached 30s, bounded at 5s,</p>
+<p>   and de-duplicated. That last part matters beyond speed: a slow Supabase</p>
+<p>   would previously have stalled every route at once.</p>
+<p><strong>Trade-off, stated plainly:</strong> a revoked session stays accepted for up to 30s.</p>
+<p>Chosen over verifying the JWT locally, which would drop revocation awareness</p>
+<p>until the token expires (~1h).</p>
+<hr />
+<h2>5. Structure — the chain registry</h2>
+<p>Chains were four named fields spread across 28 files, plus a separate</p>
+<p>asset→chain map, plus a closed union type. Adding one meant finding every place</p>
+<p>that had spelled the list out.</p>
+<p>Now one registry describes each chain, and everything derivable derives from it.</p>
+<p>**Adding an EVM chain (Avalanche, Base) needs no new address and no database</p>
+<p>change** — one secp256k1 address is valid on every EVM chain. A non-EVM chain</p>
+<p>(Cardano) needs an adapter, a column, and Turnkey signing support **verified</p>
+<p>first**.</p>
+<hr />
+<h2>Recurring root causes</h2>
+<p>Three patterns caused almost every bug. Worth checking in review:</p>
+<ol>
+<li><strong>A loading flag covering only some of a component's data sources</strong> — 4 bugs.</li>
+<li><strong>Optimistic updates computed from live state, not a snapshot</strong> — 3 bugs.</li>
+<li><strong>Two sources for the same number</strong> — staggered loading, vanishing XLM/USDC,</li>
+</ol>
+<p>   and a wrong balance beside a Deposit button.</p>
+<p>A fourth worth naming: <strong>a timer standing in for a real signal.</strong> The 800ms</p>
+<p>delay, the retry schedules, the client dedupe windows — each was a guess about</p>
+<p>how long something takes. Replacing each with the actual event made the code</p>
+<p>simpler <em>and</em> faster.</p>
+<hr />
+<h2>What is deliberately not done</h2>
+<ul>
+<li><strong>P0-1</strong> — swap-card balances and token prices are still browser-direct.</li>
+</ul>
+<p>  Required between 1k and 10k users, not before staging.</p>
+<ul>
+<li><strong>#19b</strong> — the auth cache is per server instance. A shared Redis tier is an</li>
+</ul>
+<p>  upgrade with a trigger, not a correction.</p>
+<ul>
+<li><strong>The persisted token store</strong> still powers the deposit card and swap card, and</li>
+</ul>
+<p>  is the <em>unreliable</em> source. Retiring it removes a whole category of bug.</p>
+<ul>
+<li><strong>Tests.</strong> <code>normalize.ts</code> is pure, has caused two money-display bugs, and has</li>
+</ul>
+<p>  zero coverage — comments claiming otherwise were wrong. Best first suite.</p>
+<hr />
+<h2>6. Bitcoin-source swaps, fixed</h2>
+<p>Full detail in <a href="45-btc-swap-explained.md">45-btc-swap-explained.md</a>.</p>
+<p>Swapping <em>from</em> Bitcoin failed at signing with <code>UnrecognizedScript</code>. Two</p>
+<p>theories were written down early and both turned out to be wrong, which is</p>
+<p>worth recording because ruling them out is what produced the real answer:</p>
+<ul>
+<li><em>"The PSBT is base64 and we send hex."</em> The magic bytes said it was already</li>
+</ul>
+<p>  valid hex. Disproven.</p>
+<ul>
+<li><em>"There is a taproot output."</em> The hex contained <code>5120</code>, the taproot prefix,</li>
+</ul>
+<p>  but a proper decode showed it was a coincidental substring in the middle of</p>
+<p>  other data. There is no taproot. Disproven.</p>
+<p>The actual cause: Turnkey's PSBT parser derives an address from <strong>every</strong></p>
+<p>script, and LI.FI's PSBT contains an <strong>OP_RETURN</strong> output, which by definition</p>
+<p>has no address. Their docs list what they reject and OP_RETURN is not on it, so</p>
+<p>it is an undocumented limitation on their side, not a malformed PSBT and not a</p>
+<p>bug in our code.</p>
+<p>The fix is Turnkey's own documented alternative. Rather than handing them the</p>
+<p>PSBT to parse, we compute the signature hashes locally with bitcoinjs-lib and</p>
+<p>ask Turnkey to sign those raw 32-byte digests. It never sees the OP_RETURN.</p>
+<p>Three things worth carrying forward:</p>
+<ul>
+<li><strong>The transaction is never modified.</strong> Only signatures are added. The</li>
+</ul>
+<p>  standing "never rewrite a Chainflip PSBT" rule is about changing outputs and</p>
+<p>  is fully respected.</p>
+<ul>
+<li><strong>All inputs are signed in one Turnkey activity</strong>, so a multi-input swap</li>
+</ul>
+<p>  still costs one passkey prompt rather than one per input.</p>
+<ul>
+<li><strong>Low-S normalisation.</strong> A high-S signature is valid cryptography but</li>
+</ul>
+<p>  non-standard, so relays silently drop it. That failure looks like "broadcast</p>
+<p>  succeeded and nothing happened", which is the worst kind to debug. Four lines</p>
+<p>  removed the whole category.</p>
+<p>Also worth knowing before anyone edits that file: it is the first client-side</p>
+<p>use of <code>bitcoinjs-lib</code> in the app, Next does not polyfill the <code>Buffer</code> global</p>
+<p>for browser bundles, and bitcoinjs v7 is <code>Uint8Array</code>-only. Do not add</p>
+<p><code>Buffer.from</code> there. And it is imported with <code>await import(...)</code>, because a</p>
+<p>static import put 45 kB of Bitcoin library into the bundle of everyone who</p>
+<p>opens the swap page.</p>
+<hr />
+<h2>7. External wallets</h2>
+<p>Full detail in <a href="46-external-wallets.md">46-external-wallets.md</a>.</p>
+<p>Checking whether the tester guide held for someone signed in with Freighter or</p>
+<p>Lobstr turned up two things in this batch and corrected two stale beliefs.</p>
+<p><strong>The product rule, now explicit: external wallets are Stellar-only.</strong> They can</p>
+<p>hold and move XLM and USDC, swap between them, use savings and MoneyGram.</p>
+<p>Bitcoin, Ethereum and Solana need the Turnkey passkey, because a Stellar wallet</p>
+<p>physically cannot produce those signatures.</p>
+<p><strong>The regression.</strong> Section 4 above closed the transaction-log routes by</p>
+<p>checking that the wallet belongs to the signed-in account. That check reads</p>
+<p><code>linked_wallets</code> or <code>turnkey_wallets</code>, and connecting an external wallet never</p>
+<p>wrote a <code>linked_wallets</code> row. So the security fix silently 403'd every external</p>
+<p>wallet: their swaps stopped reaching the database and vanished from Activity.</p>
+<p>Fixed with one <code>ensureWalletLinked()</code> helper called from two places. On connect,</p>
+<p>where all three UI paths share the same hook so a fourth cannot forget. And on</p>
+<p>session restore, which backfills people who connected before the fix without</p>
+<p>asking them to reconnect. It checks before writing, because that route charges</p>
+<p>a "3 wallets per day" quota even for an address that is already linked.</p>
+<p><strong>The gate that came back.</strong> Cross-chain swaps were reachable from an external</p>
+<p>wallet, and offered to provision a Turnkey wallet mid-swap. That contradicts</p>
+<p>the Stellar-only rule and hands someone a second wallet they never asked for.</p>
+<p>A gate for exactly this was written in July, committed to a feature branch, and</p>
+<p>lost in the squash that produced its PR. Restored, and improved: it now also</p>
+<p>switches the quote fetches off, so a user with both wallet types does not burn</p>
+<p>LI.FI quota on swaps the button will not run.</p>
+<p><code>action: null</code> on that button is the load-bearing part. Outbound CCTP burns on</p>
+<p>Stellar first and only then needs the passkey, so a half-executed route would</p>
+<p>leave USDC on Base awaiting recovery.</p>
+<p><strong>Two beliefs corrected.</strong> The system map said cross-chain was gated to Normal</p>
+<p>wallets; it was not, and the file it named did not contain the check. And we</p>
+<p>had six external wallets recorded as supported when only four are connectable,</p>
+<p>xBull and HANA having been removed in May.</p>
+<hr />
+<h2>8. Sends</h2>
+<p>Full walkthrough in <a href="49-sends-explained.md">49-sends-explained.md</a>.</p>
+<p>One live test — 5 XLM sent to Coinbase — exposed two independent bugs, both</p>
+<p>now fixed:</p>
+<p><strong>Our app showed nothing (#47).</strong> Sends were the only money flow that never</p>
+<p>fired the app's "money moved" event, so no screen refreshed and no pending</p>
+<p>state existed. Now every send announces itself from the send primitive,</p>
+<p>appears in the feed immediately as a pending row (persisted, so a</p>
+<p>pending Bitcoin send survives reloads), and the balance route gained the same</p>
+<p>cache bypass the activity routes had. No polling anywhere: three bounded</p>
+<p>refreshes per send action, then reconciliation rides on fetches the app</p>
+<p>already makes.</p>
+<p><strong>Coinbase credited nothing (#48).</strong> The send had no memo, and Coinbase pools</p>
+<p>all customer deposits into one account where the memo is the routing key.</p>
+<p>The ecosystem's official guard (SEP-29) ran and passed, because Coinbase</p>
+<p>never set the flag — so the fix cannot rely on it. Exchange destinations are</p>
+<p>now recognised (seed list of ~33 verified addresses + a live directory</p>
+<p>lookup, Redis-cached) and the modal fails closed: memo field forces open,</p>
+<p>button disabled until it is filled. The savings withdraw form, which has no</p>
+<p>memo input at all, refuses exchange addresses outright.</p>
+<p>Also worth noting from this work: the new unit tests caught a real bug before</p>
+<p>staging (the pending ledger skipped localStorage on a fresh load — a pending</p>
+<p>BTC send would have vanished on reload), and the memo test fixture is the</p>
+<p>literal address from the incident.</p>
+<hr />
+<h2>Known broken</h2>
+<p>Nothing known-broken is shipping in this push.</p>
+<p>Two items are open but neither blocks it:</p>
+<ul>
+<li><strong>#42</strong> — the self-heal that restores a missing Stellar address reads it from</li>
+</ul>
+<p>  Turnkey regardless of wallet type. For someone using an external wallet <em>and</em></p>
+<p>  a Turnkey wallet, that could silently swap which Stellar address is active.</p>
+<p>  Not yet reproduced, and deliberately not "fixed" first: when the address is</p>
+<p>  wiped the wallet type is wiped with it, so the obvious guard would not</p>
+<p>  actually work. Needs the repro.</p>
+<ul>
+<li><strong>#43</strong> — <code>xbull</code> and <code>hana</code> linger in the wallet-type union after the</li>
+</ul>
+<p>  modules were deleted. Cosmetic.</p>
+</body></html>

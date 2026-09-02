@@ -1,5 +1,7 @@
 'use client';
 
+import { resolveRpId } from './passkey-stamper';
+
 // ---------------------------------------------------------------------------
 // WebAuthn passkey registration for Turnkey sub-org creation.
 // Shared by the Bitcoin wallet setup and the wallet-import flow.
@@ -34,7 +36,9 @@ export async function createPasskeyRegistration(
   const challengeBytes = crypto.getRandomValues(new Uint8Array(32));
   const challenge = toBase64Url(challengeBytes.buffer);
 
-  const rpId = process.env.NEXT_PUBLIC_TURNKEY_RP_ID || 'localhost';
+  // Same resolver as the signing prompt — a mismatch here registers a passkey
+  // the signing ceremony can never ask for.
+  const rpId = resolveRpId();
   const credential = (await navigator.credentials.create({
     publicKey: {
       challenge: challengeBytes,
@@ -45,7 +49,7 @@ export async function createPasskeyRegistration(
         displayName: userEmail ?? 'Normal User',
       },
       pubKeyCredParams: [
-        { type: 'public-key', alg: -7 },   // ES256 (P-256)
+        { type: 'public-key', alg: -7 }, // ES256 (P-256)
         { type: 'public-key', alg: -257 }, // RS256
       ],
       timeout: 60000,

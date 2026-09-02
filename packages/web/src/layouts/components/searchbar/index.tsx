@@ -12,9 +12,10 @@ import parse from 'autosuggest-highlight/parse';
 import match from 'autosuggest-highlight/match';
 import { useBoolean } from 'minimal-shared/hooks';
 import { fCurrency } from '@/utils/format-number';
+import { useAppStore } from '@normalfinance/state';
 import { getCryptoIconUrl } from '@normalfinance/utils';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -45,9 +46,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
   const router = useRouter();
 
   const { globalIsLoading } = useAppStore();
-  const {
-    tokenState: { tokens },
-  } = usePersistStore();
+  const tokens = useStellarTokens();
 
   const { value: open, onFalse: onClose, onTrue: onOpen, onToggle } = useBoolean();
   const [searchQuery, setSearchQuery] = useState('');
@@ -236,8 +235,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
                   '&:hover': {
                     borderRadius: 1,
                     borderColor: theme.vars?.palette.primary.main || theme.palette.primary.main,
-                    backgroundColor:
-                      theme.vars?.palette.action.hover || theme.palette.action.hover,
+                    backgroundColor: theme.vars?.palette.action.hover || theme.palette.action.hover,
                   },
                 }}
               >

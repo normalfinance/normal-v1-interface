@@ -12,6 +12,12 @@ const { version } = JSON.parse(packageJson);
 const isStaticExport = 'false';
 
 const nextConfig = {
+  // Gate builds run alongside the dev server, and both default to `.next` —
+  // the dev server rewrites it mid-build, which fails prerendering with
+  // random "Cannot find module" errors (recurring all of 2026-08-17). Setting
+  // NEXT_BUILD_DIR points a verification build at its own directory; unset
+  // (dev, Vercel) everything stays exactly as before.
+  distDir: process.env.NEXT_BUILD_DIR || '.next',
   images: {
     remotePatterns: [
       {
@@ -24,6 +30,12 @@ const nextConfig = {
     ],
   },
   trailingSlash: true,
+  // #13: clients fetch '/api/...' slash-less while trailingSlash canonicalizes
+  // to '/api/.../' — so EVERY API call paid a 308 redirect + second round trip.
+  // Skipping the redirect serves both forms directly (verified empirically:
+  // docs/audit/64). Internal links still generate slashed URLs, so page
+  // canonical behavior is unchanged.
+  skipTrailingSlashRedirect: true,
   env: {
     BUILD_STATIC_EXPORT: isStaticExport,
     NEXT_PUBLIC_APP_VERSION: version,

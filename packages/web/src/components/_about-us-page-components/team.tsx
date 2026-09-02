@@ -289,10 +289,7 @@ export const Team: React.FC = () => {
   return (
     <>
       {/* ── Team grid ── */}
-      <Box
-        component="section"
-        sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
-      >
+      <Box component="section" sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}>
         <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
           {/* Header */}
           <Box mb={{ xs: '40px', md: '56px' }}>
@@ -350,7 +347,6 @@ export const Team: React.FC = () => {
           </Box>
         </Box>
       </Box>
-
     </>
   );
 };

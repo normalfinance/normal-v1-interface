@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { logger } from '@normalfinance/utils';
+import { logger } from '@/utils/logger';
 
 export interface LinkedWallet {
   id: string;
@@ -42,8 +42,6 @@ export class LinkedWalletService {
         supabaseUid: supabaseUid.substring(0, 8) + '...',
         walletAddress: walletAddress.substring(0, 8) + '...',
       });
-
-      
 
       return linkedWallet as LinkedWallet;
     } catch (error) {

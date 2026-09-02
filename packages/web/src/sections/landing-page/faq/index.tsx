@@ -43,7 +43,7 @@ const DEFAULT_QUESTIONS: Question[] = [
   {
     title: 'How exactly is the yield made and secured?',
     answer:
-      'Your USDC is deposited into Blend\'s lending pools. Borrowers over-collateralize their loans and pay interest — you earn a share proportional to your deposit. DeFindex optimizes allocation across the most efficient pools. Security is maintained through non-custodial architecture, over-collateralization with automatic liquidations, and audited Soroban smart contracts.',
+      "Your USDC is deposited into Blend's lending pools. Borrowers over-collateralize their loans and pay interest — you earn a share proportional to your deposit. DeFindex optimizes allocation across the most efficient pools. Security is maintained through non-custodial architecture, over-collateralization with automatic liquidations, and audited Soroban smart contracts.",
   },
   {
     title: 'What assets does Normal support?',
@@ -163,7 +163,14 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
           {subhead && (
             <Box
               component="p"
-              sx={{ m: 0, mt: '14px', fontSize: '15px', color: '#6b6b76', lineHeight: 1.6, maxWidth: '60ch' }}
+              sx={{
+                m: 0,
+                mt: '14px',
+                fontSize: '15px',
+                color: '#6b6b76',
+                lineHeight: 1.6,
+                maxWidth: '60ch',
+              }}
             >
               {t(subhead)}
             </Box>

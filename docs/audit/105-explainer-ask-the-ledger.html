@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ask The Ledger</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Ask The Ledger</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 10 &mdash; third attempt at
+the stale balance, and a change of approach.</p>
+
+<h2>1 &middot; What I got wrong twice</h2>
+<p>Your question &mdash; <em>&ldquo;didn't we have it so it's spinning in the popup until the new
+balance is refetched?&rdquo;</em> &mdash; is the right one. That <strong>is</strong> the design.
+The popup has an &ldquo;Updating balances&rdquo; step and Done is supposed to wait for it.</p>
+<p>My first two attempts both assumed that gate was sound and went hunting in the caching layers
+underneath it. I found two genuine bugs there and fixed them, and I was measuring the wrong thing
+each time. This round I looked at the gate itself, and it had three separate problems &mdash; one
+of which I made worse.</p>
+
+<h2>2 &middot; Hole 1: one failed read skipped the entire wait</h2>
+<p>This is almost certainly what you were seeing, and it is my fault.</p>
+<p>The balance fetch throws on any unhappy response:</p>
+<pre>if (!res.ok) throw new Error(`portfolio ${res.status}`);</pre>
+<p>My retry loop called it without catching. So a single hiccup &mdash; a rate limit, an auth
+refresh, one bad response &mdash; threw straight out of the loop, out of the whole gate, and landed
+in the engine's catch-all:</p>
+<pre>await Promise.race([
+  refreshAggregate?.()<span class="no">.catch(() =&gt; {})</span>,   // ← swallowed here
+  new Promise((r) =&gt; setTimeout(r, 15_000)),
+]);
+setSwapStage('done');                     // ← so Done fires IMMEDIATELY</pre>
+<div class="box bad"><div class="label">And I made it more likely</div>
+Going from one retry to three tripled the number of requests that could throw. So the change I
+made to fix the stale balance also increased the chance of the gate being skipped altogether
+&mdash; which looks exactly like &ldquo;the fix did nothing&rdquo;. A failed read is simply
+&ldquo;not fresh yet&rdquo;; it now counts as a failed attempt and the loop carries on.</div>
+
+<h2>3 &middot; Hole 2: it watched one balance out of two</h2>
+<p>A swap moves <em>two</em> balances &mdash; the one you spend and the one you receive. The gate
+only watched the destination. Watching both is strictly more evidence for no extra cost, and it is
+also what the card actually shows you. Now it waits on the pair.</p>
+
+<h2>4 &middot; Hole 3: it was asking the wrong question &mdash; the real fix</h2>
+<p>Both previous rounds kept the same underlying approach: <strong>refresh the balance and see if
+the number moved.</strong> Step back and that is a guess about two different things at once:</p>
+<table>
+  <tr><th>if the number has not moved, is it because&hellip;</th><th>then the right move is</th></tr>
+  <tr><td>the server handed us a cached copy</td><td>wait for its cache window and ask again</td></tr>
+  <tr><td>Horizon has not ingested the swap yet</td><td>wait for the ledger, then ask once</td></tr>
+</table>
+<p>One signal, two very different causes, and no way to tell them apart. That is why each fix
+helped a bit and none of them finished the job.</p>
+
+<h3>The question that is actually definite</h3>
+<p>The swap hands us its <strong>transaction hash</strong>. So instead of inferring from balances,
+we can ask the ledger directly: <em>do you have this transaction?</em></p>
+<pre>await awaitTxVisible(config.HORIZON_URL, hash);   // then refresh balances</pre>
+<p>That read goes <strong>straight to Horizon</strong> &mdash; no server response cache, no bypass
+floor, no SWR. None of the layers that made the old signal unreliable are in the way. Once it
+answers yes, the ledger provably contains your swap, so the balance read that follows is being
+made at a moment when the right answer exists.</p>
+<div class="box good"><div class="label">Cost in the normal case: nothing</div>
+Horizon has the transaction almost immediately, so this returns on the first poll. It is bounded
+at 8 seconds and never throws &mdash; a swap that has already succeeded must never be held up by
+our own bookkeeping, so if Horizon is unreachable it gives up and lets the refresh proceed as
+before. 7 tests, including &ldquo;always takes at least one look&rdquo; and &ldquo;gives up inside
+the budget&rdquo;.</div>
+
+<h2>5 &middot; So the popup now genuinely waits</h2>
+<p>The sequence for a Stellar swap is now:</p>
+<pre>1. submit the swap, get a hash
+2. <span class="ok">wait until Horizon has that transaction</span>          ← new, usually instant
+3. refresh balances, retrying if the server served a cached copy
+   (waiting only the remaining floor time, capped at 12s)
+4. <span class="ok">Done</span> — with the balance on screen already updated</pre>
+<p>Step 3 keeps everything from the last two rounds: the server reports whether it floored a
+request, and the retry waits precisely as long as the floor has left.</p>
+
+<h2>6 &middot; If it still misbehaves, the next report is an answer</h2>
+<p>I have stopped guessing in a second sense too: the gate now writes one line to the browser
+console per attempt.</p>
+<pre>[balance-gate:USDC-&gt;XLM] attempt 1 floored=false changed=true before=XLM:42.1|USDC:15.0
+                          after=XLM:57.3|USDC:0 retryAfterMs=- elapsed=812ms</pre>
+<p>That single line distinguishes every case we have been guessing between: whether the server
+floored us, what it actually returned, whether it moved, and how long it took. If the balance ever
+lags again, open the console (F12), run one swap, and send me those lines &mdash; that turns the
+next round into a diagnosis instead of a fourth attempt.</p>
+
+<h2>7 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R66</span></td>
+      <td>Run a single Stellar swap with the console open. Watch the popup's &ldquo;Updating
+      balances&rdquo; step and the balances behind it.</td>
+      <td>Done appears with the balance <strong>already correct</strong> &mdash; no gap, no
+      waiting afterwards. The console shows one <code>[balance-gate:...]</code> line, typically
+      <code>attempt 1 floored=false changed=true</code> in well under a second.</td></tr>
+  <tr><td>2<br><span class="qa">QA R64</span></td>
+      <td>Your original sequence: USDC → XLM, then immediately XLM → USDC.</td>
+      <td>Both land correctly with no page refresh. On the second one the console may show
+      <code>floored=true</code> followed by a second attempt &mdash; that is the retry doing its
+      job, and Done still waits for it.</td></tr>
+  <tr><td>3</td>
+      <td>Optional: throttle the network to Slow 3G and run a swap.</td>
+      <td>Done takes longer but is still correct when it appears. If a read fails outright the
+      console shows <code>attempt N FAILED</code> and the loop continues instead of giving up
+      &mdash; which is the specific bug in &sect;2.</td></tr>
+</table>
+
+<h2>8 &middot; Commit</h2>
+<p><code>fix(swap): wait for the ledger before reading balances</code> (full message in chat). New
+tests: <code>lib/stellar/await-tx-visible.test.ts</code> (7). Suite: <strong>461 passing, 54
+suites</strong>; lint, prettier, tsc and build all clean.</p>
+
+</body>
+</html>

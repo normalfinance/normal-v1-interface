@@ -3,14 +3,13 @@
 import type { PortfolioAsset } from '@/types/portfolio';
 
 import { BigNumber } from 'bignumber.js';
-import { logger } from '@normalfinance/utils';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
+import { usePersistStore } from '@normalfinance/state';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
-import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { assetDisplay, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
@@ -25,13 +24,64 @@ import { ActivityCard } from './portfolio-activity-card';
 
 import type { HoldingData } from './_shared';
 
+// Shown until we know whether the user even has a wallet. Beyond that each
+// card owns its own skeleton, so a slow source never blanks the whole page.
+function PortfolioSkeleton() {
+  return (
+    <DashboardContent maxWidth="xl">
+      {/* Hero skeleton */}
+      <Skeleton
+        variant="rectangular"
+        height={220}
+        sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }}
+      />
+
+      {/* Holdings + Savings skeleton */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
+          gap: '20px',
+          mt: '20px',
+        }}
+      >
+        <Skeleton
+          variant="rectangular"
+          height={320}
+          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+        />
+        <Skeleton
+          variant="rectangular"
+          height={320}
+          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+        />
+      </Box>
+
+      {/* Activity skeleton */}
+      <Skeleton
+        variant="rectangular"
+        height={280}
+        sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }}
+      />
+    </DashboardContent>
+  );
+}
+
 export default function PortfolioView() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { user } = useSupabaseAuth();
   // Single source of truth for all balances + savings.
-  const { getAsset, savings, savingsUsd, isLoading: balancesLoading } = usePortfolio(!!user);
+  const {
+    getAsset,
+    savings,
+    savingsUsd,
+    wallet: walletBalances,
+    isLoading: balancesLoading,
+  } = usePortfolio(!!user);
   const bitcoinAddress = getAsset('BTC')?.address ?? null;
   const ethereumAddress = getAsset('ETH')?.address ?? null;
   const solanaAddress = getAsset('SOL')?.address ?? null;
@@ -40,12 +90,7 @@ export default function PortfolioView() {
   // checking, so we don't flash the picker at an existing user.
   const { hasWallet: hasTurnkeyWallet } = useTurnkeyWallet(!!user);
 
-  const { setGlobalIsLoading } = useAppStore();
-  const {
-    wallet,
-    getAllTokens,
-    tokenState: { tokens },
-  } = usePersistStore();
+  const { wallet } = usePersistStore();
 
   const hasAnyWallet = !!wallet.address || hasTurnkeyWallet === true;
   // Still resolving whether an authed user has a wallet — keep the skeleton so we
@@ -53,62 +98,88 @@ export default function PortfolioView() {
   const walletChecking = !!user && !wallet.address && hasTurnkeyWallet === null;
 
   const savingsValue = savingsUsd;
-  const earnings = savings.earnings;
-  const savingsLoading = savings.vaultLoading || savings.positionLoading;
+  // #75: earnings compose slot + companion, exactly like the value does —
+  // with an external wallet in the slot, `savings.earnings` alone is the
+  // EMPTY wallet's earnings and showed a confident $0.00.
+  const earnings = savings.earnings + savings.companionEarnings;
+  // Companion loading included: savings load like any other asset — the
+  // skeleton holds until EVERY source has answered.
+  const savingsLoading =
+    savings.vaultLoading || savings.positionLoading || savings.companionPositionLoading;
 
-  const stellarBalance = useMemo(
-    () =>
-      tokens
-        .reduce(
-          (acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)),
-          BigNumber(0)
-        )
-        .toNumber(),
-    [tokens]
-  );
+  // True once balances AND savings have both resolved at least once. Used to
+  // gate first-paint skeletons without letting later refetches re-trigger them.
+  const [firstPaintDone, setFirstPaintDone] = useState(false);
+  useEffect(() => {
+    if (!balancesLoading && !savings.positionLoading && !savings.companionPositionLoading)
+      setFirstPaintDone(true);
+  }, [balancesLoading, savings.positionLoading, savings.companionPositionLoading]);
+  // Doc 117: same cap as the landing hero (doc 116). companionPositionLoading
+  // is deliberately sticky (data === undefined, so error-retry gaps never
+  // flash $0) — but a permanently dead companion lookup then held this page's
+  // skeletons forever, crypto rows included. After 8s, paint what we have.
+  useEffect(() => {
+    const id = setTimeout(() => setFirstPaintDone(true), 8_000);
+    return () => clearTimeout(id);
+  }, []);
 
-  // Native (non-Stellar) chain tokens with a balance — BTC, ETH, SOL
-  const nativeTokens = useMemo(
-    () =>
-      (['BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[])
-        .filter(
-          (a): a is PortfolioAsset => !!a && a.balance != null && BigNumber(a.balance).gt(0)
-        )
-        .map(portfolioAssetToToken),
-    [getAsset]
-  );
+  // ONE source for every chain, including XLM/USDC.
+  //
+  // This page used to read Stellar assets from the persisted token store while
+  // the home hero and the account drawer read them from the portfolio
+  // aggregator. Two paths for the same two assets meant every loading bug had
+  // to be fixed twice and this page always lagged behind the others. The token
+  // list is exactly XLM + USDC on mainnet (Blend USDC on testnet) — the same
+  // assets the aggregator returns — so there is nothing to lose by unifying.
+  const walletTokens = useMemo(() => {
+    // #32: this page is the ACCOUNT-WIDE view (doc 72 §4f). On a hybrid
+    // account EVERY row is labeled by its owning wallet — the slot wallet's
+    // Stellar assets carry the external wallet's name, BTC/ETH/SOL and the
+    // companion's XLM/USDC carry "Normal wallet" — so it is always clear
+    // which wallet's money each number is. Single-wallet users see no labels.
+    const hybrid = !!walletBalances.companionStellar;
+    const connLabel = connectedWalletLabel(wallet.walletType);
+    const slot = (
+      ['XLM', 'USDC', 'BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[]
+    )
+      .filter((a): a is PortfolioAsset => !!a && a.balance != null && BigNumber(a.balance).gt(0))
+      .map((a) => {
+        const tkn = portfolioAssetToToken(a);
+        if (!hybrid) return tkn;
+        const owner = a.chain === 'stellar' ? connLabel : 'Normal wallet';
+        return { ...tkn, name: `${assetDisplay(a.symbol).name} · ${owner}` };
+      });
+    // Distinct contract ids keep React keys + row identity collision-free.
+    const companion = (walletBalances.companionStellar?.assets ?? [])
+      .filter((a) => a.balance != null && BigNumber(a.balance).gt(0))
+      .map((a) => ({
+        ...portfolioAssetToToken(a),
+        contract: `__companion_${a.symbol.toLowerCase()}__`,
+        name: `${assetDisplay(a.symbol).name} · Normal wallet`,
+      }));
+    return [...slot, ...companion];
+  }, [getAsset, walletBalances.companionStellar, wallet.walletType]);
 
-  const nativeValue = useMemo(
+  // "Wallet" = everything the user holds outside of savings, on any chain
+  const walletBalance = useMemo(
     () =>
-      nativeTokens.reduce(
+      walletTokens.reduce(
         (acc, tkn) => acc + BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber(),
         0
       ),
-    [nativeTokens]
+    [walletTokens]
   );
-
-  // "Wallet" = everything the user holds outside of savings, on any chain
-  const walletBalance = stellarBalance + nativeValue;
   const totalBalance = walletBalance + savingsValue;
 
-  const holdingsWithBalance = useMemo(
-    () => tokens.filter((tkn) => BigNumber(tkn.balance).gt(0)),
-    [tokens]
-  );
-
   const holdingsData: HoldingData[] = useMemo(() => {
-    const entries: HoldingData[] = holdingsWithBalance.map((tkn) => ({
-      token: tkn,
-      value: BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber(),
-      percentage:
-        totalBalance > 0
-          ? BigNumber(tkn.balance)
-              .multipliedBy(tkn.price)
-              .dividedBy(totalBalance)
-              .multipliedBy(100)
-              .toNumber()
-          : 0,
-    }));
+    const entries: HoldingData[] = walletTokens.map((tkn) => {
+      const value = BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber();
+      return {
+        token: tkn,
+        value,
+        percentage: totalBalance > 0 ? (value / totalBalance) * 100 : 0,
+      };
+    });
 
     if (savingsValue > 0) {
       entries.push({
@@ -131,48 +202,26 @@ export default function PortfolioView() {
       });
     }
 
-    nativeTokens.forEach((tkn) => {
-      const value = BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber();
-      entries.push({
-        token: tkn,
-        value,
-        percentage: totalBalance > 0 ? (value / totalBalance) * 100 : 0,
-      });
-    });
-
     return entries.sort((a, b) => b.value - a.value);
-  }, [holdingsWithBalance, totalBalance, savingsValue, nativeTokens]);
+  }, [walletTokens, totalBalance, savingsValue]);
 
-  useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
-      try {
-        setGlobalIsLoading(true);
-        await getAllTokens();
-      } catch (e) {
-        logger.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-      }
-    };
-    refreshTokens();
-  }, [wallet.address, getAllTokens, setGlobalIsLoading]);
+  // #75 round 2A: hybrid → one Holdings TAB per wallet (Niko's preference,
+  // same pills as the drawer). Row identity by contract: slot Stellar tokens
+  // keep their real contracts; everything Turnkey-side is synthetic
+  // (`__btc__`, `__companion_*__`, `__savings__`) — so "starts with __" IS
+  // the Normal-wallet side. Savings (account product) rides the Normal tab.
+  const holdingsSections = useMemo(() => {
+    if (!walletBalances.companionStellar) return undefined;
+    const normal = holdingsData.filter((h) => h.token.contract.startsWith('__'));
+    const external = holdingsData.filter((h) => !h.token.contract.startsWith('__'));
+    return [
+      { label: 'Normal wallet', data: normal },
+      { label: connectedWalletLabel(wallet.walletType), data: external },
+    ];
+  }, [holdingsData, walletBalances.companionStellar, wallet.walletType]);
 
   if (!mounted || walletChecking) {
-    return (
-      <DashboardContent maxWidth="xl">
-        {/* Hero skeleton */}
-        <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }} />
-
-        {/* Holdings + Savings skeleton */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px', mt: '20px' }}>
-          <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
-          <Skeleton variant="rectangular" height={320} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
-        </Box>
-
-        {/* Activity skeleton */}
-        <Skeleton variant="rectangular" height={280} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }} />
-      </DashboardContent>
-    );
+    return <PortfolioSkeleton />;
   }
 
   if (!hasAnyWallet) {
@@ -268,8 +317,16 @@ export default function PortfolioView() {
         walletBalance={walletBalance}
         savingsValue={savingsValue}
         earnings={earnings}
-        loading={savingsLoading}
+        // The totals here sum BOTH sources — native-chain balances and the
+        // Stellar token store. Gating on savings alone let the figure paint
+        // before XLM/USDC landed, so the number visibly jumped a beat later.
+        // Doc 117: gated on the CAPPED first paint, like Holdings below.
+        // This was the live flag — a stuck companion lookup would spin the
+        // page hero forever, even after every other row had painted.
+        loading={!firstPaintDone && (savingsLoading || balancesLoading)}
         holdingsData={holdingsData}
+        balancesError={!!walletBalances.error}
+        onRetry={() => walletBalances.refresh()}
       />
 
       <Box
@@ -282,8 +339,16 @@ export default function PortfolioView() {
       >
         <HoldingsCard
           holdingsData={holdingsData}
+          sections={holdingsSections}
           totalBalance={totalBalance}
-          loading={balancesLoading || (savings.positionLoading && holdingsData.length === 0)}
+          error={!!walletBalances.error}
+          onRetry={() => walletBalances.refresh()}
+          // Savings is one of the holdings rows, so the card must wait for it
+          // too — otherwise the coins paint and the savings row drops in a
+          // couple of seconds later. Only on the FIRST paint: once real data
+          // has rendered, a background refetch must never flash the skeleton
+          // back, which would be worse than the late row.
+          loading={!firstPaintDone && (balancesLoading || savings.positionLoading)}
         />
         <SavingsCard sx={{ minWidth: 0, overflow: 'hidden' }} />
       </Box>

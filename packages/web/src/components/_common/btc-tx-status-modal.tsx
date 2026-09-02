@@ -4,8 +4,8 @@ import useSWR from 'swr';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { fCurrency } from '@/utils/format-number';
-import { usePersistStore } from '@normalfinance/state';
 import React, { useRef, useState, useEffect } from 'react';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 
 import {
   Box,
@@ -63,7 +63,7 @@ export function BtcTxStatusModal({
   const [txConfirmed, setTxConfirmed] = useState(false);
   const wasConfirmedRef = useRef(false);
 
-  const tokens = usePersistStore((s) => s.tokenState.tokens);
+  const tokens = useStellarTokens();
   const btcPrice = BigNumber(tokens.find((tok) => tok.symbol === 'BTC')?.price ?? 0);
 
   const { data: txData } = useSWR<MempoolTx>(
@@ -73,7 +73,7 @@ export function BtcTxStatusModal({
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json() as Promise<MempoolTx>;
       }),
-    { refreshInterval: 30_000, revalidateOnFocus: true },
+    { refreshInterval: 30_000, revalidateOnFocus: true }
   );
 
   useEffect(() => {
@@ -109,10 +109,16 @@ export function BtcTxStatusModal({
       fullWidth
       slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
     >
-      <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
+      <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography
-            sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+            sx={{
+              fontSize: '15px',
+              fontWeight: 600,
+              color: '#0A0A0F',
+              letterSpacing: '-0.01em',
+              lineHeight: '28px',
+            }}
           >
             {t('Transaction sent')}
           </Typography>
@@ -169,11 +175,7 @@ export function BtcTxStatusModal({
                   justifyContent: 'center',
                 }}
               >
-                <Iconify
-                  icon="eva:checkmark-circle-2-fill"
-                  width={28}
-                  sx={{ color: '#1AB37D' }}
-                />
+                <Iconify icon="eva:checkmark-circle-2-fill" width={28} sx={{ color: '#1AB37D' }} />
               </Box>
             ) : (
               <CircularProgress size={36} thickness={3} sx={{ color: 'rgba(10,10,15,0.3)' }} />
@@ -188,9 +190,7 @@ export function BtcTxStatusModal({
                 transition: 'color 400ms ease',
               }}
             >
-              {isConfirmed
-                ? t('Transaction confirmed')
-                : t('Confirming on Bitcoin network…')}
+              {isConfirmed ? t('Transaction confirmed') : t('Confirming on Bitcoin network…')}
             </Typography>
 
             {!isConfirmed && (
@@ -235,7 +235,11 @@ export function BtcTxStatusModal({
 
           {/* Details card */}
           <Box
-            sx={{ borderRadius: '16px', border: '1px solid rgba(10,10,15,0.08)', overflow: 'hidden' }}
+            sx={{
+              borderRadius: '16px',
+              border: '1px solid rgba(10,10,15,0.08)',
+              overflow: 'hidden',
+            }}
           >
             {/* Amount */}
             <Box
@@ -247,9 +251,7 @@ export function BtcTxStatusModal({
                 alignItems: 'flex-start',
               }}
             >
-              <Typography
-                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', fontWeight: 500 }}
-              >
+              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', fontWeight: 500 }}>
                 {t('Amount')}
               </Typography>
               <Box sx={{ textAlign: 'right' }}>

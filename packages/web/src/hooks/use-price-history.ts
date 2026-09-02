@@ -23,15 +23,26 @@ async function fetcher(url: string): Promise<PriceHistoryResponse> {
 }
 
 export function usePriceHistory(symbol: string, range: PriceRange, enabled = true) {
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading, isValidating } = useSWR(
     enabled ? `/api/prices/history?symbol=${symbol}&range=${range}` : null,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60_000 }
+    // keepPreviousData: switching ranges shows the old curve until the new one
+    // lands instead of flashing empty. Retries: a cold upstream cache often
+    // fails the FIRST call and succeeds seconds later — consumers must treat
+    // "error but still retrying" as loading, not failure (isValidating stays
+    // true through retries).
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      errorRetryCount: 4,
+    }
   );
 
   return {
     prices: data?.prices ?? [],
     isLoading,
+    isValidating,
     error,
   };
 }
@@ -42,6 +53,10 @@ export function usePriceHistory(symbol: string, range: PriceRange, enabled = tru
  * user has an address) — the token store only knows Stellar assets.
  */
 export function useUsdPrice(symbol: string, enabled = true): number {
-  const { prices } = usePriceHistory(symbol, '1d', enabled && PRICE_HISTORY_SYMBOLS.includes(symbol));
+  const { prices } = usePriceHistory(
+    symbol,
+    '1d',
+    enabled && PRICE_HISTORY_SYMBOLS.includes(symbol)
+  );
   return prices.length ? prices[prices.length - 1][1] : 0;
 }

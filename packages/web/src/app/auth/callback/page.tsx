@@ -65,15 +65,24 @@ const AuthCallbackPage = () => {
         {status === 'pending' && <CircularProgress />}
         {status === 'error' ? (
           <>
-            <Alert severity={isPkceError ? 'warning' : 'error'} sx={{ borderRadius: 2, width: '100%' }}>
+            <Alert
+              severity={isPkceError ? 'warning' : 'error'}
+              sx={{ borderRadius: 2, width: '100%' }}
+            >
               {message}
             </Alert>
             {isPkceError && (
               <Typography variant="body2" color="text.secondary" textAlign="center">
-                {t('Tip: open this link in the browser where you created your account, or go back and request a new confirmation email.')}
+                {t(
+                  'Tip: open this link in the browser where you created your account, or go back and request a new confirmation email.'
+                )}
               </Typography>
             )}
-            <Button variant="outlined" onClick={() => router.replace('/')} sx={{ borderRadius: 2, mt: 1 }}>
+            <Button
+              variant="outlined"
+              onClick={() => router.replace('/')}
+              sx={{ borderRadius: 2, mt: 1 }}
+            >
               {t('Back to sign in')}
             </Button>
           </>

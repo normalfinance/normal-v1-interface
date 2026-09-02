@@ -1,10 +1,12 @@
 'use client';
 
-import { logger } from '@normalfinance/utils';
+import { logger } from '@/utils/logger';
 import React, { useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { ActivityCard } from '@/sections/portfolio/portfolio-activity-card';
@@ -17,6 +19,8 @@ import Typography from '@mui/material/Typography';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import { GetStartedPicker } from '@/components/_common/get-started-picker';
+import WalletReadinessNotice from '@/components/_common/wallet-readiness-notice';
+import NormalWalletSetupDialog from '@/components/_common/normal-wallet-setup-dialog';
 
 import SwapCard from './swap-card';
 import { SavingsOnrampCard } from '../savings/savings-onramp-card';
@@ -25,14 +29,22 @@ import type { SwapSymbol } from './engines/types';
 
 export default function SwapView() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { user } = useSupabaseAuth();
   const { setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
   const { bitcoinAddress } = useBtcPortfolio(true);
   const { ethereumAddress } = useEthPortfolio(true);
   const { solanaAddress } = useSolPortfolio(true);
+  // #74: swap-page readiness notices — one per wallet that can't hold USDC
+  // yet. The companion's fix runs through the guided setup dialog (passkey);
+  // the connected wallet adds its own trustline inline.
+  const { companionStellar } = useWalletBalances(!!user);
+  const isExternalWallet = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
+  const [setupOpen, setSetupOpen] = useState(false);
   // Any wallet (Stellar or a Turnkey chain wallet); null = still checking.
   const { hasWallet: hasTurnkeyWallet } = useTurnkeyWallet(!!user);
   const hasAnyWallet = !!wallet.address || hasTurnkeyWallet === true;
@@ -42,7 +54,6 @@ export default function SwapView() {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
@@ -50,15 +61,30 @@ export default function SwapView() {
       }
     };
     refreshTokens();
-  }, [wallet.address, getAllTokens, setGlobalIsLoading]);
+  }, [wallet.address, setGlobalIsLoading]);
 
   if (!mounted || walletChecking) {
     return (
       <DashboardContent maxWidth="xl">
-        <Skeleton variant="rectangular" height={48} width={200} sx={{ borderRadius: '12px', bgcolor: 'rgba(10,10,15,0.08)', mb: '24px' }} />
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px' }}>
-          <Skeleton variant="rectangular" height={420} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
-          <Skeleton variant="rectangular" height={200} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+        <Skeleton
+          variant="rectangular"
+          height={48}
+          width={200}
+          sx={{ borderRadius: '12px', bgcolor: 'rgba(10,10,15,0.08)', mb: '24px' }}
+        />
+        <Box
+          sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px' }}
+        >
+          <Skeleton
+            variant="rectangular"
+            height={420}
+            sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          />
+          <Skeleton
+            variant="rectangular"
+            height={200}
+            sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          />
         </Box>
       </DashboardContent>
     );
@@ -160,7 +186,9 @@ export default function SwapView() {
     <DashboardContent maxWidth="xl">
       <Box sx={{ mb: '24px' }}>
         <Stack spacing={0.5}>
-          <Typography sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+          <Typography
+            sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+          >
             Swap
           </Typography>
           <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)' }}>
@@ -168,6 +196,27 @@ export default function SwapView() {
           </Typography>
         </Stack>
       </Box>
+
+      {/* #74: USDC-readiness notices, one per wallet, right wallet's signer.
+          Self-hiding: render nothing while checking, on probe failure, or
+          when the wallet is ready — most users never see this block. */}
+      {wallet.address && (
+        <Stack spacing={1} sx={{ mb: '16px' }}>
+          <WalletReadinessNotice
+            address={wallet.address}
+            walletLabel={isExternalWallet ? connectedWalletLabel(wallet.walletType) : 'Your wallet'}
+            kind="slot"
+          />
+          {isExternalWallet && companionStellar && (
+            <WalletReadinessNotice
+              address={companionStellar.address}
+              walletLabel="Normal wallet"
+              kind="companion"
+              onOpenSetup={() => setSetupOpen(true)}
+            />
+          )}
+        </Stack>
+      )}
 
       <Box
         sx={{
@@ -180,6 +229,12 @@ export default function SwapView() {
         <SwapCard initial={initial} />
         <SavingsOnrampCard />
       </Box>
+
+      <NormalWalletSetupDialog
+        open={setupOpen}
+        onClose={() => setSetupOpen(false)}
+        neededUsdc={0}
+      />
 
       {/* Unified activity — swaps + cross-chain transfers */}
       <Box sx={{ mt: '20px' }}>

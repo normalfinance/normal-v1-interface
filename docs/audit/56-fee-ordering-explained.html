@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>56-fee-ordering-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>56 — Fee ordering fix (#26), explained for juniors</h1>
+<p>Branch: <code>fix/fee-ordering</code>. Design doc: <a href="55-fee-ordering-plan.md">55-fee-ordering-plan.md</a>.</p>
+<h2>The problem, in one story</h2>
+<p>A coworker deposited savings from a Lobstr wallet. The app charged the</p>
+<p>Normal fee (transaction 1), then asked for the second signature (the actual</p>
+<p>deposit) — and the wallet bounced it. Result: **fee paid, deposit never</p>
+<p>happened.** That could happen in five different ways (rejection, closed tab,</p>
+<p>wallet jam, expired session, network drop), because the app made something</p>
+<p>irreversible (submitted tx 1) BEFORE it had everything it needed (signature</p>
+<p>2).</p>
+<h2>The fix, in one sentence</h2>
+<p><strong>Nothing is submitted until every signature exists</strong> — and once both</p>
+<p>signatures exist, a server process guarantees BOTH transactions complete,</p>
+<p>even if you close the tab.</p>
+<h2>How it works — cause and effect</h2>
+<ul>
+<li>If you start a deposit → you will see TWO signing prompts back to back</li>
+</ul>
+<p>  (deposit first, then fee), and during those prompts **nothing has touched</p>
+<p>  the blockchain yet**.</p>
+<ul>
+<li>If you reject EITHER prompt → you will see an error, and **nothing</li>
+</ul>
+<p>  happened**: no deposit, no fee, wallet untouched. Retrying costs nothing.</p>
+<ul>
+<li>If you approve both → the app sends both signed transactions to our</li>
+</ul>
+<p>  server in ONE request. The server saves the signed fee in Redis FIRST,</p>
+<p>  then submits the deposit, then the fee.</p>
+<ul>
+<li>If you close the tab right after the second signature → the deposit AND</li>
+</ul>
+<p>  the fee still complete within ~2 minutes, because a cron job</p>
+<p>  (<code>fee-escrow-sweep</code>, every 2 min) finds the saved pair and finishes it.</p>
+<ul>
+<li>If the deposit fails on-chain → the fee is <strong>never</strong> submitted, and it</li>
+</ul>
+<p>  couldn't be even by accident (see the sequence trick below).</p>
+<h2>The trick that makes it safe: Stellar sequence numbers</h2>
+<p>Every Stellar account has a counter. A transaction says "I am number N+1"</p>
+<p>and can only ever run when the account is exactly at N. We build the pair</p>
+<p>as: deposit = N+1, fee = N+2.</p>
+<ul>
+<li>The fee (N+2) <strong>cannot run before</strong> the deposit (N+1) — the chain itself</li>
+</ul>
+<p>  refuses it.</p>
+<ul>
+<li>If the deposit never runs, the fee <strong>can never run at all</strong>.</li>
+<li>If a stuck user retries, the NEW pair also uses N+1/N+2 — so whichever</li>
+</ul>
+<p>  pair lands first kills the other one (<code>tx_bad_seq</code>). **Double-charging is</p>
+<p>  impossible by construction**, not by us being careful.</p>
+<ul>
+<li>The fee transaction carries a 15-minute expiry, so a saved pair we fail</li>
+</ul>
+<p>  to complete is guaranteed dead after that — the escrow can't haunt anyone.</p>
+<h2>What changed, by category (12 files)</h2>
+<p><strong>Server — new (3):</strong> <code>server/fee-escrow.ts</code> (the Redis escrow + a pure</p>
+<p>decision function that says submit/wait/give-up), <code>api/fees/execute-pair</code></p>
+<p>(validates the pair — same account, consecutive sequences, fee really pays</p>
+<p>OUR address, user owns the wallet — then escrow → submit → submit),</p>
+<p><code>api/cron/fee-escrow-sweep</code> (the every-2-min finisher).</p>
+<p><strong>Changed plumbing (3):</strong> <code>lib/build-fee-payment.ts</code> (fee can now be built</p>
+<p>"behind" a given sequence, with a 15-min window), its route (passes the two</p>
+<p>new fields through, validated), <code>vercel.json</code> (cron entry).</p>
+<p><strong>Client flows (3):</strong> <code>use-defindex-savings.tsx</code> deposit + withdraw and</p>
+<p><code>use-swap.tsx</code> — all three now: build service tx → build fee behind it →</p>
+<p>sign both → send pair. A new shared helper <code>lib/stellar/fee-pair.ts</code> does</p>
+<p>the pair submission and, if the network dies mid-request, polls Horizon to</p>
+<p>find out what actually happened instead of guessing.</p>
+<p><strong>UI (1):</strong> <code>savings-card.tsx</code> — deposit steps are now "sign deposit (1 of</p>
+<p>2) → sign fee (2 of 2) → crediting"; withdraw merges its two broadcast</p>
+<p>steps into one.</p>
+<p><strong>Tests (2 new files, 12 cases):</strong> the escrow decision table (8 cases —</p>
+<p>every combination of "fee/service found/failed/missing × windows</p>
+<p>open/closed") and the sequence chaining (fee lands EXACTLY one behind the</p>
+<p>service, long window present, garbage sequence rejected).</p>
+<h2>Two bugs this quietly kills</h2>
+<ol>
+<li><strong>Withdraw could forget to log.</strong> The old code threw an error when the</li>
+</ol>
+<p>   commission payment failed — BEFORE the line that records the withdrawal</p>
+<p>   in our database. So a withdrawal that succeeded on-chain could be missing</p>
+<p>   from Activity. Now the log line always runs once the pair is accepted.</p>
+<ol>
+<li><strong>Error messages promising doom.</strong> "(Normal fee already charged — tx</li>
+</ol>
+<p>   …)" messages are gone from all three flows, because that situation can</p>
+<p>   no longer exist.</p>
+<h2>What can still go wrong (honestly)</h2>
+<p>If our server AND the cron are both down for 15+ minutes immediately after</p>
+<p>a user's deposit succeeded, the fee window expires unpaid. The server logs</p>
+<p>it loudly (<code>[fee-escrow] RECEIVABLE</code>) with both hashes, and the Activity</p>
+<p>row still records the fee hash — so it's countable, traceable money, not</p>
+<p>silent leakage. It requires our whole backend to vanish at the worst</p>
+<p>moment, which is lightning-strike territory.</p>
+<h2>How to test it (do → see)</h2>
+<p>See the staging matrix at the end of</p>
+<p><a href="55-fee-ordering-plan.md">55-fee-ordering-plan.md</a> — 7 scenarios, each in</p>
+<p>"do this → you should see this" form.</p>
+</body></html>

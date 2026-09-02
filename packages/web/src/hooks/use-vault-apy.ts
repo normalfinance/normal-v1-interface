@@ -17,20 +17,27 @@ function readLocalStorage(): number | null {
     if (entry.vault?.apy == null) return null;
     if (!entry.cachedAt || Date.now() - entry.cachedAt > CACHE_TTL_MS) return null;
     return Number(entry.vault.apy);
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function writeLocalStorage(apy: number): void {
   if (typeof window === 'undefined') return;
   try {
     const existing = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
-      ...existing,
-      vault: { ...(existing.vault ?? {}), apy },
-      cachedAt: Date.now(),
-      network: 'mainnet',
-    }));
-  } catch { /* storage full */ }
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        ...existing,
+        vault: { ...(existing.vault ?? {}), apy },
+        cachedAt: Date.now(),
+        network: 'mainnet',
+      })
+    );
+  } catch {
+    /* storage full */
+  }
 }
 
 function getOrFetchApy(): Promise<number | null> {
@@ -51,16 +58,22 @@ function getOrFetchApy(): Promise<number | null> {
 
 export function useVaultApy(): number | null {
   const [apy, setApy] = useState<number | null>(() => {
-    if (_apy != null) return _apy;          // module cache (same page)
+    if (_apy != null) return _apy; // module cache (same page)
     const ls = readLocalStorage();
-    if (ls != null) { _apy = ls; return ls; } // localStorage (cross-page)
+    if (ls != null) {
+      _apy = ls;
+      return ls;
+    } // localStorage (cross-page)
     return null;
   });
 
   useEffect(() => {
     if (apy != null) return;
-    getOrFetchApy().then((val) => { if (val != null) setApy(val); });
-  }, []);
+    getOrFetchApy().then((val) => {
+      if (val != null) setApy(val);
+    });
+    // Re-running once `apy` is set exits on the guard above — safe and rule-clean.
+  }, [apy]);
 
   return apy;
 }

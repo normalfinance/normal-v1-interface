@@ -33,7 +33,12 @@ function DonutChart({ holdingsData }: { holdingsData: HoldingData[] }) {
   const total = holdingsData.reduce((s, h) => s + h.value, 0);
   if (total === 0) {
     return (
-      <svg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} width="100%" height="100%" style={{ display: 'block' }}>
+      <svg
+        viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`}
+        width="100%"
+        height="100%"
+        style={{ display: 'block' }}
+      >
         <circle
           cx={DONUT_CX}
           cy={DONUT_CY}
@@ -54,7 +59,12 @@ function DonutChart({ holdingsData }: { holdingsData: HoldingData[] }) {
 
   let cursor = 0;
   return (
-    <svg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} width="100%" height="100%" style={{ display: 'block' }}>
+    <svg
+      viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`}
+      width="100%"
+      height="100%"
+      style={{ display: 'block' }}
+    >
       <circle
         cx={DONUT_CX}
         cy={DONUT_CY}
@@ -99,6 +109,10 @@ interface HeroCardProps {
   earnings: number;
   loading: boolean;
   holdingsData: HoldingData[];
+  /** Doc 90 W3: balances failed with nothing cached — render the outage,
+   *  never a confident $0.00. */
+  balancesError?: boolean;
+  onRetry?: () => void;
 }
 
 export function HeroCard({
@@ -108,13 +122,21 @@ export function HeroCard({
   earnings,
   loading,
   holdingsData,
+  balancesError,
+  onRetry,
 }: HeroCardProps) {
   const { t } = useTranslate();
 
   const stats = [
     { label: t('Wallet'), value: fCurrencyTwoDecimals(walletBalance), colored: false, sub: null },
     { label: t('Savings'), value: fCurrencyTwoDecimals(savingsValue), colored: false, sub: null },
-    { label: t('Earnings'), value: fCurrencyTwoDecimals(Math.abs(earnings)), colored: true, positive: earnings >= 0, sub: `${Math.abs(earnings).toFixed(7)} USDC` },
+    {
+      label: t('Earnings'),
+      value: fCurrencyTwoDecimals(Math.abs(earnings)),
+      colored: true,
+      positive: earnings >= 0,
+      sub: `${Math.abs(earnings).toFixed(7)} USDC`,
+    },
   ];
 
   return (
@@ -193,6 +215,43 @@ export function HeroCard({
                 height={72}
                 sx={{ bgcolor: 'rgba(255,255,255,0.08)', borderRadius: '8px' }}
               />
+            ) : balancesError && totalBalance === 0 ? (
+              <Box>
+                <Box
+                  sx={{
+                    ...MONO,
+                    fontSize: 'clamp(32px, 4vw, 48px)',
+                    fontWeight: 500,
+                    color: 'rgba(255,255,255,0.55)',
+                    lineHeight: 1.05,
+                  }}
+                >
+                  —
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px', mt: '8px' }}>
+                  <Box sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '13.5px' }}>
+                    {t("Couldn't load your balances — nothing is lost.")}
+                  </Box>
+                  <Box
+                    component="button"
+                    type="button"
+                    onClick={onRetry}
+                    sx={{
+                      border: '1px solid rgba(255,255,255,0.35)',
+                      background: 'transparent',
+                      color: '#fff',
+                      borderRadius: '8px',
+                      px: '10px',
+                      py: '3px',
+                      fontSize: '12.5px',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {t('Retry')}
+                  </Box>
+                </Box>
+              </Box>
             ) : (
               <Box
                 sx={{
@@ -246,7 +305,14 @@ export function HeroCard({
                       {stat.value}
                     </Box>
                     {stat.sub && (
-                      <Box sx={{ ...MONO, fontSize: '12px', color: 'rgba(255,255,255,0.35)', mt: '4px' }}>
+                      <Box
+                        sx={{
+                          ...MONO,
+                          fontSize: '12px',
+                          color: 'rgba(255,255,255,0.35)',
+                          mt: '4px',
+                        }}
+                      >
                         {stat.sub}
                       </Box>
                     )}

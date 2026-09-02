@@ -1,82 +1,48 @@
 'use client';
 
-import type { Token } from '@normalfinance/types';
+// ---------------------------------------------------------------------------
+// P0-1 (#66): BTC balance + price for swap-card / send-modal — now a thin
+// SELECTOR over the shared server aggregate (`useWalletBalances`, one deduped
+// SWR over /api/wallet/portfolio) instead of a browser-direct mempool.space
+// fetch per mount per user. Addresses still come from the Turnkey wallet
+// lookup. Provider failures surface as the aggregate's stale-snapshot values
+// (the old "keep last known, never a confident 0" behavior, now server-side
+// for every chain). Post-action freshness rides the shared hook's bypassed
+// event refresh; `refetchBalance` is the awaitable cache-bypassing refresh
+// the #62 arrival gate needs.
+// ---------------------------------------------------------------------------
 
-import { cdn } from '@normalfinance/utils';
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo } from 'react';
+import { nativeAssetToToken } from '@/lib/portfolio/native-token';
 
 import { useTurnkeyWallet } from './use-turnkey-wallet';
-
-async function fetchBtcData(address: string): Promise<{ btc: number; price: number } | null> {
-  try {
-    const [addrRes, priceRes] = await Promise.all([
-      fetch(`https://mempool.space/api/address/${address}`),
-      fetch('https://mempool.space/api/v1/prices'),
-    ]);
-    if (!addrRes.ok) return null;
-    const addrData = await addrRes.json();
-    const priceData = priceRes.ok ? await priceRes.json() : null;
-    const funded: number = addrData.chain_stats?.funded_txo_sum ?? 0;
-    const spent: number = addrData.chain_stats?.spent_txo_sum ?? 0;
-    const btc = (funded - spent) / 1e8;
-    const price: number = priceData?.USD ?? 0;
-    return { btc, price };
-  } catch {
-    return null;
-  }
-}
+import { useWalletBalances } from './use-wallet-balances';
 
 export function useBtcPortfolio(enabled = true) {
   const { addresses, loading: walletLoading, hasWallet, refetch } = useTurnkeyWallet(enabled);
-  const [btcToken, setBtcToken] = useState<Token | null>(null);
-  const [balanceLoading, setBalanceLoading] = useState(false);
+  const balances = useWalletBalances(enabled);
 
   const address = addresses?.bitcoinAddress ?? null;
-
-  // Re-runnable on demand (e.g. after a swap) — the effect alone only fires on
-  // address change, so a same-address balance update would otherwise be missed.
-  const loadBalance = useCallback(async () => {
-    if (!address) {
-      setBtcToken(null);
-      return;
-    }
-    setBalanceLoading(true);
-    const data = await fetchBtcData(address);
-    setBtcToken({
-      symbol: 'BTC',
-      contract: '__btc__',
-      name: 'Bitcoin',
-      issuer: '',
-      org: '',
-      domain: '',
-      icon: cdn('tokens/bitcoin.webp'),
-      decimals: 8,
-      featured: false,
-      balance: String(data?.btc ?? 0),
-      price: String(data?.price ?? 0),
-      percentageChange: 0,
-    } as Token);
-    setBalanceLoading(false);
-  }, [address]);
-
-  useEffect(() => {
-    loadBalance();
-  }, [loadBalance]);
-
-  // Auto-refresh when a swap settles (fires `nf:activity-updated`), so the BTC
-  // balance updates everywhere without a manual page refresh.
-  useEffect(() => {
-    const onUpdate = () => loadBalance();
-    window.addEventListener('nf:activity-updated', onUpdate);
-    return () => window.removeEventListener('nf:activity-updated', onUpdate);
-  }, [loadBalance]);
+  const asset = balances.getAsset('BTC');
+  // Memoized so the token keeps a STABLE identity between data updates — the
+  // pre-memo version built a fresh object every render, and consumers that
+  // watch the token list (send-modal's open-reset) fired on every keystroke,
+  // wiping the form (observed live 2026-08-13).
+  const btcToken = useMemo(
+    () => (address ? nativeAssetToToken(asset, 'bitcoin') : null),
+    [address, asset]
+  );
 
   return {
     btcToken,
     bitcoinAddress: address,
     hasWallet,
-    loading: walletLoading || balanceLoading,
+    // Doc 90 W3: BTC was the only chain with NO failure surface — an outage
+    // rendered as a confident 0 and the asset page's retry branch was
+    // unreachable. Same meaning as useEthPortfolio/useSolPortfolio.
+    error: asset?.status === 'error',
+    loading: walletLoading || balances.isLoading,
     refetch,
-    refetchBalance: loadBalance,
+    refetchBalance: balances.refreshFresh,
   };
 }

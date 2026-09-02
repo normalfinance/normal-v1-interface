@@ -52,10 +52,8 @@ export const RoadmapHero: React.FC = () => (
         backgroundImage:
           'linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)',
         backgroundSize: '56px 56px',
-        WebkitMaskImage:
-          'radial-gradient(ellipse 80% 70% at 50% 50%, #000 30%, transparent 80%)',
-        maskImage:
-          'radial-gradient(ellipse 80% 70% at 50% 50%, #000 30%, transparent 80%)',
+        WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at 50% 50%, #000 30%, transparent 80%)',
+        maskImage: 'radial-gradient(ellipse 80% 70% at 50% 50%, #000 30%, transparent 80%)',
         pointerEvents: 'none',
       }}
     />
@@ -127,8 +125,8 @@ export const RoadmapHero: React.FC = () => (
           mb: '48px',
         }}
       >
-        Most people earn next to nothing on their savings. Normal is built to change that —
-        starting with a USDC savings account that pays real yield, with no bank in the middle.
+        Most people earn next to nothing on their savings. Normal is built to change that — starting
+        with a USDC savings account that pays real yield, with no bank in the middle.
       </Typography>
 
       {/* Meta row */}

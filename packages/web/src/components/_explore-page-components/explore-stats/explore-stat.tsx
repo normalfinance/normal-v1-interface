@@ -1,5 +1,3 @@
-import { useTranslate } from '@/locales';
-
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -14,8 +12,6 @@ type Props = {
 };
 
 export function ExploreStat({ title, total, percent, formatter }: Props) {
-  const { t } = useTranslate('auto');
-
   return (
     <Box
       sx={{

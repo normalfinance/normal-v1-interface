@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>66-layer1-cache-plan</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>66 — P0-1 Layer-1 cache: plan</h1>
+<p><strong>Branch:</strong> <code>feat/layer1-cache</code> · GO given 2026-08-12. The [STRATEGIC]</p>
+<p>register item marked "mandatory between 1k and 10k users."</p>
+<h2>Verified starting point (recon, not assumption)</h2>
+<p>Layer-1 largely EXISTS: <code>/api/wallet/portfolio</code> (server aggregator, 15s</p>
+<p>response cache + 1h stale snapshot + refresh=1 bypass with 5s floor) and</p>
+<p><code>useWalletBalances</code> (ONE deduped SWR over it, localStorage first-paint,</p>
+<p>event-driven bypassed refresh, 30s poll). The portfolio page rides it.</p>
+<p>The remaining browser-direct gap — what P0-1 actually is:</p>
+<ul>
+<li><code>use-btc-portfolio</code>: every mount fetches mempool.space (balance + price)</li>
+</ul>
+<p>  from the BROWSER, per user, per view.</p>
+<ul>
+<li><code>use-chain-portfolio</code> (ETH/SOL): every mount fetches public JSON-RPC</li>
+</ul>
+<p>  <code>eth_getBalance</code> / <code>getBalance</code> from the browser.</p>
+<ul>
+<li>Consumers: swap-card (mounts all three, always), send-modal, #62's</li>
+</ul>
+<p>  <code>refetchChain</code>.</p>
+<p>Cause → effect at scale: cost and rate-limit exposure grow linearly with</p>
+<p>OPEN VIEWS, not users — the swap page alone fires 3 provider calls per</p>
+<p>mount per user. After this batch, those views share the one server</p>
+<p>aggregate everyone else already uses: cost grows with the CACHE WINDOW,</p>
+<p>not the user count.</p>
+<p><strong>Latent bug found during recon (fixed here):</strong> swap-card's <code>refetchChain</code></p>
+<p>— which #62's arrival gate AWAITS before showing "Done" — calls</p>
+<p><code>refetch()</code>, which refreshes Turnkey ADDRESSES, not balances. The balance</p>
+<p>only updated via the background activity event, so the await guaranteed</p>
+<p>less than designed.</p>
+<h2>Design</h2>
+<ol>
+<li><strong><code>useWalletBalances</code> gains <code>refreshFresh(): Promise&lt;void&gt;</code></strong> — an</li>
+</ol>
+<p>   awaitable, <code>refresh=1</code> (server-cache-bypassing) revalidation of the one</p>
+<p>   shared key. This is what arrival gates and post-action refreshes need.</p>
+<ol>
+<li><strong>The three per-chain hooks become thin selectors</strong> over</li>
+</ol>
+<p>   <code>useWalletBalances</code> + <code>useTurnkeyWallet</code> (addresses/hasWallet keep their</p>
+<p>   source): same exported interfaces (<code>btcToken</code>, <code>ethereumAddress</code>,</p>
+<p>   <code>loading</code>, <code>error</code>, <code>refetch</code>, <code>refetchBalance</code>, …) so swap-card,</p>
+<p>   send-modal, and #62 wiring keep working — but zero browser-direct</p>
+<p>   provider calls and zero per-hook event listeners (the shared hook</p>
+<p>   already refreshes on <code>nf:activity-updated</code> with the bypass).</p>
+<ul>
+<li>Token shape preserved via a pure mapper (<code>PortfolioAsset</code> → <code>Token</code>),</li>
+</ul>
+<p>     unit-tested: sentinel contracts (<code>__btc__</code> …), icons, decimals,</p>
+<p>     <code>change24h</code> → <code>percentageChange</code>.</p>
+<ul>
+<li><code>error</code> maps from the aggregate's per-asset <code>status === 'error'</code>;</li>
+</ul>
+<p>     <code>stale</code> values still display (server stale-snapshot ≥ the old</p>
+<p>     keep-last-known behavior).</p>
+<ol>
+<li><strong><code>refetchChain</code> rewired to <code>refetchBalance</code></strong> (now = <code>refreshFresh</code>) —</li>
+</ol>
+<p>   the #62 "Done waits for real balances" guarantee becomes true end to</p>
+<p>   end: bridge DONE → awaited bypassed aggregate refresh → Done shown.</p>
+<ol>
+<li><strong>Deliberately KEPT browser-direct</strong> (documented exceptions):</li>
+</ol>
+<ul>
+<li><code>fetchEthBalance</code>/<code>fetchSolBalance</code> exports — coinbase-offramp-modal's</li>
+</ul>
+<p>     ACTION-TIME preflight (the data-layer rule: display reads share the</p>
+<p>     cache; action-time freshness keeps its own live read).</p>
+<ul>
+<li><code>ETH_RPC_URL</code>/<code>SOL_RPC_URL</code> exports — tx-confirmation probing</li>
+</ul>
+<p>     (lifi-tracker, send-confirmation): per-action, chain-truth reads.</p>
+<ul>
+<li>mempool.space FEE quote in send-modal — a per-action fee estimate.</li>
+<li>BTC balance loses its browser path entirely (server aggregate covers</li>
+</ul>
+<p>     it; no action-time BTC preflight exists).</p>
+<h2>Every scenario</h2>
+<table>
+<tr><th>Scenario</th><th>Behavior after</th></tr>
+<tr><td>Swap page + send modal + portfolio open at once</td><td>ONE portfolio request (shared SWR), previously 1 + up to 4 browser-direct calls</td></tr>
+<tr><td>Send/swap settles</td><td>confirmation event → one bypassed refresh of the shared aggregate (floored server-side)</td></tr>
+<tr><td>LI.FI swap DONE (#62 gate)</td><td>awaits the bypassed refresh — now genuinely balances, not addresses</td></tr>
+<tr><td>Provider down for one chain</td><td>server stale-snapshot serves last-good marked <code>stale</code>; UI keeps numbers (old BTC behavior, now for all chains)</td></tr>
+<tr><td>RPC error on one chain</td><td><code>error</code> flag per asset; ETH/SOL hooks expose it exactly as before</td></tr>
+<tr><td>External (Lobstr) user</td><td>authed route works off the session; no Turnkey row → native tokens null (unchanged)</td></tr>
+<tr><td>Off-ramp MAX preflight</td><td>still a live direct read (action-time exception)</td></tr>
+<tr><td>Testnet</td><td>network in the SWR key and route param (unchanged)</td></tr>
+<tr><td>Signed-out edge</td><td>hooks <code>enabled</code> gating unchanged; route 401 → SWR keeps previous data, no confident zeros</td></tr>
+</table>
+<h2>Files</h2>
+<ul>
+<li><code>hooks/use-wallet-balances.ts</code> — <code>refreshFresh</code></li>
+<li><code>hooks/use-btc-portfolio.ts</code>, <code>hooks/use-chain-portfolio.ts</code> — selector</li>
+</ul>
+<p>  rewrite (RPC-URL + action-time exports kept)</p>
+<ul>
+<li><strong>new</strong> <code>lib/portfolio/native-token.ts</code> + tests</li>
+<li><code>sections/swap/swap-card.tsx</code> — <code>refetchChain</code> → <code>refetchBalance</code></li>
+<li>docs/register/memory</li>
+</ul>
+<p>No routes, no schema, no cron changes.</p>
+</body></html>

@@ -1,7 +1,10 @@
 export type NetworkType = 'testnet' | 'mainnet';
 
 export function getCurrentNetwork(): NetworkType {
-  const network = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase();
+  // trim() guards against a stray trailing space in the env value (e.g.
+  // "MAINNET "), which would otherwise fail the strict === and silently fall
+  // back to testnet — reading Stellar/savings on the wrong network.
+  const network = process.env.NEXT_PUBLIC_NETWORK?.trim().toLowerCase();
   return network === 'mainnet' ? 'mainnet' : 'testnet';
 }
 

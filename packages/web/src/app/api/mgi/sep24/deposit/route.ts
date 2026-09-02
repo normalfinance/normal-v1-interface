@@ -1,23 +1,17 @@
+import { j } from '@/utils/http';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { j, getAccessToken } from '@/utils/http';
 import { mgiApiBase } from '@/lib/mgi/server-base';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // We send only `asset_code: 'USDC'`; MoneyGram resolves the issuer for its
 // network, so no hardcoded (testnet) issuer is needed here.
 
-export async function POST(req: Request) {
+export const POST = withAuth(async (req: Request, { user }) => {
   const t0 = Date.now();
 
   try {
     // Authenticate
-    const accessToken = getAccessToken(req);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const body = await req.json().catch(() => ({}));
     const {
@@ -73,7 +67,14 @@ export async function POST(req: Request) {
       if (!loc) {
         return j(502, { error: 'Anchor redirected without a Location header', status: r.status });
       }
-      console.log('[MGI] deposit interactive redirect', r.status, 'in', dur, 'ms ->', loc);
+      console.log(
+        '[MGI] deposit interactive redirect',
+        r.status,
+        'in',
+        dur,
+        'ms ->',
+        String(loc).split('?')[0]
+      );
       return NextResponse.json({ url: loc, id: null });
     }
 
@@ -104,7 +105,14 @@ export async function POST(req: Request) {
           console.error('[MGI] failed to record deposit tx', dbErr);
         }
       }
-      console.log('[MGI] deposit interactive JSON', r.status, 'in', dur, 'ms ->', url);
+      console.log(
+        '[MGI] deposit interactive JSON',
+        r.status,
+        'in',
+        dur,
+        'ms ->',
+        String(url).split('?')[0]
+      );
       return NextResponse.json({ url, id });
     }
 
@@ -126,13 +134,10 @@ export async function POST(req: Request) {
       error: 'Unexpected response from anchor',
       status: r.status,
       contentType: ct || null,
-      bodySnippet: text.slice(0, 2000),
-      sentTo: endpoint,
-      sentBody: payload,
       note: 'The anchor should return JSON or a 302/303 redirect to the interactive UI. If HTML persists, re-check allowlisted client_domain and SEP-10 token scope.',
     });
   } catch (e: any) {
     console.error('[MGI] /api/mgi/sep24/deposit crashed:', e);
-    return j(500, { error: e?.message || 'Server error', stack: e?.stack });
+    return j(500, { error: 'MoneyGram is temporarily unavailable — please try again.' });
   }
-}
+});

@@ -56,7 +56,6 @@ const PHASES: Phase[] = [
   },
 ];
 
-
 // ----------------------------------------------------------------------
 
 const statusStyles: Record<Status, { bg: string; color: string }> = {
@@ -91,7 +90,8 @@ export default function RoadmapSection() {
       aria-labelledby="roadmap-heading"
       sx={{
         bgcolor: '#FAFAFB',
-        pt: { xs: '80px', md: '110px' }, pb: { xs: '40px', md: '56px' }
+        pt: { xs: '80px', md: '110px' },
+        pb: { xs: '40px', md: '56px' },
       }}
     >
       <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
@@ -235,7 +235,15 @@ export default function RoadmapSection() {
                 {/* Bullets */}
                 <Box
                   component="ul"
-                  sx={{ m: 0, mt: '20px', p: 0, listStyle: 'none', flex: 1, display: 'grid', gap: '10px' }}
+                  sx={{
+                    m: 0,
+                    mt: '20px',
+                    p: 0,
+                    listStyle: 'none',
+                    flex: 1,
+                    display: 'grid',
+                    gap: '10px',
+                  }}
                 >
                   {phase.bullets.map((bullet) => (
                     <Box

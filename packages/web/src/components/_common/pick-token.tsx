@@ -14,13 +14,13 @@ import {
   Button,
   TextField,
   Typography,
-  IconButton,
   DialogTitle,
   DialogContent,
   InputAdornment,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 import { NetworkBadge, getAssetNetwork } from './network-badge';
 
@@ -44,12 +44,25 @@ const PickToken: React.FC<PickTokenProps> = ({
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredTokens = tokens.filter((token) => {
-    const lowerTerm = searchTerm.toLowerCase();
-    return (
-      token.name.toLowerCase().includes(lowerTerm) || token.symbol.toLowerCase().includes(lowerTerm)
-    );
-  });
+  // Highest USD value first (Niko 2026-08-21) — this component IS every
+  // asset picker in the app (swap, send, withdraw, asset actions), so the
+  // ordering rule lives here once. NaN-safe: a missing price or balance
+  // sorts as $0; the sort is stable, so $0 ties keep the curated order.
+  const usdValue = (token: Token): BigNumber => {
+    const v = BigNumber(token.price || 0).multipliedBy(token.balance || 0);
+    return v.isFinite() ? v : BigNumber(0);
+  };
+  const byUsdDesc = (a: Token, b: Token) => usdValue(b).comparedTo(usdValue(a)) ?? 0;
+
+  const filteredTokens = tokens
+    .filter((token) => {
+      const lowerTerm = searchTerm.toLowerCase();
+      return (
+        token.name.toLowerCase().includes(lowerTerm) ||
+        token.symbol.toLowerCase().includes(lowerTerm)
+      );
+    })
+    .sort(byUsdDesc);
 
   const handleTokenClick = (token: Token) => {
     onTokenSelect(token);
@@ -57,7 +70,7 @@ const PickToken: React.FC<PickTokenProps> = ({
   };
 
   const featuredTokens = tokens.filter((token) => token.featured);
-  const ownedTokens = tokens.filter((token) => BigNumber(token.balance).gt(0));
+  const ownedTokens = tokens.filter((token) => BigNumber(token.balance).gt(0)).sort(byUsdDesc);
   const unownedTokens = tokens.filter((token) => BigNumber(token.balance).eq(0));
   const arrangedTokens = [...unownedTokens];
 
@@ -79,14 +92,12 @@ const PickToken: React.FC<PickTokenProps> = ({
         },
       }}
     >
-      <DialogTitle sx={{ p: 2, pb: 0, width: '100%' }}>
+      <DialogTitle sx={{ p: 2, pb: '12px', width: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="div">
             {t('Select an asset')}
           </Typography>
-          <IconButton onClick={onClose}>
-            <Iconify icon="mingcute:close-line" width={24} />
-          </IconButton>
+          <ModalCloseButton onClick={onClose} />
         </Box>
       </DialogTitle>
       <DialogContent
@@ -156,7 +167,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                     <Box
                       component="img"
-                      src={token.icon ?? getCryptoIconUrl(token.symbol)}
+                      src={token.icon || getCryptoIconUrl(token.symbol)}
                       sx={{
                         width: 40,
                         height: 40,
@@ -180,10 +191,22 @@ const PickToken: React.FC<PickTokenProps> = ({
                           {token.name.includes('Short') && (
                             <Chip label="Short" color="error" size="small" variant="soft" />
                           )}
-                          {token.name.replace('Short', '')}
+                          {token.name.replace('Short', '').split(' · ')[0]}
                         </Typography>
                         <NetworkBadge network={getAssetNetwork(token)} />
                       </Box>
+                      {token.name.includes(' · ') && (
+                        <Typography
+                          sx={{
+                            fontSize: '11.5px',
+                            color: theme.palette.text.secondary,
+                            textAlign: 'left',
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          {token.name.split(' · ').slice(1).join(' · ')}
+                        </Typography>
+                      )}
                     </Box>
                   </Box>
                   <Box>
@@ -254,7 +277,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                   >
                     <Box
                       component="img"
-                      src={token.icon ?? getCryptoIconUrl(token.symbol)}
+                      src={token.icon || getCryptoIconUrl(token.symbol)}
                       sx={{
                         width: 20,
                         height: 20,
@@ -306,7 +329,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                         <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                           <Box
                             component="img"
-                            src={token.icon ?? getCryptoIconUrl(token.symbol)}
+                            src={token.icon || getCryptoIconUrl(token.symbol)}
                             sx={{
                               width: 40,
                               height: 40,
@@ -330,10 +353,22 @@ const PickToken: React.FC<PickTokenProps> = ({
                                 {token.name.includes('Short') && (
                                   <Chip label="Short" color="error" size="small" variant="soft" />
                                 )}
-                                {token.name.replace('Short', '')}
+                                {token.name.replace('Short', '').split(' · ')[0]}
                               </Typography>
                               <NetworkBadge network={getAssetNetwork(token)} />
                             </Box>
+                            {token.name.includes(' · ') && (
+                              <Typography
+                                sx={{
+                                  fontSize: '11.5px',
+                                  color: theme.palette.text.secondary,
+                                  textAlign: 'left',
+                                  lineHeight: 1.35,
+                                }}
+                              >
+                                {token.name.split(' · ').slice(1).join(' · ')}
+                              </Typography>
+                            )}
                           </Box>
                         </Box>
                         <Box>
@@ -389,7 +424,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
                         <Box
                           component="img"
-                          src={token.icon ?? getCryptoIconUrl(token.symbol)}
+                          src={token.icon || getCryptoIconUrl(token.symbol)}
                           sx={{
                             width: 40,
                             height: 40,
@@ -414,10 +449,22 @@ const PickToken: React.FC<PickTokenProps> = ({
                               {token.name.includes('Short') && (
                                 <Chip label="Short" color="error" size="small" variant="soft" />
                               )}
-                              {token.name.replace('Short', '')}
+                              {token.name.replace('Short', '').split(' · ')[0]}
                             </Typography>
                             <NetworkBadge network={getAssetNetwork(token)} />
                           </Box>
+                          {token.name.includes(' · ') && (
+                            <Typography
+                              sx={{
+                                fontSize: '11.5px',
+                                color: theme.palette.text.secondary,
+                                textAlign: 'left',
+                                lineHeight: 1.35,
+                              }}
+                            >
+                              {token.name.split(' · ').slice(1).join(' · ')}
+                            </Typography>
+                          )}
                         </Box>
                       </Box>
                       <Box>

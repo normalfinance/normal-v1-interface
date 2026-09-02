@@ -77,7 +77,14 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
         {loading ? 'Setting up…' : 'Set up Bitcoin wallet'}
       </Box>
 
-      <Box sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.4)', textAlign: 'center', lineHeight: 1.5 }}>
+      <Box
+        sx={{
+          fontSize: '11.5px',
+          color: 'rgba(10,10,15,0.4)',
+          textAlign: 'center',
+          lineHeight: 1.5,
+        }}
+      >
         Secured by your device biometrics. No seed phrase required.
       </Box>
 

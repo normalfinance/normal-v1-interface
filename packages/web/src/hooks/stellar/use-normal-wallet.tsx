@@ -1,11 +1,16 @@
 import type { MnemonicStrength } from '@normalfinance/utils';
 
+import { shouldRestoreTurnkeyStellar } from '@/lib/wallet-slot';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { linkWallet, updateLastUsed } from '@/services/linked-wallets';
 import { useWalletPassword } from '@/providers/WalletPasswordProvider';
 import { logger, createKeypairFromSecret } from '@normalfinance/utils';
 import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
-import { getTurnkeyWalletInfo, isTurnkeyStellarAddress } from '@/lib/turnkey/wallet-info';
+import {
+  getTurnkeyWalletInfo,
+  isTurnkeyStellarAddress,
+  isTurnkeyStellarAddressStrict,
+} from '@/lib/turnkey/wallet-info';
 import {
   isLegacyBase64,
   isPasswordEncrypted,
@@ -94,6 +99,53 @@ export const useNormalWallet = () => {
   const { requestPassword } = useWalletPassword();
 
   const connectionChecked = useRef(false);
+  const recoveryChecked = useRef(false);
+
+  // Self-heal a wiped Stellar address.
+  //
+  // `disconnectWallet()` clears `wallet.address` from the PERSISTED store, so
+  // once it runs the address is gone across reloads and only signing in again
+  // restored it. Everything Stellar then breaks quietly — balances are fetched
+  // with `stellar=` empty, and the activity/savings hooks get a null key — while
+  // BTC/ETH/SOL keep working, because the server reads those from the authed DB
+  // row. That asymmetry is exactly the "XLM and USDC don't load" report.
+  //
+  // Turnkey is the authority on which Stellar address belongs to this user, so
+  // if the persisted one is missing while Turnkey has it, restore it.
+  //
+  // #32 chunk 1: guarded by the lastWalletType breadcrumb — an empty slot
+  // whose breadcrumb records an EXTERNAL wallet means the user disconnected
+  // by choice; restoring the Turnkey wallet there silently switched their
+  // wallet (finding #42). Absent breadcrumb (fresh device) restores as
+  // always. Decision logic + invariants: lib/wallet-slot.ts.
+  useEffect(() => {
+    if (recoveryChecked.current) return;
+    if (!shouldRestoreTurnkeyStellar(persistStore.wallet.address, persistStore.lastWalletType))
+      return;
+
+    recoveryChecked.current = true;
+    (async () => {
+      try {
+        const info = await getTurnkeyWalletInfo();
+        if (!info?.stellarAddress) return;
+        // Re-check: another path may have connected while we were awaiting.
+        const latest = usePersistStore.getState();
+        if (!shouldRestoreTurnkeyStellar(latest.wallet.address, latest.lastWalletType)) return;
+
+        logger.warn(
+          '[NORMAL WALLET] Persisted Stellar address was missing; restoring it from Turnkey'
+        );
+        await persistStore.connectWallet(info.stellarAddress, 'normal-wallet');
+        normalWalletStore.setPublicKey(info.stellarAddress);
+        normalWalletStore.setConnected(true);
+      } catch (error) {
+        // Unknown, not "no wallet" — allow a later attempt rather than
+        // permanently giving up on recovery.
+        recoveryChecked.current = false;
+        logger.error('[NORMAL WALLET] Stellar address recovery failed:', error);
+      }
+    })();
+  }, [persistStore, normalWalletStore]);
 
   // Restore Normal wallet from persist store and localStorage on mount
   useEffect(() => {
@@ -126,7 +178,11 @@ export const useNormalWallet = () => {
         if (!hasStoredNormalWalletKey()) {
           // Turnkey-imported wallets have no local key — signing goes through
           // the passkey, so the connection is still valid.
-          const isTurnkeyManaged = await isTurnkeyStellarAddress(storedAddress);
+          // STRICT on purpose: a failed lookup must never be read as "not your
+          // wallet", because the branch below disconnects the wallet. On
+          // failure this throws, the catch below clears `connectionChecked`,
+          // and the next render retries instead of stranding the session.
+          const isTurnkeyManaged = await isTurnkeyStellarAddressStrict(storedAddress);
           if (!isTurnkeyManaged) {
             logger.warn(
               '[NORMAL WALLET] Persisted Normal wallet is missing a local key; clearing stale connection state'
@@ -148,6 +204,11 @@ export const useNormalWallet = () => {
         normalWalletStore.setPublicKey(storedAddress);
         normalWalletStore.setConnected(true);
       } catch (error) {
+        // The guard is set before the awaits above, so leaving it set after a
+        // failure would strand the wallet for the whole page session — no
+        // balances, no savings, no activity, recoverable only by a full
+        // reload. Clearing it lets the next render retry.
+        connectionChecked.current = false;
         logger.error('[NORMAL WALLET] Failed to restore wallet:', error);
       }
     };
@@ -385,7 +446,9 @@ export const useNormalWallet = () => {
     isTurnkeyStellarAddress(addr).then((managed) => {
       if (!cancelled) setIsTurnkeyManaged(managed);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [normalWalletStore.publicKey]);
 
   // canSign is true when the wallet can sign transactions: a keypair is in

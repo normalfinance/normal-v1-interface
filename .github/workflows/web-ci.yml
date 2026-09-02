@@ -1,14 +1,26 @@
 name: Web CI
 
+# HISTORY (2026-08-06): this workflow had failed 40/40 runs back to at least
+# July 25 — every run died at the Prettier step, which SKIPPED every real gate
+# behind it (ESLint, tsc, build). Nobody was typechecking in CI at all.
+# The July loss of the external-wallet gate (PR #466) happened with no net.
+# Changes made: PR trigger enabled, push narrowed (PRs already cover feature
+# branches), Prettier made non-blocking until the scheduled repo-wide reformat
+# lands, the unit-test step added, build made non-blocking until repo secrets
+# exist (Vercel builds every push with real env and is the authoritative
+# build signal today). Details: docs/audit/50-ci-and-withauth-plan.md.
+
 on:
-  # pull_request:
-  #   paths:
-  #     - 'packages/web/**'
+  pull_request:
+    branches: [develop, master]
   push:
-    branches:
-      - '**'
-    # paths:
-    #   - 'packages/web/**'
+    branches: [develop, master]
+
+# A force-push or rapid follow-up commit cancels the superseded run instead of
+# queueing behind it.
+concurrency:
+  group: web-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   web:
@@ -36,6 +48,9 @@ jobs:
         run: npx turbo build --filter="!@normalfinance/web" --cache-dir=.turbo
 
       # ---------- Quality Gates ----------
+      # Blocking since 2026-08-07: the repo-wide reformat landed, so an
+      # unformatted file is now a real defect, not legacy noise. `yarn fm:fix`
+      # locally is the remedy.
       - name: Prettier – formatting check
         working-directory: packages/web
         run: yarn fm:check
@@ -44,34 +59,9 @@ jobs:
         working-directory: packages/web
         run: yarn lint
 
-      # Extract translation keys before downloading to ensure English files are current
-      - name: i18n – extract translation keys
-        working-directory: packages/web
-        run: yarn i18n:extract
-
-      # - name: i18n – download latest translations
-      #   working-directory: packages/web
-      #   env:
-      #     CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
-      #     CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_TOKEN }}
-      #   run: |
-      #     if [ -n "$CROWDIN_PROJECT_ID" ] && [ -n "$CROWDIN_API_TOKEN" ]; then
-      #       echo "Downloading latest translations from Crowdin..."
-      #       yarn i18n:download || echo "Warning: Failed to download translations, continuing with existing ones"
-      #     else
-      #       echo "Crowdin credentials not available, skipping translation download"
-      #     fi
-
-      # Sync keys from 'en' to other languages to ensure no missing keys
-      - name: i18n – sync missing keys
-        working-directory: packages/web
-        run: yarn i18n:sync-keys
-
-      # Check for untranslated / missing keys across all locale JSON files
-      - name: i18n – translation completeness check
-        working-directory: packages/web
-        continue-on-error: true
-        run: yarn i18n:check
+      # (i18n steps removed 2026-08-06 — translations retired, English-only.
+      #  The t() runtime keys are the English strings themselves, so no
+      #  extraction/sync is needed to render correctly.)
 
       - name: Prisma - Generate Prisma Client
         working-directory: packages/web
@@ -81,8 +71,24 @@ jobs:
         working-directory: packages/web
         run: npx tsc --noEmit --project tsconfig.json
 
-      - name: Next.js – production build
+      # The unit suite: money-math and regression tests, each anchored to a
+      # shipped bug (see docs/audit/47-testing-plan.md). Runs in seconds; a
+      # red here means a promise users already relied on has been broken.
+      - name: Jest – unit tests
         working-directory: packages/web
+        run: yarn test
+
+      # NON-BLOCKING until CI secrets exist: several modules read env at
+      # import time (e.g. server/rateLimiter constructs its Redis client from
+      # UPSTASH_* vars), and next build imports every route module — on a
+      # secretless runner this can detonate regardless of code health. Vercel
+      # builds every push with real env and is the authoritative build gate
+      # today. To make this blocking: add the UPSTASH_*/DATABASE_URL/Supabase
+      # secrets in repo Settings → Secrets → Actions, then remove
+      # continue-on-error.
+      - name: Next.js – production build (non-blocking, see comment)
+        working-directory: packages/web
+        continue-on-error: true
         env:
           NEXT_PUBLIC_APP_ENV: ci
           EDGE_CONFIG: ${{ secrets.EDGE_CONFIG }}

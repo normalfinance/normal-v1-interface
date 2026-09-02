@@ -27,14 +27,13 @@ import {
   Skeleton,
   TextField,
   Typography,
-  IconButton,
   DialogTitle,
   DialogContent,
   CircularProgress,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
-import { useSnackbar } from '@/components/template/snackbar';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 export type NormalWalletImportProps = {
   open: boolean;
@@ -55,7 +54,6 @@ export default function NormalWalletImport({
   onBack,
 }: NormalWalletImportProps) {
   const { t } = useTranslate();
-  const { enqueueSnackbar } = useSnackbar();
   const { importWalletFromMnemonic, importWalletFromPrivateKey } = useNormalWallet();
   const { session } = useSupabaseAuth();
 
@@ -419,9 +417,7 @@ export default function NormalWalletImport({
             value={privateKey}
             onChange={(e) => handlePrivateKeyChange(e.target.value)}
             error={!!privateKeyError}
-            helperText={
-              privateKeyError || t('Your private key should be 56 characters long.')
-            }
+            helperText={privateKeyError || t('Your private key should be 56 characters long.')}
             disabled={isImporting}
           />
         </Stack>
@@ -470,18 +466,7 @@ export default function NormalWalletImport({
               ? t('Reconnect Account')
               : t('Import Existing Normal Account')}
         </Typography>
-        <IconButton
-          aria-label="close"
-          onClick={handleClose}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            color: (theme) => theme.palette.grey[500],
-          }}
-        >
-          <Iconify icon="mingcute:close-line" />
-        </IconButton>
+        <ModalCloseButton onClick={handleClose} sx={{ position: 'absolute', right: 12, top: 12 }} />
       </DialogTitle>
 
       <DialogContent sx={{ py: 5 }}>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Safari Compatibility Audit</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:980px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Safari Compatibility Audit</h1>
+<p class="subtitle">Branch <code>chore/console-hygiene</code>, 2026-08-28 &mdash; prompted by a
+coworker&rsquo;s iPhone screenshot: coin assets not loading. A systematic sweep of every Safari
+hazard class in the client code, one confirmed bug fixed, everything else given a verdict.</p>
+
+<h2>1 &middot; Why Safari specifically breaks things</h2>
+<p>Two facts combine badly. First, our build (Next/SWC with browserslist
+<code>&gt;0.5%, not dead</code>) transpiles <em>syntax</em> for older browsers — but it
+<strong>never polyfills runtime APIs</strong>. A missing function on Safari simply throws at the
+moment it is called. Second, iPhones run whatever Safari their iOS ships — users on iOS 15 exist,
+and nothing we write in Chrome ever warns us.</p>
+
+<h2>2 &middot; The confirmed bug — found and fixed</h2>
+<div class="box bad"><div class="label">AbortSignal.timeout — Safari &lt; 16.0</div>
+<strong>12 client-side call sites</strong> passed <code>signal: AbortSignal.timeout(…)</code>
+directly to fetch. On Safari older than 16.0 (Sep 2022) that static does not exist — the call
+throws a synchronous <code>TypeError</code> <em>before the request is even sent</em>. Affected
+paths, i.e. what silently dies on such a device: the <strong>Turnkey wallet lookup</strong>
+(wallet-info — the root of most balance surfaces), the <strong>gas reserve read</strong>, five
+<strong>CCTP status/autopilot calls</strong>, the <strong>MoneyGram client</strong> (3), the swap
+detail modal, and the refund flow. &ldquo;Coin assets not loading&rdquo; is exactly what the
+wallet-lookup failure looks like.</div>
+<p><strong>The fix:</strong> a dependency-free helper, <code>utils/abort-timeout.ts</code> — native
+<code>AbortSignal.timeout</code> when the platform has it, a timer-aborted
+<code>AbortController</code> when it doesn&rsquo;t. Two tests, one of which deletes the platform
+API to prove the old failure mode (synchronous throw) is gone. All 12 client sites now use it;
+server-side files keep the native call (they run on Node, where it always exists).</p>
+
+<h2>3 &middot; The full hazard table — what was checked and the verdict</h2>
+<table>
+  <tr><th>hazard</th><th>breaks on</th><th>verdict in our code</th></tr>
+  <tr><td><code>AbortSignal.timeout</code></td><td>Safari &lt; 16.0</td>
+      <td class="no">12 client sites — FIXED (above)</td></tr>
+  <tr><td>Regex lookbehind <code>(?&lt;=…)</code></td><td>&lt; 16.4 — SyntaxError at chunk
+      <em>parse</em>, blanks whole sections</td><td class="ok">none in client code</td></tr>
+  <tr><td><code>requestIdleCallback</code></td><td>&lt; 18</td><td class="ok">not used</td></tr>
+  <tr><td><code>structuredClone</code> / <code>Object.hasOwn</code> /
+      <code>crypto.randomUUID</code></td><td>&lt; 15.4</td><td class="ok">not used</td></tr>
+  <tr><td><code>.at()</code> / <code>findLast</code> / <code>toSorted</code> /
+      <code>toReversed</code></td><td>&lt; 15.4 / 16 era</td><td class="ok">not used</td></tr>
+  <tr><td><code>AbortSignal.any</code> / <code>Object.groupBy</code> /
+      <code>Promise.withResolvers</code> / <code>URL.canParse</code></td><td>&lt; 17.x</td>
+      <td class="ok">not used</td></tr>
+  <tr><td>Date parsing of <code>"YYYY-MM-DD HH:mm"</code> strings (Safari returns Invalid
+      Date)</td><td>all Safari</td>
+      <td class="ok">no string-literal date construction found; API dates are ISO</td></tr>
+  <tr><td><code>Intl.NumberFormat</code> <code>notation: 'compact'</code></td>
+      <td>&lt; 14.1</td><td class="ok">2 sites — safe on any plausible iPhone</td></tr>
+  <tr><td>WebP token icons</td><td>&lt; iOS 14</td><td class="ok">safe; no AVIF anywhere</td></tr>
+  <tr><td>Syntax (optional chaining, logical assignment, BigInt literals&hellip;)</td>
+      <td>—</td><td class="ok">transpiled by SWC per browserslist; BigInt needs iOS 14+, which
+      WebAuthn requires anyway</td></tr>
+</table>
+
+<h2>4 &middot; Watch items — real Safari quirks, no code change yet</h2>
+<table>
+  <tr><th>item</th><th>why it matters on iOS</th></tr>
+  <tr><td><code>navigator.clipboard</code> (10 sites)</td>
+      <td>Safari only allows writes during a user gesture and can still reject. Our copy buttons
+      are click-handlers (gesture ✓), but a rejection is silent on some. If a copy button
+      &ldquo;does nothing&rdquo; on iPhone, this is where to look.</td></tr>
+  <tr><td>WebAuthn / passkeys (3 sites)</td>
+      <td>Works on iOS Safari, but Apple is stricter about prompts that start long after the tap
+      (our ceremonies sometimes follow quote/build fetches). If iPhone testing shows
+      &ldquo;operation not allowed&rdquo; on signing, the fix is moving the prompt closer to the
+      tap — noted, not preemptively rebuilt.</td></tr>
+  <tr><td>Safari ITP 7-day storage cap</td>
+      <td>localStorage a user hasn&rsquo;t touched for 7 days can be wiped — sessions and caches
+      vanish, which looks like a random logout. Cosmetic-recoverable; worth knowing when a tester
+      reports it.</td></tr>
+  <tr><td>iOS viewport (<code>100vh</code>, keyboard, safe-area)</td>
+      <td>Purely visual; not audited in this pass.</td></tr>
+</table>
+
+<h2>5 &middot; Honest limit + what to ask your coworker</h2>
+<div class="box warn"><div class="label">I cannot run an iPhone from here</div>
+The fix in &sect;2 is real and needed regardless — but whether it is <em>your coworker&rsquo;s</em>
+bug depends on their iOS version. If they are on iOS 16+, something else is at play and I need
+two things from them:
+<ul>
+  <li><strong>iOS version</strong> — Settings → General → About → iOS Version.</li>
+  <li><strong>The console</strong> — easiest: plug the iPhone into any Mac, Safari →
+      Develop → their phone → the page, and screenshot the console. The first red line will name
+      the culprit outright — this audit turns that line into a fix in minutes rather than another
+      research round.</li>
+</ul></div>
+
+<h2>6 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R75</span></td>
+      <td>On the coworker&rsquo;s iPhone (after this deploys): open the app, portfolio and swap
+      pages.</td>
+      <td>Coin assets load. If they still do not, collect the two items from &sect;5 — the answer
+      will be in the first console line.</td></tr>
+  <tr><td>2</td><td>Desktop Safari (any Mac, current version): full pass — sign-in, swap,
+      savings, drawer.</td>
+      <td>Everything behaves as in Chrome; console stays clean (per doc 114).</td></tr>
+</table>
+
+<h2>7 &middot; Commit</h2>
+<p><code>fix(safari): AbortSignal.timeout fallback for Safari &lt; 16</code> (full message in
+chat). New tests: <code>utils/abort-timeout.test.ts</code> (2). Suite: <strong>501 passing, 58
+suites</strong>; lint, prettier, tsc and build all clean.</p>
+
+</body>
+</html>

@@ -8,6 +8,7 @@ import { BigNumber } from 'bignumber.js';
 import { ModalType } from '@normalfinance/types';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { assetDisplay } from '@/lib/portfolio/display';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
@@ -41,11 +42,46 @@ interface AssetMeta {
 
 // Assets offered in the Buy / Receive pickers (Sell filters to held only).
 const SUPPORTED: AssetMeta[] = [
-  { symbol: 'USDC', blockchain: 'stellar', name: 'USD Coin', icon: assetDisplay('USDC').icon, decimals: 7, contract: '__usdc__' },
-  { symbol: 'XLM', blockchain: 'stellar', name: 'Stellar Lumens', icon: assetDisplay('XLM').icon, decimals: 7, contract: '__xlm__' },
-  { symbol: 'BTC', blockchain: 'bitcoin', name: 'Bitcoin', icon: assetDisplay('BTC').icon, decimals: 8, contract: '__btc__' },
-  { symbol: 'ETH', blockchain: 'ethereum', name: 'Ethereum', icon: assetDisplay('ETH').icon, decimals: 18, contract: '__eth__' },
-  { symbol: 'SOL', blockchain: 'solana', name: 'Solana', icon: assetDisplay('SOL').icon, decimals: 9, contract: '__sol__' },
+  {
+    symbol: 'USDC',
+    blockchain: 'stellar',
+    name: 'USD Coin',
+    icon: assetDisplay('USDC').icon,
+    decimals: 7,
+    contract: '__usdc__',
+  },
+  {
+    symbol: 'XLM',
+    blockchain: 'stellar',
+    name: 'Stellar Lumens',
+    icon: assetDisplay('XLM').icon,
+    decimals: 7,
+    contract: '__xlm__',
+  },
+  {
+    symbol: 'BTC',
+    blockchain: 'bitcoin',
+    name: 'Bitcoin',
+    icon: assetDisplay('BTC').icon,
+    decimals: 8,
+    contract: '__btc__',
+  },
+  {
+    symbol: 'ETH',
+    blockchain: 'ethereum',
+    name: 'Ethereum',
+    icon: assetDisplay('ETH').icon,
+    decimals: 18,
+    contract: '__eth__',
+  },
+  {
+    symbol: 'SOL',
+    blockchain: 'solana',
+    name: 'Solana',
+    icon: assetDisplay('SOL').icon,
+    decimals: 9,
+    contract: '__sol__',
+  },
 ];
 
 export type AssetActionKey = 'buy' | 'sell' | 'send' | 'receive';
@@ -60,12 +96,19 @@ export function useAssetActions(): {
   const isAuthed = !!user;
   const portfolio = usePortfolio(isAuthed);
   const persist = usePersistStore();
+  const stellarTokens = useStellarTokens();
   const { setModalView } = useAppStore();
   const { addresses, refetch: refetchAddresses } = useTurnkeyWallet(isAuthed);
 
   const [picker, setPicker] = useState<'buy' | 'sell' | 'receive' | null>(null);
-  const [flow, setFlow] = useState<{ action: 'buy' | 'sell' | 'receive'; symbol: string } | null>(null);
-  const [setup, setSetup] = useState<{ chain: TurnkeyChain; action: 'buy' | 'sell' | 'receive'; symbol: string } | null>(null);
+  const [flow, setFlow] = useState<{ action: 'buy' | 'sell' | 'receive'; symbol: string } | null>(
+    null
+  );
+  const [setup, setSetup] = useState<{
+    chain: TurnkeyChain;
+    action: 'buy' | 'sell' | 'receive';
+    symbol: string;
+  } | null>(null);
 
   const addressFor = (bc: Blockchain): string | null => {
     if (bc === 'stellar') return persist.wallet.address || null;
@@ -77,9 +120,8 @@ export function useAssetActions(): {
   // Token objects for the picker: real store tokens for Stellar (USDC/XLM),
   // synthesized from portfolio data for the native chains.
   const pickerTokens: Token[] = SUPPORTED.map((m) => {
-    const stored = m.blockchain === 'stellar'
-      ? persist.tokenState.tokens.find((tk) => tk.symbol === m.symbol)
-      : undefined;
+    const stored =
+      m.blockchain === 'stellar' ? stellarTokens.find((tk) => tk.symbol === m.symbol) : undefined;
     if (stored) return stored;
     const a = portfolio.getAsset(m.symbol);
     return {
@@ -135,7 +177,7 @@ export function useAssetActions(): {
     if (s) setFlow({ action: s.action, symbol: s.symbol });
   };
 
-  const flowMeta = flow ? SUPPORTED.find((m) => m.symbol === flow.symbol) ?? null : null;
+  const flowMeta = flow ? (SUPPORTED.find((m) => m.symbol === flow.symbol) ?? null) : null;
   const flowBlockchain: Blockchain = flowMeta?.blockchain ?? 'stellar';
   const flowAddress = flowMeta ? addressFor(flowMeta.blockchain) : null;
   const flowBalanceNum = flow ? Number(portfolio.getAsset(flow.symbol)?.balance ?? 0) : 0;
@@ -162,7 +204,11 @@ export function useAssetActions(): {
         onClose={() => setFlow(null)}
         walletAddress={flowAddress ?? undefined}
         asset={{ symbol: flow?.symbol ?? 'USDC', blockchain: flowBlockchain }}
-        providers={flow?.symbol === 'USDC' ? ['stripe', 'coinbase', 'moneygram'] : ['stripe', 'coinbase']}
+        providers={
+          // Stripe offered LAST (Niko 2026-08-26) until the session integration
+          // replaces the bare link (doc 88 B3).
+          flow?.symbol === 'USDC' ? ['coinbase', 'moneygram', 'stripe'] : ['coinbase', 'stripe']
+        }
       />
 
       <OffRampDialog
@@ -173,6 +219,9 @@ export function useAssetActions(): {
         asset={{ symbol: flow?.symbol ?? 'USDC', blockchain: flowBlockchain }}
         providers={flow?.symbol === 'USDC' ? ['coinbase', 'moneygram'] : ['coinbase']}
         assetBalance={flowBalanceNum}
+        assetPrice={
+          flow ? Number(portfolio.getAsset(flow.symbol)?.price ?? 0) || undefined : undefined
+        }
       />
 
       <ReceiveModal

@@ -3,7 +3,7 @@ import type { TransferArgs } from '@/hooks/stellar/use-send-token';
 import { BigNumber } from 'bignumber.js';
 import { fCurrency } from '@/utils/format-number';
 import { isValidStellarAddress } from '@/utils/stellar-address';
-import { spendableXlm, STELLAR_TX_FEE_XLM } from '@/utils/stellar-reserve';
+import { STELLAR_TX_FEE_XLM, spendableXlmForOutflow } from '@/utils/stellar-reserve';
 
 import type { SendParams, SendAdapter, AdapterFeeInfo } from './index';
 
@@ -16,6 +16,10 @@ type StellarSendFn = (args: TransferArgs) => Promise<string>;
 export function createStellarAdapter(
   stellarSend: StellarSendFn,
   xlmPriceUsd: number,
+  // #67: an active savings position holds SAVINGS_XLM_BUFFER back from every
+  // XLM outflow — typed amounts included, not just MAX — so a saver can never
+  // strand their own withdrawals.
+  hasActiveSavings = false
 ): SendAdapter {
   const feeFiat = BigNumber(NETWORK_FEE_XLM).multipliedBy(xlmPriceUsd);
   const feeInfo: AdapterFeeInfo = {
@@ -37,7 +41,7 @@ export function createStellarAdapter(
         // Until the real subentry count loads, assume 1 (the USDC savings
         // trustline — the common case) so we never over-report spendable and let
         // a send exceed the on-chain reserve. MAX itself does a fresh read.
-        return spendableXlm(token.balance, xlmSubentries ?? 1);
+        return spendableXlmForOutflow(token.balance, xlmSubentries ?? 1, hasActiveSavings);
       }
       return BigNumber(token.balance);
     },

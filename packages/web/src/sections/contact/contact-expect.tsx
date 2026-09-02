@@ -13,10 +13,7 @@ const RESPONSE_TIMES = [
 ];
 
 export const ContactExpect: React.FC = () => (
-  <Box
-    component="section"
-    sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
-  >
+  <Box component="section" sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}>
     <Container maxWidth="xl">
       <Box
         sx={{
@@ -77,9 +74,9 @@ export const ContactExpect: React.FC = () => (
               }}
             >
               {EMAIL}
-            </Box>
-            {' '}and gets triaged by a real person — not a bot. We route by topic so you always
-            hear from someone who actually knows the answer.
+            </Box>{' '}
+            and gets triaged by a real person — not a bot. We route by topic so you always hear from
+            someone who actually knows the answer.
           </Typography>
 
           {/* Response times grid */}

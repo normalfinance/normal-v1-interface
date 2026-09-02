@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calm Endings</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Calm Endings</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 15 &mdash; a swap that
+moved nothing must end quietly, truthfully, and clean itself up.</p>
+
+<h2>1 &middot; What this run is for</h2>
+<p>Your ETH → USDC swap reverted on the blockchain itself (verified: receipt status
+<code>0x0</code>, LI.FI status <code>FAILED</code>). Your ETH never left; only ~$0.13 of gas was
+spent. The app&rsquo;s handling of that ending was the problem: a scary red box, a Try again
+button routed into the wrong recovery, and a banner that kept advertising the dead swap as
+&ldquo;money in flight&rdquo; forever. Your instruction: honest message, no red, no Try again,
+banner gone. That is exactly what shipped.</p>
+
+<h2>2 &middot; The new ending, surface by surface</h2>
+
+<h3>The popup: a quiet grey panel instead of a red alarm</h3>
+<p>A swap whose funds provably never moved is now a <strong>calm ending</strong>, not an error.
+The failed step gets a small grey marker (not the red triangle), and below the steps sits a soft
+grey panel &mdash; no red anywhere &mdash; with this copy:</p>
+<pre>The exchange rejected this swap on-chain — the transaction reverted, which
+usually means the price moved past its protection while it was being
+processed. Your ETH never left your wallet; only the small network fee was
+spent. Get a fresh quote and swap again whenever you like.</pre>
+<p>That is the honest &ldquo;because of what&rdquo;: the route&rsquo;s own on-chain protection
+(slippage/deadline) rejected the trade, the revert undid everything, and the only cost was gas.
+One button: <strong>Close</strong>. No Try again &mdash; there is nothing to retry; the right
+next step is a fresh quote, and the card is right there. The bridge-refund ending
+(&ldquo;funds returned to your wallet&rdquo;) gets the same calm treatment.</p>
+<div class="box"><div class="label">Red still exists — where it belongs</div>
+The red surface stays for failures that need something from you (a mid-bridge halt with funds on
+Base, a declined signature). The dividing line is simple: <strong>red = your money moved and
+needs an action; grey = nothing moved, nothing to do.</strong></div>
+
+<h3>The banner: ghosts remove themselves</h3>
+<p>The dead row stayed on the banner because its retirement was fire-and-forget. Now the state
+machine itself retires it: every advance pass &mdash; the banner&rsquo;s 30-second poke and the
+cron &mdash; checks a <code>CREATED</code> inbound row&rsquo;s source transaction against LI.FI,
+and if LI.FI says it failed or was refunded, the row is marked FAILED with an honest detail
+(&ldquo;Source transaction reverted on-chain &mdash; funds never left the sender; nothing was
+bridged&rdquo;) and drops off the banner. <strong>Your currently stuck row will clear itself
+within about 30 seconds of the page being open</strong> &mdash; no clicks needed.</p>
+
+<h3>If someone does click &ldquo;Receive USDC&rdquo; on a ghost</h3>
+<p>The recovery used to find 0 USDC and throw <em>&ldquo;No USDC found on Base — it may already
+be bridging&rdquo;</em> &mdash; wrong, and a dead end. Now, on finding nothing, it asks the server
+to verify the source leg against LI.FI right there: a dead leg is retired on the spot with an
+honest note (&ldquo;that swap had already failed on-chain &mdash; nothing was bridged and your
+funds never left your wallet&rdquo;), and a genuinely-still-bridging leg gets a patient
+&ldquo;still working, nothing to do&rdquo; &mdash; both as info toasts, not errors.</p>
+
+<h3>One verdict, shared</h3>
+<p>Three surfaces used to interpret LI.FI&rsquo;s status with three private copies of the logic —
+which is exactly how they ended up telling you three different stories. The reading now lives in
+one tested module (<code>lib/cctp/lifi-verdict.ts</code>, 4 tests, one of them your exact
+transaction&rsquo;s response), used by the engine, the server route and the state machine. The
+surfaces can still word things differently; they can no longer <em>disagree about what
+happened</em>.</p>
+
+<h2>3 &middot; Honest limits</h2>
+<ul>
+  <li>The copy says &ldquo;usually means the price moved past its protection&rdquo; because the
+      revert reason is not in the receipt without a trace — slippage/deadline is the common
+      cause, and the copy claims no more than we know.</li>
+  <li>Outbound failures (money already on Base) keep their existing red flow with Bring back —
+      those genuinely need the user, so they are not calm endings.</li>
+</ul>
+
+<h2>4 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R71</span></td>
+      <td>Open the app with the stuck &ldquo;27.48 USDC · ETH → USDC&rdquo; banner row visible and
+      wait ~30s.</td>
+      <td>The row disappears by itself. In Activity, the transfer shows as failed with the honest
+      detail. Nothing to click.</td></tr>
+  <tr><td>2</td>
+      <td>If a future swap&rsquo;s source leg reverts on-chain, watch the popup.</td>
+      <td>Grey panel, honest copy naming the revert and that funds never left (minus the network
+      fee), one Close button. <span class="no">No red box, no Try again.</span> The banner never
+      shows the row as &ldquo;in flight&rdquo;.</td></tr>
+  <tr><td>3</td>
+      <td>Click &ldquo;Receive USDC&rdquo; on an in-flight row whose USDC genuinely has not
+      arrived yet.</td>
+      <td>A patient info toast (&ldquo;still working — nothing to do&rdquo;), not an error.</td></tr>
+</table>
+
+<h2>5 &middot; Commit</h2>
+<p><code>fix(cctp): a swap that moved nothing ends calmly and cleans up after itself</code> (full
+message in chat). New tests: <code>lib/cctp/lifi-verdict.test.ts</code> (4).</p>
+
+</body>
+</html>

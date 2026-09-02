@@ -53,7 +53,11 @@ export function ModalProvider({ children }: ModalProviderProps) {
         />
       )}
 
-      {modalState.SEND_CRYPTO && wallet.address && (
+      {/* No wallet.address gate (sweep 2026-08-21): a BTC/ETH/SOL-first user
+          has NO Stellar slot address, and the gate made the drawer's Send a
+          silent no-op for them. The modal itself handles an empty Stellar
+          list fine (native rows still render and send). */}
+      {modalState.SEND_CRYPTO && (
         <SendModal
           open={modalState.SEND_CRYPTO}
           onClose={() => setModalView(ModalType.SEND_CRYPTO, false)}

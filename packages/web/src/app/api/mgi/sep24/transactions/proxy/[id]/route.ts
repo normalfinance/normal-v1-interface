@@ -1,7 +1,7 @@
+import { j } from '@/utils/http';
 import { NextResponse } from 'next/server';
-import { j, getAccessToken } from '@/utils/http';
+import { withAuth } from '@/lib/with-auth';
 import { mgiApiBase } from '@/lib/mgi/server-base';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
  * GET /api/mgi/sep24/transaction/proxy/:id
@@ -10,16 +10,10 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
  * Forwards to:
  *   https://{MGI_ACCESS_HOST}/stellarsepservice/sep24/transaction?id=<id>
  */
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export const GET = withAuth(async (req: Request, { user, params }) => {
   const t0 = Date.now();
   try {
     // Authenticate
-    const accessToken = getAccessToken(req);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const base = mgiApiBase();
     if (!base) return j(500, { error: 'Server missing MGI_ACCESS_HOST' });
@@ -54,17 +48,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json(data, { status: 200 });
     }
 
-    const text = await r.text();
     return j(502, {
       error: 'Unexpected response from anchor (get)',
       status: r.status,
       contentType: ct || null,
-      bodySnippet: text.slice(0, 2000),
-      sentTo: endpoint,
       note: 'Should return JSON. If you see 401, ensure Authorization Bearer token is present. If HTML, re-check allowlist.',
     });
   } catch (e: any) {
     console.error('[MGI] /api/mgi/sep24/transaction/proxy/:id crashed:', e);
-    return j(500, { error: e?.message || 'Server error', stack: e?.stack });
+    return j(500, { error: 'MoneyGram is temporarily unavailable — please try again.' });
   }
-}
+});

@@ -1,5 +1,6 @@
 'use client';
 
+import type { ChainAddresses } from '@/lib/chains/registry';
 import type { IconButtonProps } from '@mui/material/IconButton';
 
 import { paths } from '@/routes/paths';
@@ -10,21 +11,19 @@ import { useUserActivity } from '@/hooks';
 import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, logger } from '@normalfinance/utils';
 import { usePortfolio } from '@/hooks/use-portfolio';
+import { usePersistStore } from '@normalfinance/state';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getLinkedWallets } from '@/services/linked-wallets';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
-import { portfolioAssetToToken } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
-import {
-  useNormalWallet,
-} from '@/hooks/stellar/use-normal-wallet';
+import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { useAppStore, usePersistStore, useNetworkStore } from '@normalfinance/state';
+import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
+import { CHAINS, CHAIN_IDS, getChainAddress, availableChains } from '@/lib/chains/registry';
 import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
 import AddOutlined from '@mui/icons-material/AddOutlined';
-import SyncOutlined from '@mui/icons-material/SyncOutlined';
 import CloseOutlined from '@mui/icons-material/CloseOutlined';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import {
@@ -48,55 +47,47 @@ import { Scrollbar } from '@/components/template/scrollbar';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import WalletSelectionModal from '@/components/_common/wallet-selection-modal';
+import NormalWalletSetupDialog from '@/components/_common/normal-wallet-setup-dialog';
 import ConnectedWallet from '@/components/_common/drawer-components/connected-wallet';
 import OnboardingWizard, { type WizardStep } from '@/components/_common/onboarding-wizard';
+import WalletReadinessNotice, {
+  PostConnectReadinessToast,
+} from '@/components/_common/wallet-readiness-notice';
 
 import { AccountButton } from './account-button';
 
-function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress, solanaAddress }: { address: string; drawerOpen: boolean; bitcoinAddress: string | null; ethereumAddress: string | null; solanaAddress: string | null }) {
-  const { setGlobalIsLoading } = useAppStore();
+function WalletConnected({
+  address,
+  drawerOpen,
+  addresses,
+}: {
+  address: string;
+  drawerOpen: boolean;
+  addresses: ChainAddresses | null | undefined;
+}) {
+  const { wallet: persistWallet } = usePersistStore();
 
-  const {
-    tokenState: { tokens },
-    getAllTokens,
-  } = usePersistStore();
-  const network = useNetworkStore((s) => s.network);
-  const [tokensFetching, setTokensFetching] = useState(true);
-
-  const { recentActivity } = useUserActivity(address, bitcoinAddress, ethereumAddress, solanaAddress);
+  const { recentActivity } = useUserActivity(address, addresses);
+  const bitcoinAddress = getChainAddress(addresses, 'bitcoin');
 
   // Unified, deduped source: native balances + savings from one place.
-  const { getAsset, savings } = usePortfolio(true);
+  const { getAsset, savings, wallet: walletBalances } = usePortfolio(true);
   const userPosition = savings.position;
-  const savingsFetching = savings.positionLoading;
+  // Savings load like any other asset: the skeleton holds until EVERY source
+  // (slot + companion) has answered — never a confident $0 mid-load.
+  const savingsFetching = savings.positionLoading || savings.companionPositionLoading;
+  // Doc 117: companionPositionLoading can stick forever on a dead lookup
+  // (deliberately — see use-savings-position). Cap it here so the drawer's
+  // savings row can never spin for eternity: after 8s, show what we have.
+  const [savingsGateCapped, setSavingsGateCapped] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setSavingsGateCapped(true), 8_000);
+    return () => clearTimeout(id);
+  }, []);
   const savingsRef = useRef(savings);
   useEffect(() => {
     savingsRef.current = savings;
   });
-
-  // Effect hook to fetch all tokens when the component mounts, address changes, or network toggles
-  useEffect(() => {
-    const refreshTokens = async (): Promise<void> => {
-      if (!address) return;
-
-      setTokensFetching(true);
-      setGlobalIsLoading(true);
-      try {
-        await getAllTokens(true);
-      } catch (e) {
-        logger.error(e);
-      } finally {
-        setGlobalIsLoading(false);
-        setTokensFetching(false);
-      }
-    };
-
-    const timer = setTimeout(() => {
-      refreshTokens();
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [address, getAllTokens, network, setGlobalIsLoading]);
 
   // Refresh savings when the drawer opens.
   useEffect(() => {
@@ -116,30 +107,161 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress,
     return a ? portfolioAssetToToken(a) : null;
   }, [getAsset]);
 
+  // #75: the slot wallet's Stellar rows come from the AGGREGATE — the same
+  // source as every other display surface, refreshed on activity events. The
+  // legacy store only refreshed on drawer mount, so a drawer left open showed
+  // pre-transaction balances (and a freshly activated external wallet as
+  // empty).
+  const slotStellarTokens = useMemo(
+    () =>
+      walletBalances.assets
+        .filter((a) => a.chain === 'stellar' && a.balance != null && BigNumber(a.balance).gt(0))
+        .map(portfolioAssetToToken),
+    [walletBalances.assets]
+  );
+
+  // Savings as an ASSETS-TAB row (Niko): account-wide value (slot +
+  // companion), $1-pegged so TokensTab's USD sort places it naturally;
+  // clicking it opens /savings (special-cased in TokensTab). Absent while
+  // loading with nothing cached — never a confident $0 row.
+  const savingsTokenValue =
+    Math.max(parseFloat(userPosition?.currentValue || '0'), 0) + savings.companionValue;
+  const savingsToken = useMemo<ReturnType<typeof portfolioAssetToToken> | null>(() => {
+    if (!(savingsTokenValue > 0)) return null;
+    return {
+      symbol: 'Savings',
+      contract: '__savings__',
+      name: 'Normal Savings',
+      issuer: '',
+      org: '',
+      domain: '',
+      icon: cdn('logo/logo-single.png'),
+      decimals: 4,
+      featured: false,
+      balance: String(savingsTokenValue),
+      price: '1',
+      percentageChange: 0,
+    } as ReturnType<typeof portfolioAssetToToken>;
+  }, [savingsTokenValue]);
+
   const allTokens = useMemo(
     () =>
-      [...tokens, btcToken, ethToken, solToken]
+      [...slotStellarTokens, btcToken, ethToken, solToken, savingsToken]
         .filter((tkn): tkn is NonNullable<typeof tkn> => !!tkn)
         // Only assets the user actually holds. The portfolio aggregator always
         // emits a BTC/ETH/SOL/XLM/USDC entry (0 when there's no address/balance),
         // so without this a Stellar-only user sees a phantom "BTC $0". Mirrors the
         // balance>0 filtering the holdings/hero views already use.
         .filter((tkn) => BigNumber(tkn.balance).gt(0)),
-    [tokens, btcToken, ethToken, solToken]
+    [slotStellarTokens, btcToken, ethToken, solToken, savingsToken]
   );
 
-  const assetsBalance = useMemo(
-    () => allTokens.reduce((acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)), BigNumber(0)),
-    [allTokens]
+  // #32 chunk 2 — dual-wallet display. When the CONNECTED wallet is external
+  // and the account also owns a Turnkey (Normal) wallet with a funded Stellar
+  // address, the drawer shows two SPLIT sections (doc 72 §4f): every number
+  // stays spendable by exactly one wallet — never a combined sum no action
+  // could spend. Companion with zero balances is NOT shown (an unactivated
+  // creation would only confuse; the guided flow introduces it properly).
+  const isExternalConnected =
+    persistWallet.walletType != null && persistWallet.walletType !== 'normal-wallet';
+  const companion = walletBalances.companionStellar;
+  const companionTokens = useMemo(
+    () =>
+      (companion?.assets ?? [])
+        .map(portfolioAssetToToken)
+        .filter((tkn) => BigNumber(tkn.balance).gt(0)),
+    [companion]
   );
+  // #74: per-wallet readiness badges — each tab carries ITS wallet's notice,
+  // and the fix routes to that wallet's signer (companion → setup dialog,
+  // connected wallet → its own inline changeTrust).
+  const [setupOpen, setSetupOpen] = useState(false);
+  const walletSections = useMemo(() => {
+    if (!isExternalConnected || !companion) return null;
+    const chainTokens = [btcToken, ethToken, solToken].filter(
+      (tkn): tkn is NonNullable<typeof tkn> => !!tkn && BigNumber(tkn.balance).gt(0)
+    );
+    // Savings rides the Normal-wallet tab — same placement as the /portfolio
+    // Holdings tabs (it's the account product, held via the Normal wallet).
+    const normalTokens = [
+      ...companionTokens,
+      ...chainTokens,
+      ...(savingsToken ? [savingsToken] : []),
+    ];
+    if (normalTokens.length === 0) return null; // nothing to show for the companion yet
+    const externalTokens = slotStellarTokens;
+    return [
+      {
+        label: 'Normal wallet',
+        address: companion.address,
+        tokens: normalTokens,
+        notice: (
+          <WalletReadinessNotice
+            address={companion.address}
+            walletLabel="Normal wallet"
+            kind="companion"
+            onOpenSetup={() => setSetupOpen(true)}
+          />
+        ),
+      },
+      {
+        label: connectedWalletLabel(persistWallet.walletType),
+        address,
+        tokens: externalTokens,
+        notice: (
+          <WalletReadinessNotice
+            address={address}
+            walletLabel={connectedWalletLabel(persistWallet.walletType)}
+            kind="slot"
+          />
+        ),
+      },
+    ];
+  }, [
+    isExternalConnected,
+    companion,
+    companionTokens,
+    btcToken,
+    ethToken,
+    solToken,
+    slotStellarTokens,
+    savingsToken,
+    address,
+    persistWallet.walletType,
+  ]);
 
-  const savingsValue = Math.max(parseFloat(userPosition?.currentValue || '0'), 0);
-  const savingsLoaded = userPosition !== null;
+  const assetsBalance = useMemo(() => {
+    // Savings is a DISPLAY row in the tokens list, but the summary already
+    // counts it in its own "Savings" line — summing it here doubled the
+    // total ($73.52 for a $52.85 account, observed live 2026-08-17).
+    const base = allTokens.reduce(
+      (acc, tkn) =>
+        tkn.contract === '__savings__'
+          ? acc
+          : acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)),
+      BigNumber(0)
+    );
+    // Total balance = everything the ACCOUNT owns; in dual-wallet mode the
+    // companion's funds are part of it (the per-wallet split lives in the
+    // sections below, where numbers must map to actions).
+    return walletSections
+      ? companionTokens.reduce(
+          (acc, tkn) => acc.plus(BigNumber(tkn.balance).multipliedBy(tkn.price)),
+          base
+        )
+      : base;
+  }, [allTokens, walletSections, companionTokens]);
+
+  // #32: account-wide savings display — slot wallet's position + the
+  // companion Normal wallet's (one product; actions stay per-wallet).
+  const savingsValue =
+    Math.max(parseFloat(userPosition?.currentValue || '0'), 0) + savings.companionValue;
+  const savingsLoaded = !savingsFetching;
 
   // Render whenever the user has ANY wallet — a Turnkey-only (e.g. BTC-first)
   // user has no Stellar `address` but should still see their real drawer.
   // ConnectedWallet ignores `address`; balances come from the portfolio.
-  const hasWallet = !!address || !!bitcoinAddress || !!ethereumAddress || !!solanaAddress;
+  const hasWallet = !!address || availableChains(addresses).length > 0;
   if (!hasWallet) {
     return null;
   }
@@ -158,12 +280,29 @@ function WalletConnected({ address, drawerOpen, bitcoinAddress, ethereumAddress,
         address={address}
         balance={assetsBalance.toNumber()}
         savingsValue={savingsValue}
-        savingsFetching={savingsFetching && !savingsLoaded}
-        tokensFetching={tokensFetching}
+        savingsFetching={savingsFetching && !savingsLoaded && !savingsGateCapped}
+        tokensFetching={walletBalances.isLoading}
         percentageChange={0}
         tokens={allTokens}
+        sections={walletSections ?? undefined}
+        walletNotice={
+          // #74 single-wallet mode: the slot wallet's own badge. A wallet with
+          // no Stellar address renders nothing (notice self-hides).
+          address ? (
+            <WalletReadinessNotice
+              address={address}
+              walletLabel={connectedWalletLabel(persistWallet.walletType)}
+              kind="slot"
+            />
+          ) : undefined
+        }
         activity={recentActivity}
         bitcoinAddress={bitcoinAddress}
+      />
+      <NormalWalletSetupDialog
+        open={setupOpen}
+        onClose={() => setSetupOpen(false)}
+        neededUsdc={0}
       />
     </Box>
   );
@@ -192,6 +331,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   /*  drawer UI toggle ------------------------------------------- */
   const { value: open, onTrue: onOpen, onFalse: onClose } = useBoolean();
+  // #75: address list collapsed by default (5 rows pushed content down).
+  const [addressesOpen, setAddressesOpen] = useState(false);
 
   const {
     value: isDisconnecting,
@@ -216,14 +357,40 @@ export function AccountDrawer(props: AccountDrawerProps) {
     hasWallet: turnkeyHasWallet,
     authFailed: turnkeyAuthFailed,
   } = useTurnkeyWallet(open && !!session);
-  const bitcoinAddress = turnkeyAddresses?.bitcoinAddress ?? null;
-  const ethereumAddress = turnkeyAddresses?.ethereumAddress ?? null;
-  const solanaAddress = turnkeyAddresses?.solanaAddress ?? null;
-
   // Has ANY wallet — a Stellar wallet OR a Turnkey chain wallet (BTC/ETH/SOL).
   // Asset-first users may have e.g. only BTC and no Stellar address yet.
-  const hasAnyWallet =
-    isWalletConnected || !!bitcoinAddress || !!ethereumAddress || !!solanaAddress;
+  const hasAnyWallet = isWalletConnected || availableChains(turnkeyAddresses).length > 0;
+
+  // The address list rendered further down: one row per chain that has an
+  // address, built from the registry instead of four hand-written blocks.
+  const chainRows = CHAIN_IDS.flatMap((id) => {
+    const chain = CHAINS[id];
+    // Stellar shows the *connected* wallet, which may be an imported one
+    // rather than the Turnkey address (see finding #40). When that wallet is
+    // EXTERNAL, name it by its real wallet (Lobstr, Freighter…), not the
+    // chain (Niko 2026-08-21).
+    const addr = id === 'stellar' ? connectedAddress : getChainAddress(turnkeyAddresses, id);
+    if (!addr) return [];
+    const slotIsExternal =
+      persist.wallet.walletType != null && persist.wallet.walletType !== 'normal-wallet';
+    const name =
+      id === 'stellar' && slotIsExternal
+        ? connectedWalletLabel(persist.wallet.walletType)
+        : (chain.name as string);
+    return [{ id: id as string, name, color: chain.brandColor as string, addr }];
+  });
+  // #32 chunk 2: with an external wallet connected, the companion Normal
+  // wallet's Stellar address gets its own labeled row — previously invisible
+  // (the Stellar row only ever showed the slot; finding #40).
+  const companionStellarAddr = getChainAddress(turnkeyAddresses, 'stellar');
+  if (companionStellarAddr && connectedAddress && companionStellarAddr !== connectedAddress) {
+    chainRows.push({
+      id: 'stellar-normal',
+      name: 'Normal wallet',
+      color: CHAINS.stellar.brandColor as string,
+      addr: companionStellarAddr,
+    });
+  }
 
   // Turnkey lookup not resolved yet (still loading, or the API errored — e.g.
   // a revoked session returning 401). While unresolved we must NOT claim the
@@ -311,13 +478,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
     // Open the wizard so the user can pick their wallet
     setWizardInitialStep('linked-accounts');
     setShowLoginModal(true);
-  }, [
-    session,
-    normalPublicKey,
-    isNormalConnected,
-    disconnectNormalWallet,
-    persist,
-  ]);
+  }, [session, normalPublicKey, isNormalConnected, disconnectNormalWallet, persist]);
 
   /** Handle Normal wallet creation success */
   const handleNormalWalletCreated = async () => {
@@ -358,7 +519,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
   // Tracks showLoginModal without adding it as an effect dependency (avoids
   // the effect re-firing and immediately closing the modal on open).
   const showLoginModalRef = useRef(showLoginModal);
-  useEffect(() => { showLoginModalRef.current = showLoginModal; }, [showLoginModal]);
+  useEffect(() => {
+    showLoginModalRef.current = showLoginModal;
+  }, [showLoginModal]);
 
   useEffect(() => {
     const passwordResetParam = searchParams.get('passwordResetSuccess');
@@ -379,7 +542,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
     // on /savings itself, so just land the user there — the savings card guides
     // the next step based on real account state.
     router.replace(paths.savings, { scroll: false });
-     
   }, [searchParams, router]);
 
   useEffect(() => {
@@ -438,6 +600,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   return (
     <>
+      {/* #74 P5: one-time "this wallet can't hold USDC" toast right after an
+          external wallet is first seen. Renders nothing itself. */}
+      {session && <PostConnectReadinessToast />}
       {session ? (
         <AccountButton
           data-testid="account-button"
@@ -500,7 +665,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
             <IconButton
               onClick={onClose}
               data-testid="close-drawer-button"
-              sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
+              sx={{
+                color: '#6B6B76',
+                borderRadius: '8px',
+                '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
+              }}
             >
               <CloseOutlined sx={{ fontSize: 20 }} />
             </IconButton>
@@ -519,42 +688,56 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       stopNavigatingToSettings();
                       onClose();
                     }}
-                    sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
+                    sx={{
+                      color: '#6B6B76',
+                      borderRadius: '8px',
+                      '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
+                    }}
                   >
-                    {isNavigatingToSettings
-                      ? <CircularProgress size={18} color="inherit" />
-                      : <SettingsOutlined sx={{ fontSize: 20 }} />}
+                    {isNavigatingToSettings ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <SettingsOutlined sx={{ fontSize: 20 }} />
+                    )}
                   </IconButton>
                 </span>
               </Tooltip>
 
-              <Tooltip title={t('Create New Account')}>
+              <Tooltip
+                title={
+                  turnkeyHasWallet === true ? t('Connect external wallet') : t('Create New Account')
+                }
+              >
                 <IconButton
                   size="small"
                   onClick={() => {
+                    // #32 chunk 3: a user who already HAS a Normal wallet adds
+                    // an EXTERNAL wallet here (kit picker, links + connects —
+                    // doc 72 §4d/§4f); only wallet-less users get the wizard.
+                    if (turnkeyHasWallet === true) {
+                      connectWallet();
+                      onClose();
+                      return;
+                    }
                     setWizardInitialStep('choose-wallet');
                     setShowLoginModal(true);
                     onClose();
                   }}
-                  sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
+                  sx={{
+                    color: '#6B6B76',
+                    borderRadius: '8px',
+                    '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
+                  }}
                 >
                   <AddOutlined sx={{ fontSize: 20 }} />
                 </IconButton>
               </Tooltip>
 
-              <Tooltip title={t('Switch Wallets')}>
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    setWizardInitialStep('linked-accounts');
-                    setShowLoginModal(true);
-                    onClose();
-                  }}
-                  sx={{ color: '#6B6B76', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' } }}
-                >
-                  <SyncOutlined sx={{ fontSize: 20 }} />
-                </IconButton>
-              </Tooltip>
+              {/* #32 chunk 5: the ⟳ "All wallets" button is gone (decision
+                  2026-08-18). Its two jobs are covered better elsewhere:
+                  wallet visibility by the Assets-tab wallet pills, and
+                  connecting another wallet by the "+" button — one control
+                  per job, no duplicate entry point into the wizard. */}
             </Stack>
           )}
 
@@ -577,7 +760,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   minWidth: 'unset',
                   boxShadow: 'none',
                   '&:hover': { bgcolor: '#1a1a22', boxShadow: 'none' },
-                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.4)', color: 'rgba(255,255,255,0.6)' },
+                  '&.Mui-disabled': {
+                    bgcolor: 'rgba(10,10,15,0.4)',
+                    color: 'rgba(255,255,255,0.6)',
+                  },
                 }}
               >
                 {t('Logout')}
@@ -596,7 +782,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     sx={{ width: 44, height: 44, flexShrink: 0 }}
                   />
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ fontSize: '15px', fontWeight: 600, letterSpacing: '-0.01em', color: '#0A0A0F' }}>
+                    <Typography
+                      sx={{
+                        fontSize: '15px',
+                        fontWeight: 600,
+                        letterSpacing: '-0.01em',
+                        color: '#0A0A0F',
+                      }}
+                    >
                       {displayName}
                     </Typography>
                     <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '1px' }}>
@@ -604,47 +797,91 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     </Typography>
                   </Box>
                 </Stack>
-                {(connectedAddress || bitcoinAddress || ethereumAddress || solanaAddress) && (
-                  <Box sx={{ mt: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {connectedAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#14B8A6', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Stellar</Box>
-                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${connectedAddress.slice(0, 8)}...${connectedAddress.slice(-6)}`}
-                        </Box>
-                        <CopyIconButton value={connectedAddress} alert="Stellar address copied" />
-                      </Stack>
-                    )}
-                    {bitcoinAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#F7931A', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Bitcoin</Box>
-                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${bitcoinAddress.slice(0, 8)}...${bitcoinAddress.slice(-6)}`}
-                        </Box>
-                        <CopyIconButton value={bitcoinAddress} alert="Bitcoin address copied" />
-                      </Stack>
-                    )}
-                    {ethereumAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#627EEA', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Ethereum</Box>
-                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${ethereumAddress.slice(0, 8)}...${ethereumAddress.slice(-6)}`}
-                        </Box>
-                        <CopyIconButton value={ethereumAddress} alert="Ethereum address copied" />
-                      </Stack>
-                    )}
-                    {solanaAddress && (
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#9945FF', flexShrink: 0 }} />
-                        <Box sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}>Solana</Box>
-                        <Box sx={{ fontFamily: '"Geist Mono", ui-monospace, monospace', fontSize: '11.5px', color: '#2A2A33', letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {`${solanaAddress.slice(0, 8)}...${solanaAddress.slice(-6)}`}
-                        </Box>
-                        <CopyIconButton value={solanaAddress} alert="Solana address copied" />
-                      </Stack>
+                {/* One row per chain the user has an address for. Driven by the
+                    registry, so a new chain appears here without another copy
+                    of this block — these were four near-identical stanzas.
+                    Note the Stellar row prefers the *connected* address, which
+                    is why an imported wallet currently hides the Turnkey one
+                    (finding #40 — the list should eventually show both). */}
+                {/* #75: collapsed by default — five address rows pushed the
+                    balance card below the fold (Niko). One summary line with
+                    the count; expanding shows the same rows as before. */}
+                {chainRows.length > 0 && (
+                  <Box sx={{ mt: '10px' }}>
+                    <Box
+                      component="button"
+                      onClick={() => setAddressesOpen((p) => !p)}
+                      sx={{
+                        appearance: 'none',
+                        border: 'none',
+                        bgcolor: 'transparent',
+                        p: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        color: '#6B6B76',
+                        fontSize: '11.5px',
+                        '&:hover': { color: '#2A2A33' },
+                      }}
+                    >
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-flex',
+                          transition: 'transform 150ms ease',
+                          transform: addressesOpen ? 'rotate(90deg)' : 'none',
+                        }}
+                      >
+                        ▸
+                      </Box>
+                      {t('Addresses')} · {chainRows.length}
+                    </Box>
+                    {addressesOpen && (
+                      <Box
+                        sx={{
+                          mt: '6px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                        }}
+                      >
+                        {chainRows.map(({ id, name, color, addr }) => (
+                          <Stack key={id} direction="row" alignItems="center" gap="8px">
+                            <Box
+                              sx={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                bgcolor: color,
+                                flexShrink: 0,
+                              }}
+                            />
+                            <Box
+                              sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}
+                            >
+                              {name}
+                            </Box>
+                            <Box
+                              sx={{
+                                fontFamily: '"Geist Mono", ui-monospace, monospace',
+                                fontSize: '11.5px',
+                                color: '#2A2A33',
+                                letterSpacing: '-0.01em',
+                                flex: 1,
+                                minWidth: 0,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {`${addr.slice(0, 8)}...${addr.slice(-6)}`}
+                            </Box>
+                            <CopyIconButton value={addr} alert={`${name} address copied`} />
+                          </Stack>
+                        ))}
+                      </Box>
                     )}
                   </Box>
                 )}
@@ -668,7 +905,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 // Any wallet (incl. a Turnkey-only BTC/ETH/SOL user with no
                 // Stellar address yet) → the real drawer. Savings-specific setup
                 // is no longer nagged here; it lives on /savings, on demand.
-                <WalletConnected address={connectedAddress ?? ''} drawerOpen={open} bitcoinAddress={bitcoinAddress} ethereumAddress={ethereumAddress} solanaAddress={solanaAddress} />
+                <WalletConnected
+                  address={connectedAddress ?? ''}
+                  drawerOpen={open}
+                  addresses={turnkeyAddresses}
+                />
               ) : turnkeyAuthFailed ? (
                 // The server rejected our session token (revoked elsewhere, or
                 // expired) — the wallets are NOT gone, so never show the $0
@@ -729,7 +970,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     {session ? (
                       <>
                         <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260 }}>
-                          {t('Pick an asset to get started — we’ll set up your wallet for it in one tap.')}
+                          {t(
+                            'Pick an asset to get started — we’ll set up your wallet for it in one tap.'
+                          )}
                         </Typography>
                         <Button
                           variant="contained"

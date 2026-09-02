@@ -1,4 +1,4 @@
-import { logger } from '@normalfinance/utils';
+import { logger } from '@/utils/logger';
 import { createClient } from '@vercel/edge-config';
 
 const edgeConfig = createClient(process.env.EDGE_CONFIG);

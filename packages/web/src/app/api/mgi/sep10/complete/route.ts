@@ -1,10 +1,10 @@
 import { cookies } from 'next/headers';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { getAccessToken } from '@/utils/http';
 import { mgiApiBase } from '@/lib/mgi/server-base';
 import { Keypair, Transaction } from '@stellar/stellar-sdk';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { type NetworkType, getCurrentNetwork, getStellarConfigForNetwork } from '@normalfinance/utils';
+import { networkFromCookie } from '@/server/network-cookie';
+import { getStellarConfigForNetwork } from '@normalfinance/utils';
 
 /**
  * POST /api/mgi/sep10/complete
@@ -15,15 +15,9 @@ import { type NetworkType, getCurrentNetwork, getStellarConfigForNetwork } from 
  * - Posts to MGI /auth as application/x-www-form-urlencoded (transaction=<xdr>)
  * - Bubbles up MoneyGram's exact error body so you can see what's wrong
  */
-export async function POST(req: Request) {
+export const POST = withAuth(async (req: Request, { user }) => {
   try {
     // Authenticate
-    const accessToken = getAccessToken(req);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { userSignedXDR } = (await req.json()) as { userSignedXDR?: string };
     if (!userSignedXDR) {
@@ -36,8 +30,7 @@ export async function POST(req: Request) {
     // Prefer the user's cookie, but fall back to the build's NEXT_PUBLIC_NETWORK
     // (not a hardcoded testnet) so a missing cookie can't downgrade a mainnet
     // user onto the testnet passphrase against the production MoneyGram host.
-    const network = (cookieStore.get('normal-network')?.value as NetworkType | undefined)
-      ?? getCurrentNetwork();
+    const network = networkFromCookie(cookieStore);
     const passphrase = getStellarConfigForNetwork(network).NETWORK_PASSPHRASE;
 
     if (!authSecret) {
@@ -67,17 +60,15 @@ export async function POST(req: Request) {
     let data: any = raw;
     try {
       data = JSON.parse(raw);
-    } catch (err) {
+    } catch {
       data = raw;
     }
 
     if (!r.ok) {
       return NextResponse.json(
         {
-          error: 'MGI auth complete failed',
+          error: 'MoneyGram sign-in failed — please try again.',
           status: r.status,
-          details: data,
-          sentTo: url,
         },
         { status: r.status }
       );
@@ -86,7 +77,7 @@ export async function POST(req: Request) {
     const token = data?.token ?? data?.access_token ?? data;
     if (!token) {
       return NextResponse.json(
-        { error: 'MGI /auth succeeded but no token in response', details: data },
+        { error: 'MoneyGram sign-in failed — please try again.' },
         { status: 502 }
       );
     }
@@ -95,8 +86,8 @@ export async function POST(req: Request) {
   } catch (e: any) {
     console.error('[MGI] /api/mgi/sep10/complete crashed:', e);
     return NextResponse.json(
-      { error: e?.message || 'Server error', stack: e?.stack },
+      { error: 'MoneyGram is temporarily unavailable — please try again.' },
       { status: 500 }
     );
   }
-}
+});

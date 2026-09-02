@@ -10,6 +10,7 @@
 
 # next.js
 /.next/
+/.next-verify/
 /.swc/
 /out/
 
@@ -55,3 +56,4 @@ _static
 
 test-results/
 freighter/
+lint-report.txt

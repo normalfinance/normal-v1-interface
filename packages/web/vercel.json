@@ -4,6 +4,18 @@
     {
       "path": "/api/cron/dune-sync/",
       "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/cron/cctp-advance/",
+      "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron/fee-escrow-sweep/",
+      "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron/ramp-reconcile/",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

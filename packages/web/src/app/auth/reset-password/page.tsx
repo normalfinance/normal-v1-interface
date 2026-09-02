@@ -1,10 +1,11 @@
 'use client';
 
+import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { updatePassword } from '@/services/auth';
 import { clearLoginIntent } from '@/lib/loginIntent';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseClientWithUrlDetection } from '@/lib/createSupabaseClient';
 
 import { Box, Stack, Button, TextField, Typography, CircularProgress } from '@mui/material';
@@ -16,7 +17,6 @@ type Status = 'pending' | 'ready' | 'loading' | 'success' | 'error';
 const ResetPasswordPage = () => {
   const { t } = useTranslate();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status>('pending');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -73,7 +73,7 @@ const ResetPasswordPage = () => {
           }
         } catch (err) {
           if (!mounted) return;
-          console.error('Error setting session:', err);
+          logger.error('Error setting session:', err);
           setStatus('error');
           setError(t('Invalid or expired reset link. Please request a new one.'));
         }

@@ -1,17 +1,27 @@
 import type { SavingsPosition } from '@/types/savings';
 import type { AssetStatus, PortfolioAsset, PortfolioChain } from '@/types/portfolio';
 
+import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
+
 // ---------------------------------------------------------------------------
 // Pure portfolio/savings normalization + reconciliation. NO I/O, no server-only
-// imports — so it's unit-testable in isolation (see normalize.test.ts) and
-// shared by the server aggregator and the client savings read.
+// imports. Shared by the server aggregator and the client savings read.
+//
+// Tested in normalize.test.ts (`yarn test`). Every case there is anchored to a
+// bug this module actually produced or a rule promised below — if a change
+// fails one, it is re-introducing a bug users have already seen.
 // ---------------------------------------------------------------------------
 
+// Native assets derive from the chain registry so this can't drift out of sync
+// with it; non-native assets (USDC on Stellar) are listed explicitly, since a
+// chain's registry entry describes the chain, not every token issued on it.
 export const ASSET_META: Record<string, { chain: PortfolioChain; decimals: number }> = {
-  BTC: { chain: 'bitcoin', decimals: 8 },
-  ETH: { chain: 'ethereum', decimals: 18 },
-  SOL: { chain: 'solana', decimals: 9 },
-  XLM: { chain: 'stellar', decimals: 7 },
+  ...Object.fromEntries(
+    CHAIN_IDS.map((id) => [
+      CHAINS[id].symbol,
+      { chain: CHAINS[id].id as PortfolioChain, decimals: CHAINS[id].decimals },
+    ])
+  ),
   USDC: { chain: 'stellar', decimals: 7 },
 };
 
@@ -95,9 +105,29 @@ export function reconcileSavingsPosition(
     const apiTD = parseFloat(apiPos.totalDeposited);
     const prevTD = parseFloat(prev.totalDeposited);
     const currentValue = parseFloat(apiPos.currentValue);
-    const tdDrop = prevTD - apiTD;
-    const smallIndexerLag = tdDrop > 0.001 && prevTD > 0 && tdDrop / prevTD < 0.2;
-    const stale = apiTD > currentValue + 0.001 || smallIndexerLag;
+
+    // Deposits and current value move together, and that relationship is what
+    // identifies a lagging read — not how large the gap happens to be.
+    //
+    // `totalDeposited` is deposits net of withdrawals, so it can only fall if
+    // the user withdrew — and a withdrawal lowers current value too. If
+    // deposits fall while current value holds or rises, the deposits source is
+    // behind the chain (DeFindex's events feed lags 30-120s, and falls back to
+    // our own DB records when rate-limited, which may not have the newest
+    // deposit yet).
+    //
+    // This replaces a `drop / prevTD < 0.2` heuristic that assumed the lag was
+    // always small relative to the position. Depositing 4.24 into a 10.67
+    // position produced a 28% gap, slipped past the threshold, and the stale
+    // figure was accepted: deposits showed 10.67 against a value of 14.91, so
+    // the deposit itself was displayed as 4.24 of earnings.
+    const depositsFell = apiTD < prevTD - 0.001;
+    const valueHeld = currentValue >= prevCV - 0.001;
+    const depositsLagging = depositsFell && valueHeld;
+
+    // Separate inconsistency: deposits exceeding the current value means the
+    // deposits figure is ahead of a value that hasn't caught up.
+    const stale = apiTD > currentValue + 0.001 || depositsLagging;
     if (stale) {
       return {
         ...apiPos,

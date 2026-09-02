@@ -26,6 +26,7 @@ import {
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import WalletReadinessNotice from '@/components/_common/wallet-readiness-notice';
 
 export type ReceiveModalContext = 'deposit' | 'receive';
 
@@ -70,12 +71,13 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
       });
       setQrCodeUrl(qrDataUrl);
     } catch (error) {
+      // Doc 90 W4: cosmetic — the inline text + copyable address below cover
+      // it; an ERROR toast overstated a non-problem.
       logger.error('Error generating QR code:', error);
-      enqueueSnackbar('Failed to generate QR code', { variant: 'error' });
     } finally {
       setIsGeneratingQR(false);
     }
-  }, [walletAddress, enqueueSnackbar]);
+  }, [walletAddress]);
 
   useEffect(() => {
     if (open && walletAddress) {
@@ -95,7 +97,9 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
     const win = window.open('', '_blank');
     setIsCoinbaseLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         win?.close();
         enqueueSnackbar(t('Please log in first'), { variant: 'warning' });
@@ -111,7 +115,9 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
       const { token: sessionToken, error } = await r.json();
       if (error || !sessionToken) {
         win?.close();
-        enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), { variant: 'error' });
+        enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), {
+          variant: 'error',
+        });
         return;
       }
       const url = createCoinbasePayOnrampURL({
@@ -130,7 +136,9 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
     } catch (err: any) {
       win?.close();
       logger.error('Coinbase XLM onramp error:', err);
-      enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), { variant: 'error' });
+      enqueueSnackbar(t('Failed to start Coinbase checkout. Try again later.'), {
+        variant: 'error',
+      });
     } finally {
       setIsCoinbaseLoading(false);
     }
@@ -172,7 +180,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         />
       ) : (
         <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.4)' }}>
-          {t('Unable to generate QR code')}
+          {t('QR unavailable — copy the address below.')}
         </Typography>
       )}
     </Box>
@@ -259,9 +267,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
       </Stack>
 
       <Divider sx={{ width: '100%' }}>
-        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)' }}>
-          {t('or')}
-        </Typography>
+        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)' }}>{t('or')}</Typography>
       </Divider>
 
       {/* Coinbase CTA */}
@@ -306,9 +312,25 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
       fullWidth
       slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
     >
-      <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
-        <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', mb: '2px' }}>
-          <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em', textAlign: 'center' }}>
+      <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
+        <Box
+          sx={{
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            mb: '2px',
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: '17px',
+              fontWeight: 700,
+              color: '#0A0A0F',
+              letterSpacing: '-0.02em',
+              textAlign: 'center',
+            }}
+          >
             {t(isReceiveContext ? 'Receive Crypto' : 'Deposit Crypto')}
           </Typography>
           <Box
@@ -337,12 +359,16 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         </Box>
 
         {!isCheckingAccount && accountExists && (
-          <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}>
+          <Typography
+            sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}
+          >
             {t('Scan the QR code or copy your account ID below')}
           </Typography>
         )}
         {!isCheckingAccount && !accountExists && !accountStatusError && (
-          <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}>
+          <Typography
+            sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}
+          >
             {t(
               isReceiveContext
                 ? 'Activate your Stellar account first, then receive other Stellar assets'
@@ -377,7 +403,9 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
               }}
             >
               <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
-                {t('We could not check your Stellar account right now. Please try again in a moment.')}
+                {t(
+                  'We could not check your Stellar account right now. Please try again in a moment.'
+                )}
               </Typography>
             </Box>
             <Box
@@ -419,11 +447,15 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
                 width: '100%',
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55, mb: '6px' }}>
+              <Typography
+                sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55, mb: '6px' }}
+              >
                 {t('This Stellar account is not active on-chain yet.')}
               </Typography>
               <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
-                {t('Send at least 1 XLM to this account ID first. Once the account is funded, you can receive USDC and other Stellar assets here.')}
+                {t(
+                  'Send at least 1 XLM to this account ID first. Once the account is funded, you can receive USDC and other Stellar assets here.'
+                )}
               </Typography>
             </Box>
 
@@ -436,6 +468,20 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         {!isCheckingAccount && accountExists && (
           <Stack spacing={1.5} alignItems="center">
             {QrBox}
+
+            {/* #74: warn BEFORE the address is shared — USDC sent to a wallet
+                without the trustline bounces back to the sender on-chain. The
+                notice self-hides when ready; activation is this modal's own
+                UI above, hence hideActivation. Copying stays allowed (the
+                user may add the trustline in their wallet app instead). */}
+            <Box sx={{ width: '100%' }}>
+              <WalletReadinessNotice
+                address={walletAddress}
+                walletLabel={t('This wallet')}
+                kind="slot"
+                hideActivation
+              />
+            </Box>
 
             {/* Stellar-only warning */}
             <Box
@@ -451,9 +497,15 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
                 width: '100%',
               }}
             >
-              <Iconify icon="eva:alert-triangle-outline" width={15} sx={{ color: 'warning.main', flexShrink: 0 }} />
+              <Iconify
+                icon="eva:alert-triangle-outline"
+                width={15}
+                sx={{ color: 'warning.main', flexShrink: 0 }}
+              />
               <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.5 }}>
-                {t('This wallet ONLY supports Stellar tokens!')}
+                {t(
+                  'This is a Stellar address — only send assets on the Stellar network here (XLM, USDC). Assets sent from other networks cannot be recovered.'
+                )}
               </Typography>
             </Box>
 

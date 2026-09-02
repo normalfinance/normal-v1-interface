@@ -1,4 +1,9 @@
-import type { VolumeDailyRow, VaultSnapshotRow, YieldSnapshotRow, WalletActivityRow } from '@/lib/dune/tables';
+import type {
+  VolumeDailyRow,
+  VaultSnapshotRow,
+  YieldSnapshotRow,
+  WalletActivityRow,
+} from '@/lib/dune/tables';
 
 const DEFINDEX_API = 'https://api.defindex.io';
 const VAULT_ADDRESS = process.env.NEXT_PUBLIC_MAINNET_DEFINDEX_VAULT!;
@@ -6,9 +11,7 @@ const NETWORK = 'mainnet';
 const DEFINDEX_API_KEY = process.env.DEFINDEX_API_KEY;
 
 function defindexHeaders(): HeadersInit {
-  return DEFINDEX_API_KEY
-    ? { Authorization: `Bearer ${DEFINDEX_API_KEY}` }
-    : {};
+  return DEFINDEX_API_KEY ? { Authorization: `Bearer ${DEFINDEX_API_KEY}` } : {};
 }
 
 // ---------------------------------------------------------------------------
@@ -58,9 +61,7 @@ export async function fetchSavingsVolume(): Promise<VolumeDailyRow[]> {
   for (const point of json.data ?? []) {
     if (!point.timestamp) continue;
     const date = new Date(point.timestamp).toISOString();
-    const deposits = Number(
-      point.deposits ?? point.dailyDeposits ?? point.depositVolume ?? 0
-    );
+    const deposits = Number(point.deposits ?? point.dailyDeposits ?? point.depositVolume ?? 0);
     const withdrawals = Number(
       point.withdrawals ?? point.dailyWithdrawals ?? point.withdrawalVolume ?? 0
     );
@@ -92,15 +93,20 @@ export async function fetchSavingsVolume(): Promise<VolumeDailyRow[]> {
   // The Dune SUM query for the total-volume KPI will still be correct because
   // duneClear wipes the table before each insert — so this one row IS the total.
   if (!hasPerDayData) {
-    console.log('[defindex-sync] no per-day deposit fields found — falling back to cumulative metrics');
+    console.log(
+      '[defindex-sync] no per-day deposit fields found — falling back to cumulative metrics'
+    );
     const m = json.metrics ?? json.currentState ?? json;
-    const totalDeposits = Number(
-      m.totalDeposits ?? m.cumulativeDeposits ?? m.total_deposits ?? 0
-    ) / 1e7;
-    const totalWithdrawals = Number(
-      m.totalWithdrawals ?? m.cumulativeWithdrawals ?? m.total_withdrawals ?? 0
-    ) / 1e7;
-    console.log('[defindex-sync] cumulative totalDeposits:', totalDeposits, 'totalWithdrawals:', totalWithdrawals);
+    const totalDeposits =
+      Number(m.totalDeposits ?? m.cumulativeDeposits ?? m.total_deposits ?? 0) / 1e7;
+    const totalWithdrawals =
+      Number(m.totalWithdrawals ?? m.cumulativeWithdrawals ?? m.total_withdrawals ?? 0) / 1e7;
+    console.log(
+      '[defindex-sync] cumulative totalDeposits:',
+      totalDeposits,
+      'totalWithdrawals:',
+      totalWithdrawals
+    );
     if (totalDeposits > 0) {
       rows.push({
         date: today,

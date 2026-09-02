@@ -73,7 +73,7 @@ export function ExploreAssetsTableRow({ row, index }: Props) {
         <Stack direction="row" spacing={1} alignItems="center">
           {row.tokenLong && (
             <Avatar
-              src={row.tokenLong.icon ?? getCryptoIconUrl(row.tokenLong.symbol)}
+              src={row.tokenLong.icon || getCryptoIconUrl(row.tokenLong.symbol)}
               alt={row.tokenLong.name}
               sx={{ width: 27, height: 27 }}
             />

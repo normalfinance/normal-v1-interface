@@ -16,7 +16,6 @@ import { BentoSection } from './bento-section';
 import { StatsGrid } from './stats-grid/stats-grid';
 import { TestimonialGrid } from './testimonials/testimonials';
 
-
 export type TokenMeta = Pick<Token, 'name' | 'symbol' | 'icon' | 'price' | 'percentageChange'>;
 
 export const tokens: TokenMeta[] = [
@@ -50,17 +49,15 @@ export const tokens: TokenMeta[] = [
   },
 ];
 
-
 export default function LandingPage() {
   const { setGlobalIsLoading } = useAppStore();
-  const { wallet, getAllTokens } = usePersistStore();
+  const { wallet } = usePersistStore();
 
   // Effect hook to fetch all pools and tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
@@ -68,11 +65,11 @@ export default function LandingPage() {
       }
     };
     refreshTokens();
-  }, [wallet.address]);
+  }, [wallet.address, setGlobalIsLoading]);
 
   return (
     <>
-      <HeroHeader/>
+      <HeroHeader />
       <BrandMarquee />
       <BentoSection />
       <StatsGrid />

@@ -4481,6 +4481,7 @@ __metadata:
     "@upstash/ratelimit": ^2.0.5
     "@upstash/redis": ^1.35.1
     "@vercel/analytics": ^2.0.1
+    "@vercel/speed-insights": ^2.0.0
     "@walletconnect/modal": ^2.6.2
     "@walletconnect/sign-client": ^2.13.1
     "@walletconnect/types": ^2.13.1
@@ -4608,10 +4609,12 @@ __metadata:
     "@testing-library/react": ^14.2.0
     "@turnkey/crypto": ^2.10.0
     "@turnkey/http": ^4.1.0
+    "@turnkey/iframe-stamper": ^2.11.1
     "@turnkey/sdk-server": ^6.1.0
     "@turnkey/webauthn-stamper": ^0.6.0
     "@types/autosuggest-highlight": ^3.2.3
     "@types/canvas-confetti": ^1.9.0
+    "@types/jest": ^29.5.2
     "@types/node": ^22.10.3
     "@types/nprogress": ^0.2.3
     "@types/qrcode": ^1.5.5
@@ -6980,6 +6983,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@turnkey/iframe-stamper@npm:^2.11.1":
+  version: 2.11.1
+  resolution: "@turnkey/iframe-stamper@npm:2.11.1"
+  checksum: b35967a8646803e1581e931557f08d59251ee3e3f6c4e63e70a204f79e363dbff6554d19ebf2cd5b4816fd684d1b30b1efdf9cdfa919244ad8cd2c1b4b7a8ca1
+  languageName: node
+  linkType: hard
+
 "@turnkey/sdk-server@npm:^6.1.0":
   version: 6.1.0
   resolution: "@turnkey/sdk-server@npm:6.1.0"
@@ -7925,6 +7935,36 @@ __metadata:
     next:
       optional: true
   checksum: b94ee17915dd5675ce62039ab6dce564b6f6fbbd7a12e69e8b0f160644c6b435838be3dde4e2e83702c24fac51b433125484550e86fe5aad0fa838a4ae6d81db
+  languageName: node
+  linkType: hard
+
+"@vercel/speed-insights@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "@vercel/speed-insights@npm:2.0.0"
+  peerDependencies:
+    "@sveltejs/kit": ^1 || ^2
+    next: ">= 13"
+    nuxt: ">= 3"
+    react: ^18 || ^19 || ^19.0.0-rc
+    svelte: ">= 4"
+    vue: ^3
+    vue-router: ^4
+  peerDependenciesMeta:
+    "@sveltejs/kit":
+      optional: true
+    next:
+      optional: true
+    nuxt:
+      optional: true
+    react:
+      optional: true
+    svelte:
+      optional: true
+    vue:
+      optional: true
+    vue-router:
+      optional: true
+  checksum: 618336b186a6b330ccff1862400bfaa8bf3473594a02f975119299ec880850dfd6837aa5276c01a8d4b88bbb3e122f7dca4706a1ed6e8b863f959fc7b343be3a
   languageName: node
   linkType: hard
 

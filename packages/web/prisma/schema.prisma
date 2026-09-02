@@ -77,9 +77,16 @@ model VaultDeposit {
   feeAmount     String?  // Normal fee (deposit) or commission (withdraw), human-readable USDC
   feeTxHash     String?  // Hash of the classic fee payment transaction
   txHash        String?
+  // #27 record-before-broadcast: pending | submitted | confirmed | failed | abandoned.
+  // Legacy rows (written only after success) default to confirmed via the SQL default.
+  status        String   @default("confirmed")
+  statusReason  String?  // e.g. Horizon result codes on failure
+  network       String?  // "mainnet" | "testnet"; null on legacy rows
   createdAt     DateTime @default(now())
 
   @@index([walletAddress, vaultAddress])
+  @@index([status])
+  @@index([txHash])
   @@map("vault_deposits")
 }
 
@@ -95,10 +102,59 @@ model SwapLog {
   feeAmount        String?  // 0.5% fee charged in tokenIn (human-readable)
   feeTxHash        String?  // Hash of the classic fee payment transaction
   txHash           String?
+  // #27 record-before-broadcast: pending | submitted | confirmed | failed | abandoned.
+  // Legacy rows (written only after success) default to confirmed via the SQL default.
+  status           String   @default("confirmed")
+  statusReason     String?  // e.g. Horizon result codes on failure
+  network          String?  // "mainnet" | "testnet"; null on legacy rows
   createdAt        DateTime @default(now())
 
   @@index([walletAddress])
+  @@index([status])
+  @@index([txHash])
   @@map("swap_logs")
+}
+
+// Cross-ecosystem swap via CCTP (Soroswap → CCTP → LI.FI composite). One row
+// per transfer, driving a resumable state machine — the row is created and the
+// burn intent persisted BEFORE the burn tx is broadcast, so a crashed process
+// can always be recovered (attestations are re-fetchable from Iris forever).
+// status: CREATED | SRC_SWAP_DONE | BURN_SUBMITTED | BURN_CONFIRMED | ATTESTED
+//       | MINT_SUBMITTED | MINT_CONFIRMED | DST_SWAP_PENDING | COMPLETED
+//       | NEEDS_REATTEST | FAILED
+model CctpTransfer {
+  id             String   @id @default(cuid())
+  userId         String   // supabase uid
+  network        String   @default("mainnet") // 'mainnet' | 'testnet' — cron advances rows without request context
+  direction      String   // 'stellar_to_evm' | 'evm_to_stellar' | 'stellar_to_solana' | ...
+  status         String   @default("CREATED")
+  sourceDomain   Int      // CCTP domain id of the burn chain
+  destDomain     Int      // CCTP domain id of the mint chain
+  amountWire     String   // canonical 6-dp integer units, as string
+  srcAsset       String   // user-facing source asset symbol (e.g. 'XLM')
+  dstAsset       String   // user-facing destination asset symbol (e.g. 'BTC')
+  srcAmount      String?  // human source amount for the activity feed (e.g. '0.5')
+  dstAmount      String?  // human delivered amount, set on completion
+  srcAddress     String
+  destAddress    String
+  srcSwapTxHash  String?  // Soroswap/LI.FI leg before the burn
+  burnTxHash     String?
+  eventNonce     String?
+  messageHex     String?
+  attestationHex String?
+  mintTxHash     String?
+  dstSwapTxHash  String?  // LI.FI/Soroswap leg after the mint
+  gasTopUpTxHash String?  // relayer dust-gas send on the burn chain (once)
+  quoteJson      String?  // full quote snapshot incl. fee breakdown
+  errorDetail    String?
+  retryCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([burnTxHash])
+  @@map("cctp_transfers")
 }
 
 // Our record of a MoneyGram SEP-24 transaction, written when our server
@@ -122,6 +178,79 @@ model MoneyGramTransaction {
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+// #29 record-before-broadcast for native ETH/SOL sends. Row written (with the
+// pre-computable tx hash and, on EVM, the nonce) BEFORE the server broadcasts;
+// settled pending → submitted → confirmed/failed/abandoned by the route and
+// the cron reconciler. A non-terminal row blocks further sends on that
+// wallet+chain — the structural double-send guard. Not wired into activity
+// feeds (sends already surface via chain activity APIs + #47 pending rows).
+model SendLog {
+  id            String   @id @default(cuid())
+  walletAddress String
+  chain         String   // registry ChainId: 'ethereum' | 'solana'
+  symbol        String?
+  amount        String
+  destination   String
+  txHash        String?
+  nonce         Int?     // EVM only — the double-send key
+  status        String   @default("pending")
+  statusReason  String?
+  network       String?
+  createdAt     DateTime @default(now())
+
+  @@index([walletAddress])
+  @@index([status])
+  @@index([txHash])
+  @@map("send_logs")
+}
+
+// #24: "we owe the provider an on-chain send for sale X" — previously
+// localStorage (device-local: cleared browser / second device = amnesia and a
+// stuck sale). txHash null = claimed, in progress; set = fulfilled. Rows are
+// keyed on the session user; the activity feed joins them with the provider's
+// live status by providerTxnId.
+/// One record per handoff to a ramp provider (doc 89 F2): written BEFORE the
+/// user leaves, tracked until the chain confirms. walletAddress is the
+/// WalletChoice-selected wallet. Table ships as additive SQL:
+/// docs/audit/sql/ramp_transfers.sql
+model RampTransfer {
+  id              String    @id @default(cuid())
+  supabaseUid     String
+  network         String    @default("mainnet")
+  direction       String // 'onramp' | 'offramp'
+  provider        String // 'coinbase' | 'moonpay' | ...
+  asset           String
+  chain           String
+  walletAddress   String
+  amountExpected  String?
+  amountFinal     String?
+  status          String    @default("committed")
+  providerRef     String?
+  baselineBalance String?
+  failureReason   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+  settledAt       DateTime?
+
+  @@index([supabaseUid])
+  @@index([status])
+  @@index([supabaseUid, status])
+  @@map("ramp_transfers")
+}
+
+model OfframpFill {
+  id            String   @id @default(cuid())
+  supabaseUid   String
+  provider      String   @default("coinbase")
+  providerTxnId String
+  txHash        String?
+  createdAt     DateTime @default(now())
+
+  @@unique([supabaseUid, providerTxnId])
+  @@index([supabaseUid])
+  @@map("offramp_fills")
+}
+
 model TurnkeyWallet {
   id              String   @id @default(cuid())
   supabaseUid     String   @unique
@@ -135,6 +264,31 @@ model TurnkeyWallet {
 
   @@index([supabaseUid])
   @@map("turnkey_wallets")
+}
+
+/// One row per Turnkey WALLET (seed). A sub-organization can hold several;
+/// TurnkeyWallet above stays the user's sub-org + PRIMARY wallet, and this is
+/// the full list. Signing never uses walletId (Turnkey signs by
+/// organizationId + address), so this table is for records and display only.
+/// Table ships as additive SQL: docs/audit/sql/turnkey_wallet_seeds.sql
+model TurnkeyWalletSeed {
+  id              String   @id @default(cuid())
+  supabaseUid     String
+  walletId        String
+  label           String?
+  /// 'created' (made in-app) | 'imported' (a phrase the user brought)
+  origin          String   @default("created")
+  isPrimary       Boolean  @default(false)
+  bitcoinAddress  String?
+  ethereumAddress String?
+  solanaAddress   String?
+  stellarAddress  String?
+  createdAt       DateTime @default(now())
+
+  @@unique([supabaseUid, walletId], map: "turnkey_wallet_seeds_uid_wallet_key")
+  @@index([supabaseUid])
+  @@index([stellarAddress])
+  @@map("turnkey_wallet_seeds")
 }
 
 model normal_contract_events {

@@ -35,7 +35,7 @@ export const MomentsDefaults: Props = {
 };
 
 export const Moments: React.FC<MomentsProps> = (props) => {
-  const { heading, description, images, ...sectionProps } = {
+  const { description, images, ...sectionProps } = {
     ...MomentsDefaults,
     ...props,
   };
@@ -77,7 +77,8 @@ export const Moments: React.FC<MomentsProps> = (props) => {
             <Box
               component="span"
               sx={{
-                background: 'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)',
+                background:
+                  'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',

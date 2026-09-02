@@ -19,9 +19,7 @@ const svgH = 100;
 const BRAND_COLOR = '#818cf8';
 
 const POINTS = (() => {
-  const vals = Array.from({ length: MONTHS }, (_, i) =>
-    INITIAL * Math.pow(1 + APY / 100, i / 12)
-  );
+  const vals = Array.from({ length: MONTHS }, (_, i) => INITIAL * Math.pow(1 + APY / 100, i / 12));
   const min = vals[0];
   const max = vals[MONTHS - 1];
   const range = max - min;
@@ -117,7 +115,6 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
         pb: '36px',
       }}
     >
-
       {/* Live chip */}
       <Box
         sx={{
@@ -169,7 +166,8 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
         <Box
           component="span"
           sx={{
-            background: 'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)',
+            background:
+              'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -193,9 +191,18 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
         {displayApy != null ? (
           `${displayApy}%`
         ) : (
-          <Skeleton variant="text" width={36} sx={{ bgcolor: 'rgba(255,255,255,0.12)', display: 'inline-block', verticalAlign: 'middle' }} />
+          <Skeleton
+            variant="text"
+            width={36}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.12)',
+              display: 'inline-block',
+              verticalAlign: 'middle',
+            }}
+          />
         )}{' '}
-        APY on USDC in audited lending pools, diversify across leading crypto assets, and keep full self-custody — withdraw anytime, no lock-ups.
+        APY on USDC in audited lending pools, diversify across leading crypto assets, and keep full
+        self-custody — withdraw anytime, no lock-ups.
       </Typography>
 
       {/* Live balance */}
@@ -268,7 +275,10 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
           {GRID.map(({ label, y }) => (
             <line
               key={label}
-              x1={0} y1={y} x2={svgW} y2={y}
+              x1={0}
+              y1={y}
+              x2={svgW}
+              y2={y}
               stroke="rgba(255,255,255,0.08)"
               strokeWidth={0.5}
               strokeDasharray="3 5"
@@ -277,7 +287,6 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
 
           {/* Ghost curve */}
           <path d={LINE_D} fill="none" stroke={BRAND_COLOR} strokeWidth={1} opacity={0.1} />
-
 
           {/* Animated line */}
           <path
@@ -315,7 +324,14 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
         ))}
 
         {/* Moving dot — absolutely positioned to avoid SVG distortion */}
-        <Box sx={{ position: 'absolute', left: `${dotLeft}%`, top: `${dotTop}%`, pointerEvents: 'none' }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            left: `${dotLeft}%`,
+            top: `${dotTop}%`,
+            pointerEvents: 'none',
+          }}
+        >
           <Box
             sx={{
               position: 'absolute',

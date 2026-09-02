@@ -15,6 +15,9 @@ import { useUsdPrice } from '@/hooks/use-price-history';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
 import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { ActivityCard } from '@/sections/portfolio/portfolio-activity-card';
@@ -45,6 +48,7 @@ import { ChainReceiveModal } from '@/components/_common/chain-receive-modal';
 import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 import MoneyGramPendingBanner from '@/components/_common/moneygram-pending-banner';
 import { NetworkBadge, getAssetNetwork } from '@/components/_common/network-badge';
+import RampPendingBanner, { RampInflightInline } from '@/components/_common/ramp-pending-banner';
 
 import { AssetPriceChart } from './asset-price-chart';
 
@@ -78,7 +82,14 @@ function getAssetActions(symbol: string): AssetActionKey[] {
 // the per-chain notes shown under the action row.
 const NATIVE_CHAINS: Record<
   string,
-  { chain: TurnkeyChain; name: string; contract: string; icon: string; decimals: number; note: string }
+  {
+    chain: TurnkeyChain;
+    name: string;
+    contract: string;
+    icon: string;
+    decimals: number;
+    note: string;
+  }
 > = {
   BTC: {
     chain: 'bitcoin',
@@ -115,10 +126,8 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const { enqueueSnackbar } = useSnackbar();
   const { user } = useSupabaseAuth();
 
-  const {
-    wallet,
-    tokenState: { tokens },
-  } = usePersistStore();
+  const { wallet } = usePersistStore();
+  const tokens = useStellarTokens();
 
   const upperSymbol = symbol.toUpperCase();
   const native = NATIVE_CHAINS[upperSymbol];
@@ -127,6 +136,19 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const isSol = upperSymbol === 'SOL';
 
   const storeToken = tokens.find((tkn) => tkn.symbol.toLowerCase() === symbol.toLowerCase());
+
+  // #75 Phase 2b: account-wide view for Stellar assets. The page showed the
+  // SLOT wallet's balance only (and read it from the legacy store) — a hybrid
+  // user opening /assets/XLM saw the near-empty Lobstr number while their
+  // XLM sat in the Normal wallet. Balances come from the aggregate; the big
+  // number is the ACCOUNT total, with a per-wallet split line under it.
+  const { companionStellar, assets: aggAssets } = useWalletBalances(true);
+  const aggSlotBalance = aggAssets.find(
+    (a) => a.chain === 'stellar' && a.symbol === upperSymbol
+  )?.balance;
+  const companionBalance = BigNumber(
+    companionStellar?.assets.find((a) => a.symbol === upperSymbol)?.balance ?? 0
+  );
 
   const btc = useBtcPortfolio(isBtc);
   const eth = useEthPortfolio(isEth);
@@ -137,9 +159,15 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const nativeUsdPrice = useUsdPrice(upperSymbol, !!native);
 
   const nativeToken = isBtc ? btc.btcToken : isEth ? eth.ethToken : isSol ? sol.solToken : null;
-  const nativeAddress = isBtc ? btc.bitcoinAddress : isEth ? eth.ethereumAddress : isSol ? sol.solanaAddress : null;
+  const nativeAddress = isBtc
+    ? btc.bitcoinAddress
+    : isEth
+      ? eth.ethereumAddress
+      : isSol
+        ? sol.solanaAddress
+        : null;
   const nativeLoading = isBtc ? btc.loading : isEth ? eth.loading : isSol ? sol.loading : false;
-  const nativeError = isEth ? eth.error : isSol ? sol.error : false;
+  const nativeError = isEth ? eth.error : isSol ? sol.error : isBtc ? btc.error : false;
   const refetchNative = isBtc ? btc.refetch : isEth ? eth.refetch : sol.refetch;
 
   const [sendOpen, setSendOpen] = useState(false);
@@ -149,7 +177,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const [sellOpen, setSellOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   // Action the user started before the chain account existed; resumed after setup
-  const [pendingAction, setPendingAction] = useState<'send' | 'receive' | 'buy' | 'sell' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'send' | 'receive' | 'buy' | 'sell' | null>(
+    null
+  );
   // Note: completing a Coinbase off-ramp on return is handled globally by
   // OfframpResumeHandler (mounted in ModalProvider) — not per-page.
 
@@ -177,8 +207,16 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   if (native && nativeLoading && !nativeToken) {
     return (
       <DashboardContent maxWidth="xl">
-        <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }} />
-        <Skeleton variant="rectangular" height={280} sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }} />
+        <Skeleton
+          variant="rectangular"
+          height={220}
+          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+        />
+        <Skeleton
+          variant="rectangular"
+          height={280}
+          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }}
+        />
       </DashboardContent>
     );
   }
@@ -187,9 +225,16 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
     return <SpecificNotFound type="asset" />;
   }
 
-  const balance = BigNumber(token.balance || 0);
+  // Stellar assets: slot balance from the aggregate (store kept only for
+  // identity/price fallback), display total = slot + companion.
+  const slotBalance = native
+    ? BigNumber(token.balance || 0)
+    : BigNumber(aggSlotBalance ?? token.balance ?? 0);
+  const balance = slotBalance.plus(native ? 0 : companionBalance);
   const price = BigNumber(token.price || 0);
   const value = balance.multipliedBy(price);
+  // Split line only when BOTH wallets hold some — one owner needs no labels.
+  const showWalletSplit = !native && companionBalance.gt(0);
 
   const requireLogin = (action: () => void) => {
     if (!user) {
@@ -240,16 +285,21 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
     setPendingAction(null);
   };
 
-  const ACTION_CONFIG: Record<AssetActionKey, { label: string; icon: ReactNode; onClick: () => void }> = {
+  const ACTION_CONFIG: Record<
+    AssetActionKey,
+    { label: string; icon: ReactNode; onClick: () => void }
+  > = {
     send: {
       label: t('Send'),
       icon: <CallMadeOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => (native ? requireNativeWallet('send') : requireStellarWallet(() => setSendOpen(true))),
+      onClick: () =>
+        native ? requireNativeWallet('send') : requireStellarWallet(() => setSendOpen(true)),
     },
     receive: {
       label: t('Receive'),
       icon: <CallReceivedOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => (native ? requireNativeWallet('receive') : requireStellarWallet(() => setReceiveOpen(true))),
+      onClick: () =>
+        native ? requireNativeWallet('receive') : requireStellarWallet(() => setReceiveOpen(true)),
     },
     swap: {
       label: t('Swap'),
@@ -264,12 +314,14 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
     buy: {
       label: t('Buy'),
       icon: <AttachMoneyOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => (native ? requireNativeWallet('buy') : requireStellarWallet(() => setBuyOpen(true))),
+      onClick: () =>
+        native ? requireNativeWallet('buy') : requireStellarWallet(() => setBuyOpen(true)),
     },
     sell: {
       label: t('Sell'),
       icon: <MoneyOffOutlined sx={{ fontSize: 14 }} />,
-      onClick: () => (native ? requireNativeWallet('sell') : requireStellarWallet(() => setSellOpen(true))),
+      onClick: () =>
+        native ? requireNativeWallet('sell') : requireStellarWallet(() => setSellOpen(true)),
     },
   };
 
@@ -282,7 +334,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
 
   const infoRows: { label: string; value: string; copyable?: boolean }[] = native
     ? [
-        ...(nativeAddress ? [{ label: t('Your address'), value: nativeAddress, copyable: true }] : []),
+        ...(nativeAddress
+          ? [{ label: t('Your address'), value: nativeAddress, copyable: true }]
+          : []),
         { label: t('Network'), value: native.name },
         { label: t('Decimals'), value: String(native.decimals) },
       ]
@@ -338,7 +392,15 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
             />
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Box sx={{ fontSize: '17px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                <Box
+                  sx={{
+                    fontSize: '17px',
+                    fontWeight: 600,
+                    color: '#0A0A0F',
+                    letterSpacing: '-0.01em',
+                    lineHeight: 1.3,
+                  }}
+                >
                   {token.name}
                 </Box>
                 <NetworkBadge network={getAssetNetwork(token)} />
@@ -350,12 +412,30 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
           </Stack>
 
           <Box sx={{ mb: '22px' }}>
-            <Box sx={{ fontSize: '12px', fontWeight: 500, color: 'rgba(10,10,15,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: '6px' }}>
+            <Box
+              sx={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: 'rgba(10,10,15,0.45)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                mb: '6px',
+              }}
+            >
               {t('Your Balance')}
             </Box>
             {nativeError ? (
               <>
-                <Box sx={{ ...MONO, fontSize: '28px', fontWeight: 600, color: 'rgba(10,10,15,0.3)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                <Box
+                  sx={{
+                    ...MONO,
+                    fontSize: '28px',
+                    fontWeight: 600,
+                    color: 'rgba(10,10,15,0.3)',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.2,
+                  }}
+                >
                   — {token.symbol}
                 </Box>
                 <Box
@@ -381,16 +461,42 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
               </>
             ) : (
               <>
-                <Box sx={{ ...MONO, fontSize: '28px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                <Box
+                  sx={{
+                    ...MONO,
+                    fontSize: '28px',
+                    fontWeight: 600,
+                    color: '#0A0A0F',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.2,
+                  }}
+                >
                   {fTokenAmount(balance)} {token.symbol}
                 </Box>
                 <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
-                  {fCurrencyTwoDecimals(value.toNumber())}
-                  <Box component="span" sx={{ mx: '8px', color: 'rgba(10,10,15,0.2)' }}>·</Box>
-                  {fCurrency(price.toNumber())} / {token.symbol}
+                  {price.isZero() ? '—' : fCurrencyTwoDecimals(value.toNumber())}
+                  <Box component="span" sx={{ mx: '8px', color: 'rgba(10,10,15,0.2)' }}>
+                    ·
+                  </Box>
+                  {price.isZero() ? '—' : fCurrency(price.toNumber())} / {token.symbol}
                 </Box>
+                {/* #75 2b: per-wallet split — the big number is the account
+                    total, this line says who holds what. */}
+                {showWalletSplit && (
+                  <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', mt: '6px', ...MONO }}>
+                    {t('Normal wallet')} {fTokenAmount(companionBalance)}
+                    <Box component="span" sx={{ mx: '6px', color: 'rgba(10,10,15,0.2)' }}>
+                      ·
+                    </Box>
+                    {connectedWalletLabel(wallet.walletType)} {fTokenAmount(slotBalance)}
+                  </Box>
+                )}
               </>
             )}
+            {/* Money on the way (Niko 2026-08-26): the in-flight indicator
+                lives IN the balance card — right under the number it
+                explains. Failures keep the dismissible banner below. */}
+            <RampInflightInline symbol={token.symbol} />
           </Box>
 
           {/* Actions */}
@@ -423,7 +529,11 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                   color: '#6B6B76',
                   background: 'transparent',
                   transition: 'all .15s ease',
-                  '&:hover': { bgcolor: 'rgba(10,10,15,0.03)', color: '#0A0A0F', borderColor: 'rgba(10,10,15,0.14)' },
+                  '&:hover': {
+                    bgcolor: 'rgba(10,10,15,0.03)',
+                    color: '#0A0A0F',
+                    borderColor: 'rgba(10,10,15,0.14)',
+                  },
                   '&:hover .action-icon-box': { bgcolor: '#0A0A0F', color: '#fff' },
                 }}
               >
@@ -476,7 +586,12 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
             {infoRows.map((row) => (
               <Box
                 key={row.label}
-                sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
               >
                 <Box sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', flexShrink: 0 }}>
                   {row.label}
@@ -499,7 +614,12 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                     <Iconify
                       icon="solar:copy-linear"
                       width={15}
-                      sx={{ cursor: 'pointer', color: 'rgba(10,10,15,0.35)', flexShrink: 0, '&:hover': { color: '#0A0A0F' } }}
+                      sx={{
+                        cursor: 'pointer',
+                        color: 'rgba(10,10,15,0.35)',
+                        flexShrink: 0,
+                        '&:hover': { color: '#0A0A0F' },
+                      }}
                       onClick={() => handleCopy(row.value, t('Copied to clipboard'))}
                     />
                   )}
@@ -517,6 +637,10 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
       <Box sx={{ mt: '20px' }}>
         {/* In-flight MoneyGram cash deposits/outs — USDC (Stellar) is the only
             asset MoneyGram ramps, so the banner only belongs here. */}
+        {/* doc 89 F2: FAILED ramp handoffs for THIS asset (dismissible).
+            In-flight rows render inside the balance card since 2026-08-26
+            (RampInflightInline); MoneyGram keeps its own banner below. */}
+        <RampPendingBanner symbol={token.symbol} />
         {token.symbol === 'USDC' && <MoneyGramPendingBanner />}
         <ActivityCard
           walletAddress={wallet.address}
@@ -528,17 +652,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
       </Box>
 
       {/* Modals — rendered locally so the asset is preselected */}
-      <SendModal
-        open={sendOpen}
-        onClose={() => setSendOpen(false)}
-        initialSymbol={token.symbol}
-      />
+      <SendModal open={sendOpen} onClose={() => setSendOpen(false)} initialSymbol={token.symbol} />
 
-      <ReceiveModal
-        open={receiveOpen}
-        context="receive"
-        onClose={() => setReceiveOpen(false)}
-      />
+      <ReceiveModal open={receiveOpen} context="receive" onClose={() => setReceiveOpen(false)} />
 
       {/* USDC can also be bought with cash via MoneyGram (Stellar USDC deposit);
           other assets are Stripe + Coinbase only. */}
@@ -548,7 +664,11 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         onClose={() => setBuyOpen(false)}
         walletAddress={(native ? nativeAddress : wallet.address) ?? undefined}
         asset={{ symbol: token.symbol, blockchain: native?.chain ?? 'stellar' }}
-        providers={token.symbol === 'USDC' ? ['stripe', 'coinbase', 'moneygram'] : ['stripe', 'coinbase']}
+        providers={
+          // Stripe offered LAST (Niko 2026-08-26) until the session integration
+          // replaces the bare link (doc 88 B3).
+          token.symbol === 'USDC' ? ['coinbase', 'moneygram', 'stripe'] : ['coinbase', 'stripe']
+        }
       />
 
       {/* USDC offers Coinbase + MoneyGram (both cash out Stellar USDC); BTC/ETH/
@@ -562,6 +682,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         asset={{ symbol: token.symbol, blockchain: native?.chain ?? 'stellar' }}
         providers={token.symbol === 'USDC' ? ['coinbase', 'moneygram'] : ['coinbase']}
         assetBalance={balance.toNumber()}
+        assetPrice={Number(token.price) || undefined}
       />
 
       {isBtc && (

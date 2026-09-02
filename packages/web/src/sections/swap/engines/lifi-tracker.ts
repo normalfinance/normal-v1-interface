@@ -1,8 +1,14 @@
 'use client';
 
+import type { ChainId } from '@/lib/chains/registry';
+
+import { useSnackbar } from 'notistack';
+import { logger } from '@/utils/logger';
 import { buildAuthHeaders } from '@/utils/http';
 import { useRef, useState, useEffect } from 'react';
-import { ETH_RPC_URL, SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
+import { ETH_RPC_URLS, SOL_RPC_URLS } from '@/lib/chains/rpc-fallback';
+import { clearSwapOutflow, registerSwapOutflow } from '@/lib/spendable';
+import { registerLifiStatusOverride } from '@/lib/lifi/status-overrides';
 
 // ---------------------------------------------------------------------------
 // Background tracker for a cross-chain (LI.FI) swap. Runs independently of the
@@ -24,6 +30,9 @@ export interface LifiTrackedTx {
   toSymbol: string;
   amountIn: string;
   amountOut: string;
+  /** Integrator fee in source-token units — absent when the quote carried no
+   *  fee (1011 fallback). Recorded so revenue charts see LI.FI (doc 123). */
+  feeAmount?: string;
 }
 
 const CHAIN = {
@@ -39,11 +48,33 @@ export function chainName(id: number): string {
   return 'source chain';
 }
 
+/** LI.FI numeric chain id → our registry ChainId (undefined if unknown). */
+export function registryChainOf(id: number): ChainId | undefined {
+  if (id === CHAIN.ETH) return 'ethereum';
+  if (id === CHAIN.SOL) return 'solana';
+  if (id === CHAIN.BTC) return 'bitcoin';
+  return undefined;
+}
+
 const log = (msg: string, extra?: unknown) =>
-  extra !== undefined ? console.log(`[lifi-swap] ${msg}`, extra) : console.log(`[lifi-swap] ${msg}`);
+  extra !== undefined ? logger.log(`[lifi-swap] ${msg}`, extra) : logger.log(`[lifi-swap] ${msg}`);
 
 function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+// Doc 90 1d: one flaky public node must not turn a delivered swap into a
+// reported failure — try each URL in order before giving up.
+async function rpcMulti(urls: string[], method: string, params: unknown[]): Promise<any> {
+  let lastErr: unknown;
+  for (const url of urls) {
+    try {
+      return await rpc(url, method, params);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr;
 }
 
 async function rpc(url: string, method: string, params: unknown[]): Promise<any> {
@@ -70,7 +101,7 @@ async function confirmSource(
   if (fromChainId === CHAIN.ETH) {
     for (let i = 0; i < 45 && !stop(); i++) {
       try {
-        const receipt = await rpc(ETH_RPC_URL, 'eth_getTransactionReceipt', [txHash]);
+        const receipt = await rpcMulti(ETH_RPC_URLS, 'eth_getTransactionReceipt', [txHash]);
         if (receipt) {
           log('ETH receipt status', receipt.status);
           return receipt.status === '0x1' ? 'confirmed' : 'reverted';
@@ -86,7 +117,7 @@ async function confirmSource(
   if (fromChainId === CHAIN.SOL) {
     for (let i = 0; i < 30 && !stop(); i++) {
       try {
-        const res = await rpc(SOL_RPC_URL, 'getSignatureStatuses', [[txHash]]);
+        const res = await rpcMulti(SOL_RPC_URLS, 'getSignatureStatuses', [[txHash]]);
         const st = res?.value?.[0];
         if (st) {
           if (st.err) return 'reverted';
@@ -114,7 +145,8 @@ async function pollBridge(
   for (let i = 0; i < 80 && !stop(); i++) {
     try {
       const res = await fetch(
-        `/api/lifi/status?txHash=${txHash}&fromChain=${fromChainId}&toChain=${toChainId}`
+        `/api/lifi/status?txHash=${txHash}&fromChain=${fromChainId}&toChain=${toChainId}`,
+        { headers: await buildAuthHeaders() }
       );
       if (res.ok) {
         const data = await res.json();
@@ -139,7 +171,21 @@ export interface LifiTrackerHandlers {
   onActivity: () => void;
   /** fired once when the swap reaches a terminal state — surface a toast */
   onTerminal: (stage: Stage) => void;
+  /**
+   * Awaited (capped) BETWEEN the bridge reporting DONE and the stage
+   * flipping to 'done' (#62): the engine refetches the DESTINATION chain's
+   * balances here, so "Done" is never shown against a stale balance that
+   * looks like lost funds.
+   */
+  onArrival?: () => Promise<void> | void;
 }
+
+// Safety valve for onArrival: the funds ARE on-chain once the bridge says
+// DONE — a hiccuping balance refetch must not make a successful swap look
+// stuck, so after this cap "done" shows regardless. Sized to fit the
+// verify-and-retry in swap-card's refetchChain (refresh + 5.6s floor wait +
+// second refresh) with margin.
+const ARRIVAL_CAP_MS = 15_000;
 
 /**
  * Tracks `tx` to completion, independent of any modal. Re-keys on the tx hash,
@@ -150,6 +196,7 @@ export interface LifiTrackerHandlers {
 export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHandlers): Stage {
   const [stage, setStage] = useState<Stage>('confirming');
   const handlersRef = useRef(handlers);
+  const { enqueueSnackbar } = useSnackbar();
   handlersRef.current = handlers;
 
   useEffect(() => {
@@ -158,8 +205,28 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
     const stop = () => cancelled;
     setStage('confirming');
 
+    // While this swap is in flight its source amount is committed money —
+    // register it so MAX buttons stop offering it (#62 spendable).
+    const outflowChain = registryChainOf(tx.fromChainId);
+    if (outflowChain) {
+      registerSwapOutflow(tx.txHash, {
+        chain: outflowChain,
+        symbol: tx.fromSymbol,
+        amount: tx.amountIn,
+      });
+    }
+
     (async () => {
-      const { txHash, fromChainId, toChainId, fromSymbol, toSymbol, amountIn, amountOut } = tx;
+      const {
+        txHash,
+        fromChainId,
+        toChainId,
+        fromSymbol,
+        toSymbol,
+        amountIn,
+        amountOut,
+        feeAmount,
+      } = tx;
       log(`Submitted ${fromSymbol}→${toSymbol}`, txHash);
 
       // 1) Confirm the source-chain transaction actually landed.
@@ -167,6 +234,7 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
       if (cancelled) return;
       if (src !== 'confirmed') {
         log('source not confirmed', src);
+        clearSwapOutflow(txHash); // nothing left the wallet — restore spendable
         setStage('failed');
         handlersRef.current.onTerminal('failed');
         return;
@@ -174,17 +242,22 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
       log('source confirmed');
 
       // 2) Record now (source landed) so it shows as one Swap row, then refresh.
-      try {
-        const headers = await buildAuthHeaders();
-        await fetch('/api/lifi/record', {
-          method: 'POST',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fromSymbol, toSymbol, amountIn, amountOut, txHash }),
-        });
-        log('recorded swap');
-      } catch (e) {
-        log('record failed (non-fatal)', (e as Error).message);
-      }
+      // Doc 90 W2: the record is the swap's ONLY activity row — funds left
+      // the wallet, so one failed POST must not erase it. Three attempts.
+      for (let recAttempt = 0; recAttempt < 3; recAttempt++)
+        try {
+          const headers = await buildAuthHeaders();
+          await fetch('/api/lifi/record', {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fromSymbol, toSymbol, amountIn, amountOut, txHash, feeAmount }),
+          });
+          log('recorded swap');
+          break;
+        } catch (e) {
+          log('record failed — retrying', (e as Error).message);
+          await delay(4000 * (recAttempt + 1));
+        }
       handlersRef.current.onActivity();
 
       // 3) Track the bridge until it delivers.
@@ -192,14 +265,59 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
       const bridge = await pollBridge(txHash, fromChainId, toChainId, stop);
       if (cancelled) return;
       const final: Stage =
-        bridge === 'DONE' ? 'done' : bridge === 'REFUNDED' ? 'refunded' : bridge === 'FAILED' ? 'failed' : 'bridging';
+        bridge === 'DONE'
+          ? 'done'
+          : bridge === 'REFUNDED'
+            ? 'refunded'
+            : bridge === 'FAILED'
+              ? 'failed'
+              : 'bridging';
+
+      // #62: on DONE, refresh the DESTINATION chain's balances BEFORE showing
+      // 'done' (capped — see ARRIVAL_CAP_MS). Niko's rule: never display
+      // "Done" against a stale balance that looks like lost funds.
+      if (final === 'done' && handlersRef.current.onArrival) {
+        log('bridge DONE — refreshing destination balances before showing done');
+        try {
+          await Promise.race([
+            Promise.resolve(handlersRef.current.onArrival()),
+            delay(ARRIVAL_CAP_MS),
+          ]);
+        } catch (e) {
+          log('arrival refresh failed (showing done anyway)', (e as Error).message);
+        }
+        if (cancelled) return;
+      }
+
+      if (final !== 'bridging') {
+        clearSwapOutflow(txHash);
+        // Tell the activity feed the truth BEFORE it refetches — the server
+        // statuses route caches PENDING for 30s, so without this override the
+        // row keeps showing "pending" right after delivery (#62 follow-up).
+        registerLifiStatusOverride(
+          txHash,
+          final === 'done' ? 'DONE' : final === 'refunded' ? 'REFUNDED' : 'FAILED'
+        );
+      }
       setStage(final);
       handlersRef.current.onActivity();
       if (final !== 'bridging') handlersRef.current.onTerminal(final);
+      else {
+        // Doc 90 W2: ~20 minutes without a terminal verdict — some routes
+        // (THORChain, Chainflip) legitimately take longer. Say so instead of
+        // spinning silently forever; the funds are in flight to the user's
+        // own address and the activity row keeps tracking delivery.
+        log('bridge still pending after poll budget — honest handoff');
+        enqueueSnackbar(
+          `Your ${toSymbol} is still on its way — this route can take a while. It arrives automatically; you can track it in Activity.`,
+          { variant: 'info', autoHideDuration: 12000 }
+        );
+      }
     })();
 
     return () => {
       cancelled = true;
+      clearSwapOutflow(tx.txHash);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tx?.txHash]);

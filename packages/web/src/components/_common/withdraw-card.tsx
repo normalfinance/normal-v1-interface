@@ -9,6 +9,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { ModalType, type Token } from '@normalfinance/types';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { knownMemoRequirement } from '@/lib/stellar/memo-required-list';
 import {
   getMaxAmount,
   getCryptoIconUrl,
@@ -191,6 +192,20 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
         enqueueSnackbar(t('Cannot send assets to yourself'), { variant: 'error' });
         return;
       }
+      // This flow's memo support is paste-only and not enforced, so an
+      // exchange deposit could still go out unattributed — block it and
+      // point at the Send dialog, which enforces the memo (finding #48).
+      const exchange = knownMemoRequirement(destination);
+      if (exchange?.required) {
+        enqueueSnackbar(
+          t(
+            '{{name}} deposits need a memo, which this form does not support. Use the Send button on the portfolio page instead.',
+            { name: exchange.name ?? t('This exchange') }
+          ),
+          { variant: 'error' }
+        );
+        return;
+      }
       setReviewOpen(true);
     }
   };
@@ -209,7 +224,6 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
 
   // Main button with multiple states
   const persist = usePersistStore();
-  const isConnected = !!persist.wallet.address;
   const isSendReady = getButtonLabel() === 'Send';
 
   return (
@@ -365,7 +379,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Box
                   component="img"
-                  src={sendToken ? (sendToken.icon ?? getCryptoIconUrl(sendToken.symbol)) : ''}
+                  src={sendToken ? sendToken.icon || getCryptoIconUrl(sendToken.symbol) : ''}
                   sx={{
                     width: 36,
                     height: 36,
@@ -601,7 +615,14 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
           fiatValue={fiatValue}
           address={destination}
           memo={memo}
-          sendFn={(params) => stellarSend({ destination: params.destination, token: params.token, amount: params.amount, memo: params.memo })}
+          sendFn={(params) =>
+            stellarSend({
+              destination: params.destination,
+              token: params.token,
+              amount: params.amount,
+              memo: params.memo,
+            })
+          }
         />
       )}
       {/* Token Picker Popup */}

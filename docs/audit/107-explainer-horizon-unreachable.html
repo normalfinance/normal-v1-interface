@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Day Horizon Went Dark</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>The Day Horizon Went Dark</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 12 &mdash; XLM and USDC not
+loading after the dev-server restart. Diagnosed with evidence this time, not guesses.</p>
+
+<h2>1 &middot; Straight answer first: this was not my code</h2>
+<p>And this time I did not conclude that from reading diffs &mdash; I tested every layer live:</p>
+<table>
+  <tr><th>layer</th><th>test</th><th>result</th></tr>
+  <tr><td>Your dev server (port 8082)</td><td>HTTP probes against it</td>
+      <td class="ok">Healthy &mdash; serves the app, API routes answer correctly</td></tr>
+  <tr><td>The portfolio API route</td><td>direct request</td>
+      <td class="ok">Alive (401 for an unauthenticated caller &mdash; correct)</td></tr>
+  <tr><td>General internet from your machine</td><td>CoinGecko, Google</td>
+      <td class="ok">Fine</td></tr>
+  <tr><td><strong>horizon.stellar.org</strong> &mdash; the app&rsquo;s ONLY mainnet
+      Stellar server</td>
+      <td>direct connection, twice, 20s timeout</td>
+      <td class="no">DNS resolves in 7ms&hellip; and then the connection never opens.
+      Dead, from this machine, right now.</td></tr>
+  <tr><td>The keyed Validation Cloud Horizon (commented out in <code>.env</code>)</td>
+      <td>real Horizon API call</td>
+      <td class="ok">Answers in 0.16s</td></tr>
+</table>
+<p>That last pair is the whole story. XLM and USDC are the only assets read from
+<strong>Horizon</strong>; BTC, ETH and SOL come from entirely different providers. One Stellar
+host is unreachable from your machine &rarr; exactly the Stellar pair goes blank, everything else
+loads. The restart is a red herring &mdash; it only marks <em>when</em> you started looking.</p>
+
+<div class="box warn"><div class="label">Why it was total, not just slow</div>
+Two things stacked. First, <code>.env</code> had been switched at some point from the keyed
+Validation Cloud Horizon to the public <code>horizon.stellar.org</code> (the keyed line was
+sitting there commented out) &mdash; so the public host was the <em>only</em> one configured.
+Second, the &ldquo;last-good&rdquo; snapshot that would have served your previous balances marked
+as stale had a <strong>1-hour lifetime</strong>, and you were away for a few hours. Expired
+snapshot + dead host = blank, instead of yesterday&rsquo;s numbers with a &ldquo;stale&rdquo;
+mark.</div>
+
+<h2>2 &middot; The familiar shape of this bug</h2>
+<p>Doc 95 Wave 4&rsquo;s rule was: <em>no money path may depend on one provider.</em> We built
+fallback pools for Base, Ethereum and Bitcoin. Stellar reads never got one &mdash; every consumer
+had exactly one Horizon URL, so one dead host blanked balances, account status and trustline
+checks across the whole app. Today that host actually died, and the app behaved exactly as the
+rule predicts.</p>
+
+<h2>3 &middot; The fix</h2>
+
+<h3>a) A Horizon pool, like the other chains already have</h3>
+<pre>mainnet:  [ your configured Horizon (keyed) ] → [ horizon.stellar.org ]
+testnet:  [ your configured Horizon ]         → [ horizon-testnet.stellar.org ]</pre>
+<p>The config now carries <code>HORIZON_URLS</code> (primary first, public as the safety net), and
+the readers walk the list until one <em>answers</em>:</p>
+<ul>
+  <li>the portfolio aggregate &mdash; the server read that blanked your XLM/USDC today
+      (<code>lib/stellar/horizon-pool.ts</code>, 8 tests, including &ldquo;primary unreachable
+      &rarr; served by the fallback&rdquo; built from today&rsquo;s outage);</li>
+  <li>the shared account readers (<code>fetchAccount</code>, <code>fetchAccountStrict</code>,
+      <code>fetchTransaction</code>) &mdash; which is what account status and trustline checks go
+      through.</li>
+</ul>
+<div class="box"><div class="label">The one subtlety worth understanding</div>
+A <strong>404 is an answer, not an outage.</strong> It means &ldquo;this account is not
+funded&rdquo; &mdash; the ledger has spoken. The pool returns zeros immediately and does
+<em>not</em> try the next host: failing over on 404 would re-ask a question that has already been
+answered, and make every unfunded account cost a round trip to every endpoint. Only connection
+failures, timeouts, 429s and 5xxs move to the next host. Pinned by a test.</div>
+
+<h3>b) Your <code>.env</code> is switched back</h3>
+<p>The keyed Validation Cloud endpoint (reachable, fast) is the primary again;
+<code>horizon.stellar.org</code> no longer needs its own line because it is the automatic
+fallback in code. <strong>Restart the dev server to pick this up</strong> &mdash; env values are
+baked in at start.</p>
+
+<h3>c) Stale beats blank</h3>
+<p>The last-good snapshot now lives 24 hours instead of 1. If every Horizon in the pool is ever
+down at once, you see your latest known balances marked <em>stale</em> &mdash; an outage should
+degrade the data&rsquo;s <em>age</em>, never its <em>existence</em>.</p>
+
+<h2>4 &middot; Honest notes</h2>
+<table>
+  <tr><th>note</th><th>detail</th></tr>
+  <tr><td>Why was the keyed Horizon commented out?</td>
+      <td>Unknown &mdash; the line was there, disabled, with the public host active. Worth
+      remembering if it was deliberate (e.g. saving quota). With the pool it no longer matters
+      much: whichever is primary, the other catches it.</td></tr>
+  <tr><td>The keyed URL is <code>NEXT_PUBLIC_</code></td>
+      <td>That prefix ships the key to every browser. Pre-existing, and already on the infra
+      audit list (doc: infra API keys) &mdash; not making it worse today, not fixing it today
+      either.</td></tr>
+  <tr><td>Writers (submit paths) keep a single Horizon</td>
+      <td>Deliberate. A submit that times out may still have landed; auto-retrying it against a
+      second host risks double-submitting. Reads are safe to fail over; writes need the
+      idempotent handling they already have. With the primary now reachable, submits work on
+      your machine too.</td></tr>
+  <tr><td>Port 3000 curiosity</td>
+      <td>While diagnosing: localhost:3000 on your machine is serving a different project
+      entirely (a Payload template from <code>next-websites</code>). The Normal app is on
+      <strong>8082</strong>. Nothing wrong &mdash; just do not trust a :3000 tab if one is
+      open.</td></tr>
+</table>
+
+<h2>5 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R68</span></td>
+      <td><strong>Restart the dev server</strong> (to load the new .env), open the app, watch the
+      portfolio and swap card.</td>
+      <td>XLM and USDC load again, in normal time. BTC/ETH/SOL unchanged.</td></tr>
+  <tr><td>2</td>
+      <td>Nothing else &mdash; the fallback is invisible while the primary works. If you are
+      curious: the server log prints which Horizon served a read only when it is not the
+      primary.</td>
+      <td>No behaviour change anywhere else.</td></tr>
+</table>
+
+<h2>6 &middot; Commit</h2>
+<p><code>fix(stellar): Horizon reads fail over instead of going blank</code> (full message in
+chat). New tests: <code>lib/stellar/horizon-pool.test.ts</code> (8). Touches
+<code>packages/types</code> (optional <code>HORIZON_URLS</code> field) and
+<code>packages/utils</code> (config pools + reader failover) alongside web.</p>
+
+</body>
+</html>

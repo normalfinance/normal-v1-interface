@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>61-send-safety-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>61 — Send safety (#29), explained for juniors</h1>
+<p>Branch: <code>fix/send-safety</code>. Design: <a href="60-send-safety-plan.md">60-send-safety-plan.md</a>.</p>
+<h2>The two bugs we killed</h2>
+<p><strong>Bug 1 — the gas guess.</strong> Ethereum transactions carry a gas budget. Ours</p>
+<p>was hardcoded to 21000 — the exact cost of a wallet-to-wallet transfer. But</p>
+<p>many addresses are programs (most exchange deposit addresses, all smart</p>
+<p>wallets), and paying a program costs more.</p>
+<ul>
+<li>If you sent ETH to one of those → out of budget → the chain cancels the</li>
+</ul>
+<p>  send <strong>but keeps the fee</strong> → you paid for a guaranteed failure.</p>
+<p><strong>Bug 2 — the double send.</strong> After broadcasting, we wait for the node's</p>
+<p>answer. If the connection died after the node accepted → the screen said</p>
+<p>"failed" while the send was live → the user retried → and here is the trap:</p>
+<p>Ethereum gives the retry the NEXT transaction number (it counts the first</p>
+<p>send it already has), so the two sends don't collide — <strong>both go through</strong>.</p>
+<p>No server record existed, so nobody would even notice.</p>
+<h2>What changed — cause and effect</h2>
+<ul>
+<li>If you send now → the app first asks the network what this exact send</li>
+</ul>
+<p>  costs. A normal wallet: 21000, same as ever. A contract: its real cost —</p>
+<p>  the send now works. An address that can't accept ETH: **blocked before</p>
+<p>  you sign or pay anything**, with a message telling you to check the</p>
+<p>  deposit address.</p>
+<ul>
+<li>If your amount plus the real fee exceeds your balance → you get "reduce</li>
+</ul>
+<p>  by about X" instead of a raw node error.</p>
+<ul>
+<li>Your passkey still signs everything (custody unchanged) — but the signed</li>
+</ul>
+<p>  bytes now go to our server, which **writes the record first, then</p>
+<p>  broadcasts** — exactly how Bitcoin sends have always worked here. The</p>
+<p>  server decodes the signed transaction and checks the amount, destination,</p>
+<p>  and that the sender inside it is really your wallet — the record cannot</p>
+<p>  lie, and the route cannot be used to relay someone else's transaction.</p>
+<ul>
+<li>If a send's outcome is ever unknown → the server **refuses to broadcast</li>
+</ul>
+<p>  another send on that chain** until the blockchain answers ("your previous</p>
+<p>  send is still confirming"). The every-2-minutes job asks the chain and</p>
+<p>  settles the record — usually within seconds — which unblocks you</p>
+<p>  automatically. Double sends are now structurally impossible: there is no</p>
+<p>  path where send #2 exists while send #1 is in limbo.</p>
+<h2>One design rule worth remembering</h2>
+<p>The broadcast-error classifier is deliberately paranoid **in one</p>
+<p>direction**: only definitive node rejections ("insufficient funds", "nonce</p>
+<p>too low"…) mark a record as failed. "Already known" counts as success (a</p>
+<p>previous attempt made it). Anything ambiguous stays <em>unknown</em> — because</p>
+<p>marking a possibly-live transaction "failed" would be a lying record, and a</p>
+<p>lying record is worse than a late one. The chain itself is always the final</p>
+<p>judge.</p>
+<h2>What changed, by category</h2>
+<p><strong>New (2):</strong> <code>send_logs</code> table (+ user-run SQL in doc 60),</p>
+<p><code>api/send/execute</code> (decode → cross-check → ownership → guard → record →</p>
+<p>broadcast → settle). <strong>Server (2):</strong> <code>server/send-records.ts</code> (classifier,</p>
+<p>base58, probes, reconciler pass), cron route runs the send reconciler.</p>
+<p><strong>Client (2):</strong> ETH adapter (estimateGas + balance preflight + funnel), SOL</p>
+<p>adapter (funnel). <strong>Carve-in (1):</strong> LI.FI EVM leg estimates gas if a quote</p>
+<p>ever omits its gas limit. <strong>Tests:</strong> 9 new (158 total).</p>
+<h2>How to test (do → see)</h2>
+<ul>
+<li>Send ETH to a normal wallet → works as always; <code>send_logs</code> row goes</li>
+</ul>
+<p>  pending → submitted → confirmed.</p>
+<ul>
+<li>Send ETH to a contract that accepts it (e.g. the WETH contract) → now</li>
+</ul>
+<p>  succeeds; before this fix it burned your fee and failed.</p>
+<ul>
+<li>Kill your network right after confirming a send → the app may say it is</li>
+</ul>
+<p>  confirming; trying again immediately says "previous send still</p>
+<p>  confirming" — and about a minute later everything is settled and correct.</p>
+<p>  At no point can the money leave twice.</p>
+</body></html>

@@ -11,7 +11,8 @@ import {
   getRandomVerificationWords,
 } from '@normalfinance/utils';
 
-import { Box ,
+import {
+  Box,
   Stack,
   Paper,
   Alert,
@@ -20,7 +21,6 @@ import { Box ,
   Checkbox,
   TextField,
   Typography,
-  IconButton,
   DialogTitle,
   DialogContent,
   CircularProgress,
@@ -29,6 +29,7 @@ import { Box ,
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import ModalCloseButton from '@/components/_common/modal-close-button';
 
 export type NormalWalletCreateProps = {
   open: boolean;
@@ -299,18 +300,10 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
           {stage === 'verify' && t('Verify Your Recovery Phrase')}
         </Typography>
         {!isLocked && (
-          <IconButton
-            aria-label="close"
+          <ModalCloseButton
             onClick={handleClose}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
-            <Iconify icon="mingcute:close-line" />
-          </IconButton>
+            sx={{ position: 'absolute', right: 12, top: 12 }}
+          />
         )}
       </DialogTitle>
 

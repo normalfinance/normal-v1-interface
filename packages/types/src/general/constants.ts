@@ -2,6 +2,10 @@ export interface NetworkConfig {
   // Network
   NETWORK_PASSPHRASE: string;
   HORIZON_URL: string;
+  /** Horizon endpoints in preference order (primary first). Readers that can
+   *  fail over use this; HORIZON_URL stays the single primary for writers.
+   *  Optional so existing config literals keep compiling. */
+  HORIZON_URLS?: string[];
   RPC_URL: string;
 
   // Normal Accounts

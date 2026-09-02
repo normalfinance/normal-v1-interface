@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Vanishing ETH</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; --blue:#1d4ed8; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:940px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:40px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15.5px; margin:22px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12.5px; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.good { border-left-color:#1ab37d; }
+  .box.warn { border-left-color:#d97706; }
+  .box.bad { border-left-color:#991b1b; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+  .no { color:var(--red); font-weight:600; }
+  .ok { color:var(--green); font-weight:600; }
+  .qa { font-size:11px; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>The Vanishing ETH</h1>
+<p class="subtitle">Branch <code>feat/swap-matrix-hardening</code>, run 14 &mdash; ETH correct,
+then 0 for a few seconds, then correct again. Diagnosed and closed.</p>
+
+<h2>1 &middot; What you saw, decoded</h2>
+<p>This is a different bug from yesterday&rsquo;s races &mdash; a <em>zero</em> is not a stale
+value, it is a wrong answer. Here is the chain, each link verified in code:</p>
+<table>
+  <tr><th>step</th><th>what happened</th></tr>
+  <tr><td>1</td><td>Your swap delivered; a good refresh showed ETH correctly. ✓</td></tr>
+  <tr><td>2</td><td>~10s later another refresh ran (the post-delivery burst). In that one run,
+      the <strong>ETH balance read failed</strong> &mdash; one provider hiccup on one request.
+      The aggregate marks that honestly as <code>balance: null, status: 'error'</code>.</td></tr>
+  <tr><td>3</td><td>The server has a safety net for exactly this &mdash; it backfills an errored
+      row from its last-good snapshot in Redis. That backfill <em>missed</em> (a Redis read blip,
+      or nothing usable) &mdash; so the <code>null</code> reached your browser.</td></tr>
+  <tr><td>4</td><td class="no">The display layer turned the honest null into a lie. The token
+      mappers coerce <code>null → '0'</code>, and the drawer filters rows with
+      <code>balance &gt; 0</code> &mdash; so ETH did not show as 0.00, it <strong>vanished from
+      the list entirely</strong>, which reads exactly as &ldquo;went to 0&rdquo;.</td></tr>
+  <tr><td>5</td><td>The next refresh read ETH fine and the row came back. ✓</td></tr>
+</table>
+<p>I also verified what it was <em>not</em>: your ETH RPC is keyed Alchemy and answered 8 rapid
+probes consistently; the server&rsquo;s <code>rpc()</code> helper correctly rejects error
+responses rather than turning them into zeros; and the no-clobber rule from yesterday cannot
+create this (it only rejects <em>older</em> payloads &mdash; the errored one was newer).</p>
+
+<div class="box warn"><div class="label">Was it something I plugged in?</div>
+Not directly &mdash; every link in that chain predates this week. But indirectly, yes, in one
+honest sense: the refresh machinery now runs <em>more</em> reads around a swap than before, and
+more reads means more chances for one to hiccup and expose this display hole. The hole was always
+there; the traffic that found it is newer.</div>
+
+<h2>2 &middot; The fix: a known number never becomes a hole</h2>
+<p>One new pure rule, beside yesterday&rsquo;s no-clobber rule and composed with it at every place
+a payload lands:</p>
+<pre>fillErroredFromKnown(incoming, known):
+  a row arriving with balance = null (source FAILED)
+  while we already hold a real number for that asset
+  → keep the known number, marked 'stale'
+  a row arriving with balance = '0' (a REAL zero — emptied wallet)
+  → passes through untouched</pre>
+<p>So a failed read now degrades to &ldquo;your last known balance, marked stale&rdquo; instead of
+a vanished asset. The distinction that makes this safe is the same one running through this whole
+project: <code>null</code> means <em>the question failed</em>, <code>'0'</code> means <em>the
+ledger answered zero</em> &mdash; and only the second is allowed to look like a zero.</p>
+<p>Matching is by <em>chain and symbol</em> together, so a Stellar USDC value can never patch an
+Ethereum hole. 5 new tests, including the live case and the real-zero passthrough.</p>
+
+<h3>And the silence is fixed too</h3>
+<p>Nothing anywhere logged <em>which</em> source failed &mdash; step 2 was invisible. The
+aggregate now names it:</p>
+<pre>[portfolio] eth source failed: &lt;reason&gt;</pre>
+<p>If you ever see a balance misbehave again, the dev-server terminal will say which provider
+hiccuped, when.</p>
+
+<h2>3 &middot; Why not fix the mappers or the drawer filter instead?</h2>
+<p>Because they are many and this is one. The <code>null → '0'</code> coercion exists in several
+mappers, and the <code>&gt; 0</code> filters exist in the drawer, holdings and hero views &mdash;
+patching each would be five fixes that must never drift. Patching the data once, where it lands,
+fixes every surface at the same time. (The deeper cleanup &mdash; surfaces rendering
+<code>status: 'stale'</code> visibly, doc 90&rsquo;s deferred visuals &mdash; stays on that list;
+this change makes the data they all read truthful.)</p>
+
+<h2>4 &middot; How to test</h2>
+<table>
+  <tr><th>#</th><th>do</th><th>expect</th></tr>
+  <tr><td>1<br><span class="qa">QA R70</span></td>
+      <td>Run any cross-chain swap to ETH/SOL/BTC and watch the destination balance for ~60s
+      after Done.</td>
+      <td>It never flashes to 0 and never vanishes from the drawer. If a provider hiccups
+      mid-burst you keep the last known number (and the server terminal names the failed
+      source).</td></tr>
+  <tr><td>2</td>
+      <td>Normal use, nothing special.</td>
+      <td>No behaviour change &mdash; the rule only acts when a source read fails while a real
+      number is already known.</td></tr>
+</table>
+
+<h2>5 &middot; Commit</h2>
+<p><code>fix(portfolio): a failed balance read must never erase a known balance</code> (full
+message in chat). 5 new tests in <code>client-cache.test.ts</code>.</p>
+
+</body>
+</html>

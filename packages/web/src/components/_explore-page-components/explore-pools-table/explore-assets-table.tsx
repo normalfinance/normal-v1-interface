@@ -63,7 +63,7 @@ export function ExploreAssetsTable({ assets, loading }: ExplorePoolsTableProps) 
     role: [], // keep empty → not used for markets
     status: 'all', // default tab
   });
-  const { state: currentFilters, setState: updateFilters } = filters;
+  const { state: currentFilters } = filters;
 
   /* ----- sorting -------------------------------------------------------- */
   /** only numeric sortable keys */

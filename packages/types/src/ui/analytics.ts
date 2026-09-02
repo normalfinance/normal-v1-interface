@@ -6,7 +6,7 @@ import { ContractType } from '../general';
 export type AnalyticsEventMap = {
   // 🔐 Wallet events
   wallet_connected: {
-    provider: string; // e.g., 'Freighter', 'Hana'
+    provider: string; // e.g., 'Freighter', 'Lobstr'
     address: string;
     network: string; // e.g., 'mainnet', 'testnet'
   };

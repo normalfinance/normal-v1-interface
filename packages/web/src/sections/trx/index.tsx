@@ -51,7 +51,7 @@ export default function TransactionStatusView({ trxHash }: { trxHash: string }) 
       color: 'success',
       text: 'Your transaction was successful!',
     };
-  }, [isLoading, error, transaction]);
+  }, [isLoading, error, transaction, shownConfetti]);
 
   const handleViewOnExplorer = () => {
     if (trxHash) {

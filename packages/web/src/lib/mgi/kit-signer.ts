@@ -1,7 +1,12 @@
 'use client';
 
+import { runWalletKitSigning } from '@/lib/wallet-kit-guard';
 import { SESSION_BASED_WALLET_TYPES } from '@/hooks/stellar/use-stellar-wallets-kit';
-import { usePersistStore, useNormalWalletStore, useStellarWalletKitStore } from '@normalfinance/state';
+import {
+  usePersistStore,
+  useNormalWalletStore,
+  useStellarWalletKitStore,
+} from '@normalfinance/state';
 import {
   isSessionError,
   WalletSessionExpiredError,
@@ -14,7 +19,7 @@ import {
  * external wallets work:
  *   1. Normal wallet, Turnkey-managed  → passkey signing
  *   2. Normal wallet, local key (unlocked in memory) → store signer
- *   3. External wallet (Freighter/Lobstr/xBull/…) → Stellar Wallets Kit
+ *   3. External wallet (Freighter/Lobstr/Ledger/WalletConnect) → Stellar Wallets Kit
  */
 export async function signStellarTxForMgi(
   xdr: string,
@@ -81,19 +86,29 @@ export async function signXDRWithWalletKit(
 
   let res: string | { xdr?: string; signedXDR?: string };
   try {
-    res = await sign(xdr, networkPassphrase);
+    // Serialized + pending-retried like every other external-wallet signing
+    // path (finding #54) — see lib/wallet-kit-guard.ts.
+    res = await runWalletKitSigning(() => sign(xdr, networkPassphrase));
   } catch (err) {
     // Lobstr/WalletConnect sessions don't survive page reloads; signing then
-    // fails with "connection key is missing". Surface the same reconnect UX
-    // the savings flow uses instead of the kit's raw error.
+    // fails with "connection key is missing". Inline recovery (same as
+    // signOrReconnect, Niko 2026-08-18): reopen the connect flow and retry
+    // this SAME signature once, so a mid-flow step pauses and continues
+    // instead of failing; only a declined/failed reconnect aborts.
     const walletType = usePersistStore.getState().wallet.walletType ?? '';
     if (SESSION_BASED_WALLET_TYPES.has(walletType) && isSessionError(err)) {
-      showWalletReconnectSnackbar(() =>
-        useStellarWalletKitStore.getState().connectWallet(usePersistStore.getState())
-      );
-      throw new WalletSessionExpiredError();
+      try {
+        await useStellarWalletKitStore.getState().connectWallet(usePersistStore.getState());
+        res = await runWalletKitSigning(() => sign(xdr, networkPassphrase));
+      } catch (retryErr) {
+        showWalletReconnectSnackbar(() =>
+          useStellarWalletKitStore.getState().connectWallet(usePersistStore.getState())
+        );
+        throw isSessionError(retryErr) ? new WalletSessionExpiredError() : retryErr;
+      }
+    } else {
+      throw err;
     }
-    throw err;
   }
 
   // Normalize return shape to a string XDR

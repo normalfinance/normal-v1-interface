@@ -93,10 +93,13 @@ export function WalletPasswordProvider({ children }: { children: React.ReactNode
     setError(null);
     setLoading(false);
 
-    enqueueSnackbar('Wallet data cleared. Please re-import your wallet using your recovery phrase.', {
-      variant: 'info',
-      autoHideDuration: 8000,
-    });
+    enqueueSnackbar(
+      'Wallet data cleared. Please re-import your wallet using your recovery phrase.',
+      {
+        variant: 'info',
+        autoHideDuration: 8000,
+      }
+    );
   }, [enqueueSnackbar, normalWalletStore, persistStore]);
 
   return (

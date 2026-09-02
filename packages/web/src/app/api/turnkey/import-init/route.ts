@@ -2,11 +2,10 @@ import type { NextRequest } from 'next/server';
 import type { PasskeyAttestation } from '@/lib/turnkey/server';
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { XLM_ACCOUNT } from '@/lib/turnkey/account-specs';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 import { turnkey, getSubOrgRootUserId, buildPasskeyRootUser } from '@/lib/turnkey/server';
 
 // ---------------------------------------------------------------------------
@@ -22,11 +21,7 @@ import { turnkey, getSubOrgRootUserId, buildPasskeyRootUser } from '@/lib/turnke
 //   (ORGANIZATION_MISMATCH), and this keeps the mnemonic flow end-to-end
 //   client-side anyway.
 // ---------------------------------------------------------------------------
-export async function POST(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   let body: { challenge?: string; attestation?: PasskeyAttestation } = {};
   try {
     body = await request.json();
@@ -52,7 +47,13 @@ export async function POST(request: NextRequest) {
       }
 
       const result = await turnkey.apiClient().createSubOrganization({
-        subOrganizationName: `normal-${user.id.slice(0, 8)}`,
+        // Unique by construction. The name is a dashboard label — nothing
+        // parses it — but the uid prefix alone REPEATS when an account is
+        // re-provisioned (support wipes the turnkey_wallets row so a user whose
+        // passkey became unusable can start over, and the uid is unchanged).
+        // A name we cannot guarantee is accepted twice would fail exactly the
+        // recovery it is needed for, so the suffix removes the question.
+        subOrganizationName: `normal-${user.id.slice(0, 8)}-${Date.now().toString(36)}`,
         rootQuorumThreshold: 1,
         rootUsers: [buildPasskeyRootUser(user, body.challenge, body.attestation)],
         // no `wallet` — the user's own mnemonic arrives via the import
@@ -87,6 +88,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('[turnkey/import-init] Error:', error);
     const detail = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: `Failed to start wallet import: ${detail}` }, { status: 500 });
+    return NextResponse.json(
+      { error: `Failed to start wallet import: ${detail}` },
+      { status: 500 }
+    );
   }
-}
+});

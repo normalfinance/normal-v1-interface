@@ -5,7 +5,7 @@ import { BigNumber } from 'bignumber.js';
 import { cdn } from '@normalfinance/utils';
 import { fCurrency } from '@/utils/format-number';
 import { useMemo, useState, useEffect } from 'react';
-import { usePersistStore } from '@normalfinance/state';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useBtcAddressWatch } from '@/hooks/use-btc-address-watch';
 
 import Box from '@mui/material/Box';
@@ -42,10 +42,10 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
   const [copied, setCopied] = useState(false);
   const [copiedTxid, setCopiedTxid] = useState(false);
 
-  const tokens = usePersistStore((s) => s.tokenState.tokens);
+  const tokens = useStellarTokens();
   const btcPrice = useMemo(
     () => BigNumber(tokens.find((t) => t.symbol === 'BTC')?.price ?? 0),
-    [tokens],
+    [tokens]
   );
 
   const { incomingTxs, isConnected } = useBtcAddressWatch(address, open);
@@ -61,9 +61,7 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
   }, [latestIncoming, address]);
 
   const incomingAmountBtc = incomingAmountSat / 1e8;
-  const incomingFiat = btcPrice.gt(0)
-    ? BigNumber(incomingAmountBtc).multipliedBy(btcPrice)
-    : null;
+  const incomingFiat = btcPrice.gt(0) ? BigNumber(incomingAmountBtc).multipliedBy(btcPrice) : null;
 
   useEffect(() => {
     if (!address) return;
@@ -119,7 +117,13 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
       </DialogTitle>
 
       <DialogContent
-        sx={{ p: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}
+        sx={{
+          p: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '16px',
+        }}
       >
         {/* QR code */}
         <Box
@@ -148,7 +152,13 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
 
         {/* Address + copy */}
         <Box
-          sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}
+          sx={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            alignItems: 'center',
+          }}
         >
           <Typography
             sx={{
@@ -219,8 +229,8 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
             textAlign: 'center',
           }}
         >
-          Only send <strong>Bitcoin (BTC)</strong> to this address. Sending other assets will
-          result in permanent loss.
+          Only send <strong>Bitcoin (BTC)</strong> to this address. Sending other assets will result
+          in permanent loss.
         </Box>
 
         {/* Payment status */}
@@ -363,14 +373,20 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
               }}
             >
               {isConnected ? (
-                <CircularProgress size={14} thickness={3.5} sx={{ color: '#1AB37D', flexShrink: 0 }} />
+                <CircularProgress
+                  size={14}
+                  thickness={3.5}
+                  sx={{ color: '#1AB37D', flexShrink: 0 }}
+                />
               ) : (
-                <CircularProgress size={14} thickness={3.5} sx={{ color: 'rgba(10,10,15,0.25)', flexShrink: 0 }} />
+                <CircularProgress
+                  size={14}
+                  thickness={3.5}
+                  sx={{ color: 'rgba(10,10,15,0.25)', flexShrink: 0 }}
+                />
               )}
               <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-                {isConnected
-                  ? 'Watching for incoming payment…'
-                  : 'Connecting to Bitcoin network…'}
+                {isConnected ? 'Watching for incoming payment…' : 'Connecting to Bitcoin network…'}
               </Typography>
             </Box>
           )}

@@ -12,8 +12,11 @@ import { DashboardContent } from '@/layouts/dashboard';
 import { useUsdPrice } from '@/hooks/use-price-history';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { fCurrency, fTokenAmount } from '@/utils/format-number';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
+import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
+import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
 import {
   Box,
@@ -36,18 +39,20 @@ export default function AssetsView() {
   const router = useRouter();
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
-  const {
-    wallet,
-    tokenState: { tokens },
-    getAllTokens,
-  } = usePersistStore();
+  const { wallet } = usePersistStore();
+  // #75: account-wide view — Stellar rows from the AGGREGATE (slot), plus
+  // the companion Normal wallet's rows and the Savings row. This page read
+  // the legacy slot store and showed $2.21 for a $52 account (observed live
+  // 2026-08-18: Lobstr's 2 XLM while everything else sat in the companion).
+  const { assets: aggAssets, companionStellar } = useWalletBalances(true);
+  const savings = useSavingsPosition(true);
+  const savingsUsd = savings.value + savings.companionValue;
 
   // Effect hook to fetch all tokens once the component mounts
   useEffect(() => {
     const refreshTokens = async (): Promise<void> => {
       try {
         setGlobalIsLoading(true);
-        await getAllTokens();
       } catch (e) {
         logger.error(e);
       } finally {
@@ -55,7 +60,7 @@ export default function AssetsView() {
       }
     };
     refreshTokens();
-  }, [wallet.address]);
+  }, [wallet.address, setGlobalIsLoading]);
 
   const { btcToken } = useBtcPortfolio(true);
   const { ethToken } = useEthPortfolio(true);
@@ -72,14 +77,77 @@ export default function AssetsView() {
   // holds them. Native chains aren't in the Stellar token store, so they're
   // synthesized here when the user has no address for them yet.
   const displayTokens = useMemo(() => {
-    const nativeSymbols = ['BTC', 'ETH', 'SOL'];
-    const stellar = tokens.filter(
-      (token) =>
-        !nativeSymbols.includes(token.symbol) &&
-        (BigNumber(token.balance).gt(0) || token.featured || token.symbol === 'XLM' || token.symbol === 'USDC')
-    );
+    const hybrid =
+      wallet.walletType != null && wallet.walletType !== 'normal-wallet' && !!companionStellar;
+    // ONE row per Stellar asset (Niko, 2026-08-25). The split rows predate
+    // F1: they existed so the user could SEE which wallet held what, because
+    // nothing ever asked. Now every action asks — buy/sell via WalletChoice,
+    // send via its own picker — so the page-level split is redundant noise
+    // and the per-wallet amounts move into the subtitle, hero-card style
+    // (doc 80 D2: companion first, real wallet names, never "External").
+    // Single-wallet accounts render exactly as before.
+    const slotLabel = connectedWalletLabel(wallet.walletType);
+    const fmtBal = (n: number) =>
+      n.toLocaleString('en-US', { maximumFractionDigits: n < 1 ? 4 : 2 });
+    const stellar = aggAssets
+      .filter((a) => a.chain === 'stellar')
+      .map((a) => {
+        const tk = portfolioAssetToToken(a);
+        if (!hybrid) return tk;
+        // The aggregate's Stellar rows are SLOT-only; the companion arrives
+        // separately (portfolio route) — combining is an addition, not a split.
+        const slotBal = Number(a.balance ?? 0);
+        const compBal = Number(
+          companionStellar?.assets.find((c) => c.symbol.toUpperCase() === a.symbol.toUpperCase())
+            ?.balance ?? 0
+        );
+        const parts = [
+          ...(compBal > 0 ? [{ label: 'Normal wallet', bal: compBal }] : []),
+          ...(slotBal > 0 ? [{ label: slotLabel, bal: slotBal }] : []),
+        ];
+        const name =
+          parts.length > 1
+            ? `${tk.name} · ${parts.map((pt) => `${pt.label} ${fmtBal(pt.bal)}`).join(' · ')}`
+            : parts.length === 1
+              ? `${tk.name} · ${parts[0].label}`
+              : tk.name;
+        return {
+          ...tk,
+          balance: BigNumber(slotBal).plus(compBal).toString(),
+          name,
+        } as Token;
+      });
+    // Kept as a shape so the row assembly below stays untouched; the
+    // companion's balances now live inside the combined rows above.
+    const companion: Token[] = [];
+    const savingsRow: Token[] =
+      savingsUsd > 0
+        ? [
+            {
+              symbol: 'Savings',
+              contract: '__savings__',
+              name: 'Normal Savings',
+              issuer: '',
+              org: '',
+              domain: '',
+              icon: cdn('logo/logo-single.png'),
+              decimals: 4,
+              featured: false,
+              balance: String(savingsUsd),
+              price: '1',
+              percentageChange: 0,
+            } as Token,
+          ]
+        : [];
 
-    const synthesize = (symbol: string, name: string, contract: string, icon: string, decimals: number, usdPrice: number): Token =>
+    const synthesize = (
+      symbol: string,
+      name: string,
+      contract: string,
+      icon: string,
+      decimals: number,
+      usdPrice: number
+    ): Token =>
       ({
         symbol,
         contract,
@@ -93,7 +161,7 @@ export default function AssetsView() {
         balance: '0',
         price: String(usdPrice),
         percentageChange: 0,
-      } as Token);
+      }) as Token;
 
     const natives = [
       btcToken ?? synthesize('BTC', 'Bitcoin', '__btc__', cdn('tokens/bitcoin.webp'), 8, btcUsd),
@@ -101,18 +169,35 @@ export default function AssetsView() {
       solToken ?? synthesize('SOL', 'Solana', '__sol__', cdn('tokens/solana.webp'), 9, solUsd),
     ];
 
-    return [...natives, ...stellar].sort((a, b) => {
+    return [...natives, ...stellar, ...companion, ...savingsRow].sort((a, b) => {
       const aValue = BigNumber(a.balance).multipliedBy(a.price);
       const bValue = BigNumber(b.balance).multipliedBy(b.price);
       return bValue.minus(aValue).toNumber();
     });
-  }, [tokens, btcToken, ethToken, solToken, btcUsd, ethUsd, solUsd]);
+  }, [
+    aggAssets,
+    companionStellar,
+    savingsUsd,
+    wallet.walletType,
+    btcToken,
+    ethToken,
+    solToken,
+    btcUsd,
+    ethUsd,
+    solUsd,
+  ]);
 
   // Calculate total value
-  const totalValue = displayTokens.reduce((acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)), BigNumber(0));
+  const totalValue = displayTokens.reduce(
+    (acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)),
+    BigNumber(0)
+  );
 
   const handleRowClick = (token: Token) => {
-    router.push(paths.assets.details(token.symbol));
+    // Savings is a product, not a chain asset — its row opens /savings.
+    router.push(
+      token.contract === '__savings__' ? paths.savings : paths.assets.details(token.symbol)
+    );
   };
 
   return (

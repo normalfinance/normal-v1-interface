@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>External Wallets × Cross-Chain Swaps — What We Built &amp; How to Test It</title>
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --muted: #5a5a66;
+    --line: #e6e6ea;
+    --soft: #f6f6f8;
+    --green: #0a6649;
+    --amber: #7a4a00;
+    --red: #991b1b;
+    --blue: #1d4ed8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    max-width: 860px;
+    padding: 48px 32px 96px;
+    font: 15px/1.65 "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: #fff;
+  }
+  h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 34px; }
+  h2 {
+    font-size: 21px; letter-spacing: -0.01em;
+    margin: 44px 0 12px; padding-top: 18px;
+    border-top: 2px solid var(--ink);
+  }
+  h3 { font-size: 16.5px; margin: 26px 0 8px; }
+  p, li { color: #23232b; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 5px 0; }
+  strong { color: var(--ink); }
+  code {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px; background: var(--soft);
+    padding: 1px 6px; border-radius: 5px;
+  }
+  table {
+    border-collapse: collapse; width: 100%;
+    margin: 14px 0 20px; font-size: 13.5px;
+  }
+  th, td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .box {
+    border: 1px solid var(--line); border-left: 4px solid var(--ink);
+    background: var(--soft); border-radius: 8px;
+    padding: 14px 18px; margin: 18px 0;
+  }
+  .box.warn { border-left-color: #d97706; }
+  .box.good { border-left-color: #1ab37d; }
+  .box .label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px;
+  }
+  .kv { color: var(--muted); font-size: 13px; }
+  .step { font-weight: 700; }
+  .ok { color: var(--green); font-weight: 700; }
+  .no { color: var(--red); font-weight: 700; }
+  .toc { columns: 2; gap: 32px; font-size: 14px; }
+  .toc a { color: var(--blue); text-decoration: none; }
+  .pill {
+    display: inline-block; border: 1px solid var(--line); border-radius: 999px;
+    padding: 2px 10px; font-size: 12px; font-weight: 600; color: var(--muted);
+    margin-right: 6px;
+  }
+  .pill.sel { background: var(--ink); color: #fff; border-color: var(--ink); }
+  @media print {
+    body { padding: 0 8px; font-size: 12.5px; }
+    h2 { break-after: avoid; page-break-after: avoid; }
+    h3 { break-after: avoid; }
+    table, .box { break-inside: avoid; page-break-inside: avoid; }
+    .pagebreak { break-before: page; page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<h1>External Wallets × Cross-Chain Swaps</h1>
+<div class="subtitle">
+  Everything built on branch <code>feat/external-wallet-cctp</code> — explained for the whole team, with the full test plan.
+  Design docs: 72 (architecture) · 73 (this explainer, markdown twin) · Register entries: #32 chunks 1–4e.
+</div>
+
+<div class="box">
+  <div class="label">The goal in one sentence</div>
+  A user whose Stellar wallet is <strong>Lobstr, Freighter, Ledger or WalletConnect</strong> can now swap
+  USDC into BTC / ETH / SOL and back — which physically requires our passkey-secured <strong>Normal wallet</strong>
+  (external Stellar wallets cannot sign on other chains) — without ever losing sight of their own wallet,
+  with as few signatures as possible, and with <strong>nothing ever happening silently</strong>.
+</div>
+
+<h2>Contents</h2>
+<div class="toc">
+  <ol>
+    <li><a href="#background">Background: why this was hard</a></li>
+    <li><a href="#chunk1">Chunk 1 — stop silent wallet switching</a></li>
+    <li><a href="#chunk2">Chunk 2 — show everything the account owns</a></li>
+    <li><a href="#chunk3">Chunk 3 — the guided setup popup</a></li>
+    <li><a href="#chunk4">Chunk 4 — the swaps themselves</a></li>
+    <li><a href="#sends">Bonus fix — sending to a brand-new wallet</a></li>
+    <li><a href="#rules">The safety rules behind everything</a></li>
+    <li><a href="#untouched">What deliberately did NOT change</a></li>
+    <li><a href="#testing">How to test — the full matrix</a></li>
+    <li><a href="#status">Status &amp; what remains</a></li>
+  </ol>
+</div>
+
+<h2 id="background">1 · Background: why this was hard</h2>
+<p>
+  The app was built around <strong>one “connected wallet” slot</strong> — like a TV with a single HDMI input.
+  Balances, savings, sends, swaps: every screen read from whatever was plugged into that slot.
+  That was fine when every user had exactly one wallet. But cross-chain swaps need the Normal
+  (Turnkey passkey) wallet — the only wallet that can sign on Bitcoin, Ethereum, Base and Solana —
+  so an external-wallet user needs <strong>two wallets coexisting</strong>: their own external Stellar wallet
+  <em>plus</em> a Normal wallet for everything non-Stellar.
+</p>
+<p>
+  Two locked product decisions shaped the whole build:
+</p>
+<ul>
+  <li><strong>Transfer-first:</strong> the external wallet never signs non-Stellar legs. To swap funds held externally,
+      they hop to the Normal wallet first (one visible approval) — and every <em>future</em> swap is then passkey-only,
+      which is the path to the one-signature goal (#33).</li>
+  <li><strong>No picker, no hiding:</strong> everything the account owns is displayed, every number is labeled with the
+      wallet that owns it, and the wallet that signs is decided by <em>where the action starts</em> — never by a modal
+      asking the user to choose their identity.</li>
+</ul>
+
+<h2 id="chunk1">2 · Chunk 1 — stop silent wallet switching (invisible, foundational)</h2>
+<p><strong>The problem.</strong> Two pieces of background code shoved a different wallet into the slot uninvited:</p>
+<ol>
+  <li><strong>Wallet creation stole the screen.</strong> Creating a Normal wallet while Lobstr was connected replaced
+      Lobstr in the entire app mid-flow — balances, savings, activity all flipped.</li>
+  <li><strong>The “self-heal” hijacked an empty slot.</strong> Whenever the slot was empty, a recovery routine plugged
+      the Turnkey wallet in. Great on a new laptop (your wallet just appears); terrible after you deliberately
+      disconnected an external wallet — reload, and you were silently in a different wallet (long-standing bug #42).</li>
+</ol>
+<p><strong>The fix.</strong> A persisted breadcrumb — <code>lastWalletType</code> — records the wallet you last
+   <em>chose</em> to connect and survives disconnect. An empty slot now has two distinguishable meanings:</p>
+<ul>
+  <li>breadcrumb <em>absent</em> → fresh device / cleared storage → restore the Turnkey wallet (new-laptop login unchanged);</li>
+  <li>breadcrumb says <em>“lobstr”</em> → the user disconnected on purpose → stay disconnected.</li>
+</ul>
+<p>
+  Wallet creation now adopts the new wallet into the slot <strong>only when the slot is empty</strong> (signup — unchanged).
+  With an external wallet connected, the new Normal wallet is linked to the account and the screen doesn't blink.
+  All of it is pinned by named invariant tests (I1 “creation never steals”, I2/I7 “external disconnect stays disconnected”,
+  I5 “signup still adopts”, I6 “new-device login still restores”) — if a future change breaks a promise, a test with
+  that name fails.
+</p>
+
+<h2 id="chunk2">3 · Chunk 2 — show everything the account owns, split by wallet</h2>
+<ul>
+  <li><strong>Server:</strong> the portfolio endpoint returns a <code>companionStellar</code> field — the Normal wallet's
+      XLM/USDC — whenever the connected wallet is external. Cost: exactly one extra Horizon call riding the existing
+      15-second cache. Single-wallet users: zero change.</li>
+  <li><strong>Drawer:</strong> with two wallets, the Assets tab shows <span class="pill sel">Normal wallet</span>
+      <span class="pill">Lobstr</span> tabs — each wallet's own token list under its own shortened address.
+      Numbers are never summed across wallets in lists (a sum no single action can spend is a lie);
+      the Total-balance row does sum the account, because a total is information, not an action.</li>
+  <li><strong>Portfolio &amp; home pages</strong> are the <em>account-wide</em> wealth views: the Normal wallet's assets
+      stay visible when an external wallet connects, as rows labeled <em>“· Normal wallet”</em>, and on hybrid accounts
+      <em>every</em> row is labeled by its owning wallet.</li>
+  <li><strong>Savings display is account-wide too</strong> — your position shows no matter which wallet is connected —
+      while deposit/withdraw math stays strictly per-wallet (limits and commissions can never mix wallets). A banner on
+      the savings card tells a hybrid user where their savings actually live.</li>
+  <li><strong>The unlink guard:</strong> the settings page used to happily offer “Disconnect” on the Turnkey wallet —
+      the wallet holding all the user's funds. The server now refuses (400) and the settings card explains instead.
+      Two layers on purpose: a UI bug can't reopen the hole.</li>
+  <li><strong>Why no database change?</strong> The tables already supported coexistence: <code>turnkey_wallets</code> =
+      one Normal wallet per account; <code>linked_wallets</code> = many external wallets per account. Only the browser's
+      “who signs right now” slot is single — necessarily, since an external wallet signs only while its app session is open.</li>
+</ul>
+
+<h2 id="chunk3">4 · Chunk 3 — the guided “get a Normal wallet” popup</h2>
+<div class="box good">
+  <div class="label">Who sees it</div>
+  Only an external-wallet user who starts a cross-chain swap without a Normal wallet.
+  <strong>Signup/onboarding is untouched</strong> — same asset-first flow as before, pinned by test I5.
+  Normal-wallet users never see this dialog.
+</div>
+<p>
+  The dead “cross-chain needs your Normal wallet” button became <strong>“Continue with your Normal wallet”</strong>,
+  opening a four-step dialog. Each step happens at the moment it's physically required:
+</p>
+<table>
+  <tr><th>Step</th><th>What happens</th><th>Who signs</th></tr>
+  <tr><td class="step">1 · Create</td><td>Passkey ceremony creates the Normal wallet. Chunk 1's guard keeps the external wallet connected — the screen doesn't blink.</td><td>passkey</td></tr>
+  <tr><td class="step">2 · Activate</td><td>A new Stellar account doesn't exist until it receives XLM (Stellar's rule). Pre-filled 4 XLM payment from the external wallet — enough to land the new wallet “green” on the fee semaphore from day one.</td><td>external wallet</td></tr>
+  <tr><td class="step">3 · Trustline</td><td>Stellar wallets opt in to each asset; one tap adds the USDC line. Signed by the passkey automatically, because the transaction's <em>source</em> is the Normal wallet — the universal signer routes by source account.</td><td>passkey</td></tr>
+  <tr><td class="step">4 · Fund</td><td>Pre-filled USDC transfer (the typed swap amount) from the external wallet.</td><td>external wallet</td></tr>
+</table>
+<p>
+  <strong>Resumable by construction:</strong> the current step is <em>derived from chain state</em> on every open —
+  “does the wallet exist? is it funded? has the trustline? enough USDC?” — never remembered. Kill the tab anywhere;
+  reopening resumes exactly there. A returning user with a funded wallet skips the dialog entirely.
+  One-time cost: 2 passkey ceremonies + 2 external approvals. After that, every swap is passkey-only.
+</p>
+<p>
+  Also in this chunk: the drawer's “+” button becomes <strong>“Connect external wallet”</strong> for anyone who already
+  has a Normal wallet (opens the wallet picker directly), and the ⟳ button was renamed “All wallets”.
+</p>
+
+<h2 id="chunk4">5 · Chunk 4 — the swaps themselves</h2>
+<p>The design covers every place funds can sit (doc 72 §4h). N = Normal wallet, E = connected external wallet:</p>
+<table>
+  <tr><th>Scenario</th><th>How it runs</th><th>Approvals</th></tr>
+  <tr><td>USDC on N → BTC/ETH/SOL</td><td>plain swap, Stellar side pinned to the Normal wallet</td><td>passkey only</td></tr>
+  <tr><td>USDC on E → BTC/ETH/SOL</td><td><strong>move-and-swap</strong>: one pre-filled transfer E→N, then the swap</td><td>1 external + passkey</td></tr>
+  <tr><td>BTC/ETH/SOL → USDC</td><td>plain swap; the user picks the landing wallet</td><td>passkey only</td></tr>
+  <tr><td>BTC ↔ ETH ↔ SOL</td><td>pure Turnkey-chain swap, no Stellar at all — simply un-gated</td><td>passkey only</td></tr>
+  <tr><td>XLM → cross-chain</td><td>unchanged: swap XLM→USDC first (Soroswap, the connected wallet)</td><td>—</td></tr>
+</table>
+
+<h3>The source picker (outbound)</h3>
+<p>
+  On USDC → BTC/ETH/SOL, a hybrid user sees two pills above the amount —
+  <span class="pill sel">Normal wallet · 27.48</span> <span class="pill">Lobstr · 12.50</span> —
+  and balance, validation and MAX all follow the <em>selected</em> pill. Picking the external wallet changes the button
+  itself to <strong>“Move 12.50 USDC from Lobstr &amp; swap”</strong> with a helper explaining both halves; the progress
+  popup shows “Moving USDC from Lobstr” as its own step, and the move is a normally recorded transfer in Activity.
+</p>
+<div class="box">
+  <div class="label">The safety rule that makes move-and-swap sound</div>
+  The engine does not touch the bridge until the moved USDC is <strong>visible on the Normal wallet</strong> —
+  it re-reads the balance in a bounded loop before proceeding (verify-before-act, the #62 rule).
+  A transfer that lags can only make the swap <em>wait</em>, never burn money that hasn't arrived.
+  If the move fails or is declined, the message says plainly: “nothing was swapped”.
+</div>
+
+<h3>The delivery picker (inbound)</h3>
+<p>
+  On BTC/ETH/SOL → USDC, a “Deliver to: Normal wallet / Lobstr” row picks where the USDC lands (default: Normal wallet).
+  External delivery needs that wallet's USDC trustline — if missing, the pill reads <em>“Lobstr · add trustline”</em>
+  and tapping it runs the opt-in signed by the external wallet itself. No dead ends.
+</p>
+
+<h3>The preflight ladder</h3>
+<p>The swap button never dead-ends; it always names the next step and opens the right dialog for it:</p>
+<ul>
+  <li>no Normal wallet → <em>Continue with your Normal wallet</em> (guided setup)</li>
+  <li>missing USDC trustline → <em>Add USDC to your Normal wallet</em> (setup resumes at that step)</li>
+  <li>fee-XLM dry → <em>Top up XLM to swap</em> (the burn pays its Stellar fee in XLM from the Normal wallet — a wallet
+      the user may never have topped up; the setup's XLM step doubles as the top-up)</li>
+  <li>everything ready → <em>Swap</em> (or <em>Move X &amp; swap</em>)</li>
+</ul>
+
+<h2 id="sends" class="pagebreak">6 · Bonus fix — sending to a brand-new wallet</h2>
+<p>
+  Testing surfaced a hole that predates this project. Stellar has two rules our send flow ignored:
+  an address that never received XLM <strong>does not exist on-chain</strong> (the first XLM must arrive via a special
+  <code>createAccount</code> operation of at least 1 XLM), and a wallet can hold USDC only after
+  <strong>opting in with a trustline</strong> — which only that wallet's own key can add.
+</p>
+<p>
+  Every send used to be a plain payment, so both cases failed <em>on-chain, after signing, fee burned</em>, with a raw
+  error code (<code>op_no_destination</code> / <code>op_no_trust</code>) as the only explanation. Now, in the one shared
+  send funnel (send modal, guided setup and move-and-swap all inherit it):
+</p>
+<ul>
+  <li>XLM to a fresh address → automatically switches to the activation operation (below 1 XLM: a clear message about the minimum);</li>
+  <li>USDC to a fresh address → blocked <em>before signing</em>: “send at least 1 XLM first, add a USDC trustline there, then send USDC”;</li>
+  <li>USDC to an active wallet without the trustline → blocked <em>before signing</em>, telling the user to add the asset in that wallet's app;</li>
+  <li>if the trustline state can't be determined, the send is <em>not</em> blocked — the chain stays the judge, we never block on a guess.</li>
+</ul>
+
+<h2 id="rules">7 · The safety rules behind everything</h2>
+<ul>
+  <li><strong>No silent wallet switching.</strong> The slot changes only by explicit user choice; every automatic writer is guarded and test-pinned.</li>
+  <li><strong>No silent money movement.</strong> Every transfer is announced in the button label before signing, shown as a step in the progress popup, and recorded in Activity.</li>
+  <li><strong>Every number is owned.</strong> On hybrid accounts, every balance on screen is labeled with the wallet that can actually spend it; lists never sum across wallets.</li>
+  <li><strong>Account view vs wallet view is always an explicit choice.</strong> Pages show the account; action surfaces show one wallet. Defaulting to “whatever is connected” is how assets appear to vanish — that lesson cost us three field fixes in one day.</li>
+  <li><strong>Verify before act.</strong> A burn never fires until moved funds are visible; “Done” never shows until the wallet displays the result.</li>
+  <li><strong>Block before signing, never after.</strong> Preflights (trustlines, activation, fee XLM) run before any signature, so a fee is never burned on a doomed transaction.</li>
+  <li><strong>Funds sit on the user's own addresses at every step</strong> — both wallets are theirs; the app never custodies anything in between.</li>
+</ul>
+
+<h2 id="untouched">8 · What deliberately did NOT change</h2>
+<ul>
+  <li><strong>Signup and login.</strong> Asset-first onboarding is byte-identical; a recognized returning user still lands straight in the app (test I8). New-device login still restores the Normal wallet (test I6).</li>
+  <li><strong>Single-wallet users</strong> — today's entire user base — see zero visual difference anywhere: no pills, no labels, no tabs.</li>
+  <li><strong>Savings actions</strong> stay scoped to the connected wallet; XLM ↔ USDC swaps still run on whichever wallet is connected.</li>
+  <li><strong>The database schema.</strong> No migration was needed — the tables already modeled coexistence.</li>
+</ul>
+
+<h2 id="onesource" class="pagebreak">9d · Retiring the token store (branch retire-token-store, 2026-08-20)</h2>
+
+<h3>What we were fixing</h3>
+<p>The app had TWO systems answering the same question — "how much XLM/USDC do I have?": the portfolio <strong>aggregate</strong> (server-side, covers both wallets, refreshes after every transaction, keeps a snapshot for instant paint) and the old <strong>token store</strong> (browser-side, one wallet only, refreshed only when certain pages loaded). Two answerers means they eventually disagree — and every "my balance is stale / empty / wrong" bug of the past week was exactly that: a screen reading the store while the truth lived in the aggregate. A freshly activated wallet showing as empty in Send, the swap picker showing old numbers, the drawer total missing a wallet — one disease, many symptoms.</p>
+
+<h3>Why "refresh it more often" was not the fix</h3>
+<p>We tried that first (a background refresher that poked the store after every transaction). It shrinks the stale window but the disease remains: any NEW screen can still be wired to the wrong source by accident. The only permanent cure is for the wrong source to have <strong>zero readers</strong> — then stale data isn't rare, it's unreachable.</p>
+
+<h3>How we did it — two commits, on purpose</h3>
+<p><strong>Commit A — move the readers.</strong> All eleven files that read the store wanted the same thing: the connected wallet's Stellar tokens. So one adapter, <code>useStellarTokens()</code>, serves that exact shape from the aggregate (with the USDC issuer patched in so sends and trustlines still build real assets) — and every migration became a one-line swap. The finish line is provable, not asserted: <code>grep tokenState</code> over the app → zero hits.</p>
+<p><strong>Commit B — remove the machinery.</strong> Only after readers hit zero was it safe to delete the thirteen now-pointless refresh calls, the background refresher, and the store-driven loading flags (the drawer's skeleton now follows the aggregate's own loading state). Two commits so any regression is unambiguous: A broke a reader, or B broke a caller — never "somewhere in between".</p>
+
+<h3>The rule this enforces forever</h3>
+<p>One question, one answerer. A future screen that needs Stellar tokens has exactly one import that works — the easy path IS the correct path. (The store's empty definition still sits in the shared state package with zero callers; deleting it is a tiny separate change beside the persistence versioning, done with care rather than as a tail-end edit.)</p>
+
+<h3>How to test (Part H)</h3>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>H1</td><td>Compare balances across drawer, swap card, savings card, send picker, search bar, /assets</td><td>All identical, all update within ~10s of any transaction — no reload needed anywhere</td></tr>
+  <tr><td>H2</td><td>Whole-app smoke: send, soroswap swap, cctp swap, savings deposit</td><td>Everything behaves exactly as before — this refactor changes SOURCES, never behavior; any difference is a bug, report it</td></tr>
+  <tr><td>H3</td><td>Explore page refresh button</td><td>Says "Assets refresh automatically" — it no longer pokes a dead store</td></tr>
+</table>
+
+<h2 id="chart" class="pagebreak">9e · The real savings chart (feat/savings-chart, 2026-08-20)</h2>
+<p><strong>What was wrong:</strong> the earnings chart was an ESTIMATE — it took your current earnings and drew a smooth APY-shaped curve backwards, from a capped list of recent activity. A chart users can catch being wrong costs more trust than no chart.</p>
+<p><strong>What it is now:</strong> your wallet's REAL deposit/withdraw history (the same authoritative DeFindex source our totals reconcile against — full history, server-cached) drives the curve. The math has no APY assumption at all: your TRUE total earnings (a number we know exactly) are spread over time in proportion to the balance you ACTUALLY held at each moment. Deposit more → the curve provably climbs faster from that day; withdraw everything → it goes flat. Exact at both ends: $0 at your first deposit, your true earnings today. The only approximation left is the in-between attribution — the fair split absent per-day vault prices.</p>
+<p><strong>Honesty rules carried over:</strong> a failed history fetch keeps your cached curve (never a fabricated flat $0); unplottable events are dropped, not guessed; the curve paints instantly from localStorage and refreshes behind. A nice catch along the way: our route-auth guard test flagged the new endpoint as public before any human review did — it's now allowlisted with its reason, like its siblings.</p>
+<h3>Part I — how to test</h3>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>I1</td><td>/savings chart, wallet with deposits</td><td>Curve starts at $0 on your FIRST deposit date, ends at exactly your Current Earnings figure; slope visibly changes at deposit/withdraw dates</td></tr>
+  <tr><td>I2</td><td>Deposit, wait ~1 min, reload</td><td>The new deposit appears as a slope change; totals still match the hero stats exactly</td></tr>
+  <tr><td>I3</td><td>Kill the network, reload /savings</td><td>The chart still draws (cached curve) — never a flat $0 claiming you earned nothing</td></tr>
+</table>
+
+<h2 id="testing" class="pagebreak">9 · How to test — the full matrix</h2>
+<div class="box warn">
+  <div class="label">Setup needed once</div>
+  A funded Lobstr wallet (a few USDC and XLM) connected alongside the Normal wallet
+  (drawer → “+” → Connect external wallet → Wallet Connect row → scan QR with the Lobstr app).
+  For the full guided-setup walk (steps 1–4 of the popup), use a <strong>fresh account with only Lobstr</strong> —
+  an account that already has a funded Normal wallet correctly skips the dialog.
+</div>
+
+<h3>Part A — sends to the new wallet (do these first; they fund the rest)</h3>
+<table>
+  <tr><th>#</th><th>Do</th><th>Expect</th></tr>
+  <tr><td>A1</td><td>Send <strong>0.5 XLM</strong> from the Normal wallet to the empty Lobstr address</td><td><span class="no">Blocked before signing</span> — message about the 1 XLM activation minimum</td></tr>
+  <tr><td>A2</td><td>Send <strong>4 XLM</strong> to the empty Lobstr</td><td><span class="ok">Works</span> — account auto-activates (createAccount under the hood)</td></tr>
+  <tr><td>A3</td><td>Send USDC to Lobstr <em>before</em> adding its trustline</td><td><span class="no">Blocked before signing</span> — “needs a USDC trustline · add the asset in that wallet's app”</td></tr>
+  <tr><td>A4</td><td>Add USDC in the Lobstr app (add asset → USDC), send USDC again</td><td><span class="ok">Arrives</span></td></tr>
+</table>
+
+<h3>Part B — the swap matrix (Lobstr connected)</h3>
+<table>
+  <tr><th>#</th><th>Do</th><th>Expect</th></tr>
+  <tr><td>B1</td><td>USDC → BTC, source pill <strong>Normal wallet</strong></td><td>Balance shows “· Normal wallet”; swap runs <strong>passkey-only</strong>, Lobstr never prompted</td></tr>
+  <tr><td>B2</td><td>USDC → BTC, source pill <strong>Lobstr</strong></td><td>CTA reads “Move X USDC from Lobstr &amp; swap” → one Lobstr approval → progress shows the Moving step → rest passkey-only; the move appears in Activity</td></tr>
+  <tr><td>B3</td><td>BTC → USDC, Deliver to <strong>Normal wallet</strong> (default)</td><td>USDC lands on the Normal wallet (drawer's Normal tab)</td></tr>
+  <tr><td>B4</td><td>BTC → USDC, Deliver to <strong>Lobstr</strong></td><td>If the trustline is missing the pill offers “add trustline” (one Lobstr approval), then delivery lands in Lobstr</td></tr>
+  <tr><td>B5</td><td>ETH → SOL</td><td>Runs passkey-only (no Stellar involved at all)</td></tr>
+  <tr><td>B6</td><td>XLM ↔ USDC, source pill <strong>Lobstr</strong></td><td>Soroswap; Lobstr kit signs both transactions (swap + fee)</td></tr>
+  <tr><td>B7</td><td>XLM ↔ USDC, source pill <strong>Normal wallet</strong> (chunk 4f)</td><td>Balance and MAX show the <strong>Normal wallet’s</strong> funds; <strong>passkey</strong> signs both transactions, Lobstr never prompted; with an empty Lobstr the Normal pill is <strong>pre-selected</strong> — the card must never greet you with 0.00</td></tr>
+</table>
+
+<h3>Part C — displays &amp; guards</h3>
+<table>
+  <tr><th>#</th><th>Do</th><th>Expect</th></tr>
+  <tr><td>C0</td><td>Savings card with Lobstr connected</td><td>Wallet tabs <span class="pill sel">Normal wallet</span> <span class="pill">Lobstr</span>; the Normal tab (default) shows your real deposits/value/earnings and deposits/withdraws with the <strong>passkey</strong>; the Lobstr tab shows that wallet's own (empty) position with its setup flow</td></tr>
+  <tr><td>C1</td><td>Open the drawer with both wallets</td><td>Wallet tabs (Normal wallet / Lobstr), correct icons and names, per-wallet lists, account-wide Total</td></tr>
+  <tr><td>C2</td><td>Portfolio + home pages</td><td>All assets visible with “· Normal wallet” / “· Lobstr” labels; totals include both wallets; savings figure present</td></tr>
+  <tr><td>C3</td><td>Settings → Accounts</td><td>The Normal wallet card has a badge and <strong>no</strong> Disconnect button; other wallets unlink normally</td></tr>
+  <tr><td>C4</td><td>Disconnect Lobstr → reload</td><td>Stays disconnected — no silent switch to the Normal wallet (bug #42's fix)</td></tr>
+  <tr><td>C5</td><td>Log in on a clean browser profile</td><td>Normal wallet appears automatically — new-device login unchanged</td></tr>
+  <tr><td>C6</td><td>Any single-wallet account</td><td>Zero visual difference anywhere in the app</td></tr>
+</table>
+
+<h3>Part D — guided setup (fresh account with only Lobstr)</h3>
+<table>
+  <tr><th>#</th><th>Do</th><th>Expect</th></tr>
+  <tr><td>D1</td><td>Pick USDC → BTC, press “Continue with your Normal wallet”</td><td>The 4-step dialog opens at “Create”</td></tr>
+  <tr><td>D2</td><td>Complete step 1, close the tab, reopen the dialog</td><td>Resumes at “Activate” — steps are derived, never remembered</td></tr>
+  <tr><td>D3</td><td>Walk steps 2–4 (4 XLM → trustline → USDC)</td><td>Dialog reaches “Your Normal wallet is ready”; the swap then runs</td></tr>
+</table>
+
+<h2 id="later" class="pagebreak">9b · Added after the matrix was written (2026-08-17)</h2>
+<p>Everything below landed on this same branch after live testing began. Junior summary per feature, then the extra test rows.</p>
+
+<h3>Stellar swaps from either wallet (chunk 4f)</h3>
+<p>XLM↔USDC swaps got the same wallet pills as cross-chain: pick <strong>Normal wallet</strong> → passkey signs both transactions, pick <strong>Lobstr</strong> → the kit signs, and balance/MAX/validation follow the picked wallet. The card opens on whichever wallet can actually pay. (Rows B6/B7 above.)</p>
+
+<h3>USDC-readiness notices (#74)</h3>
+<p>A wallet without a USDC trustline BOUNCES incoming USDC back to the sender. One shared probe now drives every notice: swap-page banners, a warning next to the receive QR, a badge inside each drawer wallet tab, and a one-time toast after connecting an external wallet. A FAILED probe shows nothing — the app never claims "not activated" off a network blip. The <em>Set up</em> button opens a guided popup: QR to fund with XLM (auto-advances when the payment lands — no button to press), then a kit-signed trustline.</p>
+
+<h3>Send: own wallets as first-class citizens (#74b/c)</h3>
+<p>"Your wallets" chips fill the destination (companion + ALL linked wallets, readiness-aware: unactivated targets stay selectable for XLM — that send activates them — but are disabled with the reason for USDC). And the companion Normal wallet's XLM/USDC are now <strong>sendable</strong> while an external wallet is connected — rows named "· Normal wallet", passkey signs, MAX/reserve/savings-buffer follow the owning wallet. The self-send guard now compares against the wallet the send RUNS FROM, so Normal→Lobstr works.</p>
+
+<h3>One data source everywhere (#75)</h3>
+<p>Root cause of "surfaces disagree": a legacy client-side token store that only refreshed on certain mounts, next to the server portfolio aggregate that refreshes after every transaction. Send, drawer and the fee card now read the aggregate; a layout listener keeps the store fresh for the one remaining consumer (swap card, Phase 2). Also composed for hybrid: the Earnings stat (slot + companion), the savings chart/history (follow the wallet HOLDING the savings), Holdings wallet tabs on /portfolio, per-wallet XLM fee rows ("2.00 XLM · 0.50 for fees") with a worst-wallet header chip, and the drawer address list collapsed to "Addresses · N".</p>
+
+<h3>Part E — the new test rows</h3>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>E1</td><td>Connect a fresh external wallet (clean browser)</td><td>ONE warning toast ("not active on Stellar yet"); never repeats for that address</td></tr>
+  <tr><td>E2</td><td>Drawer → Lobstr tab while unactivated</td><td>Amber badge with <strong>Set up</strong> → QR popup; send 2 XLM from anywhere → popup advances BY ITSELF → kit-signed trustline step → badges vanish everywhere</td></tr>
+  <tr><td>E3</td><td>Receive → USDC on a wallet without the trustline</td><td>Bounce warning next to the QR + inline Add trustline; copying still allowed</td></tr>
+  <tr><td>E4</td><td>Kill the network, reload</td><td>NO readiness warnings anywhere (failed probe asserts nothing)</td></tr>
+  <tr><td>E5</td><td>Send → asset picker (hybrid)</td><td>"USD Coin · Normal wallet" etc. listed next to Lobstr's own assets; best-value preselected; "Available" line names the wallet</td></tr>
+  <tr><td>E6</td><td>Send USDC · Normal wallet → tap Lobstr chip</td><td>Greyed "no USDC trustline" until E2 done; XLM → selectable with "sending XLM activates it"</td></tr>
+  <tr><td>E7</td><td>Send XLM · Normal wallet → Lobstr chip → Review</td><td>NO "Cannot send to your own address"; one passkey prompt; Lobstr balance appears on every surface within seconds, no reload</td></tr>
+  <tr><td>E8</td><td>/portfolio Holdings (hybrid)</td><td>Wallet TABS (Normal wallet | Lobstr); Savings row under Normal; single-wallet accounts unchanged</td></tr>
+  <tr><td>E9</td><td>/portfolio top block</td><td>Earnings shows the real composed amount (slot + companion), not $0.00</td></tr>
+  <tr><td>E10</td><td>/savings chart + history (hybrid)</td><td>Real earnings curve + transaction list from the wallet HOLDING the savings — not a flat $0 line</td></tr>
+  <tr><td>E11</td><td>/savings "Network fees (XLM)" card</td><td>One row per wallet: total XLM first, "· X for fees" second; header chip = WORST wallet (red while Lobstr is short, per-row dots say which)</td></tr>
+  <tr><td>E12</td><td>Cold tab after dev-server restart</td><td>Savings paint immediately (cached) or skeleton — never a confident $0.00; drawer shows "Addresses · N" collapsed</td></tr>
+</table>
+
+<h3>Part F — the final polish round (2026-08-18)</h3>
+<p><strong>What changed, in plain words:</strong> the Activity feed used to show only the connected wallet's history — your Normal-wallet deposits and swaps were invisible while Lobstr was connected; now both feeds are merged and every row says whose it was. The swap card was the last screen reading the OLD balance list (the one that only refreshed on page load) — it now reads the same live source as everything else, and its asset picker shows your TOTAL per asset (both wallets), while the pills inside still split per wallet, because a swap can only spend one wallet's money. The drawer's Assets tab gained a Normal Savings row (counted once — the Savings line, not the Assets line). Asset pages (/assets/XLM) now show the account TOTAL with a "who holds what" line. And the ⟳ "All wallets" button is gone: the wallet tabs show wallets, the "+" connects new ones — one control per job.</p>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>F1</td><td>Activity anywhere (drawer, /swap, /portfolio), hybrid</td><td>Rows from BOTH wallets in one time-ordered list, each tagged "Normal wallet" or "Lobstr" next to its type chip</td></tr>
+  <tr><td>F2</td><td>Do any send, then open /swap WITHOUT reloading</td><td>Swap balances reflect the send within ~10s (the old list needed a page reload)</td></tr>
+  <tr><td>F3</td><td>Swap asset picker, hybrid</td><td>XLM/USDC rows show the TOTAL across both wallets under "Your assets"; after picking, the pills still show the honest per-wallet split and MAX follows the selected pill</td></tr>
+  <tr><td>F4</td><td>Drawer → Assets tab</td><td>"Normal Savings" row sorted by value (Normal tab on hybrid); clicking opens /savings; Total balance = Assets + Savings exactly (no double count)</td></tr>
+  <tr><td>F5</td><td>/assets/XLM (or USDC), hybrid</td><td>Big number = BOTH wallets' total; a line underneath reads "Normal wallet 13.25 · Lobstr 2.00"; single-wallet accounts see no split line</td></tr>
+  <tr><td>F10</td><td>Let the Lobstr/WalletConnect session expire (e.g. reload the page), then start a swap FROM Lobstr</td><td>The flow does NOT fail: an info toast explains the session expired, the wallet's connect window opens by itself, and after you approve, the SAME step continues — signature prompt and all. Only closing the connect window without approving aborts (persistent snackbar with Reconnect)</td></tr>
+  <tr><td>F11</td><td>Swap USDC → BTC (either source pill), keep the popup open</td><td>The "Delivering BTC" step says "Bitcoin confirmations — usually 10–60 minutes" and STAYS active until true delivery; Done only shows after the wallet refetch confirms the BTC — closing the popup then shows the BTC already in your balance. Past ~60 min still bridging → honest "on its way" note (funds at YOUR addresses, pending ≠ lost)</td></tr>
+  <tr><td>F9</td><td>/assets page (hybrid)</td><td>Total ≈ your real account value; rows for BOTH wallets ("XLM · Normal wallet", "XLM · Lobstr") plus a "Normal Savings" row that opens /savings on click — never a $2 total for a $52 account</td></tr>
+  <tr><td>F7</td><td>Open /assets/XLM on a cold server (first visit in a while)</td><td>Price chart shows a SKELETON while the first fetch retries — the "unavailable" message may only appear after retries are truly exhausted, never seconds before the chart draws</td></tr>
+  <tr><td>F8</td><td>Open the drawer → expand "Addresses" (repeat visit)</td><td>All address rows (BTC/ETH/SOL/Stellar/Normal) paint INSTANTLY from cache — no seconds-long gap after the assets appear; first-ever visit on a device still waits once</td></tr>
+  <tr><td>F6</td><td>Drawer header</td><td>No ⟳ button — only settings, "+", and close; connecting another wallet still works via "+"</td></tr>
+</table>
+
+<h2 id="gas" class="pagebreak">9c · The gas &amp; honest-endings branch (insufficient-gas, 2026-08-20)</h2>
+
+<h3>Why swaps failed with "insufficient funds for gas"</h3>
+<p>On Ethereum, every transaction pays gas ON TOP of the amount you send. Our card checked "amount ≤ balance" but never "amount + gas ≤ balance" — so an amount could look fine and still be physically impossible. And gas for our bridge routes is BIG: the deposit contracts run ~538,000 gas (~$4–12), not the 21,000 of a simple transfer.</p>
+<p><strong>The fix, one idea:</strong> the gas money is now held back INSIDE your spendable ETH — the same trick that made XLM safe (the reserve lives in the balance, so typing, MAX, display and validation all agree automatically). The reserve is computed LIVE (current gas price × the route's real gas limit), refreshed every minute. A flat number is wrong whenever gas moves; a live number never goes stale.</p>
+
+<h3>Honest costs: the 20% / 50% rules</h3>
+<p>Bridge gas is a fixed cost — $10 of gas is nothing on a $500 swap and everything on a $15 one. So instead of a flat minimum: the quote's OWN gas cost is always shown ("Network gas ≈ $9.80 (12%)"); above 20% it turns amber with a warning; above 50% the swap is blocked — at that point it's a donation to validators. Percentages self-adjust to every chain and every gas price, so there are no per-chain constants to go stale. The old $50 pilot cap on cross-ecosystem swaps is REMOVED (the relayer earned its trust); the $10 minimum stays — it protects OUR relayer economics — and now shows on the button BEFORE you click, not as a server error after.</p>
+
+<h3>When a bridge refunds: the truth, fast</h3>
+<p>A bridge can fail and send your money back. Before: the app polled for USDC that would never arrive, said "timed out", and you learned the truth from block explorers. Now the app asks the bridge for its VERDICT while it waits: a refund becomes its own calm ending within ~30 seconds — row marked Failed, your returned ETH refetched and visible FIRST, then the message "the bridge returned your ETH — it is back in your wallet", with a <strong>Try again</strong> button (your pair and amount are still filled — retry is one click).</p>
+
+<h3>Three doors to recovery, one honesty rule</h3>
+<p>A halted transfer can now be finished from the swap popup (Try again), from its Activity row's detail popup ("Finish this transfer"), or from the banner above the swap card (the closed-tab door) — all three call the SAME handler. And the banner only says your USDC is "safe in your own Base account" after it has actually SEEN the balance there; until then it honestly says "heading to". Rule of the whole branch: never claim what you haven't verified, and never make the user hunt for the fix.</p>
+
+<h3>Part G — the live-test fallout round (2026-08-19)</h3>
+<p><strong>What changed, in plain words:</strong> Niko's real BTC swaps exposed a family of "built for the fast chains" assumptions. Delivery ETAs now come from a per-chain <em>settlement registry</em> (BTC 10–60 min, ETH 1–5, SOL/Stellar 1–3) — one place to edit when a chain or bridge changes, no hardcoded copy. BTC swaps now track to TRUE delivery like SOL/ETH (the popup's Delivering step holds until the payout confirms, then waits for the balance refetch before Done). An expired Lobstr/WalletConnect session mid-flow now pauses and resumes the step (reconnect window opens by itself) instead of failing the swap. The Activity table gained: rows the moment a swap starts, correct per-flow statuses, no duplicate rows for hybrid swaps, and a reliable newest-first order. And the recovery banner now steps aside while the popup is actively working a transfer — but reappears instantly with its recovery button if anything goes wrong or the tab dies.</p>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>G1</td><td>Start ANY swap/send; glance at Activity before finishing signatures</td><td>The Pending row is already at the TOP of the table — appears within a second of starting, in every flow and from either wallet</td></tr>
+  <tr><td>G2</td><td>Reject a signature mid-swap; let another complete; get a refund case</td><td>Statuses are truthful per flow: Failed / Done / Refunded rows each distinct; a pending row whose delivered amount is unknown shows "—", never $0</td></tr>
+  <tr><td>G3</td><td>Hybrid cctp swap, then reload Activity</td><td>Exactly ONE row per swap (no Lobstr+Normal duplicates), and fresh rows always sort above old ones</td></tr>
+  <tr><td>G4</td><td>Reload the page (kills the Lobstr session), start a swap from Lobstr</td><td>Info toast + the wallet's connect window opens by itself; approving resumes the SAME step; only closing it without approving aborts</td></tr>
+  <tr><td>G5</td><td>Any swap → wait for Done → close the popup immediately</td><td>The received asset is ALREADY in the visible balances (drawer, swap card, portfolio) — Done waits for the aggregate refetch on every engine, BTC included</td></tr>
+  <tr><td>G6</td><td>During an active swap, look above the swap card; then reject a step</td><td>No recovery banner while the popup is healthy; the moment a step errors (or you reload mid-swap), the banner appears with its one-tap recovery — recovery is never lost, just never duplicated</td></tr>
+  <tr><td>G8</td><td>A bridge leg that REFUNDS (or force one: reject nothing, just pick an amount the bridge refuses)</td><td>Within ~30s of the refund the popup tells the calm story — "the bridge returned your ETH — it is back in your wallet" — the Activity row flips to Failed, your returned balance is ALREADY visible, and a "Try again" button puts you one click from retrying. No block explorers needed</td></tr>
+  <tr><td>G9</td><td>Recovery banner wording before/after delivery</td><td>"USDC heading to your own Base account" while unverified; "safe in your own Base account" ONLY once the balance is actually seen on Base — the banner never claims a location it hasn't checked</td></tr>
+  <tr><td>G10</td><td>Open a halted swap's row in Activity (any page)</td><td>The detail popup has a "Finish this transfer" button — same one-tap recovery as the banner, reachable from wherever you are</td></tr>
+  <tr><td>G7</td><td>Open a BTC swap's popup vs an ETH/SOL one</td><td>ETAs differ per chain from the registry ("usually 10–60 minutes" vs "a few minutes") — same code path, different registry entries</td></tr>
+</table>
+
+<h2 id="autopilot" class="pagebreak">9f · One signature per swap — the autopilot (#33 Stage 3, 2026-08-20)</h2>
+
+<h3>The problem, in one sentence</h3>
+<p>A cross-ecosystem swap has a step on Base that happens 20–50 minutes AFTER you click Swap (outbound: the pivot swap once the bridge mints; inbound: the burn once your USDC lands) — which meant a second passkey prompt long after you walked away, and a stranded swap if you didn't come back.</p>
+
+<h3>How it works now</h3>
+<p>Your Turnkey wallet supports <strong>policy-scoped delegations</strong>: with ONE passkey ceremony you add a "Normal Autopilot" user to your own wallet organization, holding a key that lives on our server — but the WALLET ITSELF only lets that key sign transactions matching a policy: <strong>Base chain only, zero ETH value, and only the three allowlisted contracts</strong> (USDC, Circle's TokenMessenger, LI.FI's router). The enforcement is in the signer, not in our server's good behavior — a bug (or a breach) on our side still cannot move funds anywhere the policy doesn't allow.</p>
+<p>With the delegation active, the mid-flow Base step runs SERVER-side: gas top-up, approve, burn/pivot, receipt waits, and the database update all happen in one authenticated call. You sign ONCE when the swap starts. Bonus resilience: closing the tab no longer matters for that step — the server finishes it.</p>
+
+<h3>The safety rules (each one testable)</h3>
+<ul>
+  <li><strong>Fallback, never blockage.</strong> ANY autopilot failure — no consent, revoked, kill-switch, Turnkey down, policy rejection — silently falls back to the interactive prompts. Autopilot only ever removes prompts.</li>
+  <li><strong>The server re-checks everything</strong> the recovery banner checks, plus session ownership: your transfer, your addresses (from YOUR wallet row — the delivery address is never taken from the request), correct state, real Base balance.</li>
+  <li><strong>Status honesty:</strong> a FAILED status check shows "Unknown" in Settings and means "prompts this run" in the engine — never a fake On or Off.</li>
+  <li><strong>Consent is a moment, not a nag:</strong> offered once, before your first cross-chain swap signs anything. "Not now" is remembered; Settings keeps both doors (Turn on / Turn off, one passkey each).</li>
+  <li><strong>Kill-switch:</strong> AUTOPILOT_DISABLED=1 stops all server signing instantly, for everyone, without touching anyone's wallet.</li>
+  <li><strong>Audit trail:</strong> every server-signed transaction is recorded (who, which transfer, what purpose, when).</li>
+</ul>
+
+<h3>Part J — how to test</h3>
+<table>
+  <tr><th>#</th><th>Test</th><th>Expect</th></tr>
+  <tr><td>J1</td><td>First cctp swap on an account without the delegation (env keys set)</td><td>The consent dialog appears BEFORE anything signs; "Enable — one passkey" → one ceremony → the swap continues; total prompts this first time = ceremony + the swap's own signature</td></tr>
+  <tr><td>J2</td><td>ETH → USDC (inbound) with autopilot ON</td><td>ONE signature at the start; the burn stage completes with NO further prompt; popup reaches Done; row shows burn + delivery normally</td></tr>
+  <tr><td>J3</td><td>USDC → ETH/SOL (outbound) with autopilot ON</td><td>ONE passkey (the Stellar burn); the pivot happens with NO prompt ~1 min after the mint; delivery tracking unchanged</td></tr>
+  <tr><td>J4</td><td>Pick "Not now" in the consent dialog</td><td>The swap continues with the old prompts; the dialog never reappears; Settings → Accounts shows Off with "Turn on — one passkey"</td></tr>
+  <tr><td>J5</td><td>Settings → Turn off, then swap again</td><td>Prompts are back mid-flow (fallback), no errors anywhere; Turn on restores 1-signature swaps</td></tr>
+  <tr><td>J6</td><td>Revoke mid-flow: start an inbound swap, Turn off in another tab BEFORE the burn stage</td><td>The engine falls back to the interactive burn prompt — the swap still completes; nothing strands</td></tr>
+  <tr><td>J7</td><td>Set AUTOPILOT_DISABLED=1 on the server, swap</td><td>Same as J5 — prompts everywhere, Settings shows Off/Unknown; no server signing happens</td></tr>
+  <tr><td>J8</td><td>Autopilot ON, start an inbound swap, CLOSE THE TAB during "arriving"</td><td>Reopen later: the recovery banner path still works as before — and if the server call was already running, the burn completed without you; the row shows burnTxHash</td></tr>
+  <tr><td>J9</td><td>Policy negative test (dev): call the Turnkey sign API with the autopilot key for a transfer to a RANDOM address</td><td>Turnkey REFUSES the signature (policy: contract not allowlisted) — this is the proof the guarantee lives in the signer</td></tr>
+  <tr><td>J10</td><td>Check the audit table after J2/J3</td><td>One row per server-signed tx in autopilot_signatures (subOrg, purpose cctp-inbound-*/cctp-outbound-*, timestamp)</td></tr>
+</table>
+
+<h2 id="status">10 · Status &amp; what remains</h2>
+<ul>
+  <li><strong>Done and gated</strong> (typecheck, lint, 212 unit/component tests, production build): chunks 1, 2 (+ field fixes), 3, 4a–4e.</li>
+  <li><strong>Awaiting:</strong> the live matrix above (Niko), then any fallout fixes.</li>
+  <li><strong>Chunk 5 (polish, last):</strong> activity-feed labels for companion legs, the “All wallets” button's final fate, closing findings #40/#42 in the register, final docs.</li>
+  <li>After #32 closes, the locked roadmap continues: #53 savings chart → #33 signature-reduction program (which now benefits external users automatically, because their swaps run on Turnkey rails) → Phase 5 load testing.</li>
+</ul>
+
+<p class="kv" style="margin-top:40px">
+  Branch <code>feat/external-wallet-cctp</code> · Findings register: docs/audit/20-findings.md (#32 chunks) ·
+  Architecture: docs/audit/72 · Surface audit: docs/audit/75 · This document: docs/audit/73 (.md + .html) · Generated 2026-08-16, extended 2026-08-17–20
+</p>
+
+</body>
+</html>

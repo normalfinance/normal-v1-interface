@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Transaction Log Rebuilt</title>
+<style>
+  :root { --ink:#0a0a0f; --muted:#5a5a66; --line:#e6e6ea; --soft:#f6f6f8; --green:#0a6649; --amber:#7a4a00; --red:#991b1b; }
+  * { box-sizing: border-box; }
+  body { margin:0 auto; max-width:980px; padding:48px 32px 96px; font:15px/1.65 "Segoe UI",system-ui,-apple-system,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:30px; line-height:1.2; letter-spacing:-0.02em; margin:0 0 6px; }
+  .subtitle { color:var(--muted); font-size:15px; margin-bottom:30px; }
+  h2 { font-size:20px; letter-spacing:-0.01em; margin:42px 0 10px; padding-top:16px; border-top:2px solid var(--ink); }
+  h3 { font-size:15px; margin:24px 0 6px; }
+  p, li { color:#23232b; }
+  code { font-family:"Consolas","Courier New",monospace; font-size:12.5px; background:var(--soft); padding:1px 5px; border-radius:5px; }
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; font-size:12px; line-height:1.5; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:13px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:var(--soft); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }
+  .box { border:1px solid var(--line); border-left:4px solid var(--ink); background:var(--soft); border-radius:8px; padding:14px 18px; margin:16px 0; }
+  .box.warn { border-left-color:#d97706; }
+  .box.good { border-left-color:#1ab37d; }
+  .box .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+</style>
+</head>
+<body>
+<h1>Transaction Log Rebuilt</h1>
+<p class="subtitle">2026-09-01 &mdash; the old <code>normal_transaction_log</code> only ever saw
+Soroswap swaps and savings, and its &ldquo;fee_usd&rdquo; column was not in dollars. It is now
+built from the same rows as activity_v2. Run 125, branch
+<code>chore/console-hygiene</code>.</p>
+
+<h2>1 &middot; What was wrong</h2>
+<p>That table had its own builder (<code>fetchTransactionLog</code> in
+<code>services/prisma-sync.ts</code>) that read <code>swap_logs</code> and
+<code>vault_deposits</code> directly &mdash; written before CCTP, sends and ramps existed, and
+never revisited. Two defects:</p>
+<table>
+  <tr><th>defect</th><th>effect on your query</th></tr>
+  <tr><td>Only two source tables</td><td>CCTP swaps, sends and on/off-ramps were invisible.
+      LI.FI swaps <em>were</em> present (they live in <code>swap_logs</code>) but indistinguishable
+      &mdash; every swap said <code>action_type = 'swap'</code>, which is why the table looked
+      Soroswap-only.</td></tr>
+  <tr><td><code>fee_usd</code> held <b>raw token units</b>
+      (<code>Number(feeAmount)</code>, unconverted)</td><td>a 0.5 XLM fee was logged as
+      &ldquo;0.5&rdquo; in a column named USD &mdash; the same class of bug doc 122 fixed in the
+      volume table.</td></tr>
+</table>
+<div class="box warn"><div class="label">Root cause, worth naming</div>
+Two builders were producing overlapping tables from the same database. When new products
+shipped, only one of them was updated. This is the same failure mode as run 15/16 (a new status
+taught to the state machine but not to the banner&rsquo;s classifier): <b>duplicate sources of
+truth drift silently</b>. The fix is not to patch the second builder — it is to delete it.</div>
+
+<h2>2 &middot; The fix</h2>
+<table>
+  <tr><th>file</th><th>change</th></tr>
+  <tr><td><code>src/lib/dune/transaction-log.ts</code> (+5 tests)</td><td><b>NEW</b> pure mapper:
+      <code>buildTransactionLogRows(activityRows)</code> projects the v2 rows into the legacy
+      table&rsquo;s fixed schema, and <code>transactionActionType</code> maps product+action to
+      an <code>action_type</code>. Completed rows only — this table has always logged what
+      happened, not what was attempted.</td></tr>
+  <tr><td><code>services/prisma-sync.ts</code></td><td><code>fetchTransactionLog</code>
+      <b>deleted</b>. One table, one source.</td></tr>
+  <tr><td><code>api/cron/dune-sync/route.ts</code></td><td>Uploads both tables from a
+      <b>single</b> <code>fetchActivityV2()</code> call — no second DeFindex fan-out, no extra
+      seconds. If the activity fetch fails, the log step reports
+      <code>SKIPPED: activity fetch failed</code> rather than vanishing from the response.</td></tr>
+</table>
+<h3>Backward compatibility (deliberate)</h3>
+<p>Existing dashboard widgets that filter this table keep working, because the old values keep
+their exact meaning:</p>
+<pre>swap             ← Soroswap swap        (unchanged)
+savings_deposit  ← savings deposit      (unchanged)
+savings_withdraw ← savings withdrawal   (unchanged)
+swap_lifi        ← NEW: LI.FI cross-chain swap
+swap_cctp        ← NEW: CCTP swap
+send             ← NEW
+onramp / offramp ← NEW (Coinbase, MoneyGram)</pre>
+<div class="box"><div class="label">Labelled limitation</div>
+The Dune table&rsquo;s columns are fixed at creation, so this projection is lossy on purpose:
+no <code>product</code>, <code>status</code>, <code>chain</code> or <code>amount_usd</code>
+column exists there. Recreating the table to add them would break every saved widget, so
+instead doc 119 &sect;3.16 gives the richer query against
+<code>normal_activity_v2</code> &mdash; use that for anything new.</div>
+
+<h2>3 &middot; Verified live</h2>
+<pre>transaction_log: 323 rows  →  414 rows
+activity_v2:     434 rows
+                 434 − 414 = 20 failed/refunded CCTP attempts, correctly excluded</pre>
+<p>The 91 new rows are the CCTP swaps, sends and ramps the table could never show, plus LI.FI
+swaps now labelled as such.</p>
+<div class="box good"><div class="label">If you do X &rarr; you will see Y</div>
+Re-run your existing query &rarr; the same 500-row view, but now with <code>swap_cctp</code>,
+<code>swap_lifi</code>, <code>send</code> and <code>onramp</code> rows in it, and
+<code>fee_usd</code> values that are actually dollars. Run doc 119 &sect;3.16 instead &rarr; the
+same list plus product, chain, status and USD amount per row. No table creation needed &mdash;
+this uploads into the existing table.</div>
+
+<h2>4 &middot; Gates</h2>
+<p>536 tests / 63 suites green (5 new), lint 0 errors, prettier clean, <code>tsc</code> clean,
+isolated <code>.next-verify</code> build green. Sync verified live against the shared production
+database.</p>
+
+</body>
+</html>

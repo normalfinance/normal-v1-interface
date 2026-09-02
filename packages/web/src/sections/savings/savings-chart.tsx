@@ -1,16 +1,14 @@
 'use client';
 
-import type { SavingsDepositActivity, SavingsWithdrawActivity } from '@/types/activity';
-
 import { useMemo, useState } from 'react';
-import { useUserActivity } from '@/hooks/stellar/use-user-activity';
+import { useSavingsHistory } from '@/hooks/use-savings-history';
+import { buildRealEarningsHistory } from '@/lib/savings/earnings-history';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 
 type TimeFilter = '1W' | '1M' | '3M' | '6M' | '1Y' | '5Y' | 'ALL';
-type SavingsActivity = SavingsDepositActivity | SavingsWithdrawActivity;
 
 const MONO = '"Geist Mono", ui-monospace, monospace';
 const TIME_FILTERS: TimeFilter[] = ['1W', '1M', '3M', '6M', '1Y', '5Y', 'ALL'];
@@ -24,7 +22,6 @@ const WINDOW_MS: Record<TimeFilter, number | null> = {
   ALL: null,
 };
 
-const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
 const CHART_W = 800;
 const CHART_H = 220;
 const NUM_POINTS = 80;
@@ -51,12 +48,20 @@ function fmtStat(v: number): string {
 function fmtDate(t: number, now: number): string {
   const diff = now - t;
   if (diff < 7 * 24 * 3600 * 1000) {
-    return new Date(t).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return new Date(t).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
   }
   if (diff < 365 * 24 * 3600 * 1000) {
     return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
-  return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return new Date(t).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 // ─── Data helpers ──────────────────────────────────────────────────────────────
@@ -64,51 +69,6 @@ function fmtDate(t: number, now: number): string {
 interface ChartPoint {
   t: number;
   v: number;
-}
-
-function buildEarningsHistory(
-  activity: SavingsActivity[],
-  anchorEarnings: number,
-  apy: number,
-  now: number
-): ChartPoint[] {
-  const sorted = [...activity].sort((a, b) => a.timestamp - b.timestamp);
-  if (sorted.length === 0) return [];
-
-  const firstT = sorted[0].timestamp;
-  if (now <= firstT) return [];
-
-  const r = apy / 100;
-  const step = (now - firstT) / (NUM_POINTS - 1);
-
-  const points: ChartPoint[] = Array.from({ length: NUM_POINTS }, (_, i) => {
-    const T = firstT + i * step;
-    let balance = 0;
-    let earnings = 0;
-    let prevT = firstT;
-
-    for (const event of sorted) {
-      if (event.timestamp > T) break;
-      const dt = (event.timestamp - prevT) / YEAR_MS;
-      earnings += balance > 0 ? balance * (Math.exp(r * dt) - 1) : 0;
-      const amount = parseFloat(event.amount);
-      if (event.type === 'Savings Deposit') balance += amount;
-      else balance = Math.max(0, balance - amount);
-      prevT = event.timestamp;
-    }
-
-    const dt = (T - prevT) / YEAR_MS;
-    earnings += balance > 0 ? balance * (Math.exp(r * dt) - 1) : 0;
-    return { t: T, v: Math.max(0, earnings) };
-  });
-
-  const lastEstimate = points[points.length - 1].v;
-  if (lastEstimate > 0 && anchorEarnings >= 0) {
-    const scale = anchorEarnings / lastEstimate;
-    return points.map((p) => ({ t: p.t, v: p.v * scale }));
-  }
-  points[points.length - 1].v = anchorEarnings;
-  return points;
 }
 
 function filterByWindow(points: ChartPoint[], filter: TimeFilter, now: number): ChartPoint[] {
@@ -120,7 +80,11 @@ function filterByWindow(points: ChartPoint[], filter: TimeFilter, now: number): 
   const before = points.filter((p) => p.t < cutoff);
   const startV = before.length > 0 ? before[before.length - 1].v : 0;
 
-  if (after.length === 0) return [{ t: cutoff, v: startV }, { t: now, v: startV }];
+  if (after.length === 0)
+    return [
+      { t: cutoff, v: startV },
+      { t: now, v: startV },
+    ];
   return [{ t: cutoff, v: startV }, ...after];
 }
 
@@ -139,31 +103,19 @@ interface SavingsChartProps {
   walletAddress?: string;
   currentEarnings: number;
   currentBalance?: number;
-  apy?: number | null;
 }
 
-export function SavingsChart({
-  walletAddress,
-  currentEarnings,
-  apy,
-}: SavingsChartProps) {
+export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartProps) {
   const [filter, setFilter] = useState<TimeFilter>('1W');
-  const { recentActivity, isLoading } = useUserActivity(walletAddress);
+  // #53: REAL history — the DeFindex events this wallet actually produced
+  // (authoritative, full, cached), not horizon-parsed recent activity.
+  const { events, isLoading, error: historyError } = useSavingsHistory(walletAddress);
 
   const now = useMemo(() => Date.now(), []);
 
-  const savingsActivity = useMemo(
-    () =>
-      recentActivity.filter(
-        (a): a is SavingsActivity =>
-          a.type === 'Savings Deposit' || a.type === 'Savings Withdraw'
-      ),
-    [recentActivity]
-  );
-
   const allPoints = useMemo(
-    () => buildEarningsHistory(savingsActivity, currentEarnings, apy ?? 7, now),
-    [savingsActivity, currentEarnings, apy, now]
+    () => buildRealEarningsHistory(events, currentEarnings, now, NUM_POINTS),
+    [events, currentEarnings, now]
   );
 
   const chartPoints = useMemo(
@@ -172,15 +124,18 @@ export function SavingsChart({
   );
 
   // Period earnings from curve — one value per filter
-  const periodEarnings = useMemo(() => ({
-    '1W': getPeriodEarnings(allPoints, 7 * 24 * 3600 * 1000, now),
-    '1M': getPeriodEarnings(allPoints, 30 * 24 * 3600 * 1000, now),
-    '3M': getPeriodEarnings(allPoints, 90 * 24 * 3600 * 1000, now),
-    '6M': getPeriodEarnings(allPoints, 180 * 24 * 3600 * 1000, now),
-    '1Y': getPeriodEarnings(allPoints, 365 * 24 * 3600 * 1000, now),
-    '5Y': getPeriodEarnings(allPoints, 5 * 365 * 24 * 3600 * 1000, now),
-    'ALL': currentEarnings,
-  }), [allPoints, currentEarnings, now]);
+  const periodEarnings = useMemo(
+    () => ({
+      '1W': getPeriodEarnings(allPoints, 7 * 24 * 3600 * 1000, now),
+      '1M': getPeriodEarnings(allPoints, 30 * 24 * 3600 * 1000, now),
+      '3M': getPeriodEarnings(allPoints, 90 * 24 * 3600 * 1000, now),
+      '6M': getPeriodEarnings(allPoints, 180 * 24 * 3600 * 1000, now),
+      '1Y': getPeriodEarnings(allPoints, 365 * 24 * 3600 * 1000, now),
+      '5Y': getPeriodEarnings(allPoints, 5 * 365 * 24 * 3600 * 1000, now),
+      ALL: currentEarnings,
+    }),
+    [allPoints, currentEarnings, now]
+  );
 
   const PERIOD_LABEL: Record<TimeFilter, string> = {
     '1W': '7 Days',
@@ -189,7 +144,7 @@ export function SavingsChart({
     '6M': '6 Months',
     '1Y': '1 Year',
     '5Y': '5 Years',
-    'ALL': 'All Time',
+    ALL: 'All Time',
   };
 
   // Tight y-range: scale to visible data, not 0→globalMax
@@ -204,8 +159,7 @@ export function SavingsChart({
   // SVG coordinate functions
   const minT = chartPoints.length > 0 ? chartPoints[0].t : now - WINDOW_MS['1W']!;
   const maxT = now;
-  const xFn = (t: number) =>
-    maxT === minT ? CHART_W / 2 : ((t - minT) / (maxT - minT)) * CHART_W;
+  const xFn = (t: number) => (maxT === minT ? CHART_W / 2 : ((t - minT) / (maxT - minT)) * CHART_W);
   const yFn = (v: number) =>
     yHigh === yLow ? CHART_H / 2 : CHART_H - 4 - ((v - yLow) / (yHigh - yLow)) * (CHART_H - 10);
 
@@ -258,17 +212,33 @@ export function SavingsChart({
           fontWeight: 600,
           fontFamily: MONO,
           letterSpacing: '-0.01em',
-          color: accent ? '#4ADE80' : estimated ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.85)',
+          color: accent
+            ? '#4ADE80'
+            : estimated
+              ? 'rgba(255,255,255,0.5)'
+              : 'rgba(255,255,255,0.85)',
         }}
       >
-        {estimated ? '~' : ''}{fmtStat(value)}
+        {estimated ? '~' : ''}
+        {fmtStat(value)}
       </Typography>
     </Box>
   );
 
+  if (historyError && events.length === 0 && !isLoading) {
+    // Doc 90 W3: a failed history fetch used to render a flat "$0.00" curve
+    // presented as the user's real earnings. Say it instead.
+    return (
+      <Box sx={{ mt: '20px', pt: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <Typography sx={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>
+          {`Couldn't load your earnings history — it retries automatically.`}
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ mt: '20px', pt: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-
       {/* Stats + filter row */}
       <Box
         sx={{
@@ -379,7 +349,10 @@ export function SavingsChart({
                 {gridYs.map((gy, i) => (
                   <line
                     key={i}
-                    x1="0" y1={gy} x2={CHART_W} y2={gy}
+                    x1="0"
+                    y1={gy}
+                    x2={CHART_W}
+                    y2={gy}
                     stroke="rgba(255,255,255,0.05)"
                     strokeWidth="1"
                   />
@@ -405,8 +378,14 @@ export function SavingsChart({
                   </>
                 ) : (
                   <line
-                    x1="0" y1={CHART_H * 0.72} x2={CHART_W} y2={CHART_H * 0.72}
-                    stroke="#4ADE80" strokeWidth="1.5" strokeDasharray="7 5" strokeOpacity="0.2"
+                    x1="0"
+                    y1={CHART_H * 0.72}
+                    x2={CHART_W}
+                    y2={CHART_H * 0.72}
+                    stroke="#4ADE80"
+                    strokeWidth="1.5"
+                    strokeDasharray="7 5"
+                    strokeOpacity="0.2"
                   />
                 )}
               </svg>

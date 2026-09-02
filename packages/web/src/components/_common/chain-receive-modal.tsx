@@ -43,16 +43,22 @@ export function ChainReceiveModal({
   const { copy } = useCopyToClipboard();
   const { enqueueSnackbar } = useSnackbar();
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [qrFailed, setQrFailed] = useState(false);
 
   useEffect(() => {
     if (!open || !address) return;
+    setQrFailed(false);
     QRCode.toDataURL(address, {
       width: 200,
       margin: 1,
       color: { dark: '#0A0A0F', light: '#FFFFFF' },
     })
       .then(setQrCodeUrl)
-      .catch(() => setQrCodeUrl(''));
+      .catch(() => {
+        // Doc 90 W4: cosmetic failure — say it instead of spinning forever.
+        setQrCodeUrl('');
+        setQrFailed(true);
+      });
   }, [open, address]);
 
   if (!address) return null;
@@ -70,9 +76,18 @@ export function ChainReceiveModal({
       fullWidth
       slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
     >
-      <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
-        <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}>
+      <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
+        <Box
+          sx={{
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Typography
+            sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+          >
             {t('Receive {{symbol}}', { symbol })}
           </Typography>
           <Box
@@ -98,7 +113,9 @@ export function ChainReceiveModal({
             <Iconify icon="mingcute:close-line" width={16} />
           </Box>
         </Box>
-        <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}>
+        <Typography
+          sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}
+        >
           {t('Scan the QR code or copy your {{chain}} address', { chain: chainLabel })}
         </Typography>
       </DialogTitle>
@@ -120,7 +137,18 @@ export function ChainReceiveModal({
             }}
           >
             {qrCodeUrl ? (
-              <Box component="img" src={qrCodeUrl} alt={`${chainLabel} address QR`} sx={{ maxWidth: '100%', borderRadius: '4px' }} />
+              <Box
+                component="img"
+                src={qrCodeUrl}
+                alt={`${chainLabel} address QR`}
+                sx={{ maxWidth: '100%', borderRadius: '4px' }}
+              />
+            ) : qrFailed ? (
+              <Typography
+                sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.45)', textAlign: 'center' }}
+              >
+                {t('QR unavailable — copy the address below.')}
+              </Typography>
             ) : (
               <CircularProgress size={36} sx={{ color: 'rgba(10,10,15,0.3)' }} />
             )}
@@ -140,7 +168,11 @@ export function ChainReceiveModal({
               width: '100%',
             }}
           >
-            <Iconify icon="eva:alert-triangle-outline" width={15} sx={{ color: 'warning.main', flexShrink: 0 }} />
+            <Iconify
+              icon="eva:alert-triangle-outline"
+              width={15}
+              sx={{ color: 'warning.main', flexShrink: 0 }}
+            />
             <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.5 }}>
               {warning}
             </Typography>
@@ -158,7 +190,14 @@ export function ChainReceiveModal({
               wordBreak: 'break-all',
             }}
           >
-            <Typography sx={{ fontSize: '12px', color: '#0A0A0F', fontFamily: '"Geist Mono", "Courier New", monospace', lineHeight: 1.6 }}>
+            <Typography
+              sx={{
+                fontSize: '12px',
+                color: '#0A0A0F',
+                fontFamily: '"Geist Mono", "Courier New", monospace',
+                lineHeight: 1.6,
+              }}
+            >
               {address}
             </Typography>
           </Box>

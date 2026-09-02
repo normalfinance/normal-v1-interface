@@ -143,7 +143,11 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
   if (loading || hasWallet === null) {
     return (
       <Box sx={CARD_SX}>
-        <Skeleton variant="rectangular" height={120} sx={{ borderRadius: '12px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+        <Skeleton
+          variant="rectangular"
+          height={120}
+          sx={{ borderRadius: '12px', bgcolor: 'rgba(10,10,15,0.06)' }}
+        />
       </Box>
     );
   }
@@ -156,7 +160,9 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
           <BtcIcon />
           <Box>
             <Box sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F' }}>Bitcoin</Box>
-            <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>Non-custodial · secured by your device</Box>
+            <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
+              Non-custodial · secured by your device
+            </Box>
           </Box>
         </Box>
         <BitcoinWalletSetup userId={userId} userEmail={userEmail} onSuccess={refetch} />
@@ -170,12 +176,16 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
   return (
     <Box sx={CARD_SX}>
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: '20px' }}>
+      <Box
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: '20px' }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <BtcIcon />
           <Box>
             <Box sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F' }}>Bitcoin</Box>
-            <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>Non-custodial · Turnkey TEE</Box>
+            <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
+              Non-custodial · Turnkey TEE
+            </Box>
           </Box>
         </Box>
         {btcAddress && <AddressPill address={btcAddress} />}
@@ -183,19 +193,45 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
 
       {/* Balance */}
       <Box>
-        <Box sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.35)', mb: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <Box
+          sx={{
+            fontSize: '11px',
+            color: 'rgba(10,10,15,0.35)',
+            mb: '4px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+          }}
+        >
           Balance
         </Box>
         {balanceLoading ? (
-          <Skeleton variant="text" width={120} height={40} sx={{ bgcolor: 'rgba(10,10,15,0.06)' }} />
+          <Skeleton
+            variant="text"
+            width={120}
+            height={40}
+            sx={{ bgcolor: 'rgba(10,10,15,0.06)' }}
+          />
         ) : (
           <>
-            <Box sx={{ ...MONO, fontSize: '26px', fontWeight: 400, color: '#0A0A0F', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+            <Box
+              sx={{
+                ...MONO,
+                fontSize: '26px',
+                fontWeight: 400,
+                color: '#0A0A0F',
+                letterSpacing: '-0.02em',
+                lineHeight: 1.2,
+              }}
+            >
               {balance != null ? `${balance.btc.toFixed(6)} BTC` : '0.000000 BTC'}
             </Box>
             {balance?.usd != null && (
               <Box sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.4)', mt: '2px' }}>
-                ≈ ${balance.usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ≈ $
+                {balance.usd.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </Box>
             )}
           </>
@@ -215,7 +251,8 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
           lineHeight: 1.55,
         }}
       >
-        Send Bitcoin to your address above to get started. Your funds are secured by device biometrics — Normal never holds your private keys.
+        Send Bitcoin to your address above to get started. Your funds are secured by device
+        biometrics — Normal never holds your private keys.
       </Box>
     </Box>
   );

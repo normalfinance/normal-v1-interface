@@ -1,15 +1,32 @@
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { rateLimiter } from '@/server/rateLimiter';
+import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { isValidStellarAddress } from '@/utils/stellar-address';
+
+// ----------------------------------------------------------------------
+// DEPRECATED (#27, 2026-08-10): swaps are now recorded server-side by
+// /api/fees/execute-pair BEFORE broadcast — no current client calls this
+// route. It stays alive for one release because browsers holding the
+// previous bundle still post here mid-flow; rows it writes default to
+// status 'confirmed' (the old contract: only logged after success). Delete
+// in the next cleanup batch. (LI.FI cross-chain swaps log via /api/lifi/
+// record, which is NOT deprecated.)
+// ----------------------------------------------------------------------
 
 function isValidTokenRef(ref: string): boolean {
   return ref === 'native' || isValidStellarAddress(ref);
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   try {
+    // This route writes financial records that feed the public Dune dashboard.
+    // It was open to anyone — verified on staging, where an unauthenticated
+    // POST reached validation instead of being rejected.
+
     const body = await request.json();
     const {
       walletAddress,
@@ -36,6 +53,26 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Invalid wallet address format' },
         { status: 400 }
       );
+    }
+
+    // Authentication alone isn't enough: walletAddress comes from the body, so
+    // without this any logged-in user could log swaps against someone else's
+    // address.
+    if (!(await userOwnsWallet(user.id, walletAddress))) {
+      return NextResponse.json(
+        { success: false, error: 'Wallet does not belong to this account' },
+        { status: 403 }
+      );
+    }
+
+    // Second line of defence: even a legitimate user shouldn't be able to fill
+    // the table.
+    const { success: withinLimit } = await rateLimiter.limit(
+      walletAddress,
+      request.headers.get('x-forwarded-for') ?? undefined
+    );
+    if (!withinLimit) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
     }
 
     if (!isValidTokenRef(tokenInAddress) || !isValidTokenRef(tokenOutAddress)) {
@@ -72,9 +109,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Swap log transaction error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to log swap' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to log swap' }, { status: 500 });
   }
-}
+});

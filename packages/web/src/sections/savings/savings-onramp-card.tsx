@@ -99,7 +99,12 @@ export function SavingsOnrampCard() {
       </Typography>
 
       <Stack spacing={1.5}>
-        <WalletGate buttonText={t('Login to deposit cash')} fullWidth variant="soft" requireWalletConnection={false}>
+        <WalletGate
+          buttonText={t('Login to deposit cash')}
+          fullWidth
+          variant="soft"
+          requireWalletConnection={false}
+        >
           <OnrampButton
             icon={<AccountBalanceOutlinedIcon sx={{ fontSize: 20, color: '#0A0A0F' }} />}
             label={t('Deposit cash')}

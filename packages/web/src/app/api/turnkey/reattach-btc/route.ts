@@ -1,11 +1,10 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { turnkey } from '@/lib/turnkey/server';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 // ---------------------------------------------------------------------------
 // POST /api/turnkey/reattach-btc
@@ -16,11 +15,7 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 //
 // Body: { address: string }
 // ---------------------------------------------------------------------------
-export async function POST(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   let body: { address?: string };
   try {
     body = await request.json();
@@ -48,7 +43,8 @@ export async function POST(request: NextRequest) {
       });
       if (
         accounts.some(
-          (a) => a.address === address && a.addressFormat === 'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH'
+          (a) =>
+            a.address === address && a.addressFormat === 'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH'
         )
       ) {
         found = true;
@@ -76,4 +72,4 @@ export async function POST(request: NextRequest) {
     const detail = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: `Failed to reattach address: ${detail}` }, { status: 500 });
   }
-}
+});

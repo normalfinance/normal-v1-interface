@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { faucetRateLimiter } from '@/server/faucet-rate-limiter';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 const LinkWalletSchema = z.object({
   walletAddress: z
@@ -14,7 +14,6 @@ const LinkWalletSchema = z.object({
     .min(1, 'Wallet address is required')
     .regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
   walletName: z.string().max(50, 'Wallet name must be 50 characters or less').optional(),
-  userId: z.string().uuid().optional(), // Required for admin requests
 });
 
 const UpdateWalletSchema = z.object({
@@ -27,26 +26,20 @@ const UpdateWalletSchema = z.object({
 
 /**
  * POST /api/wallets/link
- * Link a wallet to the authenticated user's account
- * Admin can bypass rate limits by using ADMIN_SECRET and providing userId in body
+ * Link a wallet to the authenticated user's account.
+ *
+ * #36 (removed 2026-08-12): an ADMIN_SECRET rate-limit bypass used to live
+ * here — provably unreachable, because withAuth rejects any bearer token
+ * that is not a valid Supabase session BEFORE the comparison could run.
+ * Dead security code invites someone to "fix" it into a live backdoor, so
+ * it is gone rather than documented.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check if admin bypass (admin_secret as auth token)
-    const isAdminRequest = accessToken === process.env.ADMIN_SECRET;
     const isDev = process.env.NODE_ENV === 'development';
     const isTestnet = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() !== 'mainnet';
     const forceRateLimit = process.env.FORCE_RATE_LIMIT === 'true';
 
-    // Parse and validate request body first (needed for admin userId)
     const body = await request.json();
     const validation = LinkWalletSchema.safeParse(body);
 
@@ -57,57 +50,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { walletAddress, walletName, userId: adminProvidedUserId } = validation.data;
+    const { walletAddress, walletName } = validation.data;
+    const userId = user.id;
 
-    // const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
-    // if (isLinked) {
-    //   return NextResponse.json({ error: 'Wallet already linked' }, { status: 409 });
-    // }
-
-    let userId: string;
-
-    if (isAdminRequest) {
-      // Admin request: require userId in body
-      if (!adminProvidedUserId) {
-        return NextResponse.json(
-          { error: 'Admin requests require userId in request body' },
-          { status: 400 }
-        );
-      }
-      userId = adminProvidedUserId;
-      logger.log('[API /wallets/link] Admin bypass for user:', {
-        userId: userId.substring(0, 8) + '...',
-      });
-    } else {
-      // Normal request: authenticate user
-      userId = user.id;
-
-      // Check rate limit for non-admin requests (skipped on dev/testnet unless FORCE_RATE_LIMIT=true)
-      if ((!isDev && !isTestnet) || forceRateLimit) {
-        const rateLimitResult = await faucetRateLimiter.reserve(userId);
-        if (rateLimitResult.degraded) {
-          logger.warn('[API /wallets/link] Rate limiter unavailable, allowing wallet creation:', {
-            userId: userId.substring(0, 8) + '...',
-          });
-        }
-        if (!rateLimitResult.success) {
-          logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
-            userId: userId.substring(0, 8) + '...',
-            reset: rateLimitResult.reset,
-          });
-          return NextResponse.json(
-            {
-              error: 'You can only create 3 wallets per day. Try again tomorrow.',
-              reset: rateLimitResult.reset,
-            },
-            { status: 429 }
-          );
-        }
-      } else {
-        logger.log('[API /wallets/link] Dev/testnet mode: skipping rate limit', {
+    // Rate limit (skipped on dev/testnet unless FORCE_RATE_LIMIT=true)
+    if ((!isDev && !isTestnet) || forceRateLimit) {
+      const rateLimitResult = await faucetRateLimiter.reserve(userId);
+      if (rateLimitResult.degraded) {
+        logger.warn('[API /wallets/link] Rate limiter unavailable, allowing wallet creation:', {
           userId: userId.substring(0, 8) + '...',
         });
       }
+      if (!rateLimitResult.success) {
+        logger.warn('[API /wallets/link] Rate limit exceeded for user:', {
+          userId: userId.substring(0, 8) + '...',
+          reset: rateLimitResult.reset,
+        });
+        return NextResponse.json(
+          {
+            // "Try again tomorrow" is wrong for a ROLLING window — a slot
+            // frees 24h after the oldest use, often within hours. The client
+            // appends the real wait from `reset`.
+            error: 'You can only add 3 wallets per day.',
+            reset: rateLimitResult.reset,
+          },
+          { status: 429 }
+        );
+      }
+    } else {
+      logger.log('[API /wallets/link] Dev/testnet mode: skipping rate limit', {
+        userId: userId.substring(0, 8) + '...',
+      });
     }
 
     // Link the wallet
@@ -147,22 +120,14 @@ export async function POST(request: NextRequest) {
     console.log('[API /wallets/link] Error linking wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
 /**
  * PATCH /api/wallets/link
  * Update a linked wallet (name, lastUsedAt)
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAuth(async (request: NextRequest, { user }) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Parse and validate request body
     const body = await request.json();
     const validation = UpdateWalletSchema.safeParse(body);
@@ -172,7 +137,7 @@ export async function PATCH(request: NextRequest) {
         { error: 'Invalid request body', details: validation.error.errors },
         { status: 400 }
       );
-    } 
+    }
 
     const { walletAddress, walletName } = validation.data;
 
@@ -201,22 +166,14 @@ export async function PATCH(request: NextRequest) {
     console.log('[API /wallets/link] Error updating wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
 /**
  * DELETE /api/wallets/link
  * Unlink a wallet from the authenticated user's account
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request: NextRequest, { user }) => {
   try {
-    // Authenticate
-    const accessToken = getAccessToken(request);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Get wallet address from query params
     const { searchParams } = new URL(request.url);
     const walletAddress = searchParams.get('walletAddress');
@@ -229,6 +186,22 @@ export async function DELETE(request: NextRequest) {
     const isLinked = await LinkedWalletService.isWalletLinked(user.id, walletAddress);
     if (!isLinked) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // #32 chunk 2: the Turnkey (Normal) wallet's Stellar address can never be
+    // unlinked — it holds the user's funds and the link row backs the
+    // ownership checks CCTP/swap logging relies on. Observed live 2026-08-15:
+    // the settings page happily offered to unlink the wallet holding all of
+    // the user's money.
+    const tk = await prisma.turnkeyWallet.findUnique({
+      where: { supabaseUid: user.id },
+      select: { stellarAddress: true },
+    });
+    if (tk?.stellarAddress && tk.stellarAddress === walletAddress) {
+      return NextResponse.json(
+        { error: 'Your Normal wallet cannot be unlinked from your account.' },
+        { status: 400 }
+      );
     }
 
     // Unlink the wallet
@@ -245,4 +218,4 @@ export async function DELETE(request: NextRequest) {
     console.log('[API /wallets/link] Error unlinking wallet:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});

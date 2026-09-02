@@ -1,30 +1,32 @@
 import type { Activity } from '@/types/activity';
 import type { MgiDbTransaction } from '@/lib/mgi/statuses';
+import type { ChainAddresses } from '@/lib/chains/registry';
 import type { WalletActivityItem, WalletActivityResponse } from '@/types/wallet-activity';
 
 import useSWR from 'swr';
-import { useMemo, useEffect } from 'react';
-import { Horizon } from '@stellar/stellar-sdk';
 import { buildAuthHeaders } from '@/utils/http';
+import { chainOfActivityEvent } from '@/lib/tx-events';
+import { getCryptoIconUrl } from '@normalfinance/utils';
+import { fetchOfframpFills } from '@/lib/offramp-fills';
+import { CHAINS, getChainAddress } from '@/lib/chains/registry';
+import { useMemo, useEffect, useSyncExternalStore } from 'react';
 import { useMgiTransactions } from '@/hooks/use-mgi-transactions';
-import { cdn, constants, getCryptoIconUrl } from '@normalfinance/utils';
+import { getLifiStatusOverride } from '@/lib/lifi/status-overrides';
+import { isTerminal, providerLabel, type RampStatus } from '@/lib/ramp/status';
 import { FAILED_MGI_STATUSES, PENDING_MGI_STATUSES } from '@/lib/mgi/statuses';
+import {
+  toHashSet,
+  getPendingSends,
+  subscribePendingSends,
+  getServerPendingSends,
+  reconcilePendingSends,
+} from '@/lib/pending-sends';
 
-// Coinbase off-ramp sends are recorded client-side as { coinbaseTxnId: ourTxHash }
-// when we broadcast the on-chain transfer (see coinbase-offramp-modal). We join
-// that with the live Coinbase status to re-label the matching Sent row as an
-// off-ramp and show its real status. (localStorage v1 — DB-backed is the
-// hardening follow-up.)
-const OFFRAMP_FILLS_KEY = 'nf:cb-offramp-fills';
-
-function readOfframpFills(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  try {
-    return JSON.parse(localStorage.getItem(OFFRAMP_FILLS_KEY) || '{}');
-  } catch {
-    return {};
-  }
-}
+// Coinbase off-ramp sends are recorded as { coinbaseTxnId: ourTxHash } when we
+// broadcast the on-chain transfer (see coinbase-offramp-modal). We join that
+// with the live Coinbase status to re-label the matching Sent row as an
+// off-ramp and show its real status. DB-backed since #24 (lib/offramp-fills) —
+// the tracking survives cleared browsers and device switches.
 
 interface OfframpInfo {
   status: 'pending' | 'completed' | 'failed';
@@ -42,7 +44,7 @@ function mapCoinbaseStatus(s: string): OfframpInfo['status'] {
 // local { coinbaseTxnId: txHash } fills with the Coinbase status API
 // (keyed by coinbaseTxnId).
 async function fetchOfframpStatuses(): Promise<Record<string, OfframpInfo>> {
-  const fills = readOfframpFills();
+  const fills = await fetchOfframpFills();
   const entries = Object.entries(fills).filter(([, h]) => h && h !== 'pending');
   if (!entries.length) return {};
   try {
@@ -126,7 +128,79 @@ function mapWalletActivityItem(item: WalletActivityItem): Activity {
   }
 }
 
-const FEES_WALLET = 'GCVCVOJMNDX7DBYEN3YAJ2VWIHT4ZDUNSUFIRLHRQBKS7PXSTDRB4MWE';
+// --- CCTP cross-ecosystem swaps ---------------------------------------------
+// One CctpTransfer row = one coherent "Swap" entry (BTC/ETH/SOL ⇄ XLM/USDC via
+// Circle CCTP + LI.FI). Reuses SwapActivity's pending/failed flags, so the feed
+// and UI render it exactly like a LI.FI cross-chain swap — no UI changes.
+interface CctpTransferRow {
+  id: string;
+  direction: string;
+  status: string;
+  srcAsset: string;
+  dstAsset: string;
+  srcAmount: string | null;
+  dstAmount: string | null;
+  burnTxHash: string | null;
+  mintTxHash: string | null;
+  srcSwapTxHash: string | null;
+  dstSwapTxHash: string | null;
+  quoteJson: string | null;
+  createdAt: string;
+}
+
+function mapCctpTransfer(tr: CctpTransferRow): Extract<Activity, { type: 'Swap' }> {
+  // Outbound (USDC → BTC/ETH/SOL) isn't truly done at COMPLETED — that only marks
+  // the CCTP bridge (mint on Base); the target asset arrives after the LI.FI
+  // pivot (dstSwapTxHash). Inbound (→ USDC on Stellar) is done at COMPLETED.
+  const outbound = tr.direction === 'stellar_to_crosschain';
+  const refunded = tr.status === 'REFUNDED';
+  const failed = tr.status === 'FAILED';
+  const succeeded = outbound
+    ? tr.status === 'COMPLETED' && !!tr.dstSwapTxHash
+    : tr.status === 'COMPLETED';
+  // Funding source, for the activity row's wallet tag (2026-08-22).
+  let fundedFrom: 'external' | 'normal' | undefined;
+  try {
+    const q = tr.quoteJson ? JSON.parse(tr.quoteJson) : null;
+    if (q?.fundedFrom === 'external' || q?.fundedFrom === 'normal') fundedFrom = q.fundedFrom;
+  } catch {
+    /* legacy/unparseable quote blob → no claim about the source */
+  }
+  return {
+    id: `cctp:${tr.id}`,
+    timestamp: Date.parse(tr.createdAt),
+    type: 'Swap',
+    fundedFrom,
+    txHash: tr.burnTxHash ?? null,
+    tokenIn: {
+      address: `cctp:${tr.srcAsset}`,
+      symbol: tr.srcAsset,
+      iconUrl: getCryptoIconUrl(tr.srcAsset),
+      amount: parseFloat(tr.srcAmount ?? '0'),
+    },
+    tokenOut: {
+      address: `cctp:${tr.dstAsset}`,
+      symbol: tr.dstAsset,
+      iconUrl: getCryptoIconUrl(tr.dstAsset),
+      amount: parseFloat(tr.dstAmount ?? '0'),
+    },
+    pending: !succeeded && !failed && !refunded,
+    failed,
+    refunded,
+  };
+}
+
+async function fetchCctpTransfers(): Promise<CctpTransferRow[]> {
+  try {
+    const headers = await buildAuthHeaders();
+    const res = await fetch('/api/cctp/transfers?history=1', { headers });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.transfers ?? []) as CctpTransferRow[];
+  } catch {
+    return [];
+  }
+}
 
 // MoneyGram rows come from OUR database (written at initiation, statuses
 // reported back after clients fetch them) — never from MoneyGram's SEP-24 API
@@ -146,162 +220,48 @@ function mapMgiDbToActivity(rows: MgiDbTransaction[]): Activity[] {
         pending: PENDING_MGI_STATUSES.has(tx.status),
         failed: FAILED_MGI_STATUSES.has(tx.status),
       };
-      return tx.kind === 'deposit'
-        ? { ...base, type: 'Buy' }
-        : { ...base, type: 'Sell' };
+      return tx.kind === 'deposit' ? { ...base, type: 'Buy' } : { ...base, type: 'Sell' };
     });
-}
-
-async function fetchStellarPayments(walletAddress: string): Promise<Activity[]> {
-  try {
-    const config = constants.StellarConfig;
-    const server = new Horizon.Server(config.HORIZON_URL, {
-      allowHttp: config.HORIZON_URL.startsWith('http://'),
-    });
-
-    const payments = await server
-      .payments()
-      .forAccount(walletAddress)
-      .order('desc')
-      .limit(100)
-      .call();
-
-    const activities: Activity[] = [];
-
-    for (const record of payments.records) {
-      if (record.type !== 'payment') continue;
-      const p = record as Horizon.ServerApi.PaymentOperationRecord;
-
-      const isNative = p.asset_type === 'native';
-      const isUsdc = p.asset_code === 'USDC' && p.asset_issuer === config.USDC_ISSUER;
-      if (!isNative && !isUsdc) continue;
-      if (p.to === FEES_WALLET) continue;
-
-      const symbol = isNative ? 'XLM' : 'USDC';
-      const timestamp = Date.parse(p.created_at);
-      const amount = parseFloat(p.amount);
-      const isReceive = p.to === walletAddress;
-
-      activities.push({
-        id: `horizon:${p.id}`,
-        timestamp,
-        type: isReceive ? 'Receive' : 'Sent',
-        address: isReceive ? p.from : p.to,
-        txHash: (p as any).transaction_hash ?? null,
-        token: {
-          address: isNative ? 'native' : (p.asset_code ?? 'USDC'),
-          symbol,
-          iconUrl: getCryptoIconUrl(symbol),
-          amount,
-        },
-      });
-    }
-
-    return activities;
-  } catch {
-    return [];
-  }
-}
-
-async function fetchBtcActivity(bitcoinAddress: string): Promise<Activity[]> {
-  try {
-    // Fetch confirmed+recent txs AND mempool-only txs in parallel.
-    // /txs returns up to 25 recent transactions and can drop older unconfirmed
-    // ones as new confirmed txs come in. /txs/mempool always contains every
-    // current unconfirmed tx — use it as the authoritative pending source.
-    const [txsRes, mempoolRes] = await Promise.all([
-      fetch(`https://mempool.space/api/address/${bitcoinAddress}/txs`),
-      fetch(`https://mempool.space/api/address/${bitcoinAddress}/txs/mempool`),
-    ]);
-    if (!txsRes.ok) return [];
-    const txs: any[] = await txsRes.json();
-    const mempoolTxs: any[] = mempoolRes.ok ? await mempoolRes.json() : [];
-
-    // Authoritative set of txids that are currently unconfirmed
-    const mempoolIds = new Set<string>(mempoolTxs.map((t: any) => t.txid as string));
-
-    // Merge: /txs results first, then any mempool txs not already included
-    const txMap = new Map<string, any>();
-    for (const tx of txs) txMap.set(tx.txid, tx);
-    for (const tx of mempoolTxs) {
-      if (!txMap.has(tx.txid)) txMap.set(tx.txid, tx);
-    }
-    const allTxs = Array.from(txMap.values());
-
-    const activities: Activity[] = [];
-
-    for (const tx of allTxs) {
-      const txid: string = tx.txid;
-      // Use mempool endpoint as ground-truth for unconfirmed status
-      const isConfirmed = mempoolIds.has(txid) ? false : (tx.status?.confirmed ?? false);
-      const timestamp: number = isConfirmed
-        ? (tx.status?.block_time as number) * 1000
-        : Date.now();
-
-      const userInputs: any[] = tx.vin.filter(
-        (v: any) => v.prevout?.scriptpubkey_address === bitcoinAddress
-      );
-      const nonUserOutputs: any[] = tx.vout.filter(
-        (v: any) => v.scriptpubkey_address !== bitcoinAddress
-      );
-      const userOutputs: any[] = tx.vout.filter(
-        (v: any) => v.scriptpubkey_address === bitcoinAddress
-      );
-
-      const isFromUser = userInputs.length > 0;
-      const sentToOthers: number = nonUserOutputs.reduce((s: number, v: any) => s + v.value, 0);
-      const receivedByUser: number = userOutputs.reduce((s: number, v: any) => s + v.value, 0);
-      const btcIcon = cdn('tokens/bitcoin.webp');
-
-      if (isFromUser && sentToOthers > 0) {
-        activities.push({
-          id: `btc:${txid}`,
-          timestamp,
-          type: 'Sent',
-          address: nonUserOutputs[0]?.scriptpubkey_address ?? txid,
-          txHash: txid,
-          confirmed: isConfirmed,
-          token: {
-            address: '__btc__',
-            symbol: 'BTC',
-            iconUrl: btcIcon,
-            amount: sentToOthers / 1e8,
-          },
-        });
-      } else if (receivedByUser > 0) {
-        const senderAddress = isFromUser
-          ? bitcoinAddress
-          : (tx.vin[0]?.prevout?.scriptpubkey_address ?? txid);
-        activities.push({
-          id: `btc:${txid}`,
-          timestamp,
-          type: 'Receive',
-          address: senderAddress,
-          txHash: txid,
-          confirmed: isConfirmed,
-          token: {
-            address: '__btc__',
-            symbol: 'BTC',
-            iconUrl: btcIcon,
-            amount: receivedByUser / 1e8,
-          },
-        });
-      }
-    }
-
-    return activities;
-  } catch {
-    return [];
-  }
 }
 
 async function fetchWalletActivity(url: string): Promise<Activity[]> {
-  const res = await fetch(url);
+  // The route is authenticated + ownership-checked (doc 81 item 1), so this
+  // must carry the session: a bare fetch would 401 and the feed would render
+  // empty, which looks exactly like "this wallet has no activity".
+  const res = await fetch(url, { headers: await buildAuthHeaders(), credentials: 'include' });
   const data: WalletActivityResponse = await res.json();
   if (!data.success || !data.items) {
     return [];
   }
   return data.items.map(mapWalletActivityItem);
+}
+
+// In-flight ramp transfers (doc 89 F2) → Buy/Sell rows with the same
+// pending/failed flags MoneyGram rows already use, so the card renders them
+// with no changes. Arrived rows are EXCLUDED on purpose: the moment the chain
+// shows the money the ramp row disappears and the chain's own Receive row is
+// the permanent record ("when assets appear the message go away").
+async function fetchRampActivity(url: string): Promise<Activity[]> {
+  try {
+    const res = await fetch(url, { headers: await buildAuthHeaders(), credentials: 'include' });
+    const data = await res.json();
+    const rows: any[] = Array.isArray(data?.transfers) ? data.transfers : [];
+    return rows
+      .filter((r) => !['arrived', 'paid_out', 'abandoned'].includes(String(r.status)))
+      .map((r) => ({
+        id: `ramp:${r.id}`,
+        timestamp: new Date(r.createdAt).getTime(),
+        type: r.direction === 'onramp' ? ('Buy' as const) : ('Sell' as const),
+        symbol: String(r.asset),
+        iconUrl: getCryptoIconUrl(String(r.asset)),
+        amount: r.amountExpected ? parseFloat(r.amountExpected) || 0 : 0,
+        provider: providerLabel(String(r.provider)),
+        pending: !isTerminal(r.status as RampStatus),
+        failed: r.status === 'failed',
+      })) as Activity[];
+  } catch {
+    return [];
+  }
 }
 
 // ETH/SOL history come pre-normalized to Activity[] from our server routes
@@ -317,17 +277,28 @@ async function fetchChainActivity(url: string): Promise<Activity[]> {
   }
 }
 
+/**
+ * Takes the user's chain addresses as one object rather than a positional
+ * argument per chain: adding a chain no longer changes this signature, and
+ * callers stop threading three separate props around just to reach it.
+ *
+ * Note the per-chain SWRs below stay written out one by one — React's rules of
+ * hooks forbid calling hooks in a loop, so this file keeps a block per chain by
+ * necessity, not by oversight.
+ */
 export function useUserActivity(
   walletAddress: string | null | undefined,
-  bitcoinAddress?: string | null,
-  ethereumAddress?: string | null,
-  solanaAddress?: string | null
+  addresses?: ChainAddresses | null
 ): {
   recentActivity: Activity[];
   isLoading: boolean;
   error: Error | undefined;
   mutate: () => void;
 } {
+  const bitcoinAddress = getChainAddress(addresses, 'bitcoin');
+  const ethereumAddress = getChainAddress(addresses, 'ethereum');
+  const solanaAddress = getChainAddress(addresses, 'solana');
+
   const key =
     walletAddress && /^[GC][A-Z2-7]{55}$/.test(walletAddress)
       ? `/api/wallet/activity?walletAddress=${encodeURIComponent(walletAddress)}&limit=50`
@@ -341,10 +312,16 @@ export function useUserActivity(
   // Refresh the feed immediately when a swap/deposit just completed, instead
   // of waiting for focus/interval revalidation. Dispatched by the swap cards.
   useEffect(() => {
-    const handler = () => {
-      setTimeout(() => {
-        mutate();
-      }, 800);
+    // No delay: the log write now dispatches this event only AFTER the row is
+    // saved, so there is nothing left to wait for. The 800ms here was a
+    // workaround for the refresh racing the write — with the race removed at
+    // its source, the wait is pure latency on every refresh.
+    //
+    // Chain-scoped events are plain wallet sends (see lib/tx-events.ts); those
+    // never write to this DB-backed feed, so skip the refetch for them.
+    const handler = (e: Event) => {
+      if (chainOfActivityEvent(e)) return;
+      mutate();
     };
     window.addEventListener('nf:activity-updated', handler);
     return () => window.removeEventListener('nf:activity-updated', handler);
@@ -353,32 +330,125 @@ export function useUserActivity(
   const { transactions: mgiTxs } = useMgiTransactions(!!walletAddress);
   const mgiData = useMemo(() => mapMgiDbToActivity(mgiTxs), [mgiTxs]);
 
-  const { data: stellarData } = useSWR<Activity[]>(
-    walletAddress ? ['stellar-payments', walletAddress] : null,
-    ([, addr]) => fetchStellarPayments(addr as string),
+  // XLM (incl. USDC) and BTC now come through our own routes, so they share a
+  // cache across tabs and — critically — have a server-side timeout. The
+  // dedupe windows match each route's TTL: 60s for Stellar, 45s for Bitcoin
+  // (shorter because that feed carries pending transactions).
+  const {
+    data: stellarData,
+    isLoading: stellarLoading,
+    mutate: mutateStellar,
+  } = useSWR<Activity[]>(
+    walletAddress ? `${CHAINS.stellar.activityPath}?address=${walletAddress}` : null,
+    fetchChainActivity,
     { revalidateOnFocus: true, dedupingInterval: 60_000 }
   );
 
-  const { data: btcData } = useSWR<Activity[]>(
-    bitcoinAddress ? ['btc-activity', bitcoinAddress] : null,
-    ([, addr]) => fetchBtcActivity(addr as string),
-    { revalidateOnFocus: true, dedupingInterval: 15_000 }
+  const {
+    data: btcData,
+    isLoading: btcLoading,
+    mutate: mutateBtc,
+  } = useSWR<Activity[]>(
+    bitcoinAddress ? `${CHAINS.bitcoin.activityPath}?address=${bitcoinAddress}` : null,
+    fetchChainActivity,
+    { revalidateOnFocus: true, dedupingInterval: 45_000 }
   );
 
-  const { data: ethData } = useSWR<Activity[]>(
-    ethereumAddress ? `/api/activity/ethereum?address=${ethereumAddress}` : null,
+  // ETH/SOL history is served from a 5-minute server-side cache (each miss
+  // costs ~100 Helius credits / 2 Etherscan calls), so re-asking sooner than
+  // that only produces round-trips that return the same bytes. The dedupe
+  // window matches the TTL; freshness after a user action comes from the
+  // `nf:activity-updated` handler below, which re-fetches with `refresh=1`.
+  const {
+    data: ethData,
+    isLoading: ethLoading,
+    mutate: mutateEth,
+  } = useSWR<Activity[]>(
+    ethereumAddress ? `${CHAINS.ethereum.activityPath}?address=${ethereumAddress}` : null,
     fetchChainActivity,
-    { revalidateOnFocus: true, dedupingInterval: 30_000 }
+    { revalidateOnFocus: true, dedupingInterval: 300_000 }
   );
 
-  const { data: solData } = useSWR<Activity[]>(
-    solanaAddress ? `/api/activity/solana?address=${solanaAddress}` : null,
+  const {
+    data: solData,
+    isLoading: solLoading,
+    mutate: mutateSol,
+  } = useSWR<Activity[]>(
+    solanaAddress ? `${CHAINS.solana.activityPath}?address=${solanaAddress}` : null,
     fetchChainActivity,
-    { revalidateOnFocus: true, dedupingInterval: 30_000 }
+    { revalidateOnFocus: true, dedupingInterval: 300_000 }
   );
+
+  // A send/swap the user just made must appear at once. Bypass both caches
+  // (SWR's and the server's) for that one fetch, then seed the result back
+  // into SWR so the longer dedupe window applies again from here.
+  //
+  // A chain-scoped event (a plain send — see lib/tx-events.ts) refreshes ONLY
+  // that chain's feed: the send cannot have changed the other three, and each
+  // skipped refresh is an upstream call (Etherscan/Helius) not spent.
+  // Detail-less events keep the original refresh-everything behaviour.
+  useEffect(() => {
+    const refresh = (
+      url: string,
+      mutateFn: (data: Promise<Activity[]>, opts: { revalidate: boolean }) => unknown
+    ) => mutateFn(fetchChainActivity(`${url}&refresh=1`), { revalidate: false });
+
+    const handler = (e: Event) => {
+      const only = chainOfActivityEvent(e);
+      setTimeout(() => {
+        if (ethereumAddress && (!only || only === 'ethereum'))
+          refresh(`${CHAINS.ethereum.activityPath}?address=${ethereumAddress}`, mutateEth);
+        if (solanaAddress && (!only || only === 'solana'))
+          refresh(`${CHAINS.solana.activityPath}?address=${solanaAddress}`, mutateSol);
+        if (walletAddress && (!only || only === 'stellar'))
+          refresh(`${CHAINS.stellar.activityPath}?address=${walletAddress}`, mutateStellar);
+        if (bitcoinAddress && (!only || only === 'bitcoin'))
+          refresh(`${CHAINS.bitcoin.activityPath}?address=${bitcoinAddress}`, mutateBtc);
+      }, 800);
+    };
+    window.addEventListener('nf:activity-updated', handler);
+    return () => window.removeEventListener('nf:activity-updated', handler);
+  }, [
+    ethereumAddress,
+    solanaAddress,
+    walletAddress,
+    bitcoinAddress,
+    mutateEth,
+    mutateSol,
+    mutateStellar,
+    mutateBtc,
+  ]);
+
+  // CCTP cross-ecosystem swaps (any signed-in user with a wallet). Refetches on
+  // focus/interval so an in-flight swap flips from Pending to done on its own.
+  const {
+    data: cctpTransfers,
+    isLoading: cctpLoading,
+    mutate: mutateCctp,
+  } = useSWR<CctpTransferRow[]>(
+    walletAddress || solanaAddress || ethereumAddress || bitcoinAddress ? 'cctp-activity' : null,
+    fetchCctpTransfers,
+    { revalidateOnFocus: true, dedupingInterval: 20_000, refreshInterval: 30_000 }
+  );
+  useEffect(() => {
+    // A plain send (chain-scoped event) cannot create or advance a CCTP
+    // transfer — skip the refetch for those.
+    const handler = (e: Event) => {
+      if (chainOfActivityEvent(e)) return;
+      setTimeout(() => mutateCctp(), 800);
+    };
+    window.addEventListener('nf:activity-updated', handler);
+    return () => window.removeEventListener('nf:activity-updated', handler);
+  }, [mutateCctp]);
 
   // Coinbase off-ramp statuses: keyed by our on-chain txHash so we can re-label
   // the matching native Sent row as an off-ramp with its real status.
+  const { data: rampData } = useSWR<Activity[]>(
+    walletAddress ? '/api/ramp/transfers?active=1' : null,
+    fetchRampActivity,
+    { refreshInterval: 15_000, revalidateOnFocus: true }
+  );
+
   const { data: offrampStatuses, mutate: mutateOfframp } = useSWR<Record<string, OfframpInfo>>(
     // Any wallet (incl. Stellar for USDC/XLM off-ramps) — fetcher is a no-op
     // when there are no local off-ramp fills, so this is cheap.
@@ -389,7 +459,11 @@ export function useUserActivity(
     { revalidateOnFocus: true, dedupingInterval: 20_000, refreshInterval: 30_000 }
   );
 
-  // Refresh off-ramp statuses too when a send/settle just happened.
+  // Refresh off-ramp statuses too when a send/settle just happened. This one
+  // deliberately reacts to chain-scoped events as well: an off-ramp IS a plain
+  // send (the modal marks the fill, the primitive announces it), and this
+  // fetch is what re-labels the Sent row. Cheap — the fetcher is a no-op with
+  // no local fills.
   useEffect(() => {
     const handler = () => setTimeout(() => mutateOfframp(), 800);
     window.addEventListener('nf:activity-updated', handler);
@@ -412,7 +486,7 @@ export function useUserActivity(
     async () => {
       const res = await fetch('/api/lifi/statuses', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           swaps: lifiSwaps.map((s) => ({
             txHash: s.txHash,
@@ -446,7 +520,10 @@ export function useUserActivity(
       a.txHash &&
       (a.tokenIn.address?.startsWith('lifi:') || a.tokenOut.address?.startsWith('lifi:'))
     ) {
-      const status = swapStatuses?.[a.txHash];
+      // The tab that ran the swap knows the terminal state before the server
+      // statuses cache (PENDING, 30s TTL) catches up — prefer its answer
+      // (#62 follow-up: rows stayed "pending" right after delivery).
+      const status = getLifiStatusOverride(a.txHash) ?? swapStatuses?.[a.txHash];
       const ageMs = Date.now() - a.timestamp;
       let pending = false;
       let failed = false;
@@ -481,9 +558,101 @@ export function useUserActivity(
     return a;
   };
 
+  // CCTP swaps become coherent Swap rows; the raw on-chain delivery leg is
+  // suppressed so each swap shows once. Two tiers:
+  //  1. hashes we signed (burn / mint / src+dst swap) → exact txHash match.
+  //  2. the destination-chain receive delivered by LI.FI's bridge (we have no
+  //     hash for it) → heuristic: same asset + amount≈dstAmount within a window.
+  // Skip transfers created before amount-tracking existed (null srcAmount) —
+  // they'd render as a "0 → 0" swap; they remain as their historical raw leg.
+  const cctpActivities = (cctpTransfers ?? []).filter((tr) => tr.srcAmount).map(mapCctpTransfer);
+  const cctpLegHashes = new Set<string>();
+  for (const tr of cctpTransfers ?? []) {
+    for (const h of [tr.burnTxHash, tr.mintTxHash, tr.srcSwapTxHash, tr.dstSwapTxHash]) {
+      if (h) cctpLegHashes.add(h);
+    }
+  }
+  const cctpDeliveries = (cctpTransfers ?? [])
+    .filter((tr) => tr.dstAmount)
+    .map((tr) => ({
+      symbol: tr.dstAsset.toUpperCase(),
+      amount: parseFloat(tr.dstAmount as string),
+      start: Date.parse(tr.createdAt),
+    }));
+  const isCctpDelivery = (a: Activity): boolean => {
+    if (a.type !== 'Receive') return false;
+    const sym = a.token.symbol.toUpperCase();
+    const amt = a.token.amount;
+    return cctpDeliveries.some(
+      (d) =>
+        d.symbol === sym &&
+        Math.abs(d.amount - amt) <= Math.max(d.amount * 0.02, 1e-6) &&
+        a.timestamp >= d.start - 5 * 60_000 &&
+        a.timestamp <= d.start + 60 * 60_000
+    );
+  };
+
+  // --- Pending sends (docs/audit/48-send-visibility-plan.md) ----------------
+  // A just-broadcast send, visible before the chain's indexer has it. The
+  // ledger row is dropped the moment any feed carries its hash — same
+  // hash-dedupe idea as `swapTxHashes` above. Zero requests of its own: it
+  // only watches data these SWRs already fetched.
+  const pendingSends = useSyncExternalStore(
+    subscribePendingSends,
+    getPendingSends,
+    getServerPendingSends
+  );
+
+  // Every hash the feeds know about this render, lowercased once.
+  const knownFeedHashes = useMemo(
+    () =>
+      toHashSet(
+        [
+          ...(data ?? []),
+          ...(stellarData ?? []),
+          ...(btcData ?? []),
+          ...(ethData ?? []),
+          ...(solData ?? []),
+        ].map((a) => ('txHash' in a ? a.txHash : null))
+      ),
+    [data, stellarData, btcData, ethData, solData]
+  );
+
+  // Retire reconciled/expired entries. In an effect, not in render — this
+  // mutates the shared store and re-notifies subscribers.
+  useEffect(() => {
+    reconcilePendingSends(knownFeedHashes);
+  }, [knownFeedHashes]);
+
+  // Same-render defence: a hash that is already in a feed must not show twice
+  // while the effect above is still queued.
+  const pendingRows: Activity[] = pendingSends
+    .filter((p) => !knownFeedHashes.has(p.txHash.toLowerCase()))
+    .map((p) => ({
+      // Chain is part of the id: the activity card derives the explorer link
+      // from id prefixes, and an ETH hash opening in stellar.expert renders
+      // an endless spinner (real bug, caught on staging within the hour).
+      id: `pending-send:${p.chain}:${p.txHash}`,
+      timestamp: p.createdAt,
+      type: 'Sent',
+      address: p.destination,
+      token: {
+        address: '',
+        symbol: p.symbol,
+        iconUrl: getCryptoIconUrl(p.symbol),
+        amount: parseFloat(p.amount) || 0,
+      },
+      txHash: p.txHash,
+      // The exact shape the card already renders with a Pending badge.
+      confirmed: false,
+    }));
+
   const recentActivity = [
+    ...pendingRows,
     ...(data ?? []),
+    ...cctpActivities,
     ...(mgiData ?? []),
+    ...(rampData ?? []),
     ...(stellarData ?? []),
     ...(btcData ?? []),
     ...(ethData ?? []),
@@ -494,16 +663,31 @@ export function useUserActivity(
         !(
           (a.type === 'Sent' || a.type === 'Receive') &&
           a.txHash &&
-          swapTxHashes.has(a.txHash)
+          (swapTxHashes.has(a.txHash) || cctpLegHashes.has(a.txHash))
         )
     )
+    .filter((a) => !isCctpDelivery(a))
     .map(enrich)
     .map(enrichOfframp)
     .sort((a, b) => b.timestamp - a.timestamp);
 
+  // The feed merges eight sources that resolve independently. Reporting only
+  // the wallet-activity call as "loading" is what makes rows pop in one chain
+  // at a time (BTC/ETH/SOL first, XLM/USDC after) — consumers drop their
+  // skeleton while half the sources are still in flight. Report loading until
+  // every source we actually asked for has produced its first result; SWR also
+  // clears these on error, so a failing provider can't pin the skeleton open.
+  const anySourceLoading =
+    (Boolean(key) && isLoading) ||
+    stellarLoading ||
+    btcLoading ||
+    ethLoading ||
+    solLoading ||
+    cctpLoading;
+
   return {
     recentActivity,
-    isLoading: Boolean(key) && isLoading,
+    isLoading: anySourceLoading,
     error,
     mutate,
   };

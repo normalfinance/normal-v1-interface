@@ -7,10 +7,33 @@ const TESTNET_USDC = getCanonicalUsdcTokenForNetwork('testnet');
 const TESTNET_BLEND_USDC = getBlendUsdcTokenForNetwork('testnet');
 const MAINNET_USDC = getCanonicalUsdcTokenForNetwork('mainnet');
 
+// ---------------------------------------------------------------------------
+// Horizon pools (2026-08-28): horizon.stellar.org became unreachable from a
+// developer machine (DNS fine, TCP never connects) and, because it was the
+// ONLY configured mainnet Horizon, every Stellar read in the app went blank --
+// XLM/USDC balances, account status, trustlines -- while BTC/ETH/SOL (other
+// providers) kept working. Same single-provider gap doc 95 Wave 4 closed for
+// EVM and BTC, now closed for Stellar READS: primary (env) first, public
+// Horizon as the safety net. Writers keep the single primary.
+// ---------------------------------------------------------------------------
+function horizonPool(primary: string | undefined, publicDefault: string): string[] {
+  return [...new Set([primary, publicDefault].filter((u): u is string => !!u))];
+}
+
+const TESTNET_HORIZON_POOL = horizonPool(
+  process.env.NEXT_PUBLIC_TESTNET_HORIZON_URL,
+  'https://horizon-testnet.stellar.org'
+);
+const MAINNET_HORIZON_POOL = horizonPool(
+  process.env.NEXT_PUBLIC_MAINNET_HORIZON_URL,
+  'https://horizon.stellar.org'
+);
+
 export const TESTNET_CONFIG: NetworkConfig = {
   // Network,
   NETWORK_PASSPHRASE: 'Test SDF Network ; September 2015',
-  HORIZON_URL: process.env.NEXT_PUBLIC_TESTNET_HORIZON_URL || 'https://horizon-testnet.stellar.org',
+  HORIZON_URL: TESTNET_HORIZON_POOL[0],
+  HORIZON_URLS: TESTNET_HORIZON_POOL,
   RPC_URL: process.env.NEXT_PUBLIC_TESTNET_RPC_URL || 'https://soroban-testnet.stellar.org',
 
   // Normal Accounts
@@ -43,7 +66,8 @@ export const TESTNET_CONFIG: NetworkConfig = {
 export const MAINNET_CONFIG: NetworkConfig = {
   // Network
   NETWORK_PASSPHRASE: 'Public Global Stellar Network ; September 2015',
-  HORIZON_URL: process.env.NEXT_PUBLIC_MAINNET_HORIZON_URL || 'https://horizon.stellar.org',
+  HORIZON_URL: MAINNET_HORIZON_POOL[0],
+  HORIZON_URLS: MAINNET_HORIZON_POOL,
   RPC_URL: process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://rpc.lightsail.network/',
 
   // Normal Accounts

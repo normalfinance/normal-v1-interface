@@ -1,17 +1,23 @@
 'use client';
 
-import type { Token } from '@normalfinance/types';
+// ---------------------------------------------------------------------------
+// P0-1 (#66): native ETH / SOL balance + price — now thin SELECTORS over the
+// shared server aggregate (`useWalletBalances`) instead of browser-direct
+// JSON-RPC calls per mount per user. See use-btc-portfolio.ts for the full
+// rationale.
+//
+// STILL exported for ACTION-TIME use (the data-layer rule: display reads
+// share the cache; action-time freshness keeps its own live read):
+//  - fetchEthBalance / fetchSolBalance — coinbase-offramp-modal's preflight
+//  - ETH_RPC_URL / SOL_RPC_URL — tx-confirmation probing (lifi-tracker,
+//    send-confirmation) and send building
+// ---------------------------------------------------------------------------
 
-import { cdn } from '@normalfinance/utils';
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo } from 'react';
+import { nativeAssetToToken } from '@/lib/portfolio/native-token';
 
 import { useTurnkeyWallet } from './use-turnkey-wallet';
-
-// ---------------------------------------------------------------------------
-// Native ETH / SOL balance + USD price, mirroring use-btc-portfolio.
-// Balances come from public JSON-RPC endpoints; prices reuse our cached
-// /api/prices/history route (last point of the 1d series).
-// ---------------------------------------------------------------------------
+import { useWalletBalances } from './use-wallet-balances';
 
 export const ETH_RPC_URL =
   process.env.NEXT_PUBLIC_ETH_RPC_URL ?? 'https://ethereum-rpc.publicnode.com';
@@ -33,135 +39,73 @@ async function rpc(url: string, method: string, params: unknown[]): Promise<any>
   return data.result;
 }
 
+/** ACTION-TIME live read (off-ramp preflight) — not for display paths. */
 export async function fetchEthBalance(address: string): Promise<number> {
   const hex: string = await rpc(ETH_RPC_URL, 'eth_getBalance', [address, 'latest']);
   return Number(BigInt(hex)) / 1e18;
 }
 
+/** ACTION-TIME live read (off-ramp preflight) — not for display paths. */
 export async function fetchSolBalance(address: string): Promise<number> {
   const result = await rpc(SOL_RPC_URL, 'getBalance', [address]);
   return (result?.value ?? 0) / 1e9;
 }
 
-async function fetchUsdPrice(symbol: string): Promise<number> {
-  try {
-    const res = await fetch(`/api/prices/history?symbol=${symbol}&range=1d`);
-    if (!res.ok) return 0;
-    const data = await res.json();
-    const prices: [number, number][] = data?.prices ?? [];
-    return prices.length ? prices[prices.length - 1][1] : 0;
-  } catch {
-    return 0;
-  }
-}
-
-interface ChainSpec {
-  symbol: string;
-  name: string;
-  contract: string;
-  icon: string;
-  decimals: number;
-  addressKey: 'ethereumAddress' | 'solanaAddress';
-  fetchBalance: (address: string) => Promise<number>;
-}
-
-const CHAIN_SPECS: Record<'ethereum' | 'solana', ChainSpec> = {
-  ethereum: {
-    symbol: 'ETH',
-    name: 'Ethereum',
-    contract: '__eth__',
-    icon: cdn('tokens/ethereum.webp'),
-    decimals: 18,
-    addressKey: 'ethereumAddress',
-    fetchBalance: fetchEthBalance,
-  },
-  solana: {
-    symbol: 'SOL',
-    name: 'Solana',
-    contract: '__sol__',
-    icon: cdn('tokens/solana.webp'),
-    decimals: 9,
-    addressKey: 'solanaAddress',
-    fetchBalance: fetchSolBalance,
-  },
-};
-
 function useChainPortfolio(chain: 'ethereum' | 'solana', enabled = true) {
-  const spec = CHAIN_SPECS[chain];
   const { addresses, loading: walletLoading, hasWallet, refetch } = useTurnkeyWallet(enabled);
-  const [token, setToken] = useState<Token | null>(null);
-  const [balanceLoading, setBalanceLoading] = useState(false);
-  // True when the balance RPC failed — distinct from a genuine zero balance,
-  // so the UI never silently shows "0" for funds it simply couldn't read.
-  const [balanceError, setBalanceError] = useState(false);
+  const balances = useWalletBalances(enabled);
 
-  const address = addresses?.[spec.addressKey] ?? null;
-
-  // Pulled out of the effect so it can be re-run on demand (e.g. after a swap)
-  // without waiting for the address to change — the effect only fires on mount
-  // / address change, which never happens for a same-address balance update.
-  const loadBalance = useCallback(async () => {
-    if (!address) {
-      setToken(null);
-      setBalanceError(false);
-      return;
-    }
-    setBalanceLoading(true);
-    setBalanceError(false);
-    const [res, price] = await Promise.all([
-      spec.fetchBalance(address).then(
-        (b) => ({ balance: b, ok: true }),
-        () => ({ balance: 0, ok: false })
-      ),
-      fetchUsdPrice(spec.symbol),
-    ]);
-    setBalanceError(!res.ok);
-    setToken({
-      symbol: spec.symbol,
-      contract: spec.contract,
-      name: spec.name,
-      issuer: '',
-      org: '',
-      domain: '',
-      icon: spec.icon,
-      decimals: spec.decimals,
-      featured: false,
-      balance: String(res.balance),
-      price: String(price),
-      percentageChange: 0,
-    } as Token);
-    setBalanceLoading(false);
-  }, [address, spec]);
-
-  useEffect(() => {
-    loadBalance();
-  }, [loadBalance]);
-
-  // Auto-refresh when a swap (cross-chain or Stellar) settles, so every surface
-  // showing this balance updates without a manual page refresh.
-  useEffect(() => {
-    const onUpdate = () => loadBalance();
-    window.addEventListener('nf:activity-updated', onUpdate);
-    return () => window.removeEventListener('nf:activity-updated', onUpdate);
-  }, [loadBalance]);
+  const address =
+    (chain === 'ethereum' ? addresses?.ethereumAddress : addresses?.solanaAddress) ?? null;
+  const asset = balances.getAsset(chain === 'ethereum' ? 'ETH' : 'SOL');
+  // Memoized for a STABLE identity between data updates — see the note in
+  // use-btc-portfolio.ts (fresh-per-render objects wiped the send form).
+  const token = useMemo(
+    () => (address ? nativeAssetToToken(asset, chain) : null),
+    [address, asset, chain]
+  );
 
   return {
     token,
     address,
     hasWallet,
-    loading: walletLoading || balanceLoading,
-    error: balanceError,
+    loading: walletLoading || balances.isLoading,
+    // Per-asset error from the aggregate — same meaning as the old
+    // balanceError: the chain source failed, distinct from a genuine zero.
+    error: asset?.status === 'error',
     refetch,
-    refetchBalance: loadBalance,
+    refetchBalance: balances.refreshFresh,
   };
 }
 
 export function useEthPortfolio(enabled = true) {
-  const { token, address, hasWallet, loading, error, refetch, refetchBalance } = useChainPortfolio('ethereum', enabled);
-  return { ethToken: token, ethereumAddress: address, hasWallet, loading, error, refetch, refetchBalance };
+  const { token, address, hasWallet, loading, error, refetch, refetchBalance } = useChainPortfolio(
+    'ethereum',
+    enabled
+  );
+  return {
+    ethToken: token,
+    ethereumAddress: address,
+    hasWallet,
+    loading,
+    error,
+    refetch,
+    refetchBalance,
+  };
 }
 
 export function useSolPortfolio(enabled = true) {
-  const { token, address, hasWallet, loading, error, refetch, refetchBalance } = useChainPortfolio('solana', enabled);
-  return { solToken: token, solanaAddress: address, hasWallet, loading, error, refetch, refetchBalance };
+  const { token, address, hasWallet, loading, error, refetch, refetchBalance } = useChainPortfolio(
+    'solana',
+    enabled
+  );
+  return {
+    solToken: token,
+    solanaAddress: address,
+    hasWallet,
+    loading,
+    error,
+    refetch,
+    refetchBalance,
+  };
 }

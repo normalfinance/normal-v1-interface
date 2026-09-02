@@ -2,6 +2,7 @@
 
 import type { AssetActionKey } from '@/hooks/use-asset-actions';
 
+import { useState } from 'react';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
@@ -14,6 +15,7 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
 import Skeleton from '@mui/material/Skeleton';
+import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 
 import { Iconify } from '@/components/template/iconify';
 import { NetworkBadge, getAssetNetwork } from '@/components/_common/network-badge';
@@ -35,9 +37,11 @@ const COL_HEADER_SX = {
 
 // Same Buy / Sell / Send / Receive flows as the home hero card, via the shared
 // useAssetActions hook (asset picker → on/off-ramp / receive, lazy chain setup).
-const ACTIONS: { key: AssetActionKey; label: string; icon: string }[] = [
+// 'swap' routes to /swap; same MUI glyph as the navbar (Niko 2026-08-21).
+const ACTIONS: { key: AssetActionKey | 'swap'; label: string; icon: string }[] = [
   { key: 'buy', label: 'Buy', icon: 'ic:round-add' },
   { key: 'sell', label: 'Sell', icon: 'ic:round-remove' },
+  { key: 'swap', label: 'Swap', icon: '' },
   { key: 'send', label: 'Send', icon: 'ic:round-arrow-upward' },
   { key: 'receive', label: 'Receive', icon: 'ic:round-arrow-downward' },
 ];
@@ -45,9 +49,15 @@ const ACTIONS: { key: AssetActionKey; label: string; icon: string }[] = [
 // ----------------------------------------------------------------------
 interface HoldingsCardProps {
   holdingsData: HoldingData[];
+  /** #75: hybrid accounts get one TAB per wallet (Niko's preference —
+   *  same pattern as the drawer). Absent = single flat table. */
+  sections?: { label: string; data: HoldingData[] }[];
   totalBalance: number;
   /** Show skeleton rows while balances load with nothing cached yet. */
   loading?: boolean;
+  /** Doc 90 W3: balances failed — an outage must not read as owning nothing. */
+  error?: boolean;
+  onRetry?: () => void;
 }
 
 function HoldingsSkeleton() {
@@ -67,188 +77,340 @@ function HoldingsSkeleton() {
   );
 }
 
-export function HoldingsCard({ holdingsData, totalBalance, loading }: HoldingsCardProps) {
+export function HoldingsCard({
+  holdingsData,
+  sections,
+  totalBalance,
+  loading,
+  error,
+  onRetry,
+}: HoldingsCardProps) {
   const { t } = useTranslate();
   const router = useRouter();
   const { startAction } = useAssetActionsContext();
+  const [walletTab, setWalletTab] = useState(0);
+  // The active tab's rows; flat list when there are no sections.
+  const tabbed = !!sections && sections.length > 0;
+  const rows = tabbed
+    ? (sections[Math.min(walletTab, sections.length - 1)]?.data ?? [])
+    : holdingsData;
 
   return (
     <Box sx={{ ...CARD_SX, minWidth: 0 }}>
-        {/* Header */}
-        <Box sx={{ mb: '20px' }}>
-          <Box sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', mb: '14px' }}>
-            {t('Holdings')}
-          </Box>
-
-          {/* Action buttons */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-            {ACTIONS.map((btn) => (
-              <Box
-                key={btn.key}
-                component="button"
-                onClick={() => startAction(btn.key)}
-                sx={{
-                  appearance: 'none',
-                  border: '1px solid rgba(10,10,15,0.08)',
-                  borderRadius: '12px',
-                  padding: '10px 6px',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '7px',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: '#6B6B76',
-                  background: 'transparent',
-                  transition: 'all .15s ease',
-                  '&:hover': { bgcolor: 'rgba(10,10,15,0.03)', color: '#0A0A0F', borderColor: 'rgba(10,10,15,0.14)' },
-                  '&:hover .action-icon-box': { bgcolor: '#0A0A0F', color: '#fff' },
-                }}
-              >
-                <Box
-                  className="action-icon-box"
-                  sx={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '8px',
-                    bgcolor: '#F4F4F7',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#0A0A0F',
-                    transition: 'all .15s ease',
-                  }}
-                >
-                  <Iconify icon={btn.icon} width={18} sx={{ color: 'inherit' }} />
-                </Box>
-                {btn.label}
-              </Box>
-            ))}
-          </Box>
+      {/* Header */}
+      <Box sx={{ mb: '20px' }}>
+        <Box sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', mb: '14px' }}>
+          {t('Holdings')}
         </Box>
 
-        {holdingsData.length === 0 ? (
-          loading ? (
-            <HoldingsSkeleton />
-          ) : (
-            <Box sx={{ color: 'rgba(10,10,15,0.4)', fontSize: '14px', py: '24px' }}>
-              {t('No holdings yet')}
-            </Box>
-          )
-        ) : (
-          <Box sx={{ overflowX: 'auto' }}>
-            <Box sx={{ minWidth: 520 }}>
-              {/* Column headers */}
+        {/* Action buttons */}
+        {/* auto-fit: one row on desktop, wraps by CONTAINER width as the
+            card narrows — no viewport breakpoints to go stale. */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(88px, 1fr))',
+            gap: '6px',
+          }}
+        >
+          {ACTIONS.map((btn) => (
+            <Box
+              key={btn.key}
+              component="button"
+              onClick={() =>
+                btn.key === 'swap'
+                  ? router.push(paths.swap)
+                  : startAction(btn.key as AssetActionKey)
+              }
+              sx={{
+                appearance: 'none',
+                border: '1px solid rgba(10,10,15,0.08)',
+                borderRadius: '12px',
+                padding: '10px 6px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '7px',
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#6B6B76',
+                background: 'transparent',
+                transition: 'all .15s ease',
+                '&:hover': {
+                  bgcolor: 'rgba(10,10,15,0.03)',
+                  color: '#0A0A0F',
+                  borderColor: 'rgba(10,10,15,0.14)',
+                },
+                '&:hover .action-icon-box': { bgcolor: '#0A0A0F', color: '#fff' },
+              }}
+            >
               <Box
+                className="action-icon-box"
                 sx={{
-                  display: 'grid',
-                  gridTemplateColumns: HOLDINGS_COLS,
-                  px: '8px',
-                  pb: '10px',
-                  mb: '2px',
-                  borderBottom: '1px solid rgba(10,10,15,0.06)',
-                  gap: '12px',
+                  width: 28,
+                  height: 28,
+                  borderRadius: '8px',
+                  bgcolor: '#F4F4F7',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#0A0A0F',
+                  transition: 'all .15s ease',
                 }}
               >
-                <Box sx={COL_HEADER_SX}>{t('Asset')}</Box>
-                <Box sx={{ ...COL_HEADER_SX, textAlign: 'right' }}>{t('Balance')}</Box>
-                <Box sx={{ ...COL_HEADER_SX, textAlign: 'right' }}>{t('Price')}</Box>
-                <Box sx={{ ...COL_HEADER_SX, textAlign: 'right' }}>{t('Value')}</Box>
-                <Box sx={{ ...COL_HEADER_SX, textAlign: 'right' }}>{t('Allocation')}</Box>
+                {btn.key === 'swap' ? (
+                  <SwapVertOutlined sx={{ fontSize: 16, color: 'inherit' }} />
+                ) : (
+                  <Iconify icon={btn.icon} width={18} sx={{ color: 'inherit' }} />
+                )}
               </Box>
+              {btn.label}
+            </Box>
+          ))}
+        </Box>
+      </Box>
 
-              {/* Rows */}
-              {holdingsData.map((h, i) => {
-                const pct =
-                  totalBalance > 0
-                    ? BigNumber(h.value).dividedBy(totalBalance).multipliedBy(100).toFixed(1)
-                    : '0.0';
-                const balanceDisplay = fTokenAmount(h.token.balance);
-                const color = getHoldingColor(h.token, i);
+      {/* #75: wallet tabs — same pills as the drawer sections. */}
+      {tabbed && (
+        <Box sx={{ display: 'flex', gap: '6px', mb: '12px', flexWrap: 'wrap' }}>
+          {sections!.map((s, idx) => {
+            const selected = Math.min(walletTab, sections!.length - 1) === idx;
+            return (
+              <Box
+                key={s.label}
+                component="button"
+                onClick={() => setWalletTab(idx)}
+                sx={{
+                  appearance: 'none',
+                  border: selected
+                    ? '1px solid rgba(10,10,15,0.9)'
+                    : '1px solid rgba(10,10,15,0.1)',
+                  borderRadius: '999px',
+                  px: '12px',
+                  py: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  bgcolor: selected ? '#0A0A0F' : 'transparent',
+                  color: selected ? '#fff' : '#6B6B76',
+                  transition: 'all .15s ease',
+                  '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.25)' },
+                }}
+              >
+                {t(s.label)}
+              </Box>
+            );
+          })}
+        </Box>
+      )}
 
-                const isSavings = h.token.contract === '__savings__';
-                const handleRowClick = isSavings
-                  ? () => router.push(paths.savings)
-                  : () => router.push(paths.assets.details(h.token.symbol));
+      {rows.length === 0 ? (
+        loading ? (
+          <HoldingsSkeleton />
+        ) : error ? (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              py: '24px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <Box sx={{ color: 'rgba(10,10,15,0.55)', fontSize: '14px' }}>
+              {t("Couldn't load your holdings — your balances are safe.")}
+            </Box>
+            <Box
+              component="button"
+              type="button"
+              onClick={onRetry}
+              sx={{
+                border: '1px solid rgba(10,10,15,0.25)',
+                background: 'transparent',
+                borderRadius: '8px',
+                px: '10px',
+                py: '3px',
+                fontSize: '12.5px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                color: '#0A0A0F',
+              }}
+            >
+              {t('Retry')}
+            </Box>
+          </Box>
+        ) : (
+          <Box sx={{ color: 'rgba(10,10,15,0.4)', fontSize: '14px', py: '24px' }}>
+            {t('No holdings yet')}
+          </Box>
+        )
+      ) : (
+        <Box sx={{ overflowX: 'auto' }}>
+          <Box sx={{ minWidth: 520 }}>
+            {/* Column headers */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: HOLDINGS_COLS,
+                px: '8px',
+                pb: '10px',
+                mb: '2px',
+                borderBottom: '1px solid rgba(10,10,15,0.06)',
+                gap: '12px',
+              }}
+            >
+              <Box sx={COL_HEADER_SX}>{t('Asset')}</Box>
+              <Box sx={{ ...COL_HEADER_SX, textAlign: 'right' }}>{t('Balance')}</Box>
+              <Box sx={{ ...COL_HEADER_SX, textAlign: 'right' }}>{t('Price')}</Box>
+              <Box sx={{ ...COL_HEADER_SX, textAlign: 'right' }}>{t('Value')}</Box>
+              <Box sx={{ ...COL_HEADER_SX, textAlign: 'right' }}>{t('Allocation')}</Box>
+            </Box>
 
-                return (
-                  <Box
-                    key={h.token.contract}
-                    onClick={handleRowClick}
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: HOLDINGS_COLS,
-                      alignItems: 'center',
-                      gap: '12px',
-                      px: '8px',
-                      py: '13px',
-                      borderBottom: '1px solid rgba(10,10,15,0.05)',
-                      cursor: 'pointer',
-                      '&:last-child': { borderBottom: 'none' },
-                      '&:hover': { bgcolor: 'rgba(10,10,15,0.02)', borderRadius: '10px' },
-                    }}
-                  >
-                    {/* Asset */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0 }}>
-                      <Avatar
-                        src={h.token.icon || getCryptoIconUrl(h.token.symbol)}
-                        alt={h.token.symbol}
-                        sx={{ width: 34, height: 34, flexShrink: 0 }}
-                      />
-                      <Box sx={{ minWidth: 0 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Box sx={{ fontSize: '14px', fontWeight: 400, color: '#0A0A0F', lineHeight: 1.3 }}>
-                            {h.token.symbol}
-                          </Box>
-                          {!isSavings && <NetworkBadge network={getAssetNetwork(h.token)} />}
+            {/* Rows */}
+            {rows.map((h, i) => {
+              const pct =
+                totalBalance > 0
+                  ? BigNumber(h.value).dividedBy(totalBalance).multipliedBy(100).toFixed(1)
+                  : '0.0';
+              const balanceDisplay = fTokenAmount(h.token.balance);
+              const color = getHoldingColor(h.token, i);
+
+              const isSavings = h.token.contract === '__savings__';
+              const handleRowClick = isSavings
+                ? () => router.push(paths.savings)
+                : () => router.push(paths.assets.details(h.token.symbol));
+
+              return (
+                <Box
+                  key={h.token.contract}
+                  onClick={handleRowClick}
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: HOLDINGS_COLS,
+                    alignItems: 'center',
+                    gap: '12px',
+                    px: '8px',
+                    py: '13px',
+                    borderBottom: '1px solid rgba(10,10,15,0.05)',
+                    cursor: 'pointer',
+                    '&:last-child': { borderBottom: 'none' },
+                    '&:hover': { bgcolor: 'rgba(10,10,15,0.02)', borderRadius: '10px' },
+                  }}
+                >
+                  {/* Asset */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0 }}>
+                    <Avatar
+                      src={h.token.icon || getCryptoIconUrl(h.token.symbol)}
+                      alt={h.token.symbol}
+                      sx={{ width: 34, height: 34, flexShrink: 0 }}
+                    />
+                    <Box sx={{ minWidth: 0 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Box
+                          sx={{
+                            fontSize: '14px',
+                            fontWeight: 400,
+                            color: '#0A0A0F',
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {h.token.symbol}
                         </Box>
-                        <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.3 }}>
-                          {h.token.name}
-                        </Box>
+                        {!isSavings && <NetworkBadge network={getAssetNetwork(h.token)} />}
                       </Box>
-                    </Box>
-
-                    {/* Balance */}
-                    <Box sx={{ ...MONO, fontSize: '13px', fontWeight: 400, color: '#0A0A0F', textAlign: 'right' }}>
-                      {balanceDisplay}
-                    </Box>
-
-                    {/* Price */}
-                    <Box sx={{ ...MONO, fontSize: '13px', fontWeight: 400, color: 'rgba(10,10,15,0.6)', textAlign: 'right' }}>
-                      {fCurrency(h.token.price)}
-                    </Box>
-
-                    {/* Value */}
-                    <Box sx={{ ...MONO, fontSize: '13px', fontWeight: 400, color: '#0A0A0F', textAlign: 'right' }}>
-                      {fCurrency(h.value)}
-                    </Box>
-
-                    {/* Allocation % + bar */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
-                      <Box sx={{ ...MONO, fontSize: '13px', fontWeight: 400, color: 'rgba(10,10,15,0.6)' }}>
-                        {pct}%
-                      </Box>
-                      <Box
-                        sx={{
-                          width: '100%',
-                          maxWidth: '72px',
-                          height: '3px',
-                          bgcolor: 'rgba(10,10,15,0.07)',
-                          borderRadius: '99px',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        <Box sx={{ width: `${pct}%`, height: '100%', bgcolor: color, borderRadius: '99px' }} />
+                      <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.3 }}>
+                        {h.token.name}
                       </Box>
                     </Box>
                   </Box>
-                );
-              })}
-            </Box>
+
+                  {/* Balance */}
+                  <Box
+                    sx={{
+                      ...MONO,
+                      fontSize: '13px',
+                      fontWeight: 400,
+                      color: '#0A0A0F',
+                      textAlign: 'right',
+                    }}
+                  >
+                    {balanceDisplay}
+                  </Box>
+
+                  {/* Price */}
+                  <Box
+                    sx={{
+                      ...MONO,
+                      fontSize: '13px',
+                      fontWeight: 400,
+                      color: 'rgba(10,10,15,0.6)',
+                      textAlign: 'right',
+                    }}
+                  >
+                    {fCurrency(h.token.price)}
+                  </Box>
+
+                  {/* Value */}
+                  <Box
+                    sx={{
+                      ...MONO,
+                      fontSize: '13px',
+                      fontWeight: 400,
+                      color: '#0A0A0F',
+                      textAlign: 'right',
+                    }}
+                  >
+                    {fCurrency(h.value)}
+                  </Box>
+
+                  {/* Allocation % + bar */}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-end',
+                      gap: '5px',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        ...MONO,
+                        fontSize: '13px',
+                        fontWeight: 400,
+                        color: 'rgba(10,10,15,0.6)',
+                      }}
+                    >
+                      {pct}%
+                    </Box>
+                    <Box
+                      sx={{
+                        width: '100%',
+                        maxWidth: '72px',
+                        height: '3px',
+                        bgcolor: 'rgba(10,10,15,0.07)',
+                        borderRadius: '99px',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: `${pct}%`,
+                          height: '100%',
+                          bgcolor: color,
+                          borderRadius: '99px',
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                </Box>
+              );
+            })}
           </Box>
-        )}
-      </Box>
+        </Box>
+      )}
+    </Box>
   );
 }

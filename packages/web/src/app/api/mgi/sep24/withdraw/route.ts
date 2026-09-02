@@ -1,22 +1,16 @@
+import { j } from '@/utils/http';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { j, getAccessToken } from '@/utils/http';
 import { mgiApiBase } from '@/lib/mgi/server-base';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
  * POST /api/mgi/sep24/withdraw
  * Body: { token: string; account: string; amount: string|number; lang?: string }
  */
-export async function POST(req: Request) {
+export const POST = withAuth(async (req: Request, { user }) => {
   try {
     // Authenticate
-    const accessToken = getAccessToken(req);
-    const user = await getAuthenticatedUser(accessToken);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const {
       token,
@@ -114,11 +108,9 @@ export async function POST(req: Request) {
       error: 'Unexpected response from anchor',
       status: r.status,
       contentType: ct || null,
-      bodySnippet: text.slice(0, 2000),
-      sentTo: endpoint,
-      sentBody: payload,
     });
   } catch (e: any) {
-    return j(500, { error: e?.message || 'Server error', stack: e?.stack });
+    console.error('[MGI] route crashed:', e); // detail stays in logs (doc 90 1c)
+    return j(500, { error: 'MoneyGram is temporarily unavailable — please try again.' });
   }
-}
+});

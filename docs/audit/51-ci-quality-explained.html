@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>51-ci-quality-explained</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color:#16161a; line-height:1.55; font-size:10.5pt; padding:24px; max-width:190mm; margin-inline:auto; }
+  h1 { font-size:21pt; margin:0 0 6px; letter-spacing:-0.02em; }
+  h2 { font-size:14pt; margin:24px 0 8px; padding-top:10px; border-top:2px solid #16161a; }
+  h3 { font-size:11.5pt; margin:16px 0 6px; }
+  h4 { font-size:10.5pt; margin:12px 0 4px; }
+  table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.5pt; }
+  th,td { border:1px solid #d8d8de; padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#f2f2f4; font-weight:600; }
+  code { background:#f2f2f4; padding:1px 4px; border-radius:3px; font-size:9.5pt; }
+  pre { background:#f6f6f8; border:1px solid #e2e2e8; border-radius:5px; padding:10px 12px;
+        font-size:9pt; overflow-x:auto; white-space:pre-wrap; }
+  blockquote { border-left:3px solid #c9c9d2; margin:10px 0; padding:4px 0 4px 12px; color:#3c3c46; }
+  hr { border:0; border-top:1px solid #d8d8de; margin:18px 0; }
+  ul,ol { margin:8px 0 8px 18px; padding:0; } li { margin:3px 0; }
+  a { color:#16161a; }
+  h2, h3, table { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>51 — The safety-net work, explained</h1>
+<p>Companion to <a href="50-ci-and-withauth-plan.md">50-ci-and-withauth-plan.md</a> (the</p>
+<p>decisions and inventories). This explains the same work from scratch: what was</p>
+<p>broken, what changed, and why each piece matters. Nothing here changed what</p>
+<p>users see — all of it changes how safely we can keep shipping.</p>
+<hr />
+<h2>1. The discovery: our safety net was lying on the floor</h2>
+<p>The repo has had a CI pipeline (<code>web-ci.yml</code>) for months: on every push it was</p>
+<p>supposed to check formatting, lint, types and the build. Sounds great.</p>
+<p>Reality, verified through GitHub's API: **it had failed 40 out of the last 40</p>
+<p>runs**, going back to at least July 25 — possibly forever. And the failure</p>
+<p>worked like this: every run died at step one (Prettier, 321 unformatted</p>
+<p>files), and when a CI step fails, GitHub <strong>skips</strong> everything after it. So</p>
+<p>ESLint, TypeScript and the build were not failing.</p>
+<p><strong>They were never running at all.</strong></p>
+<p>Nobody noticed, because red that stays red becomes wallpaper. This is the</p>
+<p>single most important lesson in this document: *a check that is always red</p>
+<p>protects nothing — it trains people to ignore checks.* The July accident</p>
+<p>where working code vanished in a merge (section 6) happened while this net</p>
+<p>was, in theory, deployed.</p>
+<h2>2. Resurrecting CI: green first, strict second</h2>
+<p>The rule for the fix: <strong>CI must not be born red.</strong> Every step was run locally</p>
+<p>first; only steps proven green became blocking. Two couldn't honestly block</p>
+<p>yet, and each carries a dated comment saying exactly why and what unlocks it:</p>
+<ul>
+<li><strong>Prettier — non-blocking for now.</strong> Fixing it means reformatting 321 files</li>
+</ul>
+<p>  in one commit. Dropped into the middle of the merge-conflict mess (section</p>
+<p>  6), that commit would have been a bomb. It's scheduled for right after the</p>
+<p>  merge policy settles; then the step flips back to blocking.</p>
+<ul>
+<li><strong>The build — non-blocking for now.</strong> <code>next build</code> imports every API route,</li>
+</ul>
+<p>  and some modules read secrets at import time (the rate limiter constructs</p>
+<p>  its Redis client from env). On a CI machine with no secrets, that explodes</p>
+<p>  regardless of code health. Vercel builds every push <em>with</em> real env, so it</p>
+<p>  is the honest build gate today. Adding the secrets in repo settings unlocks</p>
+<p>  this step.</p>
+<p>What DOES block now: <strong>ESLint, TypeScript, and the unit tests</strong> — the gates</p>
+<p>that catch real regressions. Plus quality-of-life: CI runs on pull requests,</p>
+<p>duplicate runs get cancelled, and the i18n steps are gone (section 5).</p>
+<h2>3. withAuth: authentication as the default, not a memory test</h2>
+<p>Three separate security findings in this project were the same bug wearing</p>
+<p>different clothes: an API route anyone on the internet could call, because in</p>
+<p>Next.js every route is <strong>born public</strong> and a human must remember to add the</p>
+<p>auth check. Humans forget. Three times, that we know of.</p>
+<p>The fix inverts the default. A route is now written:</p>
+<pre>export const POST = withAuth(async (request, { user }) =&gt; { ... });</pre>
+<p>The check runs before the route's code ever executes; the verified user</p>
+<p>arrives as an argument. Forgetting authentication is no longer possible —</p>
+<p>and a route WITHOUT the wrapper now looks visibly different, which is what a</p>
+<p>reviewer should have to notice. Unit tests pin the load-bearing promise: the</p>
+<p>handler is never invoked without a user.</p>
+<p>Three routes use it today (the newest ones). The remaining ~34 migrate in one</p>
+<p>mechanical sweep — deliberately scheduled <em>after</em> the merge policy fix,</p>
+<p>because a 37-file diff during the conflict period would have been reckless.</p>
+<p>Bonus from the route-by-route inventory: five routes turned out to have</p>
+<p>neither auth NOR rate limiting — including two that expose our DeFindex API</p>
+<p>key to anonymous callers. Registered as finding #50, scheduled.</p>
+<h2>4. Lint zero: warnings are now signal, not noise</h2>
+<p>The codebase carried 88 lint warnings. At 88, warning #89 is invisible —</p>
+<p>nobody reads the pile. Now it's <strong>zero</strong>, and CI fails on any new one, which</p>
+<p>means a warning is once again information.</p>
+<p>Getting to zero was not "delete whatever the linter dislikes" — three cases</p>
+<p>prove why each site had to be read first:</p>
+<ul>
+<li>**<code>middleware.ts</code>'s seven "unused" variables are the parked geo-blocking</li>
+</ul>
+<p>  feature** (finding #35, awaiting a team decision). Deleting them would have</p>
+<p>  destroyed benched work. They're suppressed with a comment pointing at #35.</p>
+<ul>
+<li>**Three hook-dependency warnings would become infinite loops if "fixed"</li>
+</ul>
+<p>  naively** — the functions involved are recreated every render and set</p>
+<p>  state. Each carries a suppression comment explaining the why.</p>
+<ul>
+<li><strong>One variable looked used</strong> — there's a call to it right in the file — but</li>
+</ul>
+<p>  the call sits inside commented-out JSX. Verified before removing.</p>
+<p>The rest were genuine dirt: fourteen unused <code>catch (err)</code> bindings, dead</p>
+<p>destructurings, and one component maintaining hover state through six event</p>
+<p>handlers that nothing ever read.</p>
+<h2>5. i18n retired (the tooling, not the runtime)</h2>
+<p>Decision: the app is English-only; translations are dead. So the translation</p>
+<p><em>machinery</em> went: the custom lint rule (45 of the 88 warnings), three CI</p>
+<p>steps, the Crowdin sync workflow.</p>
+<p>What deliberately stayed: the <code>t()</code> calls and locale files. The app's</p>
+<p>translation keys ARE the English sentences, so everything renders identically</p>
+<p>with zero risk. Ripping <code>t()</code> out of hundreds of components is a separate</p>
+<p>project with separate review — not something to smuggle into a lint cleanup.</p>
+<h2>6. The merge-commit story: how working code silently vanished</h2>
+<p>This deserves its own section because it cost real code once and days of</p>
+<p>conflict pain since.</p>
+<p><strong>What "Squash and merge" does:</strong> it takes all your branch's commits and</p>
+<p>creates ONE brand-new commit on develop with the same content but **no shared</p>
+<p>history**. For a branch that dies right after, that's tidy. For a branch you</p>
+<p>keep working on, it's poison: next PR, git compares your branch against</p>
+<p>develop, finds the same files "changed on both sides" (one side being an</p>
+<p>anonymous photocopy of your own earlier work), and declares conflicts. Every</p>
+<p>time. And one day the conflict resolves the wrong way.</p>
+<p><strong>It wasn't hypothetical.</strong> In July, the external-wallet swap gate was</p>
+<p>written and committed — and the squash-merge of PR #466 shipped a version</p>
+<p>without it. Nobody noticed for almost a month, because (section 1) nothing</p>
+<p>was watching.</p>
+<p><strong>The root cause hid in settings:</strong> branch protection had **"Require linear</p>
+<p>history"** checked, which <em>forbids</em> merge commits — the safe option wasn't</p>
+<p>being ignored, it was banned. That box is now unchecked, "Allow force pushes"</p>
+<p>(which was on, for everyone!) is off, the ghost required-checks that could</p>
+<p>never report are replaced with the real <code>web (22.x)</code>, and the approval</p>
+<p>requirement is off while the team is one person.</p>
+<p><strong>The habit that keeps it fixed:</strong> long-lived branch → merge with a **merge</p>
+<p>commit**. Short throwaway branch → squash is fine, then delete the branch.</p>
+<h2>7. How to read your safety net</h2>
+<ul>
+<li><strong>On a PR:</strong> the checks box shows <code>web (22.x)</code> with "Required". Click</li>
+</ul>
+<p>  <em>Details</em> to see every step — ESLint, TypeScript, Jest — each with its own</p>
+<p>  tick. All green = lint clean, types sound, all tests passing, against</p>
+<p>  up-to-date code.</p>
+<ul>
+<li><strong>Locally:</strong> <code>yarn lint</code> and <code>yarn test</code> are the same gates. Since lint hit</li>
+</ul>
+<p>  zero, <strong>silence is the green light</strong> — ESLint only speaks when something is</p>
+<p>  wrong.</p>
+<h2>8. What this unlocks next</h2>
+<p>In order: the 37-route withAuth sweep and finding #50's five routes (safe now</p>
+<p>that merges are sane), the repo-wide Prettier reformat (then flip that CI</p>
+<p>step to blocking), CI secrets if we want the build gate blocking, and the</p>
+<p>swap-gate component test — the one that makes July's silent deletion</p>
+<p>physically impossible to repeat, because CI would go red the moment the gate</p>
+<p>disappears again.</p>
+</body></html>

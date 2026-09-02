@@ -90,16 +90,23 @@ export default function AmountDialog({
       }}
     >
       {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: '6px' }}>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="flex-start"
+        sx={{ mb: '6px' }}
+      >
         <Box>
           <Typography sx={{ fontSize: '17px', fontWeight: 600, color: '#0A0A0F', lineHeight: 1.3 }}>
             {title}
           </Typography>
-          <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '3px' }}>
-            {subtitle}
-          </Typography>
+          <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '3px' }}>{subtitle}</Typography>
         </Box>
-        <IconButton onClick={onCancel} size="small" sx={{ color: 'rgba(10,10,15,0.4)', mt: '-4px', mr: '-6px' }}>
+        <IconButton
+          onClick={onCancel}
+          size="small"
+          sx={{ color: 'rgba(10,10,15,0.4)', mt: '-4px', mr: '-6px' }}
+        >
           <Iconify icon="mingcute:close-line" width={20} />
         </IconButton>
       </Stack>
@@ -130,7 +137,15 @@ export default function AmountDialog({
           {t('Amount')}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Typography sx={{ fontSize: '24px', fontWeight: 600, color: 'rgba(10,10,15,0.35)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+          <Typography
+            sx={{
+              fontSize: '24px',
+              fontWeight: 600,
+              color: 'rgba(10,10,15,0.35)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1,
+            }}
+          >
             $
           </Typography>
           <Box
@@ -177,7 +192,13 @@ export default function AmountDialog({
               flexShrink: 0,
             }}
           >
-            <Image src={cdn('/tokens/USDC.webp')} alt={tokenLabel} width={18} height={18} style={{ objectFit: 'contain' }} />
+            <Image
+              src={cdn('/tokens/USDC.webp')}
+              alt={tokenLabel}
+              width={18}
+              height={18}
+              style={{ objectFit: 'contain' }}
+            />
             <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F' }}>
               {tokenLabel}
             </Typography>

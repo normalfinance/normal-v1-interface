@@ -4,9 +4,10 @@ export type Wallet = {
   address: string | undefined;
   activeChain: WalletChain | undefined;
   server: Horizon.Server | undefined;
+  // 'xbull' and 'hana' removed 2026-08-07 (finding #43): their kit modules
+  // were deleted in May; a persisted legacy value now simply fails the
+  // restore lookup and disconnects, same as before, minus the dead options.
   walletType:
-    | 'hana'
-    | 'xbull'
     | 'freighter'
     | 'lobstr'
     | 'stellar-wallets-kit'

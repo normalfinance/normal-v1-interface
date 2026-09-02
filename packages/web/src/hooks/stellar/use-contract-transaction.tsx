@@ -6,15 +6,18 @@ import type { AssembledTransaction } from '@stellar/stellar-sdk/contract';
 
 import { useCallback } from 'react';
 import { paths } from '@/routes/paths';
+import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useRouter } from 'next/navigation';
-import { logger } from '@normalfinance/utils';
 import { usePersistStore } from '@normalfinance/state';
 import { type TransactionDetails } from '@/types/transaction';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { getTransactionMessages, createStellarExpertUrl } from '@/utils/transactions.utils';
-import { useWalletReconnect, WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
+import {
+  useWalletReconnect,
+  WalletSessionExpiredError,
+} from '@/hooks/stellar/use-wallet-reconnect';
 import {
   useNormalWallet,
   NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE,

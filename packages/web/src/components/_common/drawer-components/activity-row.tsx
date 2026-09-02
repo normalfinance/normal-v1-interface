@@ -14,6 +14,8 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import MonetizationOnOutlined from '@mui/icons-material/MonetizationOnOutlined';
 
+import { SwapDetailModal, cctpTransferIdOf } from '@/components/_common/swap-detail-modal';
+
 const ICON_BOX_SX = {
   display: 'flex',
   alignItems: 'center',
@@ -133,6 +135,8 @@ function fmtUsd(amount: number): string {
 /* ------------------------------------------------------------------ */
 export function ActivityRow({ activity }: { activity: Activity }) {
   const { t } = useTranslate();
+  const cctpId = cctpTransferIdOf(activity);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const createdAtSec = Number.isFinite(activity.timestamp)
     ? Math.floor(activity.timestamp / 1000)
@@ -142,25 +146,37 @@ export function ActivityRow({ activity }: { activity: Activity }) {
   type ChipConfig = { label: string; color: string; bg: string };
   // Palette anchored to #1AB37D (savings green) + brand gradient colors
   const CHIP: Record<string, ChipConfig> = {
-    'Buy':              { label: 'On-Ramp',         color: '#0A6649', bg: 'rgba(26,179,125,0.11)' },
-    'Sell':             { label: 'Off-Ramp',         color: '#8A4A00', bg: 'rgba(255,176,96,0.16)'  },
-    'Receive':          { label: 'Received',         color: '#0A5272', bg: 'rgba(91,207,255,0.14)'  },
-    'Sent':             { label: 'Sent',             color: '#2A2A33', bg: 'rgba(10,10,15,0.07)'    },
-    'Swap':             { label: 'Swap',             color: '#5A2E9E', bg: 'rgba(177,123,255,0.13)' },
-    'Savings Deposit':  { label: 'Deposit',          color: '#0A6649', bg: 'rgba(26,179,125,0.11)'  },
-    'Savings Withdraw': { label: 'Withdraw',         color: '#2A2A33', bg: 'rgba(10,10,15,0.07)'    },
-    'Mint':             { label: 'Mint',             color: '#0A6649', bg: 'rgba(26,179,125,0.11)'  },
-    'Redeem':           { label: 'Redeem',           color: '#8A4A00', bg: 'rgba(255,176,96,0.16)'  },
-    'Add Liquidity':    { label: 'Add Liquidity',    color: '#0A5272', bg: 'rgba(91,207,255,0.14)'  },
-    'Remove Liquidity': { label: 'Remove Liquidity', color: '#7A1D4A', bg: 'rgba(255,123,197,0.12)' },
+    Buy: { label: 'On-Ramp', color: '#0A6649', bg: 'rgba(26,179,125,0.11)' },
+    Sell: { label: 'Off-Ramp', color: '#8A4A00', bg: 'rgba(255,176,96,0.16)' },
+    Receive: { label: 'Received', color: '#0A5272', bg: 'rgba(91,207,255,0.14)' },
+    Sent: { label: 'Sent', color: '#2A2A33', bg: 'rgba(10,10,15,0.07)' },
+    Swap: { label: 'Swap', color: '#5A2E9E', bg: 'rgba(177,123,255,0.13)' },
+    'Savings Deposit': { label: 'Deposit', color: '#0A6649', bg: 'rgba(26,179,125,0.11)' },
+    'Savings Withdraw': { label: 'Withdraw', color: '#2A2A33', bg: 'rgba(10,10,15,0.07)' },
+    Mint: { label: 'Mint', color: '#0A6649', bg: 'rgba(26,179,125,0.11)' },
+    Redeem: { label: 'Redeem', color: '#8A4A00', bg: 'rgba(255,176,96,0.16)' },
+    'Add Liquidity': { label: 'Add Liquidity', color: '#0A5272', bg: 'rgba(91,207,255,0.14)' },
+    'Remove Liquidity': {
+      label: 'Remove Liquidity',
+      color: '#7A1D4A',
+      bg: 'rgba(255,123,197,0.12)',
+    },
   };
   const chip =
     activity.type === 'Sent' && activity.offramp
       ? CHIP['Sell']
-      : CHIP[activity.type] ?? { label: activity.type, color: '#2A2A33', bg: 'rgba(10,10,15,0.07)' };
+      : (CHIP[activity.type] ?? {
+          label: activity.type,
+          color: '#2A2A33',
+          bg: 'rgba(10,10,15,0.07)',
+        });
   const isPending =
     ((activity.type === 'Sent' || activity.type === 'Receive') && activity.confirmed === false) ||
     (activity.type === 'Swap' && activity.pending === true) ||
+    // Ramp rows (MoneyGram, and Coinbase/MoonPay via doc 89 F2) flag their
+    // own in-flight state — without this, a pending Buy looked identical to
+    // a settled one.
+    ((activity.type === 'Buy' || activity.type === 'Sell') && activity.pending === true) ||
     (activity.type === 'Sent' && activity.offramp === true && activity.offrampStatus === 'pending');
 
   let icon: React.ReactNode = null;
@@ -171,7 +187,10 @@ export function ActivityRow({ activity }: { activity: Activity }) {
 
   switch (activity.type) {
     case 'Receive': {
-      const { token: { symbol, amount, iconUrl }, address } = activity;
+      const {
+        token: { symbol, amount, iconUrl },
+        address,
+      } = activity;
       icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
       amountStr = fmtAmount(amount, symbol);
       subtitle = `From ${format.shortenAddress(address)}`;
@@ -180,11 +199,14 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       break;
     }
     case 'Sent': {
-      const { token: { symbol, amount, iconUrl }, address } = activity;
+      const {
+        token: { symbol, amount, iconUrl },
+        address,
+      } = activity;
       icon = <ActivityTokenImage src={iconUrl || getCryptoIconUrl(symbol)} symbol={symbol} />;
       amountStr = fmtAmount(amount, symbol);
       subtitle = activity.offramp
-        ? activity.offrampProvider ?? 'Off-ramp'
+        ? (activity.offrampProvider ?? 'Off-ramp')
         : `To ${format.shortenAddress(address)}`;
       isPositive = false;
       usdStr = symbol === 'USDC' ? fmtUsd(amount) : fmtAmount(amount, symbol);
@@ -227,7 +249,10 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       break;
     }
     case 'Swap': {
-      const { tokenIn: { symbol: sIn, amount: aIn, iconUrl: iIn }, tokenOut: { symbol: sOut, amount: aOut, iconUrl: iOut } } = activity;
+      const {
+        tokenIn: { symbol: sIn, amount: aIn, iconUrl: iIn },
+        tokenOut: { symbol: sOut, amount: aOut, iconUrl: iOut },
+      } = activity;
       icon = (
         <SplitAvatar
           leftSrc={iIn || getCryptoIconUrl(sIn)}
@@ -263,116 +288,137 @@ export function ActivityRow({ activity }: { activity: Activity }) {
 
   /* ---------- UI ------------------------------------------------ */
   return (
-    <Stack
-      direction="row"
-      spacing={1.5}
-      alignItems="center"
-      sx={{ borderRadius: '12px', padding: '4px 8px', mx: '-8px', transition: 'background .15s ease', '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' } }}
-    >
-      {icon}
+    <>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        alignItems="center"
+        onClick={cctpId ? () => setDetailOpen(true) : undefined}
+        sx={{
+          borderRadius: '12px',
+          padding: '4px 8px',
+          mx: '-8px',
+          transition: 'background .15s ease',
+          cursor: cctpId ? 'pointer' : 'default',
+          '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' },
+        }}
+      >
+        {icon}
 
-      <Stack direction="row" sx={{ flexGrow: 1 }} alignItems="center" justifyContent="space-between">
-        {/* left: chip + amount + subtitle */}
-        <Stack spacing={0.4} alignItems="flex-start">
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Chip
-              label={chip.label}
-              size="small"
-              sx={{
-                height: 20,
-                fontSize: '11px',
-                fontWeight: 600,
-                color: chip.color,
-                bgcolor: chip.bg,
-                borderRadius: '6px',
-                '& .MuiChip-label': { px: '8px' },
-              }}
-            />
-            {isPending && (
-              <Box
-                component="span"
+        <Stack
+          direction="row"
+          sx={{ flexGrow: 1 }}
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          {/* left: chip + amount + subtitle */}
+          <Stack spacing={0.4} alignItems="flex-start">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Chip
+                label={chip.label}
+                size="small"
                 sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
                   height: 20,
-                  px: '7px',
-                  borderRadius: '6px',
-                  bgcolor: 'rgba(245,158,11,0.1)',
-                  color: '#B45309',
-                  fontSize: '10px',
+                  fontSize: '11px',
                   fontWeight: 600,
-                  letterSpacing: '0.02em',
-                }}
-              >
-                Pending
-              </Box>
-            )}
-            {((activity.type === 'Swap' && activity.failed) ||
-              (activity.type === 'Sent' &&
-                activity.offramp &&
-                activity.offrampStatus === 'failed')) && (
-              <Box
-                component="span"
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  height: 20,
-                  px: '7px',
+                  color: chip.color,
+                  bgcolor: chip.bg,
                   borderRadius: '6px',
-                  bgcolor: 'rgba(220,38,38,0.1)',
-                  color: '#B91C1C',
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  letterSpacing: '0.02em',
+                  '& .MuiChip-label': { px: '8px' },
                 }}
-              >
-                Failed
-              </Box>
+              />
+              {isPending && (
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    height: 20,
+                    px: '7px',
+                    borderRadius: '6px',
+                    bgcolor: 'rgba(245,158,11,0.1)',
+                    color: '#B45309',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  Pending
+                </Box>
+              )}
+              {(((activity.type === 'Buy' || activity.type === 'Sell') && activity.failed) ||
+                (activity.type === 'Swap' && activity.failed) ||
+                (activity.type === 'Sent' &&
+                  activity.offramp &&
+                  activity.offrampStatus === 'failed')) && (
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    height: 20,
+                    px: '7px',
+                    borderRadius: '6px',
+                    bgcolor: 'rgba(220,38,38,0.1)',
+                    color: '#B91C1C',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  Failed
+                </Box>
+              )}
+              {activity.type === 'Swap' && activity.refunded && (
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    height: 20,
+                    px: '7px',
+                    borderRadius: '6px',
+                    bgcolor: 'rgba(245,158,11,0.1)',
+                    color: '#B45309',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  Refunded
+                </Box>
+              )}
+            </Box>
+            {amountStr && (
+              <Typography sx={{ fontSize: '12px', color: '#6B6B76', ...MONO }}>
+                {amountStr}
+              </Typography>
             )}
-            {activity.type === 'Swap' && activity.refunded && (
-              <Box
-                component="span"
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  height: 20,
-                  px: '7px',
-                  borderRadius: '6px',
-                  bgcolor: 'rgba(245,158,11,0.1)',
-                  color: '#B45309',
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  letterSpacing: '0.02em',
-                }}
-              >
-                Refunded
-              </Box>
+            {subtitle && (
+              <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>{subtitle}</Typography>
             )}
-          </Box>
-          {amountStr && (
-            <Typography sx={{ fontSize: '12px', color: '#6B6B76', ...MONO }}>
-              {amountStr}
-            </Typography>
-          )}
-          {subtitle && (
-            <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>
-              {subtitle}
-            </Typography>
-          )}
-        </Stack>
+          </Stack>
 
-        {/* right: usd value + time */}
-        <Stack alignItems="flex-end" spacing={0.2}>
-          {usdStr && (
-            <Typography sx={{ fontSize: '13.5px', fontWeight: 400, color: amountColor, ...MONO }}>
-              {amountPrefix}{usdStr}
+          {/* right: usd value + time */}
+          <Stack alignItems="flex-end" spacing={0.2}>
+            {usdStr && (
+              <Typography sx={{ fontSize: '13.5px', fontWeight: 400, color: amountColor, ...MONO }}>
+                {amountPrefix}
+                {usdStr}
+              </Typography>
+            )}
+            <Typography sx={{ fontSize: '11px', color: '#9A9AA3', ...MONO }}>
+              {time} {t('ago')}
             </Typography>
-          )}
-          <Typography sx={{ fontSize: '11px', color: '#9A9AA3', ...MONO }}>
-            {time} {t('ago')}
-          </Typography>
+          </Stack>
         </Stack>
       </Stack>
-    </Stack>
+      {cctpId && (
+        <SwapDetailModal
+          transferId={detailOpen ? cctpId : null}
+          onClose={() => setDetailOpen(false)}
+        />
+      )}
+    </>
   );
 }

@@ -15,22 +15,33 @@ export const CARD_SX = {
     '0 1px 0 rgba(255,255,255,0.6) inset, 0 24px 60px rgba(10,10,15,0.08), 0 2px 8px rgba(10,10,15,0.04)',
 } as const;
 
-export const DONUT_COLORS = ['#5BCFFF', '#B17BFF', '#FF7BC5', '#FFB060', '#6E8BFF', '#1AB37D', '#FF8A65'];
+export const DONUT_COLORS = [
+  '#5BCFFF',
+  '#B17BFF',
+  '#FF7BC5',
+  '#FFB060',
+  '#6E8BFF',
+  '#1AB37D',
+  '#FF8A65',
+];
 
 const ASSET_BRAND_COLORS: Record<string, string> = {
-  '__btc__':     '#F7931A', // Bitcoin orange
-  'BTC':         '#F7931A',
-  '__eth__':     '#627EEA', // Ethereum indigo
-  'ETH':         '#627EEA',
-  '__sol__':     '#9945FF', // Solana purple
-  'SOL':         '#9945FF',
-  '__savings__': '#FF6EB4', // Savings pink
-  'Savings':     '#FF6EB4',
-  'USDC':        '#2775CA', // USDC blue
-  'XLM':         '#B17BFF', // Stellar violet
+  __btc__: '#F7931A', // Bitcoin orange
+  BTC: '#F7931A',
+  __eth__: '#627EEA', // Ethereum indigo
+  ETH: '#627EEA',
+  __sol__: '#9945FF', // Solana purple
+  SOL: '#9945FF',
+  __savings__: '#FF6EB4', // Savings pink
+  Savings: '#FF6EB4',
+  USDC: '#2775CA', // USDC blue
+  XLM: '#B17BFF', // Stellar violet
 };
 
-export function getHoldingColor(token: { contract: string; symbol: string }, index: number): string {
+export function getHoldingColor(
+  token: { contract: string; symbol: string },
+  index: number
+): string {
   return (
     ASSET_BRAND_COLORS[token.contract] ??
     ASSET_BRAND_COLORS[token.symbol] ??
@@ -46,16 +57,16 @@ export const DONUT_STROKE = 20;
 export const DONUT_GAP = 7;
 
 export const TAG_STYLES = {
-  deposit:    { bg: 'rgba(26,179,125,0.11)',  color: '#0A6649', label: 'Deposit' },
-  withdraw:   { bg: 'rgba(10,10,15,0.07)',    color: '#2A2A33', label: 'Withdraw' },
-  swap:       { bg: 'rgba(177,123,255,0.13)', color: '#5A2E9E', label: 'Swap' },
-  send:       { bg: 'rgba(10,10,15,0.07)',    color: '#2A2A33', label: 'Sent' },
-  receive:    { bg: 'rgba(91,207,255,0.14)',  color: '#0A5272', label: 'Received' },
-  buy:        { bg: 'rgba(26,179,125,0.11)',  color: '#0A6649', label: 'On-Ramp' },
-  sell:       { bg: 'rgba(255,176,96,0.16)',  color: '#8A4A00', label: 'Off-Ramp' },
-  mint:       { bg: 'rgba(26,179,125,0.11)',  color: '#0A6649', label: 'Mint' },
-  redeem:     { bg: 'rgba(255,176,96,0.16)',  color: '#8A4A00', label: 'Redeem' },
-  add_liq:    { bg: 'rgba(91,207,255,0.14)',  color: '#0A5272', label: 'Add Liquidity' },
+  deposit: { bg: 'rgba(26,179,125,0.11)', color: '#0A6649', label: 'Deposit' },
+  withdraw: { bg: 'rgba(10,10,15,0.07)', color: '#2A2A33', label: 'Withdraw' },
+  swap: { bg: 'rgba(177,123,255,0.13)', color: '#5A2E9E', label: 'Swap' },
+  send: { bg: 'rgba(10,10,15,0.07)', color: '#2A2A33', label: 'Sent' },
+  receive: { bg: 'rgba(91,207,255,0.14)', color: '#0A5272', label: 'Received' },
+  buy: { bg: 'rgba(26,179,125,0.11)', color: '#0A6649', label: 'On-Ramp' },
+  sell: { bg: 'rgba(255,176,96,0.16)', color: '#8A4A00', label: 'Off-Ramp' },
+  mint: { bg: 'rgba(26,179,125,0.11)', color: '#0A6649', label: 'Mint' },
+  redeem: { bg: 'rgba(255,176,96,0.16)', color: '#8A4A00', label: 'Redeem' },
+  add_liq: { bg: 'rgba(91,207,255,0.14)', color: '#0A5272', label: 'Add Liquidity' },
   remove_liq: { bg: 'rgba(255,123,197,0.12)', color: '#7A1D4A', label: 'Remove Liquidity' },
 } as const;
 

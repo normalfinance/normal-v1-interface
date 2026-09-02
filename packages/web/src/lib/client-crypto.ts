@@ -202,11 +202,7 @@ export async function decryptFromLocalStorage(stored: string): Promise<string> {
   const iv = base64ToArrayBuffer(data.iv);
   const ciphertext = base64ToArrayBuffer(data.ct);
 
-  const decrypted = await window.crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
-    key,
-    ciphertext
-  );
+  const decrypted = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
 
   return new TextDecoder().decode(decrypted);
 }

@@ -3,8 +3,18 @@
 import type { Token } from '@normalfinance/types';
 
 import { BigNumber } from 'bignumber.js';
+import { announceTransaction } from '@/lib/tx-events';
 import { SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
+import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
+import {
+  checkSolRemainder,
+  solMaxSendLamports,
+  lamportsToSolString,
+  SOL_RENT_DUST_MESSAGE,
+  SOL_INSUFFICIENT_MESSAGE,
+} from '@/lib/send/native-dust';
 
 import type { SendParams, SendAdapter } from './index';
 
@@ -32,7 +42,7 @@ function bytesToHex(bytes: Uint8Array): string {
 
 export function createSolanaAdapter(
   solanaAddress: string,
-  onError?: (msg: string) => void,
+  onError?: (msg: string) => void
 ): SendAdapter {
   return {
     network: 'solana',
@@ -53,10 +63,43 @@ export function createSolanaAdapter(
       return spendable.gt(0) ? spendable : BigNumber(0);
     },
 
+    // Exact-lamport MAX from a LIVE balance read (2026-08-26): the display
+    // path rounded a 9dp asset to 8dp and stranded 9 lamports in Solana's
+    // forbidden rent window — MAX must leave EXACTLY zero, in integers.
+    async getMaxSendAmount(): Promise<string | null> {
+      const { Connection, PublicKey } = await import('@solana/web3.js');
+      const connection = new Connection(SOL_RPC_URL, 'confirmed');
+      const balance = await connection.getBalance(new PublicKey(solanaAddress), 'confirmed');
+      const max = solMaxSendLamports(BigInt(balance));
+      return max > 0n ? lamportsToSolString(max) : null;
+    },
+
+    // Pre-passkey guard: a typed amount that would leave 0 < remainder <
+    // rent-minimum is DOOMED on-chain — block it with honest copy instead
+    // of collecting a signature the network must reject. RPC hiccup -> null
+    // (proceed; the server broadcast funnel still answers honestly).
+    async validateSend(params: SendParams): Promise<string | null> {
+      try {
+        const { Connection, PublicKey } = await import('@solana/web3.js');
+        const connection = new Connection(SOL_RPC_URL, 'confirmed');
+        const balance = await connection.getBalance(new PublicKey(solanaAddress), 'confirmed');
+        const sendLamports = BigInt(Math.round(parseFloat(params.amount) * 1e9));
+        const verdict = checkSolRemainder(BigInt(balance), sendLamports);
+        if (verdict === 'insufficient') return SOL_INSUFFICIENT_MESSAGE;
+        if (verdict === 'rent-dust') return SOL_RENT_DUST_MESSAGE;
+        return null;
+      } catch {
+        return null;
+      }
+    },
+
     async send(params: SendParams): Promise<string> {
       try {
         const info = await getTurnkeyWalletInfo();
-        if (!info?.subOrgId) throw new Error('Turnkey wallet not found');
+        if (!info?.subOrgId)
+          throw new Error(
+            'Could not load your wallet just now — check your connection and try again.'
+          );
         const subOrgId = info.subOrgId;
 
         const { PublicKey, Connection, Transaction, SystemProgram } = await import(
@@ -72,7 +115,12 @@ export function createSolanaAdapter(
         const tx = new Transaction().add(
           SystemProgram.transfer({ fromPubkey, toPubkey, lamports })
         );
-        const { blockhash } = await connection.getLatestBlockhash('confirmed');
+        // Doc 90 1d: the public RPC 429s routinely — one quiet retry before a
+        // send-blocking failure.
+        const { blockhash } = await connection.getLatestBlockhash('confirmed').catch(async () => {
+          await new Promise((r) => setTimeout(r, 800));
+          return connection.getLatestBlockhash('confirmed');
+        });
         tx.recentBlockhash = blockhash;
         tx.feePayer = fromPubkey;
 
@@ -80,28 +128,27 @@ export function createSolanaAdapter(
 
         // Sign with Turnkey via the user's passkey (WebAuthn prompt) —
         // ed25519 signs the raw message, no pre-hashing.
-        const rpId =
-          typeof window !== 'undefined'
-            ? process.env.NEXT_PUBLIC_TURNKEY_RP_ID ?? window.location.hostname
-            : 'localhost';
-        const { WebauthnStamper } = await import('@turnkey/webauthn-stamper');
         const { TurnkeyClient } = await import('@turnkey/http');
         const turnkeyClient = new TurnkeyClient(
           { baseUrl: 'https://api.turnkey.com' },
-          new WebauthnStamper({ rpId })
+          await createPasskeyStamper()
         );
 
-        const signResult = await turnkeyClient.signRawPayload({
-          type: 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2',
-          timestampMs: String(Date.now()),
-          organizationId: subOrgId,
-          parameters: {
-            signWith: solanaAddress,
-            payload: bytesToHex(message),
-            encoding: 'PAYLOAD_ENCODING_HEXADECIMAL',
-            hashFunction: 'HASH_FUNCTION_NOT_APPLICABLE',
-          },
-        });
+        // Guarded ceremony (#51 coverage completed 2026-08-14).
+        const { runWebauthnCeremony } = await import('@/lib/turnkey/webauthn-guard');
+        const signResult = await runWebauthnCeremony(() =>
+          turnkeyClient.signRawPayload({
+            type: 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2',
+            timestampMs: String(Date.now()),
+            organizationId: subOrgId,
+            parameters: {
+              signWith: solanaAddress,
+              payload: bytesToHex(message),
+              encoding: 'PAYLOAD_ENCODING_HEXADECIMAL',
+              hashFunction: 'HASH_FUNCTION_NOT_APPLICABLE',
+            },
+          })
+        );
 
         const result = signResult?.activity?.result?.signRawPayloadResult;
         if (!result?.r || !result?.s) throw new Error('Signing failed — no signature returned');
@@ -114,12 +161,61 @@ export function createSolanaAdapter(
         tx.addSignature(fromPubkey, Buffer.from(signature));
         if (!tx.verifySignatures()) throw new Error('Signature verification failed');
 
-        const txid = await connection.sendRawTransaction(tx.serialize(), {
-          skipPreflight: false,
+        // Broadcast through the server funnel (#29): the signed tx is
+        // recorded BEFORE broadcast, the server relays it (like BTC), and a
+        // previous send with an unknown outcome blocks this one (409) — the
+        // structural double-send guard. Custody unchanged: the tx above is
+        // already fully signed by the passkey.
+        const { buildAuthHeaders } = await import('@/utils/http');
+        const res = await fetch('/api/send/execute', {
+          method: 'POST',
+          headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chain: 'solana',
+            signedTx: Buffer.from(tx.serialize()).toString('base64'),
+            symbol: 'SOL',
+            amount: params.amount,
+            destination: params.destination,
+          }),
         });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.success) {
+          throw new Error(data?.error || 'Send failed. Please try again.');
+        }
+        const txid: string = data.txHash;
+
+        // Pending row + cache-bypassed refresh (see lib/tx-events.ts).
+        announceTransaction({
+          chain: 'solana',
+          pendingSend: {
+            txHash: txid,
+            symbol: 'SOL',
+            amount: params.amount,
+            destination: params.destination,
+          },
+        });
+
+        // #62: fire ONE more refresh at the exact moment the chain confirms —
+        // SOL lands in ~2s, well before the old +8s timer shot, and this one
+        // cannot be swallowed by the server cache floor. Confirmation also
+        // ends the pending row's SPENDABLE subtraction (#66 follow-up — see
+        // the note in the ethereum adapter).
+        void import('@/lib/send-confirmation').then(({ watchSendConfirmation }) =>
+          watchSendConfirmation('solana', txid, (outcome) => {
+            if (outcome === 'confirmed') {
+              void import('@/lib/pending-sends').then(({ markSendConfirmed }) =>
+                markSendConfirmed(txid)
+              );
+            }
+            void import('@/lib/tx-events').then(({ announceConfirmation }) =>
+              announceConfirmation('solana')
+            );
+          })
+        );
+
         return txid;
       } catch (err: any) {
-        const msg: string = err?.message ?? 'Solana transaction failed';
+        const msg: string = friendlyAppError(err);
         onError?.(msg);
         return '';
       }

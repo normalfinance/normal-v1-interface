@@ -1,26 +1,48 @@
-import type { ReferralRow, VolumeDailyRow, LinkedWalletRow, WalletActivityRow, TransactionLogRow } from '@/lib/dune/tables';
+import type {
+  ReferralRow,
+  VolumeDailyRow,
+  LinkedWalletRow,
+  WalletActivityRow,
+} from '@/lib/dune/tables';
 
 import { prisma } from '@/lib/prisma';
+import { usdOf } from '@/lib/dune/activity-v2';
+import { getSpotPrices } from '@/lib/portfolio/aggregate';
 
-const NETWORK = process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() === 'mainnet' ? 'mainnet' : 'testnet';
+const NETWORK =
+  process.env.NEXT_PUBLIC_NETWORK?.toLowerCase() === 'mainnet' ? 'mainnet' : 'testnet';
+
+// #27: swap_logs / vault_deposits rows now exist BEFORE broadcast, with
+// pending/failed/abandoned states. Dune is a public money dashboard — only
+// confirmed rows may count.
+const CONFIRMED = { status: 'confirmed' } as const;
 
 // ---------------------------------------------------------------------------
 // Swap volume + fee revenue grouped by day
 // ---------------------------------------------------------------------------
 
 export async function fetchSwapVolume(): Promise<VolumeDailyRow[]> {
-  const swaps = await prisma.swapLog.findMany({
-    select: { createdAt: true, amountIn: true, feeAmount: true },
-    orderBy: { createdAt: 'asc' },
-  });
+  // Doc 122: amounts used to be summed in RAW TOKEN UNITS as if they were
+  // dollars — 1 XLM counted as $1, inflating the public volume counter ~6x on
+  // XLM swaps. Every amount and fee is now valued at spot via usdOf (stables
+  // 1:1, unknown symbols 0 — never an invented number).
+  const [spot, swaps] = await Promise.all([
+    getSpotPrices(),
+    prisma.swapLog.findMany({
+      where: CONFIRMED,
+      select: { createdAt: true, amountIn: true, feeAmount: true, tokenInSymbol: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ]);
 
   const byDay = new Map<string, { volume: number; fee: number; count: number }>();
 
   for (const swap of swaps) {
     const day = swap.createdAt.toISOString().slice(0, 10) + 'T00:00:00.000Z';
     const existing = byDay.get(day) ?? { volume: 0, fee: 0, count: 0 };
-    existing.volume += Number(swap.amountIn ?? 0);
-    existing.fee += Number(swap.feeAmount ?? 0);
+    const sym = swap.tokenInSymbol ?? 'UNKNOWN';
+    existing.volume += usdOf(sym, Number(swap.amountIn ?? 0), spot.prices);
+    existing.fee += usdOf(sym, Number(swap.feeAmount ?? 0), spot.prices);
     existing.count += 1;
     byDay.set(day, existing);
   }
@@ -41,8 +63,11 @@ export async function fetchSwapVolume(): Promise<VolumeDailyRow[]> {
 
 export async function fetchWalletActivity(): Promise<WalletActivityRow[]> {
   const [swaps, deposits] = await Promise.all([
-    prisma.swapLog.findMany({ select: { createdAt: true, walletAddress: true } }),
-    prisma.vaultDeposit.findMany({ select: { createdAt: true, walletAddress: true, type: true } }),
+    prisma.swapLog.findMany({ where: CONFIRMED, select: { createdAt: true, walletAddress: true } }),
+    prisma.vaultDeposit.findMany({
+      where: CONFIRMED,
+      select: { createdAt: true, walletAddress: true, type: true },
+    }),
   ]);
 
   const rows: WalletActivityRow[] = [];
@@ -74,6 +99,7 @@ export async function fetchWalletActivity(): Promise<WalletActivityRow[]> {
 
 export async function fetchAllDepositWallets(): Promise<string[]> {
   const results = await prisma.vaultDeposit.findMany({
+    where: CONFIRMED,
     select: { walletAddress: true },
     distinct: ['walletAddress'],
   });
@@ -98,71 +124,10 @@ export async function fetchLinkedWallets(): Promise<LinkedWalletRow[]> {
   }));
 }
 
-// ---------------------------------------------------------------------------
-// Unified per-transaction log — one row per on-chain action through Normal
-// ---------------------------------------------------------------------------
-
-export async function fetchTransactionLog(): Promise<TransactionLogRow[]> {
-  const [swaps, deposits] = await Promise.all([
-    prisma.swapLog.findMany({
-      select: {
-        createdAt: true,
-        walletAddress: true,
-        tokenInSymbol: true,
-        tokenOutSymbol: true,
-        amountIn: true,
-        amountOut: true,
-        feeAmount: true,
-        txHash: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    }),
-    prisma.vaultDeposit.findMany({
-      select: {
-        createdAt: true,
-        walletAddress: true,
-        type: true,
-        amount: true,
-        feeAmount: true,
-        txHash: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    }),
-  ]);
-
-  const rows: TransactionLogRow[] = [];
-
-  for (const s of swaps) {
-    rows.push({
-      date: s.createdAt.toISOString(),
-      wallet_address: s.walletAddress,
-      action_type: 'swap',
-      asset_in: s.tokenInSymbol ?? 'UNKNOWN',
-      asset_out: s.tokenOutSymbol ?? 'UNKNOWN',
-      amount: Number(s.amountIn ?? 0),
-      fee_usd: Number(s.feeAmount ?? 0),
-      tx_hash: s.txHash ?? '',
-      network: NETWORK,
-    });
-  }
-
-  for (const d of deposits) {
-    const isDeposit = d.type === 'deposit';
-    rows.push({
-      date: d.createdAt.toISOString(),
-      wallet_address: d.walletAddress,
-      action_type: isDeposit ? 'savings_deposit' : 'savings_withdraw',
-      asset_in: isDeposit ? 'USDC' : 'nUSDC',
-      asset_out: isDeposit ? 'nUSDC' : 'USDC',
-      amount: Number(d.amount ?? 0),
-      fee_usd: Number(d.feeAmount ?? 0),
-      tx_hash: d.txHash ?? '',
-      network: NETWORK,
-    });
-  }
-
-  return rows;
-}
+// The per-transaction log used to be built here from swap_logs + vault_deposits
+// alone, so it never saw CCTP, sends or ramps and logged fees in source-token
+// units. It is now derived from the v2 activity rows — see
+// lib/dune/transaction-log.ts (doc 125).
 
 // ---------------------------------------------------------------------------
 // Referral activations

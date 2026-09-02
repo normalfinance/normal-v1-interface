@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
 import { CoinbaseOfframpModal } from './coinbase-offramp-modal';
@@ -28,19 +29,41 @@ const VALID_CHAINS = new Set(['bitcoin', 'ethereum', 'solana', 'stellar']);
 
 export function OfframpResumeHandler() {
   const router = useRouter();
-  const { wallet, tokenState } = usePersistStore();
+  const { wallet } = usePersistStore();
+  const stellarTokens = useStellarTokens();
 
   // Latched from the URL so it survives the marker cleanup below.
   const [resume, setResume] = useState<{ chain: TurnkeyChain; sym: string } | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const KEY = 'nf:offramp-resume:v1';
     const params = new URLSearchParams(window.location.search);
-    if (params.get('offramp') !== 'coinbase') return;
+    if (params.get('offramp') !== 'coinbase') {
+      // Doc 90 W2: the markers are stripped below, so a page REFRESH used to
+      // lose the resume unrecoverably — restore it from the session latch.
+      try {
+        const saved = window.sessionStorage.getItem(KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved) as { chain?: string; sym?: string };
+          if (parsed?.chain && VALID_CHAINS.has(parsed.chain) && parsed?.sym) {
+            setResume({ chain: parsed.chain as TurnkeyChain, sym: parsed.sym });
+          }
+        }
+      } catch {
+        /* no latch */
+      }
+      return;
+    }
     const chain = params.get('chain');
     const sym = (params.get('sym') ?? '').toUpperCase();
     if (chain && VALID_CHAINS.has(chain) && sym) {
       setResume({ chain: chain as TurnkeyChain, sym });
+      try {
+        window.sessionStorage.setItem(KEY, JSON.stringify({ chain, sym }));
+      } catch {
+        /* latch is best-effort */
+      }
       router.replace(window.location.pathname); // strip markers
     }
   }, [router]);
@@ -59,7 +82,7 @@ export function OfframpResumeHandler() {
   let token: Token | null = null;
   if (chain === 'stellar' && STELLAR_SYMBOLS.has(sym)) {
     address = wallet.address ?? null;
-    token = tokenState.tokens.find((tk) => tk.symbol.toUpperCase() === sym) ?? null;
+    token = stellarTokens.find((tk) => tk.symbol.toUpperCase() === sym) ?? null;
   } else if (chain === 'bitcoin') {
     address = btc.bitcoinAddress;
     token = btc.btcToken;
@@ -76,7 +99,14 @@ export function OfframpResumeHandler() {
   return (
     <CoinbaseOfframpModal
       open
-      onClose={() => setResume(null)}
+      onClose={() => {
+        try {
+          window.sessionStorage.removeItem('nf:offramp-resume:v1');
+        } catch {
+          /* ignore */
+        }
+        setResume(null);
+      }}
       chain={chain}
       symbol={sym}
       address={address}

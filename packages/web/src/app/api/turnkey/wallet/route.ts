@@ -1,12 +1,17 @@
 import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { logger } from '@normalfinance/utils';
-import { getAccessToken } from '@/utils/http';
 import { turnkey, buildPasskeyRootUser } from '@/lib/turnkey/server';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { XLM_ACCOUNT, SOLANA_ACCOUNT, BITCOIN_ACCOUNT, ETHEREUM_ACCOUNT } from '@/lib/turnkey/account-specs';
+import { CHAINS, pickAddresses, ADDRESS_SELECT } from '@/lib/chains/registry';
+import {
+  XLM_ACCOUNT,
+  SOLANA_ACCOUNT,
+  BITCOIN_ACCOUNT,
+  ETHEREUM_ACCOUNT,
+} from '@/lib/turnkey/account-specs';
 
 const CHAIN_SPECS = {
   bitcoin: BITCOIN_ACCOUNT,
@@ -21,39 +26,28 @@ type Chain = keyof typeof CHAIN_SPECS;
 // GET /api/turnkey/wallet
 // Returns the authenticated user's Turnkey wallet addresses (or null)
 // ---------------------------------------------------------------------------
-export async function GET(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const GET = withAuth(async (request: NextRequest, { user }) => {
   const wallet = await prisma.turnkeyWallet.findUnique({
     where: { supabaseUid: user.id },
-    select: { subOrgId: true, walletId: true, bitcoinAddress: true, ethereumAddress: true, solanaAddress: true, stellarAddress: true },
+    // Address columns come from the registry, so a new chain's column is
+    // selected automatically instead of being added by hand here.
+    select: { subOrgId: true, walletId: true, ...ADDRESS_SELECT },
   });
 
   return NextResponse.json({ wallet: wallet ?? null });
-}
+});
 
 // ---------------------------------------------------------------------------
 // POST /api/turnkey/wallet
 // Creates a Turnkey sub-org + BTC/ETH/XLM wallet for the authenticated user.
 // Body: { challenge: string, attestation: { credentialId, clientDataJson, attestationObject, transports } }
 // ---------------------------------------------------------------------------
-export async function POST(request: NextRequest) {
-  const accessToken = getAccessToken(request);
-  const user = await getAuthenticatedUser(accessToken);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export const POST = withAuth(async (request: NextRequest, { user }) => {
   // Idempotent — return existing wallet if already provisioned
   const existing = await prisma.turnkeyWallet.findUnique({ where: { supabaseUid: user.id } });
   if (existing) {
     return NextResponse.json({
-      wallet: {
-        bitcoinAddress: existing.bitcoinAddress,
-        ethereumAddress: existing.ethereumAddress,
-        solanaAddress: existing.solanaAddress,
-        stellarAddress: existing.stellarAddress,
-      },
+      wallet: pickAddresses(existing),
     });
   }
 
@@ -84,7 +78,13 @@ export async function POST(request: NextRequest) {
     const apiClient = turnkey.apiClient();
 
     const result = await apiClient.createSubOrganization({
-      subOrganizationName: `normal-${user.id.slice(0, 8)}`,
+      // Unique by construction. The name is a dashboard label — nothing
+      // parses it — but the uid prefix alone REPEATS when an account is
+      // re-provisioned (support wipes the turnkey_wallets row so a user whose
+      // passkey became unusable can start over, and the uid is unchanged).
+      // A name we cannot guarantee is accepted twice would fail exactly the
+      // recovery it is needed for, so the suffix removes the question.
+      subOrganizationName: `normal-${user.id.slice(0, 8)}-${Date.now().toString(36)}`,
       rootQuorumThreshold: 1,
       rootUsers: [buildPasskeyRootUser(user, challenge, attestation)],
       wallet: {
@@ -100,28 +100,53 @@ export async function POST(request: NextRequest) {
     const address = result.wallet?.addresses?.[0] ?? null;
     const walletId = result.wallet?.walletId ?? '';
 
+    // Record the new wallet in the seed list too (doc 83). Best-effort: the
+    // table is additive SQL, and a wallet must be created even where it has
+    // not been run yet.
+    const recordSeed = async (row: {
+      supabaseUid: string;
+      walletId: string;
+      stellarAddress: string | null;
+      bitcoinAddress: string | null;
+      ethereumAddress: string | null;
+      solanaAddress: string | null;
+    }) => {
+      try {
+        await prisma.turnkeyWalletSeed.upsert({
+          where: { supabaseUid_walletId: { supabaseUid: row.supabaseUid, walletId: row.walletId } },
+          create: { ...row, label: 'Normal wallet', origin: 'created', isPrimary: true },
+          update: {},
+        });
+      } catch {
+        /* migration pending — wallet creation must not depend on it */
+      }
+    };
+
     const saved = await prisma.turnkeyWallet.create({
       data: {
         supabaseUid: user.id,
         subOrgId,
         walletId,
-        bitcoinAddress: chain === 'bitcoin' ? address : null,
-        stellarAddress: chain === 'stellar' ? address : null,
-        ethereumAddress: chain === 'ethereum' ? address : null,
-        solanaAddress: chain === 'solana' ? address : null,
+        // Lazy provisioning: only the requested chain gets an address, and the
+        // column is looked up from the registry rather than branched per chain.
+        [CHAINS[chain].addressField]: address,
       },
     });
 
     logger.log('[turnkey/wallet] Created wallet for user', { uid: user.id.slice(0, 8), chain });
 
+    await recordSeed({
+      supabaseUid: saved.supabaseUid,
+      walletId: saved.walletId,
+      stellarAddress: saved.stellarAddress,
+      bitcoinAddress: saved.bitcoinAddress,
+      ethereumAddress: saved.ethereumAddress,
+      solanaAddress: saved.solanaAddress,
+    });
+
     return NextResponse.json(
       {
-        wallet: {
-          bitcoinAddress: saved.bitcoinAddress,
-          ethereumAddress: saved.ethereumAddress,
-          solanaAddress: saved.solanaAddress,
-          stellarAddress: saved.stellarAddress,
-        },
+        wallet: pickAddresses(saved),
       },
       { status: 201 }
     );
@@ -129,4 +154,4 @@ export async function POST(request: NextRequest) {
     logger.error('[turnkey/wallet] Error creating sub-org:', error);
     return NextResponse.json({ error: 'Failed to create wallet' }, { status: 500 });
   }
-}
+});

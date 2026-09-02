@@ -1,8 +1,8 @@
+import { j } from '@/utils/http';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
-import { j, getAccessToken } from '@/utils/http';
 import { KNOWN_MGI_STATUSES } from '@/lib/mgi/statuses';
-import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 
 /**
  * PATCH /api/mgi/transactions/[id]
@@ -13,12 +13,8 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
  * so other views/devices see it. Only known SEP-24 statuses are accepted, and
  * only for rows the caller owns.
  */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export const PATCH = withAuth(async (req: Request, { user, params }) => {
   try {
-    const user = await getAuthenticatedUser(getAccessToken(req));
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
     if (!params.id) return j(400, { error: 'Missing transaction id' });
 
     const body = (await req.json().catch(() => ({}))) as {
@@ -49,4 +45,4 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   } catch (e: any) {
     return j(500, { error: e?.message || 'Server error' });
   }
-}
+});
