@@ -17,6 +17,7 @@ import type { NetworkType } from '@normalfinance/utils';
 
 import { prisma } from '@/lib/prisma';
 import { lifiSourceVerdict } from '@/lib/cctp/lifi-verdict';
+import { inboundAutofinishDecision } from '@/lib/cctp/autofinish';
 
 import { IrisClient } from './iris';
 import { wireToUsdc } from './decimals';
@@ -76,6 +77,56 @@ export async function advanceTransfer(transfer: CctpTransfer): Promise<CctpTrans
                   : 'Source transaction reverted on-chain — funds never left the sender; nothing was bridged',
             },
           });
+          break;
+        }
+
+        // Closed-tab finish (2026-09-02, proved live the same day): the source
+        // leg SUCCEEDED — USDC is sitting at the user's own Base address — but
+        // the burn was historically fired only by the browser tab, so a closed
+        // tab parked the transfer here until a banner tap. The cron now runs
+        // the same shared core the autopilot burn route uses, gated so it never
+        // races a live session and never surprise-fires an old row.
+        if (vd?.status === 'DONE') {
+          const decision = inboundAutofinishDecision({
+            ageMs: Date.now() - transfer.createdAt.getTime(),
+            retryCount: transfer.retryCount,
+          });
+          if (!decision.attempt) break;
+
+          // Claim by CAS on retryCount — two overlapping advance passes (a
+          // scheduled cron + a manual poke) increment it once between them;
+          // the loser matches 0 rows and walks away. The increment doubles as
+          // the attempt counter the gate above caps.
+          const claimed = await prisma.cctpTransfer.updateMany({
+            where: {
+              id: transfer.id,
+              status: 'CREATED',
+              burnTxHash: null,
+              retryCount: transfer.retryCount,
+            },
+            data: { retryCount: { increment: 1 } },
+          });
+          if (claimed.count === 0) break;
+
+          // Lazy import: the finisher drags the Turnkey SDK with it, which has
+          // no business loading for the 99% of advance passes that skip this.
+          const { finishInboundBurn } = await import('@/server/autopilot-inbound');
+          const result = await finishInboundBurn(transfer);
+          if (!result.ok) {
+            // Status stays CREATED — the banner path is untouched, and the
+            // next tick retries until the gate's attempt cap. A non-autopilot
+            // user lands here every time (their burn needs their passkey).
+            await prisma.cctpTransfer.updateMany({
+              where: { id: transfer.id, status: 'CREATED' },
+              data: {
+                errorDetail:
+                  `autofinish ${result.reason}${result.detail ? `: ${result.detail}` : ''}`.slice(
+                    0,
+                    500
+                  ),
+              },
+            });
+          }
         }
         break;
       }
