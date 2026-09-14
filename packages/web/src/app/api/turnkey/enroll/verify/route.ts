@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/with-auth';
 import { turnkey } from '@/lib/turnkey/server';
 import { rateLimiter } from '@/server/rateLimiter';
-import { findSubOrgId, recordEnrollment } from '@/lib/turnkey/enroll-server';
+import { findSubOrgId, recordEnrollment, turnkeyErrorText } from '@/lib/turnkey/enroll-server';
 import { isOtpId, isNonEmptyString, ENROLL_SESSION_SECONDS } from '@/lib/turnkey/enroll-policy';
 
 // ---------------------------------------------------------------------------
@@ -59,15 +59,16 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
   } catch (e) {
     // Wrong code, expired code, and replayed otpId all land here; Turnkey's
     // message is not for the user. The audit row keeps the otpId.
-    logger.warn('[enroll/verify] rejected', e);
+    const detail = turnkeyErrorText(e);
+    logger.warn('[enroll/verify] rejected', detail);
     await recordEnrollment({
       supabaseUid: user.id,
       subOrgId,
       step: 'refused',
       otpId: body.otpId,
-      detail: 'invalid_code',
+      detail: `invalid_code: ${detail}`,
       request,
     });
-    return NextResponse.json({ error: 'invalid_code' }, { status: 400 });
+    return NextResponse.json({ error: 'invalid_code', detail }, { status: 400 });
   }
 });
