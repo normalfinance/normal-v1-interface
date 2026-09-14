@@ -1,6 +1,7 @@
 import type { v1AuthenticatorTransport } from '@turnkey/sdk-types';
 
 import { Turnkey } from '@turnkey/sdk-server';
+import { pickRootUser } from '@/lib/turnkey/enroll-policy';
 
 // ---------------------------------------------------------------------------
 // Turnkey server client — parent-org API key, instantiated once per cold start.
@@ -17,12 +18,14 @@ export const turnkey = new Turnkey({
 });
 
 /**
- * Resolve the Turnkey root user ID of a sub-organization.
- * Our sub-orgs always have exactly one root user (the end user's passkey).
+ * Resolve the Turnkey root user ID of a sub-organization — the END USER's
+ * passkey user. Not users[0]: autopilot consent adds an API-only "Normal
+ * Autopilot" user and Turnkey lists users in no promised order (live
+ * 2026-09-14: users[0] was the autopilot user).
  */
 export async function getSubOrgRootUserId(subOrgId: string): Promise<string | null> {
   const { users } = await turnkey.apiClient().getUsers({ organizationId: subOrgId });
-  return users[0]?.userId ?? null;
+  return pickRootUser(users)?.userId ?? null;
 }
 
 // WebAuthn transport string → Turnkey enum
