@@ -28,7 +28,10 @@ import {
 //         message, signature } }
 //   publicKey       — the phone's compressed P-256 session public key
 //   clientSignature — the phone's signature over the token id + public key;
-//                     the server cannot forge it, which is the point.
+//                     the server cannot forge it, which is the point. Live
+//                     2026-09-14: Turnkey wants the RAW r||s P-256 signature
+//                     (64 bytes hex), not DER — DER fails with "invalid
+//                     signature length: must be even, got 71 bytes".
 // 200 { session, subOrgId, userId }
 //   session — Turnkey's session JWT (15 min). The phone now holds an API-key
 //   credential and stamps ACTIVITY_TYPE_CREATE_AUTHENTICATORS_V2 for its own

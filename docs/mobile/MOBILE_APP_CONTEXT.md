@@ -95,6 +95,12 @@ Routes the app needs (path under `/api/`):
   with the Turnkey root user, ≤5 passkeys per wallet, one enrolment session at a time
   (`invalidateExisting`), per-user rate limit, audit table `turnkey_enrollments`. Consequence:
   inbox + Normal login can now add a passkey. Guardrail email is a logged hook, not yet sent.
+  **Proven end to end 2026-09-14** on Niko's iPhone. Client gotchas: OTP_LOGIN_V2's
+  `clientSignature.signature` is the RAW r||s P-256 signature (64 bytes hex), not DER; the
+  signing key = the key bound in `encryptOtpCodeToBundle` (its public key is the token's
+  `public_key` claim); message = `JSON.stringify({ login: { publicKey }, tokenId: <token "id">,
+  type: 'USAGE_TYPE_LOGIN' })`. iOS: plain `webcredentials:normalfinance.io` works in dev builds
+  too (Apple's CDN already serves the AASA); `?mode=developer` needs a per-device opt-in.
 - **rpId is `normalfinance.io`** on staging and prod (env `NEXT_PUBLIC_TURNKEY_RP_ID`).
   Localhost web dev uses rpId `localhost`. A passkey only ever works under the rpId it was
   created with.
