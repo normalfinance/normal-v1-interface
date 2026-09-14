@@ -111,3 +111,24 @@ export async function notifyNewDevice(params: {
     authenticatorId: params.authenticatorId,
   });
 }
+
+/**
+ * Turnkey's rejection as one bounded line. Its errors carry the reason in
+ * `message` and often a structured `details` array; ids in them are the
+ * caller's own sub-org/token ids, not secrets. Capped so a row stays small.
+ */
+export function turnkeyErrorText(e: unknown): string {
+  const err = e as { message?: unknown; details?: unknown; code?: unknown } | null;
+  const parts: string[] = [];
+  if (err && typeof err.message === 'string') parts.push(err.message);
+  if (err && err.code !== undefined) parts.push(`code=${String(err.code)}`);
+  if (err && err.details !== undefined) {
+    try {
+      parts.push(`details=${JSON.stringify(err.details)}`);
+    } catch {
+      /* unserialisable details — message is enough */
+    }
+  }
+  const text = parts.join(' ') || String(e);
+  return text.length > 600 ? `${text.slice(0, 600)}…` : text;
+}

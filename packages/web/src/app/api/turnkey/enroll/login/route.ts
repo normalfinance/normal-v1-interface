@@ -5,7 +5,12 @@ import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/with-auth';
 import { turnkey } from '@/lib/turnkey/server';
 import { rateLimiter } from '@/server/rateLimiter';
-import { getRootUser, findSubOrgId, recordEnrollment } from '@/lib/turnkey/enroll-server';
+import {
+  getRootUser,
+  findSubOrgId,
+  recordEnrollment,
+  turnkeyErrorText,
+} from '@/lib/turnkey/enroll-server';
 import {
   isNonEmptyString,
   enrollmentVerdict,
@@ -97,14 +102,18 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     });
     return NextResponse.json({ session: result.session, subOrgId, userId: verdict.userId });
   } catch (e) {
-    logger.warn('[enroll/login] rejected', e);
+    // The shared logger is silent outside development, so Turnkey's reason
+    // goes into the audit row (readable in Supabase) and, bounded, back to
+    // the caller: it names the token, the key or the signature — none secret.
+    const detail = turnkeyErrorText(e);
+    logger.warn('[enroll/login] rejected', detail);
     await recordEnrollment({
       supabaseUid: user.id,
       subOrgId,
       step: 'refused',
-      detail: 'login_failed',
+      detail: `login_failed: ${detail}`,
       request,
     });
-    return NextResponse.json({ error: 'login_failed' }, { status: 400 });
+    return NextResponse.json({ error: 'login_failed', detail }, { status: 400 });
   }
 });
