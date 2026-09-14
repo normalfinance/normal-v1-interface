@@ -55,7 +55,13 @@ Routes the app needs (path under `/api/`):
 
 - **Wallet / Turnkey**: `turnkey/wallet` (create sub-org + wallet at signup; also adds
   per-chain addresses lazily), `turnkey/wallets`, `turnkey/credentials` (passkey credential
-  ids for `allowCredentials`), `turnkey/btc-pubkey`, `turnkey/build-btc-tx`,
+  ids for `allowCredentials`, plus `subOrgId` and root `userId`),
+  `turnkey/enroll/init` `{}` → `{ otpId, otpEncryptionTargetBundle }`,
+  `turnkey/enroll/verify` `{ otpId, encryptedOtpBundle }` → `{ verificationToken }`,
+  `turnkey/enroll/login` `{ verificationToken, publicKey, clientSignature }` → `{ session, subOrgId, userId }`,
+  `turnkey/enroll/complete` `{ authenticatorId, deviceName }` → `{ ok, authenticatorCount }`
+  (errors: `no_wallet` / `no_email` / `email_mismatch` / `too_many_authenticators` 409,
+  `invalid_code` / `login_failed` / `bad_request` 400, `not_found` 404, `turnkey_error` 502), `turnkey/btc-pubkey`, `turnkey/build-btc-tx`,
   `turnkey/broadcast-btc`, `turnkey/import`, `turnkey/import-init`, `wallets/check-limit`,
   `wallets/link`, `wallets/linked`.
 - **Portfolio / activity**: `wallet/portfolio`, `wallet/activity`, `portfolio/activity`,
@@ -80,8 +86,15 @@ Routes the app needs (path under `/api/`):
 - One Turnkey **sub-organization per user**, stored in Postgres `turnkey_wallets`
   (`supabaseUid` unique ↔ `subOrgId` unique, plus `bitcoinAddress`, `ethereumAddress`,
   `solanaAddress`, `stellarAddress`, all nullable).
-- **Passkey-only.** The user's passkey is the root authenticator of the sub-org. There is no
-  password, no email OTP signer, no recovery passkey flow in code today.
+- **Passkey-only for SIGNING.** The user's passkey is the root authenticator of the sub-org;
+  every signature is a passkey prompt. **Adding a passkey from a new phone exists since
+  2026-09-14** (Justin's custody decision): `POST /api/turnkey/enroll/{init,verify,login,complete}`
+  runs Turnkey's email-OTP flow (INIT_OTP_V3 → VERIFY_OTP_V2 → OTP_LOGIN_V2) so a signed-in user
+  whose passkey lives on another device gets a 15-minute session on their OWN sub-org and uses it
+  once to stamp `CREATE_AUTHENTICATORS_V2` for the phone's passkey. Guardrails: exact email match
+  with the Turnkey root user, ≤5 passkeys per wallet, one enrolment session at a time
+  (`invalidateExisting`), per-user rate limit, audit table `turnkey_enrollments`. Consequence:
+  inbox + Normal login can now add a passkey. Guardrail email is a logged hook, not yet sent.
 - **rpId is `normalfinance.io`** on staging and prod (env `NEXT_PUBLIC_TURNKEY_RP_ID`).
   Localhost web dev uses rpId `localhost`. A passkey only ever works under the rpId it was
   created with.

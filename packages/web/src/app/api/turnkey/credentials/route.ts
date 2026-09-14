@@ -58,6 +58,10 @@ export const GET = withAuth(async (_req: NextRequest, { user }) => {
       // Kept so a cached older client still gets the id restriction.
       credentialIds: credentials.map((c) => c.id),
       subOrgId: row.subOrgId,
+      // Root user id, so a client can address CREATE_AUTHENTICATORS_V2 (the
+      // phone-side enrolment, api/turnkey/enroll/*) without a second lookup.
+      // Our sub-orgs have exactly one root user (lib/turnkey/server.ts).
+      userId: users[0]?.userId ?? null,
     });
   } catch (e: any) {
     // Never block a ceremony on this: an empty list just means "no

@@ -271,6 +271,27 @@ model TurnkeyWallet {
 /// the full list. Signing never uses walletId (Turnkey signs by
 /// organizationId + address), so this table is for records and display only.
 /// Table ships as additive SQL: docs/audit/sql/turnkey_wallet_seeds.sql
+/// One row per STEP of a phone-side passkey enrolment via email OTP (custody
+/// decision 2026-09-14: an inbox + Normal login can now add a passkey to an
+/// existing wallet, so every step leaves a trail an incident can be read from).
+/// step: 'init' | 'verify' | 'login' | 'complete' | 'refused'. Table ships as
+/// additive SQL: docs/audit/sql/turnkey_enrollments.sql
+model TurnkeyEnrollment {
+  id          String   @id @default(cuid())
+  supabaseUid String
+  subOrgId    String
+  step        String
+  otpId       String?
+  detail      String?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([supabaseUid])
+  @@index([otpId])
+  @@map("turnkey_enrollments")
+}
+
 model TurnkeyWalletSeed {
   id              String   @id @default(cuid())
   supabaseUid     String
