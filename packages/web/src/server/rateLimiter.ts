@@ -127,6 +127,15 @@ export const exportMnemonicRateLimiter = new Ratelimit({
   prefix: 'export-mnemonic',
 });
 
+// Phone-side passkey enrolment via email OTP (docs/mobile/, 2026-09-14). Turnkey
+// applies its own 3-per-3-minutes per contact; this is OUR ceiling per user so
+// a stolen Supabase session cannot spray the owner's mailbox with codes.
+export const enrollRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '10 m'),
+  prefix: 'enroll',
+});
+
 export const rateLimiter = {
   limit: async (walletAddress: string, ip?: string) => {
     // Rate limit by wallet address
