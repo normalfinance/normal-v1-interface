@@ -2,6 +2,7 @@ import { it, expect, describe } from '@jest/globals';
 
 import {
   isOtpId,
+  pickRootUser,
   normalizeEmail,
   isClientSignature,
   enrollmentVerdict,
@@ -81,5 +82,39 @@ describe('input shapes', () => {
     expect(isClientSignature({ ...ok, signature: '' })).toBe(false);
     expect(isClientSignature({ ...ok, scheme: 'SOMETHING_ELSE' })).toBe(false);
     expect(isClientSignature(null)).toBe(false);
+  });
+});
+
+describe('pickRootUser', () => {
+  const autopilot = {
+    userId: 'ap',
+    userName: 'Normal Autopilot',
+    userEmail: undefined,
+    authenticators: [],
+    apiKeys: [{}],
+  };
+  const passkey = {
+    userId: 'root',
+    userName: 'a@b.co',
+    userEmail: 'a@b.co',
+    authenticators: [{}],
+    apiKeys: [],
+  };
+
+  it('prefers the passkey holder regardless of order (live 2026-09-14 bug)', () => {
+    expect(pickRootUser([autopilot, passkey])?.userId).toBe('root');
+    expect(pickRootUser([passkey, autopilot])?.userId).toBe('root');
+  });
+
+  it('falls back to a user with an email, then to a non-API-only user', () => {
+    const emailOnly = { userId: 'e', userEmail: 'x@y.z', authenticators: [], apiKeys: [] };
+    expect(pickRootUser([autopilot, emailOnly])?.userId).toBe('e');
+    const plain = { userId: 'p', authenticators: [], apiKeys: [] };
+    expect(pickRootUser([autopilot, plain])?.userId).toBe('p');
+  });
+
+  it('returns null for an empty list and the only user otherwise', () => {
+    expect(pickRootUser([])).toBeNull();
+    expect(pickRootUser([autopilot])?.userId).toBe('ap');
   });
 });

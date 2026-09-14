@@ -107,3 +107,32 @@ export function isClientSignature(value: unknown): value is ClientSignatureInput
     isNonEmptyString(v.signature, 1024)
   );
 }
+
+/** The slice of a Turnkey `getUsers` entry the picker needs. */
+export interface TurnkeyUserLike {
+  userId: string;
+  userName?: string;
+  userEmail?: string | null;
+  authenticators?: readonly unknown[];
+  apiKeys?: readonly unknown[];
+}
+
+/**
+ * The END USER among a sub-org's users.
+ *
+ * A sub-org has one passkey root user, but autopilot consent adds a second,
+ * API-only user ("Normal Autopilot", lib/turnkey/autopilot-consent.ts) with no
+ * email and no authenticators — and Turnkey lists users in no promised order.
+ * Live 2026-09-14: users[0] was the autopilot user, so enrolment refused a
+ * perfectly good account with `no_email`. Prefer the user holding a passkey,
+ * then one with an email, and never an API-only user while another exists.
+ */
+export function pickRootUser<T extends TurnkeyUserLike>(users: readonly T[]): T | null {
+  if (!users.length) return null;
+  const withPasskey = users.find((u) => (u.authenticators?.length ?? 0) > 0);
+  if (withPasskey) return withPasskey;
+  const withEmail = users.find((u) => normalizeEmail(u.userEmail) !== '');
+  if (withEmail) return withEmail;
+  const notApiOnly = users.find((u) => (u.apiKeys?.length ?? 0) === 0);
+  return notApiOnly ?? users[0];
+}

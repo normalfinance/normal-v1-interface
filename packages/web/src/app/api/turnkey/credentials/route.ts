@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/with-auth';
 import { turnkey } from '@/lib/turnkey/server';
+import { pickRootUser } from '@/lib/turnkey/enroll-policy';
 
 // The WebAuthn credential IDs registered to THIS user's Turnkey sub-org.
 //
@@ -60,8 +61,8 @@ export const GET = withAuth(async (_req: NextRequest, { user }) => {
       subOrgId: row.subOrgId,
       // Root user id, so a client can address CREATE_AUTHENTICATORS_V2 (the
       // phone-side enrolment, api/turnkey/enroll/*) without a second lookup.
-      // Our sub-orgs have exactly one root user (lib/turnkey/server.ts).
-      userId: users[0]?.userId ?? null,
+      // The passkey holder, not users[0] — autopilot adds an API-only user.
+      userId: pickRootUser(users)?.userId ?? null,
     });
   } catch (e: any) {
     // Never block a ceremony on this: an empty list just means "no

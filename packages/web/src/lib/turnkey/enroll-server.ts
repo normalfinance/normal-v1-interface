@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
 import { turnkey } from '@/lib/turnkey/server';
+import { pickRootUser } from '@/lib/turnkey/enroll-policy';
 
 // ---------------------------------------------------------------------------
 // Phone-side passkey enrolment — the SERVER side helpers shared by the four
@@ -27,13 +28,15 @@ export interface RootUser {
 }
 
 /**
- * The sub-org's root user, read from Turnkey with the parent-org key. Our
- * sub-orgs have exactly one (lib/turnkey/server.ts); Turnkey is the authority
- * on its email and its authenticators, never our database.
+ * The sub-org's END USER, read from Turnkey with the parent-org key. A sub-org
+ * has one passkey root user plus, after autopilot consent, an API-only user;
+ * pickRootUser tells them apart. Turnkey is the authority on the email and
+ * the authenticators, never our database.
  */
 export async function getRootUser(subOrgId: string): Promise<RootUser> {
   const { users } = await turnkey.apiClient().getUsers({ organizationId: subOrgId });
-  const u = users[0];
+  // Not users[0]: autopilot sub-orgs also hold an API-only user (see picker).
+  const u = pickRootUser(users);
   if (!u?.userId) throw new Error(`Sub-org ${subOrgId} has no root user`);
   return {
     userId: u.userId,
