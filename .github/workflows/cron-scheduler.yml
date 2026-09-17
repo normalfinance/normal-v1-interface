@@ -97,7 +97,7 @@ jobs:
           fi
 
           # cctp-advance first: it is the one that finishes bridges.
-          JOBS="cctp-advance fee-escrow-sweep ramp-reconcile"
+          JOBS="cctp-advance fee-escrow-sweep ramp-reconcile push-notify"
           CURL_MAX=110
 
           # The daily firing runs ONLY dune-sync: it makes ~24 Dune API calls

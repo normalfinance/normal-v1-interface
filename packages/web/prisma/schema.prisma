@@ -107,11 +107,19 @@ model SwapLog {
   status           String   @default("confirmed")
   statusReason     String?  // e.g. Horizon result codes on failure
   network          String?  // "mainnet" | "testnet"; null on legacy rows
+  /// LI.FI rows only (tokenInAddress 'lifi:*'): bridge delivery as last seen —
+  /// 'PENDING' | 'DONE' | 'REFUNDED' | 'FAILED'. Set PENDING by /api/lifi/record,
+  /// advanced by the push-notify cron. null on Soroswap and legacy rows.
+  bridgeStatus     String?
+  bridgeCheckedAt  DateTime?
+  /// Push sent for the terminal bridge state; CAS-claimed like cctp_transfers.
+  notifiedAt       DateTime?
   createdAt        DateTime @default(now())
 
   @@index([walletAddress])
   @@index([status])
   @@index([txHash])
+  @@index([bridgeStatus])
   @@map("swap_logs")
 }
 
@@ -148,12 +156,16 @@ model CctpTransfer {
   quoteJson      String?  // full quote snapshot incl. fee breakdown
   errorDetail    String?
   retryCount     Int      @default(0)
+  /// Push notification sent for the user-visible terminal state (doc: push).
+  /// null = not yet; claimed with a CAS updateMany so exactly one push goes out.
+  notifiedAt     DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
   @@index([burnTxHash])
+  @@index([notifiedAt])
   @@map("cctp_transfers")
 }
 
@@ -196,11 +208,14 @@ model SendLog {
   status        String   @default("pending")
   statusReason  String?
   network       String?
+  /// Push sent for the terminal status; CAS-claimed like cctp_transfers.
+  notifiedAt    DateTime?
   createdAt     DateTime @default(now())
 
   @@index([walletAddress])
   @@index([status])
   @@index([txHash])
+  @@index([notifiedAt])
   @@map("send_logs")
 }
 
@@ -276,6 +291,31 @@ model TurnkeyWallet {
 /// existing wallet, so every step leaves a trail an incident can be read from).
 /// step: 'init' | 'verify' | 'login' | 'complete' | 'refused'. Table ships as
 /// additive SQL: docs/audit/sql/turnkey_enrollments.sql
+/// One row per DEVICE that may receive push notifications. `token` is unique on
+/// its own: an APNs/FCM token identifies device+app, so when a second person
+/// signs in on the same phone the row's supabaseUid is overwritten — otherwise
+/// the first user would keep receiving the second user's alerts. Disabled (not
+/// deleted) when the provider says the token is dead, so the reason is kept.
+/// Table ships as additive SQL: docs/audit/sql/push_notifications.sql
+model PushDevice {
+  id             String    @id @default(cuid())
+  token          String    @unique
+  supabaseUid    String
+  /// 'ios' | 'android'
+  platform       String
+  deviceName     String?
+  /// 'dev' (APNs sandbox, Xcode-signed) | 'prod' (APNs production / any Android)
+  appVariant     String    @default("prod")
+  createdAt      DateTime  @default(now())
+  lastSeenAt     DateTime  @default(now())
+  disabledAt     DateTime?
+  disabledReason String?
+
+  @@index([supabaseUid])
+  @@index([disabledAt])
+  @@map("push_devices")
+}
+
 model TurnkeyEnrollment {
   id          String   @id @default(cuid())
   supabaseUid String

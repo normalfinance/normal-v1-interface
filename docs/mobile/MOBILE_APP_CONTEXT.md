@@ -78,6 +78,15 @@ Routes the app needs (path under `/api/`):
   `fees/execute-pair`.
 - **Ramps**: `mgi/*` (SEP-10 challenge/complete, SEP-24 deposit/withdraw, transactions),
   `ramp/transfers`, `coinbase/session`, `coinbase/offramp-status`, `offramp/fills`.
+- **Push notifications** (2026-09-16): `push/register` `{ token, platform:'ios'|'android', deviceName?, appVariant:'dev'|'prod' }`
+  → `{ success }` (upsert BY TOKEN; a second signer-in on the same phone takes the token over),
+  `push/unregister` `{ token }` → `{ success, removed }`. Server pushes from the `push-notify` cron
+  (and after `cctp-advance`): CCTP user-visible terminal (inbound COMPLETED / outbound
+  dstSwapTxHash / REFUNDED / FAILED), ETH+SOL send confirmed/failed, LI.FI native swaps
+  DONE/REFUNDED/FAILED. Payload `data`: `{type:'cctp',transferId,status}` |
+  `{type:'lifi',txHash,status}` | `{type:'send',txHash,chain,status}`. Amounts in the body
+  only when server env `PUSH_INCLUDE_AMOUNTS=1` (default off, lock-screen privacy). Kill switch
+  `PUSH_DISABLED=1`. Raw APNs (HTTP/2, .p8) + FCM v1 — not Expo Push.
 - **Other**: `referral/*`, `marketing/opt-in`, `crisp`, `transaction`.
 - Server-only (never called by a client): `cron/*`.
 
@@ -95,6 +104,12 @@ Routes the app needs (path under `/api/`):
   with the Turnkey root user, ≤5 passkeys per wallet, one enrolment session at a time
   (`invalidateExisting`), per-user rate limit, audit table `turnkey_enrollments`. Consequence:
   inbox + Normal login can now add a passkey. Guardrail email is a logged hook, not yet sent.
+  **Proven end to end 2026-09-14** on Niko's iPhone. Client gotchas: OTP_LOGIN_V2's
+  `clientSignature.signature` is the RAW r||s P-256 signature (64 bytes hex), not DER; the
+  signing key = the key bound in `encryptOtpCodeToBundle` (its public key is the token's
+  `public_key` claim); message = `JSON.stringify({ login: { publicKey }, tokenId: <token "id">,
+  type: 'USAGE_TYPE_LOGIN' })`. iOS: plain `webcredentials:normalfinance.io` works in dev builds
+  too (Apple's CDN already serves the AASA); `?mode=developer` needs a per-device opt-in.
 - **rpId is `normalfinance.io`** on staging and prod (env `NEXT_PUBLIC_TURNKEY_RP_ID`).
   Localhost web dev uses rpId `localhost`. A passkey only ever works under the rpId it was
   created with.
