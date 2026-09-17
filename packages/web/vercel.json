@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/ramp-reconcile/",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/push-notify/",
+      "schedule": "*/2 * * * *"
     }
   ]
 }

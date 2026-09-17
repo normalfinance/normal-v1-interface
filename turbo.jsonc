@@ -176,6 +176,15 @@
 
     // Ops, jobs and analytics
     "CRON_SECRET",
+    // Push notifications (mobile) — see docs/audit/sql/push_notifications.sql
+    "APNS_BUNDLE_ID_DEV",
+    "APNS_BUNDLE_ID_PROD",
+    "APNS_KEY",
+    "APNS_KEY_ID",
+    "APNS_TEAM_ID",
+    "FIREBASE_SERVICE_ACCOUNT",
+    "PUSH_DISABLED",
+    "PUSH_INCLUDE_AMOUNTS",
     "CUSTOMERIO_API_KEY",
     "CUSTOMERIO_SITE_ID",
     "DUNE_API_KEY",

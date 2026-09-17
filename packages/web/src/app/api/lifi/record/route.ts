@@ -46,10 +46,20 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     return NextResponse.json({ success: true, recorded: false });
   }
 
+  // One row per source tx: the tracker retries this call up to 3×, and a
+  // duplicate row would notify (and display) the swap twice.
+  const existing = await prisma.swapLog.findFirst({
+    where: { txHash: String(txHash) },
+    select: { id: true },
+  });
+  if (existing) return NextResponse.json({ success: true, recorded: false, duplicate: true });
+
   try {
     await prisma.swapLog.create({
       data: {
         walletAddress: wallet.stellarAddress,
+        // Followed by the push-notify cron until LI.FI reports DONE/REFUNDED/FAILED.
+        bridgeStatus: 'PENDING',
         // Synthetic refs (not Stellar contracts) — the symbol fields drive display.
         tokenInAddress: `lifi:${fromSymbol}`,
         tokenOutAddress: `lifi:${toSymbol}`,

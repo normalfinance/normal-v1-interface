@@ -78,6 +78,15 @@ Routes the app needs (path under `/api/`):
   `fees/execute-pair`.
 - **Ramps**: `mgi/*` (SEP-10 challenge/complete, SEP-24 deposit/withdraw, transactions),
   `ramp/transfers`, `coinbase/session`, `coinbase/offramp-status`, `offramp/fills`.
+- **Push notifications** (2026-09-16): `push/register` `{ token, platform:'ios'|'android', deviceName?, appVariant:'dev'|'prod' }`
+  → `{ success }` (upsert BY TOKEN; a second signer-in on the same phone takes the token over),
+  `push/unregister` `{ token }` → `{ success, removed }`. Server pushes from the `push-notify` cron
+  (and after `cctp-advance`): CCTP user-visible terminal (inbound COMPLETED / outbound
+  dstSwapTxHash / REFUNDED / FAILED), ETH+SOL send confirmed/failed, LI.FI native swaps
+  DONE/REFUNDED/FAILED. Payload `data`: `{type:'cctp',transferId,status}` |
+  `{type:'lifi',txHash,status}` | `{type:'send',txHash,chain,status}`. Amounts in the body
+  only when server env `PUSH_INCLUDE_AMOUNTS=1` (default off, lock-screen privacy). Kill switch
+  `PUSH_DISABLED=1`. Raw APNs (HTTP/2, .p8) + FCM v1 — not Expo Push.
 - **Other**: `referral/*`, `marketing/opt-in`, `crisp`, `transaction`.
 - Server-only (never called by a client): `cron/*`.
 
