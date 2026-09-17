@@ -4,8 +4,8 @@
 // even when nobody has the app open. Registered in packages/web/vercel.json.
 import { NextResponse } from 'next/server';
 import { cronAuthVerdict } from '@/server/cron-auth';
-import { advancePendingTransfers } from '@/lib/cctp/state';
 import { notifyTerminalCctp } from '@/lib/push/sweeps';
+import { advancePendingTransfers } from '@/lib/cctp/state';
 import { recordCronHeartbeat } from '@/server/cron-heartbeat';
 
 export const dynamic = 'force-dynamic';
