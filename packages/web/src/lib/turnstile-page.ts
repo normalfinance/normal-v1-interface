@@ -37,7 +37,22 @@ function pick<T extends readonly string[]>(
 /** Text → safe JS string literal (via JSON) so no query value can break out. */
 const js = (v: string) => JSON.stringify(v);
 
+/**
+ * The env value as a bare key. Live 2026-09-21: NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ * had been entered in Vercel WITH its quotes, so the page shipped
+ * `var siteKey = "\"0x4AAA…\""` and turnstile.render() threw on the phone.
+ * A site key is `0x` + base64url-ish characters; anything else around it is
+ * noise from a paste, never part of the key.
+ */
+export function normalizeSiteKey(raw: string | null | undefined): string {
+  return (raw ?? '')
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, '')
+    .trim();
+}
+
 export function buildTurnstilePage(opts: TurnstilePageOptions): string {
+  const siteKey = normalizeSiteKey(opts.siteKey);
   const theme = pick(TURNSTILE_THEMES, opts.theme, 'light');
   const appearance = pick(TURNSTILE_APPEARANCES, opts.appearance, 'always');
   const bg = theme === 'dark' ? '#0A0A0F' : '#ffffff';
@@ -62,7 +77,7 @@ export function buildTurnstilePage(opts: TurnstilePageOptions): string {
 <div id="w"></div>
 <script>
 (function () {
-  var siteKey = ${js(opts.siteKey)};
+  var siteKey = ${js(siteKey)};
   function post(msg) {
     var s = JSON.stringify(msg);
     try { if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(s); } catch (e) {}
@@ -70,19 +85,28 @@ export function buildTurnstilePage(opts: TurnstilePageOptions): string {
   }
   window.__nfTurnstileReady = function () {
     if (!siteKey) { post({ type: 'turnstile-error', reason: 'missing-site-key' }); return; }
-    window.turnstile.render('#w', {
-      sitekey: siteKey,
-      theme: ${js(theme)},
-      appearance: ${js(appearance)},
-      callback: function (token) {
-        window.__turnstileToken = token;
-        post({ type: 'turnstile', token: token });
-      },
-      'error-callback': function (code) { post({ type: 'turnstile-error', reason: 'error:' + (code || 'unknown') }); return true; },
-      'expired-callback': function () { post({ type: 'turnstile-error', reason: 'expired' }); },
-      'timeout-callback': function () { post({ type: 'turnstile-error', reason: 'timeout' }); }
-    });
+    // A thrown render (bad key, blocked script) must surface on the phone as a
+    // message, not as a silent hang behind a blank widget box.
+    try {
+      window.turnstile.render('#w', {
+        sitekey: siteKey,
+        theme: ${js(theme)},
+        appearance: ${js(appearance)},
+        callback: function (token) {
+          window.__turnstileToken = token;
+          post({ type: 'turnstile', token: token });
+        },
+        'error-callback': function (code) { post({ type: 'turnstile-error', reason: 'error:' + (code || 'unknown') }); return true; },
+        'expired-callback': function () { post({ type: 'turnstile-error', reason: 'expired' }); },
+        'timeout-callback': function () { post({ type: 'turnstile-error', reason: 'timeout' }); }
+      });
+    } catch (e) {
+      post({ type: 'turnstile-error', reason: 'render:' + String(e && e.message ? e.message : e) });
+    }
   };
+  window.addEventListener('error', function (ev) {
+    post({ type: 'turnstile-error', reason: 'script:' + String(ev && ev.message ? ev.message : 'unknown') });
+  });
 })();
 </script>
 </body>
