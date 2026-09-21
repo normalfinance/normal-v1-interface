@@ -28,6 +28,8 @@ export function GET(request: NextRequest): Response {
     siteKey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '',
     theme: q.get('theme'),
     appearance: q.get('appearance'),
+    // Optional return-by-navigation target; only the app scheme is honoured.
+    redirect: q.get('redirect'),
   });
   return new Response(html, {
     status: 200,

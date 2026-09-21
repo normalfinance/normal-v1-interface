@@ -24,6 +24,34 @@ export interface TurnstilePageOptions {
   siteKey: string;
   theme?: string | null;
   appearance?: string | null;
+  /**
+   * Where to send the result by navigation, for hosts that cannot receive
+   * postMessage (ASWebAuthenticationSession on iOS: Cloudflare scores the
+   * in-app WKWebView as a bot, so the app opens a real Safari sheet and
+   * reads `?token=` / `?error=` off the return URL). Only the app's own
+   * scheme is ever honoured — see `allowedRedirect`.
+   */
+  redirect?: string | null;
+}
+
+/** The one scheme the page may navigate to. Never http(s): that would be an open redirect. */
+export const REDIRECT_SCHEME = 'normalapp:';
+
+/**
+ * A redirect target the page may use, or null. Must parse as a URL and carry
+ * exactly the app scheme; everything else (https, javascript:, relative
+ * paths, garbage) is dropped silently and the page falls back to postMessage.
+ */
+export function allowedRedirect(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== REDIRECT_SCHEME) return null;
+    if (u.hash) return null; // a fragment would swallow the query we append
+    return u.toString();
+  } catch {
+    return null;
+  }
 }
 
 function pick<T extends readonly string[]>(
@@ -55,6 +83,7 @@ export function buildTurnstilePage(opts: TurnstilePageOptions): string {
   const siteKey = normalizeSiteKey(opts.siteKey);
   const theme = pick(TURNSTILE_THEMES, opts.theme, 'light');
   const appearance = pick(TURNSTILE_APPEARANCES, opts.appearance, 'always');
+  const redirect = allowedRedirect(opts.redirect);
   const bg = theme === 'dark' ? '#0A0A0F' : '#ffffff';
 
   // Messages the app listens for: { type: 'turnstile', token } on success,
@@ -78,10 +107,21 @@ export function buildTurnstilePage(opts: TurnstilePageOptions): string {
 <script>
 (function () {
   var siteKey = ${js(siteKey)};
+  var redirect = ${js(redirect ?? '')};
+  var navigated = false;
+  // Hand the result back by navigation when the host asked for it (Safari
+  // sheet), in addition to postMessage. Only ever fires once per page.
+  function deliver(query) {
+    if (!redirect || navigated) return;
+    navigated = true;
+    location.replace(redirect + (redirect.indexOf('?') >= 0 ? '&' : '?') + query);
+  }
   function post(msg) {
     var s = JSON.stringify(msg);
     try { if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(s); } catch (e) {}
     try { if (window.parent && window.parent !== window) window.parent.postMessage(s, '*'); } catch (e) {}
+    if (msg.type === 'turnstile') deliver('token=' + encodeURIComponent(msg.token));
+    else if (msg.type === 'turnstile-error') deliver('error=' + encodeURIComponent(msg.reason));
   }
   window.__nfTurnstileReady = function () {
     if (!siteKey) { post({ type: 'turnstile-error', reason: 'missing-site-key' }); return; }

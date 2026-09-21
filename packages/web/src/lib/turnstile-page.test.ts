@@ -1,6 +1,6 @@
 import { it, expect, describe } from '@jest/globals';
 
-import { normalizeSiteKey, buildTurnstilePage } from './turnstile-page';
+import { allowedRedirect, normalizeSiteKey, buildTurnstilePage } from './turnstile-page';
 
 describe('buildTurnstilePage', () => {
   it('embeds the site key and the postMessage contract', () => {
@@ -41,6 +41,30 @@ describe('buildTurnstilePage', () => {
     expect(html).not.toContain('\\"0x4AAAAAACUeRJhXGht9EqJI\\"');
     expect(normalizeSiteKey(" '0xabc' ")).toBe('0xabc');
     expect(normalizeSiteKey(undefined)).toBe('');
+  });
+
+  it('honours a redirect only on the app scheme, and appends token/error by navigation', () => {
+    expect(allowedRedirect('normalapp://captcha')).toBe('normalapp://captcha');
+    expect(allowedRedirect('normalapp://captcha?src=signup')).toBe(
+      'normalapp://captcha?src=signup'
+    );
+    expect(allowedRedirect('https://evil.example/steal')).toBeNull();
+    expect(allowedRedirect('javascript:alert(1)')).toBeNull();
+    expect(allowedRedirect('/relative')).toBeNull();
+    expect(allowedRedirect('normalapp://captcha#frag')).toBeNull();
+    expect(allowedRedirect(null)).toBeNull();
+
+    const html = buildTurnstilePage({ siteKey: 'k', redirect: 'normalapp://captcha' });
+    expect(html).toContain('var redirect = "normalapp://captcha";');
+    expect(html).toContain("deliver('token=' + encodeURIComponent(msg.token))");
+    expect(html).toContain("deliver('error=' + encodeURIComponent(msg.reason))");
+    expect(html).toContain(
+      "location.replace(redirect + (redirect.indexOf('?') >= 0 ? '&' : '?') + query)"
+    );
+
+    const rejected = buildTurnstilePage({ siteKey: 'k', redirect: 'https://evil.example' });
+    expect(rejected).toContain('var redirect = "";');
+    expect(rejected).not.toContain('evil.example');
   });
 
   it('surfaces a thrown render and any script error as turnstile-error messages', () => {
