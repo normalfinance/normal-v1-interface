@@ -163,7 +163,9 @@ const AuthLoginModal = ({
         await persistTosAcceptance();
         if (isSignUp) {
           await signUpWithPassword(email.trim(), password, captchaToken);
-          setError(t('Account created! Please check your email to verify your account.'));
+          setError(
+            t('Account created! Check your email for a 6-digit code to verify your account.')
+          );
           setLoading(false);
         } else {
           await signInWithPassword(email.trim(), password, captchaToken);

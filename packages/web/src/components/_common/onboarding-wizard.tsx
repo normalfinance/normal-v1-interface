@@ -1332,8 +1332,8 @@ export default function OnboardingWizard({
             {t('Check your email')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {t('We sent a confirmation link to')} <strong>{verifyEmailAddress}</strong>.{' '}
-            {t('Click the link to activate your account.')}
+            {t('We sent a 6-digit code to')} <strong>{verifyEmailAddress}</strong>.{' '}
+            {t('Enter the code below to activate your account.')}
           </Typography>
         </Box>
       </Stack>
