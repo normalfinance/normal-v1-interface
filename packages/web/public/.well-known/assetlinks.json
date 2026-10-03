@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "io.normalfinance.app",
       "sha256_cert_fingerprints": [
-        "98:96:DC:EB:E0:82:64:48:82:02:15:AE:A9:18:82:B9:F8:E5:60:80:4B:95:A5:4B:A6:BF:20:16:7A:C1:1C:8A"
+        "98:96:DC:EB:E0:82:64:48:82:02:15:AE:A9:18:82:B9:F8:E5:60:80:4B:95:A5:4B:A6:BF:20:16:7A:C1:1C:8A",
+        "27:82:52:D1:37:EF:3F:28:71:B0:92:6D:30:4C:70:75:23:44:51:CE:18:F2:D4:81:3D:36:D2:2A:AC:D2:DD:AB"
       ]
     }
   }
