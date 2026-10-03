@@ -29,15 +29,6 @@ import {
   removeStoredNormalWalletKey,
 } from '@/hooks/stellar/use-normal-wallet';
 import {
-  verifyOtp,
-  signInWithOtp,
-  resetPassword,
-  signInWithGoogle,
-  signInWithPassword,
-  signUpWithPassword,
-  resendConfirmationEmail,
-} from '@/services/auth';
-import {
   logger,
   format,
   isTestnet,
@@ -47,6 +38,16 @@ import {
   validatePrivateKey,
   createCoinbasePayOnrampURL,
 } from '@normalfinance/utils';
+import {
+  verifyOtp,
+  signInWithOtp,
+  resetPassword,
+  verifySignupOtp,
+  signInWithGoogle,
+  signInWithPassword,
+  signUpWithPassword,
+  resendConfirmationEmail,
+} from '@/services/auth';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -207,6 +208,9 @@ export default function OnboardingWizard({
   const [authError, setAuthError] = useState<string | null>(null);
   const [verifyEmailAddress, setVerifyEmailAddress] = useState('');
   const [isResendingConfirmation, setIsResendingConfirmation] = useState(false);
+  const [signupCode, setSignupCode] = useState('');
+  const [signupCodeError, setSignupCodeError] = useState<string | null>(null);
+  const [isVerifyingSignup, setIsVerifyingSignup] = useState(false);
 
   // ── Create-wallet (Turnkey) state ─────────────────────────────────────────
   const [isCreatingWallet, setIsCreatingWallet] = useState(false);
@@ -514,6 +518,9 @@ export default function OnboardingWizard({
     setCaptchaToken(null);
     setVerifyEmailAddress('');
     setIsResendingConfirmation(false);
+    setSignupCode('');
+    setSignupCodeError(null);
+    setIsVerifyingSignup(false);
     setWalletCreateError(null);
     setIsCreatingWallet(false);
     setImportMnemonic('');
@@ -658,6 +665,28 @@ export default function OnboardingWizard({
     } finally {
       setIsResendingConfirmation(false);
     }
+  };
+
+  // Confirms the sign-up with the emailed code. On success Supabase returns a
+  // session and the auth effect moves the wizard on, same as any other sign-in.
+  const handleVerifySignup = async (code: string) => {
+    if (!verifyEmailAddress || isVerifyingSignup) return;
+    setIsVerifyingSignup(true);
+    setSignupCodeError(null);
+    try {
+      await verifySignupOtp(verifyEmailAddress, code);
+    } catch (err: any) {
+      setSignupCodeError(err?.message || t('Invalid code. Please try again.'));
+      setSignupCode('');
+      setIsVerifyingSignup(false);
+    }
+  };
+
+  const handleSignupCodeChange = (value: string) => {
+    const numeric = value.replace(/\D/g, '').slice(0, 6);
+    setSignupCode(numeric);
+    setSignupCodeError(null);
+    if (numeric.length === 6) handleVerifySignup(numeric);
   };
 
   // ── Wallet creation handler (Turnkey) ─────────────────────────────────────
@@ -1338,16 +1367,38 @@ export default function OnboardingWizard({
         </Box>
       </Stack>
 
-      <Alert
-        severity="info"
-        icon={<Iconify icon="solar:info-circle-bold" width={20} />}
-        sx={{ borderRadius: 2 }}
-      >
-        <Typography variant="body2">
-          {t('Open the link in')} <strong>{t('this browser')}</strong>
-          {t(" so you're signed in automatically.")}
-        </Typography>
-      </Alert>
+      <TextField
+        label={t('6-digit code')}
+        value={signupCode}
+        onChange={(e) => handleSignupCodeChange(e.target.value)}
+        fullWidth
+        disabled={isVerifyingSignup}
+        slotProps={{
+          htmlInput: {
+            maxLength: 6,
+            inputMode: 'numeric',
+            autoComplete: 'one-time-code',
+            style: {
+              textAlign: 'center',
+              letterSpacing: '0.6em',
+              fontSize: '1.5rem',
+              fontWeight: 600,
+            },
+          },
+        }}
+        autoFocus
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+      />
+      {isVerifyingSignup && (
+        <Stack alignItems="center">
+          <CircularProgress size={24} />
+        </Stack>
+      )}
+      {signupCodeError && (
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
+          {signupCodeError}
+        </Alert>
+      )}
 
       <Stack spacing={1.5}>
         <Button
@@ -1374,6 +1425,8 @@ export default function OnboardingWizard({
           onClick={() => {
             setStep('sign-in');
             setVerifyEmailAddress('');
+            setSignupCode('');
+            setSignupCodeError(null);
             setAuthError(null);
           }}
           sx={{ color: 'text.secondary', fontSize: '0.8rem' }}
