@@ -46,8 +46,16 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
   // Idempotent — return existing wallet if already provisioned
   const existing = await prisma.turnkeyWallet.findUnique({ where: { supabaseUid: user.id } });
   if (existing) {
+    // The caller's own row: return its ids too, so a client that reached
+    // this branch by racing itself (live 2026-09-22, mobile) can tell
+    // "already provisioned" from "nothing was created" without a second GET.
     return NextResponse.json({
-      wallet: pickAddresses(existing),
+      wallet: {
+        subOrgId: existing.subOrgId,
+        walletId: existing.walletId,
+        ...pickAddresses(existing),
+      },
+      existing: true,
     });
   }
 
@@ -146,7 +154,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
 
     return NextResponse.json(
       {
-        wallet: pickAddresses(saved),
+        wallet: { subOrgId: saved.subOrgId, walletId: saved.walletId, ...pickAddresses(saved) },
       },
       { status: 201 }
     );

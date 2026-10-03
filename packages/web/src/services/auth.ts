@@ -94,6 +94,18 @@ export const verifyOtp = async (email: string, token: string) => {
   return data.session;
 };
 
+// Confirms a password sign-up with the 6-digit code from the confirmation email
+// (the email carries a code only — there is no link to click).
+export const verifySignupOtp = async (email: string, token: string) => {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'signup',
+  });
+  if (error) throw error;
+  return data.session;
+};
+
 export const resetPassword = async (email: string, captchaToken: string) => {
   const redirectTo =
     typeof window !== 'undefined' ? `${window.location.origin}/auth/reset-password` : undefined;
