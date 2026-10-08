@@ -151,9 +151,14 @@ export function useSwap(
 
         // Embedded fee: the API already skimmed our bps inside the quote —
         // display ITS fee figure; nothing is subtracted client-side.
-        const embedded = !!data.embedded_fee;
+        // The server sends feeAmount '' when Soroswap's figure is unusable
+        // (doc 95 Wave 5) — that means "not embedded", not "fee 0": treating
+        // it as embedded left fee at 0 and the fee-pair fallback then refused
+        // with "Swap fee was not computed" (seen by mobile on staging).
+        const embeddedFeeRaw = String(data.embedded_fee?.feeAmount ?? '');
+        const embedded = /^\d+$/.test(embeddedFeeRaw) && BigInt(embeddedFeeRaw) > 0n;
         const embeddedFeeTokens = embedded
-          ? (parseInt(data.embedded_fee.feeAmount || '0', 10) / 10_000_000).toFixed(7)
+          ? (parseInt(embeddedFeeRaw, 10) / 10_000_000).toFixed(7)
           : null;
         const newQuote: SwapQuote = {
           path: data.path || [],
