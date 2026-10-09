@@ -1,5 +1,7 @@
 'use client';
 
+
+import { cdn } from '@normalfinance/utils';
 import type { PortfolioAsset } from '@/types/portfolio';
 
 import { BigNumber } from 'bignumber.js';
@@ -190,7 +192,7 @@ export default function PortfolioView() {
           issuer: '',
           org: '',
           domain: '',
-          icon: 'https://cdn.normalapi.com/logo/logo-single.png',
+          icon: cdn('/logo/logo-single.png'),
           decimals: 4,
           featured: false,
           balance: String(savingsValue),

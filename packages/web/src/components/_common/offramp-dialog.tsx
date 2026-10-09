@@ -10,6 +10,7 @@ import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { runWithdrawFlow, hasCachedMgiToken } from '@/lib/mgi/client';
+import { writeHandoff, coinbaseCanSell } from '@/lib/coinbase-offramp-rules';
 import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import { cdn, isTestnet, createCoinbasePayOfframpURL } from '@normalfinance/utils';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
@@ -337,6 +338,15 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
           /* untracked this time — never blocked */
         }
       })();
+      // Hand-off marker for the completion modal: only orders created after
+      // this moment belong to this sale (an older abandoned STARTED order of a
+      // smaller amount must never be offered for sending).
+      writeHandoff({
+        at: Date.now(),
+        sym: asset.symbol,
+        chain: asset.blockchain,
+        amount: cryptoAmount || null,
+      });
       const url = createCoinbasePayOfframpURL({
         sessionToken,
         // Return to the current page with markers so the GLOBAL resume handler
@@ -476,9 +486,14 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   ];
 
   // MoneyGram is a Stellar/USDC flow — never offer it for other chains.
+  // Coinbase cannot sell Stellar assets at all (verified against its
+  // /sell/options on 2026-10-09 — see lib/coinbase-offramp-rules.ts), so a
+  // Coinbase row for XLM or Stellar USDC would start a sale nobody can finish.
   const OFFRAMPS = ALL_OFFRAMPS.filter(
     (option) =>
-      (providers as string[]).includes(option.id) && (isStellarAsset || option.id !== 'moneygram')
+      (providers as string[]).includes(option.id) &&
+      (isStellarAsset || option.id !== 'moneygram') &&
+      (option.id !== 'coinbase' || coinbaseCanSell(asset.blockchain, asset.symbol))
   );
 
   return (
@@ -774,6 +789,17 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                 {t('Back')}
               </Button>
             </Stack>
+          ) : OFFRAMPS.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ px: 1, py: 2 }}>
+              {isStellarAsset
+                ? t(
+                    'Selling {{symbol}} to a bank account isn’t available yet. You can swap it to USDC and withdraw cash through MoneyGram, or send it to an exchange you already use.',
+                    { symbol: asset.symbol }
+                  )
+                : t('No cash-out provider is available for {{symbol}} right now.', {
+                    symbol: asset.symbol,
+                  })}
+            </Typography>
           ) : (
             <List disablePadding>
               {OFFRAMPS.map((checkout) => (
