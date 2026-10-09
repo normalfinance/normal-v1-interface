@@ -1,10 +1,9 @@
 'use client';
 
-
-import { cdn } from '@normalfinance/utils';
 import type { PortfolioAsset } from '@/types/portfolio';
 
 import { BigNumber } from 'bignumber.js';
+import { cdn } from '@normalfinance/utils';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { useMemo, useState, useEffect } from 'react';
 import { DashboardContent } from '@/layouts/dashboard';

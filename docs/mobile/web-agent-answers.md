@@ -190,8 +190,11 @@ for the API; auth is the Bearer header only (`src/utils/http.ts:15-19`).
 found in code** anywhere in `packages/*`. Dead. There is no health endpoint at all under
 `src/app/api`. Do not build against any of it.
 
-**Q16.** `cdn.normalapi.com` is the general static-asset host, addressed via
-`NEXT_PUBLIC_CDN_URL` (`../utils/src/cdn.ts:1-5`). Token icons: `getCryptoIconUrl(symbol)`
+**Q16.** Static assets live in the Cloudflare R2 bucket `normal-assets-us`. **2026-10-09 update:**
+`cdn.normalapi.com` dropped out of DNS for several hours and every image broke; the web app now
+serves assets from its own origin — use `https://www.normalfinance.io/cdn/<path>` (proxied to the
+bucket with edge caching) and never `cdn.normalapi.com` directly. Web addresses it via
+`NEXT_PUBLIC_CDN_URL=/cdn` (`../utils/src/cdn.ts`); API JSON uses `cdnAbsolute()` so URLs stay absolute. Token icons: `getCryptoIconUrl(symbol)`
 (`../utils/src/ui.ts:10-43`; natives stored by name: `tokens/bitcoin.webp`, `tokens/ethereum.webp`,
 `tokens/solana.webp`, `tokens/XLM.webp`, `tokens/USDC.webp`) and `assetDisplay` in
 `src/lib/portfolio/display.ts:18-28`. **nBTC / nETH / nSOL are the discontinued synthetics**: the

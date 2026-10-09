@@ -27,7 +27,34 @@ const nextConfig = {
         pathname: '/**',
         search: '',
       },
+      // Cloudflare R2 public bucket (the files behind the old CDN hostname).
+      { protocol: 'https', hostname: '*.r2.dev', port: '', pathname: '/**', search: '' },
     ],
+  },
+  // 2026-10-09: cdn.normalapi.com dropped out of DNS and every image broke.
+  // The assets live in Cloudflare R2; serve them from OUR origin under /cdn so
+  // the site no longer depends on a DNS record on a domain we do not manage.
+  // CDN_ORIGIN = the bucket's public URL (R2 → Settings → Public access, the
+  // r2.dev URL, or any custom domain later). NEXT_PUBLIC_CDN_URL=/cdn then
+  // makes cdn() emit same-origin paths. Unset CDN_ORIGIN keeps the old host.
+  async rewrites() {
+    const origin = (process.env.CDN_ORIGIN || 'https://cdn.normalapi.com').replace(/\/+$/, '');
+    return [{ source: '/cdn/:path*', destination: `${origin}/:path*` }];
+  },
+  async headers() {
+    return [
+      {
+        // Icons and logos are immutable by filename; let browsers and the
+        // Vercel edge keep them so the R2 origin sees a trickle, not a flood.
+        source: '/cdn/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800',
+          },
+        ],
+      },
+    ];
   },
   trailingSlash: true,
   // #13: clients fetch '/api/...' slash-less while trailingSlash canonicalizes

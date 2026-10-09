@@ -3,7 +3,7 @@ import type { Activity } from '@/types/activity';
 
 import { NextResponse } from 'next/server';
 import { redis } from '@/server/rateLimiter';
-import { cdn, logger } from '@normalfinance/utils';
+import { logger, cdnAbsolute } from '@normalfinance/utils';
 
 // ---------------------------------------------------------------------------
 // GET /api/activity/bitcoin?address=…[&refresh=1]
@@ -88,7 +88,8 @@ export async function GET(request: NextRequest) {
     for (const tx of txs) txMap.set(tx.txid, tx);
     for (const tx of mempoolTxs) if (!txMap.has(tx.txid)) txMap.set(tx.txid, tx);
 
-    const btcIcon = cdn('tokens/bitcoin.webp');
+    // Absolute on purpose: this JSON is also read by the mobile app.
+    const btcIcon = cdnAbsolute('tokens/bitcoin.webp');
     const items: Activity[] = [];
 
     for (const tx of txMap.values()) {

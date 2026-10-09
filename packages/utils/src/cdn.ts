@@ -12,3 +12,16 @@ export function cdn(path: string): string {
   const p = path.replace(/^\/+/, '');
   return `${base}/${p}`;
 }
+
+// For URLs that leave the browser context — API JSON read by the mobile app,
+// emails, Open Graph tags — a same-origin `/cdn/...` path is meaningless, so
+// prefix it with the site's own origin. Absolute bases pass through unchanged.
+export function cdnAbsolute(path: string): string {
+  const url = cdn(path);
+  if (/^https?:\/\//i.test(url)) return url;
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.normalfinance.io').replace(
+    /\/+$/,
+    ''
+  );
+  return `${site}${url.startsWith('/') ? '' : '/'}${url}`;
+}

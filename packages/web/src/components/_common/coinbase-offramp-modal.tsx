@@ -505,7 +505,9 @@ export function CoinbaseOfframpModal({
                   'Crypto sent. Coinbase will pay out your cash once it confirms — you can close this.'
                 )}
               {stage === 'done' &&
-                t('Coinbase has received your crypto and confirmed the sale. Your cash payout follows automatically.')}
+                t(
+                  'Coinbase has received your crypto and confirmed the sale. Your cash payout follows automatically.'
+                )}
               {stage === 'pending' &&
                 t(
                   'Your crypto was sent, but Coinbase hasn’t confirmed the sale yet. This usually resolves within minutes — the row stays Pending in Activity until it does. Nothing more to do here.'
