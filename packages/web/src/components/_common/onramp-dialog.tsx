@@ -260,8 +260,79 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
     }
   };
 
-  /** Stripe */
+  /** Stripe — plain link, used only when the session route is not configured. */
   const stripeUrl = createStripeURL(amount, asset.symbol.toLowerCase(), asset.blockchain);
+
+  const handleStripeClick = async () => {
+    if (!destAddress) {
+      enqueueSnackbar(t('Please login and connect your wallet first'), { variant: 'warning' });
+      return;
+    }
+    // Same blank-then-navigate pattern as Coinbase: open synchronously so
+    // Safari treats it as user-initiated, set the URL once we have it.
+    const win = window.open('', '_blank');
+    try {
+      const headers = await buildAuthHeaders();
+      const r = await fetch('/api/stripe/onramp-session', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          address: destAddress,
+          asset: asset.symbol,
+          blockchain: asset.blockchain,
+          amountUsd: amount || null,
+        }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.status === 503 && data?.notConfigured) {
+        // Not approved / no key yet — the old link still works, address typed by hand.
+        if (win) {
+          win.opener = null;
+          win.location.href = stripeUrl;
+        }
+        return;
+      }
+      if (!r.ok || !data?.url) {
+        win?.close();
+        enqueueSnackbar(data?.error || t('Failed to start Stripe checkout. Try again later.'), {
+          variant: 'error',
+        });
+        return;
+      }
+      // doc 89 F2: record the hand-off BEFORE navigating; providerRef is the
+      // session id so the Stripe webhook can advance this exact row.
+      void (async () => {
+        try {
+          await fetch('/api/ramp/transfers', {
+            method: 'POST',
+            headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              direction: 'onramp',
+              provider: 'stripe',
+              network: isTestnet() ? 'testnet' : 'mainnet',
+              asset: asset.symbol,
+              chain: asset.blockchain,
+              walletAddress: destAddress,
+              providerRef: data.sessionId ?? null,
+              baselineBalance: stellarRamp ? (selectedWallet?.balance ?? null) : null,
+            }),
+          });
+        } catch {
+          /* untracked this time — never blocked */
+        }
+      })();
+      if (win) {
+        win.opener = null;
+        win.location.href = data.url;
+      }
+    } catch (err: any) {
+      win?.close();
+      logger.error('Stripe onramp error:', err);
+      enqueueSnackbar(t('Failed to start Stripe checkout. Try again later.'), { variant: 'error' });
+    }
+  };
 
   /** Coinbase */
   const handleCoinbaseClick = async () => {
@@ -408,17 +479,17 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
       description: t('Drop-off cash at a physical location'),
       onClick: () => moneyGramAmountDialog.onTrue(),
     },
-    // LAST on purpose (Niko 2026-08-26): the link cannot carry a destination
-    // address until the Stripe onramp application is approved and the session
-    // integration is built — so the description says out loud that the user
-    // enters their wallet address on Stripe's page.
+    // Session-based since 2026-10-09: the server mints a Stripe onramp session
+    // locked to the user's own address (handleStripeClick). Until the onramp
+    // application is approved the route answers 503 and we fall back to the
+    // plain crypto.link.com link, where the user types their address.
     {
       id: 'stripe',
       avatar:
         'https://cdn.brandfetch.io/idxAg10C0L/w/480/h/480/theme/dark/icon.jpeg?c=1dxbfHSJFAPEGdCLU4o5B',
       heading: 'Stripe',
-      description: t('Card, ACH, Apple Pay — you enter your wallet address on Stripe'),
-      url: stripeUrl,
+      description: t('Card, ACH, Apple Pay'),
+      onClick: handleStripeClick,
     },
   ];
 

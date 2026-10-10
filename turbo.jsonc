@@ -14,6 +14,10 @@
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_CDN_URL",
     "CDN_ORIGIN",
+
+    // Stripe fiat-to-crypto onramp (server only)
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
     "NEXT_PUBLIC_ASSETS_DIR",
 
     // Active network selector
