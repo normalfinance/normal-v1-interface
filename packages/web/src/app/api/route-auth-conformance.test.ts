@@ -38,6 +38,8 @@ const PUBLIC_ROUTES: Record<string, string> = {
   'cron/ramp-reconcile': 'cron-secret auth, not user sessions; reads providers, flips statuses',
   'cron/push-notify':
     'cron-secret auth, not user sessions; pushes settled rows to registered devices',
+  'stripe/webhook':
+    'Stripe → us; authenticated by the Stripe-Signature HMAC (STRIPE_WEBHOOK_SECRET), not a user session; 503 when unconfigured',
 };
 
 const API_DIR = path.join(__dirname);
