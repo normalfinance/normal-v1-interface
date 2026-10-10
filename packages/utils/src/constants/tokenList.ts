@@ -1,4 +1,5 @@
 import { ApiToken } from '@normalfinance/types';
+import { cdn } from '../cdn';
 import { getCurrentNetwork, NetworkType } from '../network';
 
 const TESTNET_TOKENS: ApiToken[] = [
@@ -9,7 +10,7 @@ const TESTNET_TOKENS: ApiToken[] = [
     name: 'Stellar Lumens',
     org: 'Stellar Development Foundation',
     domain: 'stellar.org',
-    icon: 'https://cdn.normalapi.com/tokens/XLM.webp',
+    icon: cdn('/tokens/XLM.webp'),
     decimals: 7,
     featured: true,
   },
@@ -20,7 +21,7 @@ const TESTNET_TOKENS: ApiToken[] = [
     name: 'USD Coin',
     org: 'Centre Consortium LLC', // should be from circle USDC later
     domain: 'centre.io',
-    icon: 'https://cdn.normalapi.com/tokens/USDC.webp',
+    icon: cdn('/tokens/USDC.webp'),
     decimals: 7,
     featured: true,
   },
@@ -31,7 +32,7 @@ const TESTNET_TOKENS: ApiToken[] = [
     name: 'Blend USDC',
     org: 'Blend Protocol',
     domain: 'blend.capital',
-    icon: 'https://cdn.normalapi.com/tokens/USDC.webp',
+    icon: cdn('/tokens/USDC.webp'),
     decimals: 7,
     featured: true,
   },
@@ -45,7 +46,7 @@ const MAINNET_TOKENS: ApiToken[] = [
     name: 'Stellar Lumens',
     org: 'Stellar Development Foundation',
     domain: 'stellar.org',
-    icon: 'https://cdn.normalapi.com/tokens/XLM.webp',
+    icon: cdn('/tokens/XLM.webp'),
     decimals: 7,
     featured: true,
   },
@@ -56,7 +57,7 @@ const MAINNET_TOKENS: ApiToken[] = [
     name: 'USD Coin',
     org: 'Centre Consortium LLC',
     domain: 'centre.io',
-    icon: 'https://cdn.normalapi.com/tokens/USDC.webp',
+    icon: cdn('/tokens/USDC.webp'),
     decimals: 7,
     featured: true,
   },

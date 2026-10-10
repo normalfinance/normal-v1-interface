@@ -11,6 +11,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { fetchSolBalance, fetchEthBalance } from '@/hooks/use-chain-portfolio';
 import { saveOfframpFill, fetchOfframpFills, removeOfframpFill } from '@/lib/offramp-fills';
+import {
+  readHandoff,
+  clearHandoff,
+  orderIsFromHandoff,
+  sellWindowRemainingMs,
+} from '@/lib/coinbase-offramp-rules';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -52,7 +58,25 @@ const SEND_RESERVE: Record<string, number> = {
 // double-send real funds. (Durable DB-backed dedupe is the hardening follow-up.)
 // ---------------------------------------------------------------------------
 
-type Stage = 'searching' | 'ready' | 'sending' | 'confirming' | 'done' | 'failed' | 'none';
+// 'pending' = our send is on-chain but Coinbase has not reported a final
+// state within our polling budget. It is NOT success — the old code showed
+// "Cash-out complete" here and users came back confused.
+type Stage =
+  | 'searching'
+  | 'ready'
+  | 'sending'
+  | 'confirming'
+  | 'pending'
+  | 'done'
+  | 'failed'
+  | 'none';
+
+function formatCountdown(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
 interface PendingTxn {
   transactionId: string;
@@ -142,20 +166,43 @@ export function CoinbaseOfframpModal({
   const [stage, setStage] = useState<Stage>('searching');
   const [txn, setTxn] = useState<PendingTxn | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The on-chain hash of OUR send for this order. Once set, the modal must
+  // never send again for the same order, whatever Coinbase reports later.
+  const [sentHash, setSentHash] = useState<string | null>(null);
+  // Seconds left in Coinbase's 30-minute send window (null = unknown).
+  const [windowLeftMs, setWindowLeftMs] = useState<number | null>(null);
 
   const isStellar = chain === 'stellar';
+
+  // Countdown while the user is deciding. Coinbase drops the match after 30
+  // minutes; a later send lands as a loose balance in their Coinbase account.
+  useEffect(() => {
+    if (stage !== 'ready' || !txn) {
+      setWindowLeftMs(null);
+      return undefined;
+    }
+    const tick = () => setWindowLeftMs(sellWindowRemainingMs(txn.createdAt));
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [stage, txn]);
 
   // The pending sell that needs us to send crypto: STARTED, for this asset,
   // with a deposit address + amount, and not already fulfilled by us.
   const findPending = useCallback(
     (list: PendingTxn[]): PendingTxn | null => {
       const balance = parseFloat(token.balance || '0');
+      // Hand-off marker written by the Sell dialog when it opened Coinbase:
+      // only orders created for THIS sale qualify. Without it (old tab,
+      // private mode) we fall back to the balance/age filters below.
+      const handoff = readHandoff();
       const candidates = list
         .filter(
           (x) =>
             x.status === 'TRANSACTION_STATUS_STARTED' &&
             x.toAddress &&
             x.amount &&
+            orderIsFromHandoff(x.createdAt, handoff, symbol) &&
             String(x.asset).toUpperCase() === symbol.toUpperCase() &&
             // Safety: the amount MUST be denominated in the crypto, not fiat —
             // Coinbase sometimes returns sell_amount in EUR, which we must never
@@ -186,6 +233,7 @@ export function CoinbaseOfframpModal({
       }
       const found = list.find((x) => x.transactionId === id);
       if (found?.status === 'TRANSACTION_STATUS_SUCCESS') {
+        clearHandoff();
         setStage('done');
         window.dispatchEvent(new Event('nf:activity-updated'));
         return;
@@ -194,13 +242,16 @@ export function CoinbaseOfframpModal({
         found?.status === 'TRANSACTION_STATUS_FAILED' ||
         found?.status === 'TRANSACTION_STATUS_EXPIRED'
       ) {
+        // The crypto already left the wallet — `sentHash` stays set so the
+        // failed screen explains that instead of offering to send again.
         setStage('failed');
         return;
       }
     }
-    // Coinbase can take a while to credit fiat — leave the user on a positive
-    // terminal state; the crypto send already succeeded on-chain.
-    setStage('done');
+    // Five minutes without a final word from Coinbase. That is "still
+    // processing", not success — the row stays Pending in Activity and the
+    // 30 s feed refresh picks up the real state later.
+    setStage('pending');
   }, []);
 
   // On open: look for the pending sell (Coinbase creates it the moment the user
@@ -211,6 +262,7 @@ export function CoinbaseOfframpModal({
     setStage('searching');
     setError(null);
     setTxn(null);
+    setSentHash(null);
 
     (async () => {
       // Load this user's fills from the DB BEFORE matching orders — getFill
@@ -242,7 +294,9 @@ export function CoinbaseOfframpModal({
             getFill(x.transactionId) !== undefined
         );
         if (inFlight) {
+          const fill = getFill(inFlight.transactionId);
           setTxn(inFlight);
+          if (fill && fill !== 'pending') setSentHash(fill);
           setStage('confirming');
           pollSettle(inFlight.transactionId);
           return;
@@ -270,6 +324,36 @@ export function CoinbaseOfframpModal({
   const handleSend = async () => {
     if (!txn) return;
     setError(null);
+
+    // Never send twice for one order. The DB fill is the source of truth
+    // (survives refreshes and device switches), so re-read it here rather
+    // than trusting the in-memory cache that a stale tab may hold.
+    await hydrateFills();
+    const existing = getFill(txn.transactionId);
+    if (existing && existing !== 'pending') {
+      setSentHash(existing);
+      setStage('confirming');
+      pollSettle(txn.transactionId);
+      return;
+    }
+    if (sentHash) {
+      setStage('confirming');
+      pollSettle(txn.transactionId);
+      return;
+    }
+
+    // Coinbase's 30-minute send window: a late send is not matched to the sale
+    // and lands as a plain crypto balance in the user's Coinbase account.
+    const left = sellWindowRemainingMs(txn.createdAt);
+    if (left !== null && left <= 0) {
+      clearFill(txn.transactionId);
+      setError(
+        t(
+          'This Coinbase sale’s 30-minute window has passed, so Coinbase would no longer match the deposit. Nothing was sent — start a new sale on Coinbase.'
+        )
+      );
+      return;
+    }
 
     // ---- Stellar (XLM / USDC) ----
     // useSendToken handles the XLM min-reserve, USDC-by-issuer, the optional
@@ -301,6 +385,7 @@ export function CoinbaseOfframpModal({
         return;
       }
       markFill(txn.transactionId, hash);
+      setSentHash(hash);
       // No dispatch here: useSendToken announces the send itself now
       // (pending row + refresh) — a second event would double-fetch.
       // Balances refresh via the aggregate on the activity event.
@@ -369,20 +454,28 @@ export function CoinbaseOfframpModal({
     }
 
     markFill(txn.transactionId, txHash);
+    setSentHash(txHash);
     // No dispatch here: the send adapter announces the send itself now
     // (pending row + refresh) — a second event would double-fetch.
     setStage('confirming');
     pollSettle(txn.transactionId);
   };
 
+  // "Try again" is only honest when nothing left the wallet.
+  const canRetry = stage === 'failed' && !!txn && !sentHash;
+
   const title =
     stage === 'done'
       ? t('Cash-out complete')
-      : stage === 'failed'
-        ? t('Cash-out didn’t finish')
-        : stage === 'none'
-          ? t('No pending cash-out')
-          : t('Finish your {{symbol}} cash-out', { symbol });
+      : stage === 'pending'
+        ? t('Cash-out still processing')
+        : stage === 'failed'
+          ? t('Cash-out didn’t finish')
+          : stage === 'none'
+            ? t('No pending cash-out')
+            : t('Finish your {{symbol}} cash-out', { symbol });
+
+  const windowExpired = windowLeftMs !== null && windowLeftMs <= 0;
 
   return (
     <Dialog
@@ -412,9 +505,19 @@ export function CoinbaseOfframpModal({
                   'Crypto sent. Coinbase will pay out your cash once it confirms — you can close this.'
                 )}
               {stage === 'done' &&
-                t('Your crypto is on its way to Coinbase. Cash payout follows automatically.')}
+                t(
+                  'Coinbase has received your crypto and confirmed the sale. Your cash payout follows automatically.'
+                )}
+              {stage === 'pending' &&
+                t(
+                  'Your crypto was sent, but Coinbase hasn’t confirmed the sale yet. This usually resolves within minutes — the row stays Pending in Activity until it does. Nothing more to do here.'
+                )}
               {stage === 'failed' &&
-                t('We couldn’t complete the send. No funds were moved — you can try again.')}
+                (sentHash
+                  ? t(
+                      'Coinbase reported this sale as failed or expired after your crypto was sent. Nothing more should be sent — the crypto arrives as a balance in your Coinbase account, where you can sell it directly or contact Coinbase support.'
+                    )
+                  : t('We couldn’t complete the send. No funds were moved — you can try again.'))}
               {stage === 'none' &&
                 t(
                   'We didn’t find a pending Coinbase sell order. If you just confirmed one, give it a moment and reopen.'
@@ -425,7 +528,9 @@ export function CoinbaseOfframpModal({
           {(stage === 'ready' ||
             stage === 'sending' ||
             stage === 'confirming' ||
-            stage === 'done') &&
+            stage === 'pending' ||
+            stage === 'done' ||
+            (stage === 'failed' && !!sentHash)) &&
             txn && (
               <Box
                 sx={{
@@ -468,9 +573,25 @@ export function CoinbaseOfframpModal({
                   {isStellar && txn.memo && (
                     <Row label={t('Memo')} value={txn.memo} mono truncate />
                   )}
+                  {stage === 'ready' && windowLeftMs !== null && (
+                    <Row
+                      label={t('Send within')}
+                      value={windowExpired ? t('expired') : formatCountdown(windowLeftMs)}
+                      mono
+                    />
+                  )}
+                  {sentHash && <Row label={t('Your transaction')} value={sentHash} mono truncate />}
                 </Stack>
               </Box>
             )}
+
+          {stage === 'ready' && windowExpired && (
+            <Typography sx={{ fontSize: '12.5px', color: '#B91C1C', lineHeight: 1.5 }}>
+              {t(
+                'Coinbase matches deposits for 30 minutes after “Cash out now”. This sale is past that window — start a new sale on Coinbase instead of sending.'
+              )}
+            </Typography>
+          )}
 
           {(stage === 'searching' || stage === 'sending' || stage === 'confirming') && (
             <Stack alignItems="center" sx={{ py: 1 }}>
@@ -499,6 +620,7 @@ export function CoinbaseOfframpModal({
               <Button
                 variant="contained"
                 onClick={handleSend}
+                disabled={windowExpired}
                 startIcon={<Iconify icon="solar:shield-keyhole-bold" width={18} />}
                 sx={{
                   borderRadius: '12px',
@@ -511,7 +633,7 @@ export function CoinbaseOfframpModal({
                 {t('Send with passkey')}
               </Button>
             )}
-            {stage === 'failed' && txn && (
+            {canRetry && (
               <Button
                 variant="contained"
                 onClick={handleSend}
@@ -538,11 +660,7 @@ export function CoinbaseOfframpModal({
                 color: '#0A0A0F',
               }}
             >
-              {stage === 'confirming' || stage === 'done'
-                ? t('Close')
-                : stage === 'ready'
-                  ? t('Cancel')
-                  : t('Close')}
+              {stage === 'ready' ? t('Cancel') : t('Close')}
             </Button>
           </Stack>
         </Stack>
