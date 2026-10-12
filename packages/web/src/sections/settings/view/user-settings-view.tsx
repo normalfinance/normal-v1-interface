@@ -14,6 +14,7 @@ import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalance
 import { SettingsGeneral } from '../settings-general';
 import { SettingsAccounts } from '../settings-accounts';
 import { SettingsSecurity } from '../settings-security';
+import { DeleteAccountCard } from '../delete-account-card';
 
 // ----------------------------------------------------------------------
 
@@ -88,7 +89,12 @@ export function UserSettingsView() {
       {/* Tab content */}
       {tabs.value === 'general' && <SettingsGeneral />}
       {tabs.value === 'accounts' && <SettingsAccounts />}
-      {tabs.value === 'security' && <SettingsSecurity />}
+      {tabs.value === 'security' && (
+        <>
+          <SettingsSecurity />
+          <DeleteAccountCard />
+        </>
+      )}
     </DashboardContent>
   );
 }
