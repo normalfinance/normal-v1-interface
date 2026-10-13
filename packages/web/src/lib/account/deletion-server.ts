@@ -230,6 +230,15 @@ export async function deleteMarketingProfile(supabaseUid: string): Promise<void>
 }
 
 /** The last step: the Supabase auth user. Needs the service-role key. */
+/** Checked BEFORE any row is touched: a deployment without the service-role
+ *  key must refuse up front, never delete the rows and then fail the login.
+ *  (Staging 2026-10-13: rows gone, login survived — this is the guard.) */
+export function authDeleteConfigured(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_MAINNET_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
+
 export async function deleteAuthUser(supabaseUid: string): Promise<void> {
   const url = process.env.NEXT_PUBLIC_MAINNET_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -237,6 +246,16 @@ export async function deleteAuthUser(supabaseUid: string): Promise<void> {
   const admin = createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { error } = await admin.auth.admin.deleteUser(supabaseUid);
-  if (error) throw new Error(`auth delete failed: ${error.message}`);
+  // Three attempts: this is the step that turns "data removed" into "account
+  // gone", and a transient GoTrue blip must not leave a login behind.
+  let last: string = '';
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const { error } = await admin.auth.admin.deleteUser(supabaseUid);
+    if (!error) return;
+    last = error.message;
+    // Already gone (a retry after a partial run) counts as success.
+    if (/not found|does not exist/i.test(last)) return;
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 700 * attempt));
+  }
+  throw new Error(`auth delete failed: ${last}`);
 }
