@@ -3,6 +3,7 @@ import type { NetworkType } from '@normalfinance/utils';
 import { prisma } from '@/lib/prisma';
 import { createHash } from 'node:crypto';
 import { turnkey } from '@/lib/turnkey/server';
+import { constants } from '@normalfinance/utils';
 import { createClient } from '@supabase/supabase-js';
 import { withRateLimitRetry } from '@/server/defindex';
 import { PENDING_MGI_STATUSES } from '@/lib/mgi/statuses';
@@ -233,16 +234,26 @@ export async function deleteMarketingProfile(supabaseUid: string): Promise<void>
 /** Checked BEFORE any row is touched: a deployment without the service-role
  *  key must refuse up front, never delete the rows and then fail the login.
  *  (Staging 2026-10-13: rows gone, login survived — this is the guard.) */
-export function authDeleteConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_MAINNET_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+/** The Supabase URL the SAME way every other server client resolves it
+ *  (createSupabaseServerClient): the deployment's network picks the TESTNET or
+ *  MAINNET variable, with NEXT_PUBLIC_SUPABASE_URL as the legacy fallback.
+ *  Staging only has the TESTNET-named variable set (one shared project), so
+ *  reading MAINNET alone failed there (2026-10-13). */
+function supabaseUrl(): string {
+  return constants.getNetworkConfig(
+    process.env.NEXT_PUBLIC_TESTNET_SUPABASE_URL ?? '',
+    process.env.NEXT_PUBLIC_MAINNET_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   );
 }
 
+export function authDeleteConfigured(): boolean {
+  return Boolean(supabaseUrl() && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
 export async function deleteAuthUser(supabaseUid: string): Promise<void> {
-  const url = process.env.NEXT_PUBLIC_MAINNET_SUPABASE_URL;
+  const url = supabaseUrl();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('SUPABASE_SERVICE_ROLE_KEY not configured');
+  if (!url || !key) throw new Error('Supabase URL / SUPABASE_SERVICE_ROLE_KEY not configured');
   const admin = createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
