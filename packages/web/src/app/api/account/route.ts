@@ -11,6 +11,7 @@ import {
   loadWalletFacts,
   purgeAccountRows,
   readHeldBalances,
+  authDeleteConfigured,
   listExportActivities,
   deleteMarketingProfile,
 } from '@/lib/account/deletion-server';
@@ -28,7 +29,8 @@ import {
 //   409 { error, code: 'EXPORT_REQUIRED', wallets: [...] }  — export the phrase first (never overridable)
 //   409 { error, code: 'IN_FLIGHT', counts }                — money mid-transit (never overridable)
 //   409 { error, code: 'FUNDS_PRESENT', balances, unreadable } — unless override: true
-//   503 { error, code: 'UNAVAILABLE' }                      — a check could not run; try later
+//   503 { error, code: 'UNAVAILABLE' }                      — a check could not run, or this deployment lacks the service-role key; nothing deleted
+//   503 { error, code: 'AUTH_DELETE_FAILED', deleted, anonymised } — rows removed, login survived; sign in and retry (idempotent)
 //
 // The Turnkey sub-organization and passkeys are NOT deleted: funds are
 // self-custodial and the recovery phrase the user just exported restores them
@@ -123,20 +125,51 @@ export const DELETE = withAuth(async (req: NextRequest, { user }) => {
     return NextResponse.json({ success: true, dryRun: true, ok: true, balances: verdict.present });
   }
 
-  // Point of no return. Rows first (one transaction), marketing, then the auth
-  // user last — if the auth delete fails the user can sign in and retry, and
-  // the rows are already gone, which is the safe direction.
-  try {
-    const result = await purgeAccountRows(uid, facts);
-    await deleteMarketingProfile(uid);
-    await deleteAuthUser(uid);
-    console.log('[account/delete] deleted', { uid: uid.slice(0, 8), ...result });
-    return NextResponse.json({ success: true, ...result });
-  } catch (e: any) {
-    console.error('[account/delete] failed:', e?.message ?? e);
+  // Refuse before touching anything if this deployment cannot finish the job
+  // (staging 2026-10-13: rows were purged, then the login survived because the
+  // service-role key was not set on that environment).
+  if (!authDeleteConfigured()) {
+    console.error('[account/delete] SUPABASE_SERVICE_ROLE_KEY / MAINNET_SUPABASE_URL missing');
     return NextResponse.json(
-      { error: 'Deletion did not complete. Please try again.', code: 'UNAVAILABLE' },
+      { error: 'Account deletion is not available in this environment.', code: 'UNAVAILABLE' },
       { status: 503 }
     );
   }
+
+  // Point of no return. Rows first (one transaction), marketing, then the auth
+  // user last. The route is idempotent: a retry after a partial run finds no
+  // rows, passes every gate trivially and deletes the login.
+  let result: Awaited<ReturnType<typeof purgeAccountRows>>;
+  try {
+    result = await purgeAccountRows(uid, facts);
+  } catch (e: any) {
+    console.error('[account/delete] purge failed (nothing deleted):', e?.message ?? e);
+    return NextResponse.json(
+      {
+        error: 'Deletion did not complete. Nothing was removed — please try again.',
+        code: 'UNAVAILABLE',
+      },
+      { status: 503 }
+    );
+  }
+  await deleteMarketingProfile(uid);
+  try {
+    await deleteAuthUser(uid);
+  } catch (e: any) {
+    console.error('[account/delete] AUTH DELETE FAILED after purge', {
+      uid: uid.slice(0, 8),
+      err: e?.message ?? e,
+    });
+    return NextResponse.json(
+      {
+        error:
+          'Your data was removed, but your login could not be deleted. Sign in and try again to finish.',
+        code: 'AUTH_DELETE_FAILED',
+        ...result,
+      },
+      { status: 503 }
+    );
+  }
+  console.log('[account/delete] deleted', { uid: uid.slice(0, 8), ...result });
+  return NextResponse.json({ success: true, ...result });
 });
