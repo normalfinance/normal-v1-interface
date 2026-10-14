@@ -6,7 +6,7 @@
 // parent organization organizationId=… credentialId=…"), so its mappings are
 // pinned here.
 
-import { friendlyTurnkeyError } from './passkey-stamper';
+import { inAppBrowserName, friendlyTurnkeyError } from './passkey-stamper';
 
 // A stamper built from the LIVE record of Niko's sub-org (2026-08-22): one
 // credential, transports hybrid+internal, AAGUID ea9b8d66… = Google Password
@@ -144,5 +144,38 @@ describe('friendlyTurnkeyError', () => {
     expect(friendlyTurnkeyError(new Error('something entirely new'))).toBe(
       'something entirely new'
     );
+  });
+});
+
+describe('inAppBrowserName', () => {
+  const safari =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
+  const chromeIos =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1';
+  const googleApp =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 GSA/340.0';
+  const wkWebView =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
+  const androidWv =
+    'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0 Mobile Safari/537.36 wv';
+  it('is null for Safari and Chrome on iOS', () => {
+    expect(inAppBrowserName(safari)).toBeNull();
+    expect(inAppBrowserName(chromeIos)).toBeNull();
+  });
+  it('names the Google app and generic in-app webviews', () => {
+    expect(inAppBrowserName(googleApp)).toBe('the Google app');
+    expect(inAppBrowserName(wkWebView)).toBe('an app');
+    expect(inAppBrowserName(androidWv)).toBe('an app');
+  });
+  it('turns a NotAllowedError inside an in-app browser into an "open in Safari" hint', () => {
+    const ua = navigator.userAgent;
+    Object.defineProperty(navigator, 'userAgent', { value: googleApp, configurable: true });
+    try {
+      expect(friendlyTurnkeyError(new Error('NotAllowedError: operation not allowed'))).toMatch(
+        /Google app.*Open www.normalfinance.io in Safari/
+      );
+    } finally {
+      Object.defineProperty(navigator, 'userAgent', { value: ua, configurable: true });
+    }
   });
 });

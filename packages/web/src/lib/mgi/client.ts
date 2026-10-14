@@ -61,6 +61,12 @@ export function hasCachedMgiToken(account: string, testnet: boolean): boolean {
   return !!getValidToken(`${account}:${testnet ? 'testnet' : 'public'}`);
 }
 
+/** The cached SEP-10 token itself (undefined when none is valid). Lets a
+ *  watcher poll MoneyGram without ever triggering a passkey prompt. */
+export function getValidMgiToken(account: string, testnet: boolean): string | undefined {
+  return getValidToken(`${account}:${testnet ? 'testnet' : 'public'}`);
+}
+
 export function clearMgiToken(account?: string) {
   if (typeof window === 'undefined') return;
   if (!account) {
@@ -222,16 +228,22 @@ export async function startMgiWithdraw(token: string, userAccount: string, amoun
   return data as { url: string; id: string | null };
 }
 
+/** Starts a cash-out and opens MoneyGram's page. Returns the SEP-24
+ *  transaction id (and the SEP-10 token used) so the caller can watch the
+ *  transaction and run the send step once MoneyGram publishes the anchor
+ *  account + memo — the postMessage `onReady` alone is not reliable on mobile
+ *  Safari, where the page opens as a tab without an opener. */
 export async function runWithdrawFlow(
   userAccount: string,
   amount: string | number,
   onReady?: (tx: any) => void,
   popup?: Window | null
-) {
+): Promise<{ id: string | null; token: string }> {
   try {
     const token = await getMgiAuthToken(userAccount);
-    const { url } = await startMgiWithdraw(token, userAccount, Number(amount));
+    const { url, id } = await startMgiWithdraw(token, userAccount, Number(amount));
     openMoneyGram(url, (tx) => onReady?.(tx), popup);
+    return { id: id ?? null, token };
   } catch (e) {
     popup?.close();
     throw e;
