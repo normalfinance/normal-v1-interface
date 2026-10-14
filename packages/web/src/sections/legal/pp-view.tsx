@@ -79,126 +79,102 @@ export default function PrivacyPolicyView() {
   );
 }
 
-const MESSAGE = `# NORMAL PROTOCOL PRIVACY POLICY
+const MESSAGE = `# NORMAL PRIVACY POLICY
 
-Last Updated: May 06, 2026
+Last Updated: October 14, 2026
 
-One of the main priorities of Normal Finance, Inc. ("Normal") and its affiliates (together, "we", "us" or "the Company") is the privacy of our visitors. This Privacy Policy documents the types of information that we collect and record and how we use it.
+Normal Finance, Inc. ("Normal", "we", "us", "the Company") provides a self-custody crypto wallet and savings app on the web (normalfinance.io) and as a mobile app (together, the "Services"). This Privacy Policy explains what personal data we collect, why, who we share it with, and the choices you have. It applies to the Services and to our websites; it does not apply to information collected offline.
 
-If you have additional questions or require more information about our Privacy Policy, do not hesitate to contact us.
+Normal is built so that we hold as little of your data as possible. Your crypto is held in a wallet that only you control; we never have access to your private keys or your recovery phrase. We do not sell your personal data and we do not use advertising networks or tracking pixels.
 
-This Privacy Policy applies only to our online activities and to the information that visitors to our websites share with and/or we collect. This policy is not applicable to any information collected offline or via channels other than our websites.
+If you have questions, contact us at hello@normalfinance.io.
 
 ## I. Consent
 
-By using our website, you hereby consent to our Privacy Policy and agree to its terms.
+By using the Services you consent to this Privacy Policy. When you create an account you are asked to accept it, together with our Terms of Service. Where the law requires a separate consent (for example for marketing emails), we ask for it separately.
 
-## II. Personal Data We Collect and Disclose
+## II. Personal Data We Collect
 
-The below table describes what personal data that we collect about you and to whom we disclose personal data.
+| Category | What it includes | Where it comes from |
+| --- | --- | --- |
+| Account data | Your email address; if you sign in with Google, the name and profile picture Google shares with us; your sign-in method; the date your account was created. | You, or Google when you choose "Continue with Google". |
+| Wallet data | The public addresses of the wallets you create or connect (Stellar, Bitcoin, Ethereum, Solana); the identifier of your wallet at our key-management provider; the public identifiers of the passkeys registered for your wallet. We never receive your private keys, recovery phrase, or the biometric data your device uses to unlock a passkey. | Created when you set up or import a wallet. |
+| Transaction data | Records of the sends, swaps, savings deposits and withdrawals, purchases and cash-outs you make through the Services: amounts, assets, addresses, transaction hashes, status, and provider reference numbers. | Generated when you use the Services; some of it also exists publicly on the blockchains you transact on. |
+| Device and app data | Your IP address, browser or app version, operating system; for the mobile app, a push-notification token and the device name you give it. | Collected automatically when you use the Services or enable notifications. |
+| Communications data | Your marketing preference (opted in or out) and the emails we send you. | You, through sign-up and account settings. |
+| Support data | Anything you send us when you contact support. | You. |
 
-| Category of Data Collected | Disclosure of Data |
-| --- | --- |
-| Identifiers, such as your name, email address, address, phone number, and device identifiers (e.g., advertising identifiers and IP address). | <ul><li>Affiliates and subsidiaries of the Company, which includes parent and ultimate holding companies, affiliates, subsidiaries, and business units</li><li>Service providers, such as security and platform vendors</li><li>With third parties that are necessary to complete a transaction</li><li>Business partners whom we partner with to jointly market or sell our products and services, such as channel partners</li><li>Professional advisors, such as lawyers, accountants, and auditors</li><li>Entities involved in a corporate transaction, including if we sell, acquire, or merge all or some of our assets</li><li>Companies that operate cookies and tracking technologies, such as marketing and advertising partners</li><li>To which you have consented to the disclosure</li></ul> |
-| Internet or other electronic network activity information and device information, such as your browsing history, search history, device information, and other information (whether passive browsing or active engagement) regarding your interactions with our website and use of our products and services. | <ul><li>Affiliates and subsidiaries of the Company, which includes parent and ultimate holding companies, affiliates, subsidiaries, and business units</li><li>Service providers, such as security and platform vendors</li><li>Companies that operate cookies and tracking technologies, such as marketing and advertising partners</li><li>Entities involved in a corporate transaction, including if we sell, acquire, or merge all or some of our assets</li></ul> |
-| Geolocation information, such as approximate location based on your IP address, mobile device location, or information you provide to us (such as city and state you provide through a webform). You may be able to control collection of this data through the settings of your device. | <ul><li>Affiliates and subsidiaries of the Company, which includes parent and ultimate holding companies, affiliates, subsidiaries, and business units</li><li>Service providers, such as security and platform vendors</li><li>Entities involved in a corporate transaction, including if we sell, acquire, or merge all or some of our assets</li><li>Companies that operate cookies and tracking technologies, such as marketing and advertising partners</li></ul> |
+We do not collect your government ID, date of birth, bank account details or payment card details. When you buy or sell crypto for cash, the provider you choose (see Section IV) collects that information directly from you under its own privacy policy, and we receive only the status and reference of the transaction.
 
-In addition to the above disclosures, we may share your personal data to respond to lawful requests by law enforcement or other government authorities. We may also de-identify, anonymize, or aggregate personal data to use or share with third parties for any purpose, where legally permitted.
+## III. How We Use Personal Data
 
-## III. How We Use Your Personal Data
+- To provide the Services: create and sign you in to your account, set up and operate your wallet, show your balances and activity, send and receive transactions on your instruction.
+- To complete transactions with partners: pass your wallet address and transaction details to the buy, sell and cash-out providers you choose, and receive their status updates.
+- To keep you informed: transactional emails and push notifications about your account and your transactions, such as a deposit arriving or a swap completing.
+- To keep the Services secure: verify that requests come from you, detect fraud and abuse, enforce rate limits, protect against bots.
+- To improve the Services: understand which features are used and how the site performs, using aggregate analytics.
+- To comply with law: respond to lawful requests from authorities, keep the records we are required to keep, and enforce our Terms.
+- Marketing, only with your consent: product updates and announcements if you opted in.
 
-The information that you are asked to provide, and the reasons why you are asked to provide it, will be made clear to you at the point we ask you to provide your personal information.
+Where the GDPR applies, our legal bases are performance of our contract with you (providing the Services), our legitimate interests (security, improvement, record keeping), compliance with legal obligations, and your consent (marketing).
 
-We process personal data for the following purposes:
+## IV. Who We Share Personal Data With
 
-- To make our services available to you where such information is required;
-- Provide, operate, and maintain our websites;
-- Improve, personalize, and expand our websites;
-- Understand and analyze how you use our websites;
-- Develop new products, services, features, and functionalities;
-- Communicate with you, either directly or through one of our partners, including for customer service, to provide you with updates and other information relating to our websites, and for marketing and promotional purposes;
-- For our own business purposes, such as maintaining our business records and administering our technologies and network;
-- For legal, safety, or security reasons, including to comply with legal requirements; investigate any content or conduct policy violations; and detect, prevent, and respond to security incidents or other malicious, deceptive, fraudulent, or illegal activity;
-- When you have agreed to have your personal data processed by us.
+We share personal data only with the categories of recipients below, and only what each one needs.
 
-## IV. Communications
+| Recipient | What they receive | Why |
+| --- | --- | --- |
+| Authentication and hosting providers (Supabase, Vercel, Cloudflare, Upstash) | Account data, device data, transaction records, cached data. | To run the Services. Our main database is hosted in the United States. |
+| Wallet key-management provider (Turnkey) | Your email address, passkey public credentials, wallet public addresses and signing requests you approve. | To create and operate your self-custody wallet. Turnkey holds encrypted key material in secure hardware that neither we nor Turnkey can read. |
+| Buy, sell and cash-out providers (Coinbase, Stripe, MoneyGram, and others we may add such as Ramp Network or Bridge) | Your wallet address, the asset and amount, your IP address for regional eligibility, and a reference to your account at Normal. | To complete the purchase or cash-out you request. Each provider verifies your identity under its own policy. |
+| Exchange and bridge services (Soroswap, LI.FI, Circle CCTP, DeFindex and Blend) | Your wallet addresses and transaction details. | To execute swaps and savings deposits and withdrawals you request. Most of this data is also public on the blockchain. |
+| Blockchain data and price providers (mempool.space, Helius, Etherscan, CoinGecko) | Your public wallet addresses. | To read your balances and activity and show prices. |
+| Email and notification providers (Customer.io, Apple and Google push services) | Your email address, marketing preference, push token, notification content. | To send transactional and, with consent, marketing messages. |
+| Analytics (Vercel Analytics, Vercel Speed Insights, Dune) | Page views and performance data; anonymised, aggregated transaction statistics. | To understand usage and performance. Dune receives no personal identifiers. |
+| Professional advisers, authorities, and parties to a corporate transaction | What is necessary in each case. | Legal, audit, compliance, or a merger or sale of the business. |
 
-We communicate with users to operate the platform, maintain security, and share updates about Normal. This section describes the types of communications you may receive and your control over them.
+We do not sell personal data and we do not share it with advertising networks. Public blockchains are, by design, public: transactions sent from your wallet are visible to anyone, forever, and we cannot remove them.
 
-**Transactional Communications** We send transactional emails and notifications related to your account and activity on the platform. These communications may include confirmations for deposits and withdrawals, security alerts, password resets, account verification messages, and other notifications necessary to operate the service. These communications are essential to your use of our platform and are sent regardless of your marketing preferences.
+## V. Communications
 
-**Marketing Communications** We send marketing emails and product updates only to users who have explicitly opted in to receive them. You may opt in through signup forms, account settings, or other subscription entry points across the platform. Marketing communications may include information about new features, product announcements, educational content, and promotional offers. You can unsubscribe from marketing emails at any time by using the unsubscribe link provided in any marketing email or by updating your communication preferences in your account settings.
+**Transactional messages.** We send emails and push notifications you need to use the Services: sign-in codes, security alerts such as a new device being added to your wallet, and confirmations of deposits, withdrawals, swaps and cash-outs. These are sent regardless of your marketing preference. You can turn off push notifications in your device settings.
 
-**Consent Management** We record and manage your consent for marketing communications in accordance with applicable data protection laws. You maintain full control over your communication preferences and can update them at any time through your account settings or by using the preference management tools provided in our emails.
+**Marketing messages.** We send product updates only if you opted in. You can opt out at any time in Settings, or with the unsubscribe link in any marketing email.
 
-**Third-Party Service Providers** We use third-party email service providers to manage, deliver, and track our communications. These providers process your information solely on our behalf and in accordance with our instructions, applicable data protection standards, and contractual obligations that protect your privacy.
+## VI. Cookies, Local Storage and Analytics
 
-**Activity-Based Communications** We may use information about your interactions with the platform, including account activity, transaction history, and engagement patterns, to send relevant communications. These may include transaction summaries, periodic account reviews, feature recommendations based on your usage, and other product-related updates designed to improve your experience with Normal. Where these communications are promotional in nature, they are subject to your marketing preferences.
+We use browser storage to keep you signed in and to remember your preferences (for example which wallet is selected). We use Cloudflare Turnstile to protect sign-in from bots; it may set a cookie for that purpose. We use Vercel Analytics and Speed Insights, which collect anonymous page-view and performance data without cross-site tracking. We do not use advertising cookies, ad networks or tracking pixels. You can clear browser storage through your browser settings; doing so signs you out.
 
-## V. Log Files
+## VII. Data Retention and Deletion
 
-We follow a standard procedure of using log files. These files log visitors when they visit websites. The information collected by log files include internet protocol (IP) addresses, browser type, Internet Service Provider (ISP), date and time stamp, referring/exit pages, and possibly the number of clicks. These are not linked to any information that is personally identifiable. The purpose of the information is for analyzing trends, administering our websites, tracking users' movement on our websites, and gathering demographic information.
+- **Account data** is kept while your account exists.
+- **Transaction records** are kept for as long as we are required to for accounting and legal purposes. When you delete your account, these records are anonymised: the link to you is removed and only the transaction itself remains.
+- **Device and log data** is kept for a limited period for security and troubleshooting.
 
-## VI. Cookies and Web Beacons
+You can delete your account in Settings → Security → Delete account, on the web or in the app. Before deletion, the app shows you the recovery phrase of your wallet, because after deletion it is the only way to access your crypto. Deletion removes your login, personal data, linked wallets and devices from our systems. Your wallet continues to exist on the blockchain under your control; we cannot delete blockchain records.
 
-Like other websites, we use "cookies." These cookies are used to store information including visitors' preferences, and the pages on the websites that the visitor accessed or visited. The information is used to optimize the users' experience by customizing our web page content based on visitors' browser type and/or other information.
+## VIII. Security
 
-You can choose to disable cookies through your individual browser options. More detailed information about cookie management with specific web browsers can be found at the browsers' respective websites.
+Your wallet is secured by a passkey tied to your device's fingerprint, face or PIN. Private keys are generated and used inside secure hardware operated by our key-management provider and are never visible to us. Because we do not hold your keys, we cannot recover your wallet if you lose both your passkey and your recovery phrase. We protect our own systems with encryption in transit, access controls, rate limiting and monitoring. No system is perfectly secure; please protect your devices and never share your recovery phrase.
 
-## VII. Advertising Partners Privacy Policies
+## IX. International Transfers
 
-Third-party ad servers or ad networks use technologies like cookies, JavaScript, or Web Beacons that are used in their respective advertisements and links that appear on our websites, which are sent directly to the user's browser. They automatically receive your IP address when this occurs. These technologies are used to measure the effectiveness of their advertising campaigns and/or to personalize the advertising content that you see on websites that you visit.
+We are based in the United States and our providers process data there and in other countries. If you are in the European Economic Area, the United Kingdom or Switzerland, we rely on standard contractual clauses and equivalent safeguards offered by our providers for transfers of your data.
 
-We have no access to or control over these cookies that are used by third-party advertisers.
+## X. Supplemental Terms for California Residents
 
-## VIII. Third Party Privacy Policies
+Under the California Consumer Privacy Act ("CCPA"), California consumers have the right to know what personal data we collect and how we use and disclose it, the right to delete it, the right to correct it, the right to opt out of sale or sharing, and the right not to be discriminated against for exercising these rights. We do not sell or share personal data as those terms are defined in the CCPA. To exercise your rights, use the deletion feature in the app or contact us at the address below; we respond within the time the law requires.
 
-This Privacy Policy does not apply to other advertisers or websites. You should consult the respective Privacy Policies of these third-party ad servers for more detailed information. It may include their practices and instructions about how to opt-out of certain options.
+## XI. Supplemental Terms for the European Economic Area, Switzerland and the U.K.
 
-## IX. Supplemental Terms for California Residents
+Under the General Data Protection Regulation ("GDPR") and equivalent laws you have the right to be informed, to access your data, to have it rectified, to have it erased, to restrict or object to processing, to data portability, to withdraw consent at any time, and not to be subject to solely automated decisions with legal effect. You also have the right to lodge a complaint with your local data protection authority. To exercise these rights, use the deletion feature in the app or contact us at the address below; we respond within one month.
 
-Under the California Consumer Privacy Act ("CCPA"), California consumers have the following rights:
+## XII. Children
 
-**Right to know** – You have the right to request that we disclose the categories of personal data that we have collected about you, the categories of sources of that personal data, the purposes for collecting the personal data, the categories of third parties to whom we have disclosed your personal data, and the purpose for which we disclosed your personal data. You may also request information about the specific pieces of personal data we have collected about you.
+The Services are not directed to anyone under 18, and our Terms of Service require you to be at least 18. We do not knowingly collect personal data from children. If you believe a child has provided us personal data, contact us and we will delete it.
 
-**Right to delete** – You have the right to request that we delete any personal data about you that we have collected.
+## XIII. Changes to This Privacy Policy
 
-**Right to correct** – You have the right to request that we correct any inaccurate personal information that we maintain about you.
-
-**Right to opt out of sale or sharing** – You have the right to request that we not sell or share your personal data.
-
-If you make a request, we have one month to respond to you. If you would like to exercise any of these rights, please contact us at the address provided below.
-
-## X. Supplemental Terms for the European Economic Area, Switzerland, and the U.K
-
-Under the General Data Protection Regulations ("GDPR"), every user is entitled to the following:
-
-**The right to be informed** – You have the right to know how we will collect, process and store your data, and for what purposes.
-
-**The right to access** – You have the right to request copies of your personal data. We may charge you a small fee for this service.
-
-**The right to rectification** – You have the right to request that we correct any information you believe is inaccurate. You also have the right to request that we complete the information you believe is incomplete.
-
-**The right to erasure** – You have the right to request that we erase your personal data, under certain conditions.
-
-**The right to restrict processing** – You have the right to request that we restrict the processing of your personal data, under certain conditions.
-
-**The right to object** – You have the right to object to our processing of your personal data, under certain conditions.
-
-**The right to data portability** – You have the right to request that we transfer the data that we have collected to another organization, or directly to you, under certain conditions.
-
-**The right to avoid automated decision-making** – You have the right to demand human intervention for decision-making.
-
-If you make a request, we have one month to respond to you. If you would like to exercise any of these rights, please contact us at the address provided below.
-
-## XI. Children's Privacy
-
-Another part of our priority is adding protection for children while using the internet. We encourage parents and guardians to observe, participate in, and/or monitor and guide their children's online activity.
-
-We do not knowingly collect any Personal Identifiable Information from children under the age of 13. If you think that your child has provided this kind of information to our websites, we strongly encourage you to contact us immediately at the contact address provided below.
-
-## XII. Changes to This Privacy Policy
-
-We may update our Privacy Policy from time to time. We advise you to review this page periodically for any changes. We will notify you of any changes by posting the new Privacy Policy on this page. These changes are effective immediately after they are posted on this page.
+We may update this Privacy Policy. We will post the new version on this page with a new "Last Updated" date and, for material changes, notify you in the app or by email before they take effect.
 
 Contact us: hello@normalfinance.io`;
