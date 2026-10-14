@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
 import { reportMgiStatus } from '@/lib/mgi/db';
 import { buildAuthHeaders } from '@/utils/http';
@@ -172,8 +173,16 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
     sentHash: string | null;
     reference: string | null;
     stop: string | null; // why we will never send (terminal / unsafe)
+    /** Diagnostics shown in the dialog so a stuck cash-out explains itself:
+     *  what MoneyGram last said we are waiting for, the last read error, and
+     *  how many reads failed in a row. */
+    waitReason: string | null;
+    lastError: string | null;
+    failures: number;
+    startedAt: number;
   } | null>(null);
   const [mgiSending, setMgiSending] = useState(false);
+  const [mgiSendError, setMgiSendError] = useState<string | null>(null);
   const { send: sendStellar } = useSendToken();
   const stellarTokens = useStellarTokens(open);
   const stellarConfig = useStellarConfig();
@@ -491,7 +500,12 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
           sentHash: null,
           reference: null,
           stop: null,
+          waitReason: null,
+          lastError: null,
+          failures: 0,
+          startedAt: Date.now(),
         });
+        setMgiSendError(null);
       }
     } catch (e: any) {
       popup?.close();
@@ -534,20 +548,46 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
           if (!prev || prev.id !== id) return prev;
           // Only look for send instructions while nothing has been sent.
           const v = prev.sentHash ? null : withdrawVerdict(tx, prev.amount);
+          // One structured line per state change — shape only, never the
+          // memo or account — so a support thread can be read from the console.
+          if (status !== prev.status || (v && v.kind !== 'wait') || v?.reason !== prev.waitReason) {
+            logger.info('[mgi-withdraw]', {
+              id,
+              status,
+              verdict: v?.kind ?? (prev.sentHash ? 'sent' : 'n/a'),
+              reason: v && v.kind !== 'ready' ? v.reason : undefined,
+              hasAnchorAccount: !!tx.withdraw_anchor_account,
+              hasMemo: tx.withdraw_memo != null && tx.withdraw_memo !== '',
+              memoType: tx.withdraw_memo_type ?? null,
+              amountIn: tx.amount_in?.amount ?? tx.amount_in ?? null,
+              amountInAsset: tx.amount_in?.asset ?? null,
+              hasReference: !!reference,
+              elapsedS: Math.round((Date.now() - prev.startedAt) / 1000),
+            });
+          }
           return {
             ...prev,
             status: status || prev.status,
             reference: reference ?? prev.reference,
             instructions: v?.kind === 'ready' ? v.instructions : prev.instructions,
             stop: v?.kind === 'stop' ? v.reason : prev.stop,
+            waitReason: v?.kind === 'wait' ? v.reason : null,
+            lastError: null,
+            failures: 0,
           };
         });
         if (status === 'completed') {
           enqueueSnackbar(t('MoneyGram cash-out completed'), { variant: 'success' });
           window.dispatchEvent(new Event('nf:activity-updated'));
         }
-      } catch {
-        /* transient — next tick retries */
+      } catch (e: any) {
+        // Transient reads retry on the next tick, but the dialog must SAY so:
+        // a silent loop is indistinguishable from "MoneyGram never answered".
+        const msg = String(e?.message ?? e ?? 'unknown error');
+        logger.warn('[mgi-withdraw] read failed', { id, error: msg });
+        setMgiWithdraw((prev) =>
+          prev && prev.id === id ? { ...prev, lastError: msg, failures: prev.failures + 1 } : prev
+        );
       }
     };
     void tick();
@@ -586,6 +626,13 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
     const w = mgiWithdraw;
     if (!w?.instructions || w.sentHash || !usdcToken) return;
     setMgiSending(true);
+    setMgiSendError(null);
+    logger.info('[mgi-withdraw] send start', {
+      id: w.id,
+      amount: w.instructions.amount,
+      memoType: w.instructions.memoType,
+      source: stellarRamp && selectedWallet?.address ? 'selected-wallet' : 'slot',
+    });
     try {
       const hash = await sendStellar({
         destination: w.instructions.anchorAccount,
@@ -597,7 +644,15 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
           ? { sourceAddress: selectedWallet.address }
           : {}),
       });
-      if (!hash) return; // useSendToken already explained why
+      if (!hash) {
+        // useSendToken surfaced the reason in a toast; keep it on screen too.
+        logger.warn('[mgi-withdraw] send returned no hash', { id: w.id });
+        setMgiSendError(
+          t('The send did not go through — see the message above, fix the cause and try again.')
+        );
+        return;
+      }
+      logger.info('[mgi-withdraw] sent', { id: w.id, hash });
       setMgiWithdraw((prev) =>
         prev && prev.id === w.id
           ? { ...prev, sentHash: hash, status: 'pending_user_transfer_complete' }
@@ -608,8 +663,11 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
         variant: 'success',
       });
     } catch (e: any) {
+      const friendly = friendlyAppError(e);
+      logger.error('[mgi-withdraw] send failed', { id: w.id, error: String(e?.message ?? e) });
+      setMgiSendError(friendly);
       if (!(e instanceof WalletSessionExpiredError)) {
-        enqueueSnackbar(friendlyAppError(e), { variant: 'error' });
+        enqueueSnackbar(friendly, { variant: 'error' });
       }
     } finally {
       setMgiSending(false);
@@ -757,6 +815,49 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                     'Choose your pickup location and confirm on the MoneyGram page that opened. This screen updates by itself once MoneyGram is ready for your USDC.'
                   )}
                 </MgiPanel>
+              )}
+
+              {/* Diagnostics: what we are waiting for, and whether the reads
+                  are failing. Without this a stuck cash-out looks identical
+                  to one that is simply slow. */}
+              {!mgiWithdraw.sentHash && !mgiWithdraw.stop && mgiWithdraw.status !== 'completed' && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: mgiWithdraw.failures >= 3 ? '#B91C1C' : 'rgba(10,10,15,0.45)',
+                    fontFamily: '"Geist Mono", monospace',
+                    fontSize: '11px',
+                  }}
+                >
+                  {mgiWithdraw.failures >= 3
+                    ? t('Could not reach MoneyGram ({{n}} tries): {{err}}', {
+                        n: mgiWithdraw.failures,
+                        err: mgiWithdraw.lastError ?? '',
+                      })
+                    : t('MoneyGram status: {{status}}{{reason}} · checked every 5 s', {
+                        status: mgiWithdraw.status,
+                        reason: mgiWithdraw.waitReason
+                          ? ` · waiting: ${mgiWithdraw.waitReason}`
+                          : '',
+                      })}
+                </Typography>
+              )}
+
+              {mgiSendError && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    px: '12px',
+                    py: '10px',
+                    borderRadius: '10px',
+                    bgcolor: 'rgba(220,38,38,0.05)',
+                    border: '1px solid rgba(220,38,38,0.15)',
+                    color: '#B91C1C',
+                    fontSize: '12.5px',
+                  }}
+                >
+                  {mgiSendError}
+                </Typography>
               )}
 
               {mgiWithdraw.instructions && !mgiWithdraw.sentHash && !mgiWithdraw.stop && (
