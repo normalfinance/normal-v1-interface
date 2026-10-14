@@ -44,7 +44,19 @@ export const GET = withAuth(async (req: Request, { user, params }) => {
 
     if (r.ok && ct.includes('application/json')) {
       const data = await r.json().catch(() => ({}));
-      console.log('[MGI] get tx', id, r.status, 'in', dur, 'ms');
+      // Shape of the anchor's answer, never the memo or account values: this
+      // is the line to read when a cash-out never reaches "send" (2026-10-14).
+      const tx = (data as any)?.transaction ?? {};
+      console.log('[MGI] get tx', id, r.status, 'in', dur, 'ms', {
+        kind: tx.kind ?? null,
+        status: tx.status ?? null,
+        hasAnchorAccount: !!tx.withdraw_anchor_account,
+        hasMemo: tx.withdraw_memo != null && tx.withdraw_memo !== '',
+        memoType: tx.withdraw_memo_type ?? null,
+        amountIn: tx.amount_in?.amount ?? null,
+        amountInAsset: tx.amount_in?.asset ?? null,
+        hasReference: !!tx.external_transaction_id,
+      });
       return NextResponse.json(data, { status: 200 });
     }
 

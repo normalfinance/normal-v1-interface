@@ -143,6 +143,34 @@ export async function createPasskeyStamper() {
  * ones a user can actually do something about; anything unknown keeps its
  * original message so nothing is hidden from support.
  */
+/**
+ * Name of the in-app browser we are running inside, or null for a real
+ * browser. In-app browsers on iOS are WKWebViews without passkey support, so
+ * `navigator.credentials.get` is refused instantly with NotAllowedError —
+ * which our mapper used to report as "dismissed or timed out" (Niko, iPhone,
+ * MoneyGram cash-out, 2026-10-14). Pass a UA for tests.
+ */
+export function inAppBrowserName(ua: string = navigator.userAgent): string | null {
+  if (/GSA\//.test(ua)) return 'the Google app';
+  if (/FBAN|FBAV|FB_IAB/.test(ua)) return 'Facebook';
+  if (/Instagram/.test(ua)) return 'Instagram';
+  if (/Messenger/.test(ua)) return 'Messenger';
+  if (/\bLine\//.test(ua)) return 'LINE';
+  if (/Twitter|XApp/.test(ua)) return 'X';
+  if (/Telegram/.test(ua)) return 'Telegram';
+  if (/LinkedInApp/.test(ua)) return 'LinkedIn';
+  if (/Snapchat/.test(ua)) return 'Snapchat';
+  if (/\bwv\b/.test(ua) && /Android/.test(ua)) return 'an app';
+  // Generic iOS WKWebView: WebKit on iPhone/iPad that is neither Safari
+  // ("Version/x Safari/") nor a passkey-capable third-party browser (CriOS,
+  // FxiOS, EdgiOS all carry their own token).
+  if (/iPhone|iPad|iPod/.test(ua) && /AppleWebKit/.test(ua)) {
+    const known = /Safari\/|CriOS|FxiOS|EdgiOS|OPT\/|DuckDuckGo|Brave/.test(ua);
+    if (!known) return 'an app';
+  }
+  return null;
+}
+
 export function friendlyTurnkeyError(e: unknown): string {
   const raw = String((e as { message?: string })?.message ?? e ?? '');
 
@@ -171,6 +199,12 @@ export function friendlyTurnkeyError(e: unknown): string {
       raw
     )
   ) {
+    // The browser refused before any prompt: in-app browsers cannot use
+    // passkeys at all, so no amount of "try again" helps. Say where to go.
+    const host = typeof navigator !== 'undefined' ? inAppBrowserName() : null;
+    if (host) {
+      return `Passkeys don't work inside ${host}'s built-in browser. Open www.normalfinance.io in Safari or Chrome (tap the ··· menu → "Open in browser") and try again.`;
+    }
     // With the prompt restricted to this account's credentials, "not allowed"
     // usually means the device simply has none of them — a different message
     // entirely from "you dismissed it" (verified 2026-08-22: a device can

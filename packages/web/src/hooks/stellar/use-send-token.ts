@@ -30,6 +30,12 @@ export type TransferArgs = {
   amount: string;
   memo?: string;
   /**
+   * Explicit memo type. Anchors (MoneyGram SEP-24) DECLARE the type they
+   * expect; a numeric `text` memo would otherwise be auto-detected as an id
+   * memo and the deposit would not be matched. Omit for user-typed memos.
+   */
+  memoType?: 'MEMO_TEXT' | 'MEMO_ID';
+  /**
    * #74c: send FROM this wallet instead of the connected slot wallet (the
    * hybrid case: external wallet connected, asset lives in the companion
    * Normal wallet). Same contract as the savings/swap overrides — EXPLICIT,
@@ -203,7 +209,7 @@ export function useSendToken(): ReturnType {
       }
 
       if (args.memo) {
-        const memoType = detectMemoType(args.memo);
+        const memoType = args.memoType ?? detectMemoType(args.memo);
 
         switch (memoType) {
           case 'MEMO_TEXT':

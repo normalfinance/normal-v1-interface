@@ -1,11 +1,18 @@
+import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
+import { reportMgiStatus } from '@/lib/mgi/db';
 import { buildAuthHeaders } from '@/utils/http';
+import { getTransaction } from '@/lib/mgi/history';
 import { useMgiLimits } from '@/hooks/use-mgi-limits';
 import { useBoolean, useStellarConfig } from '@/hooks';
 import { usePersistStore } from '@normalfinance/state';
 import { openMoneyGramPlaceholder } from '@/lib/mgi/flow';
+import { TERMINAL_MGI_STATUSES } from '@/lib/mgi/statuses';
 import React, { useMemo, useState, useEffect } from 'react';
+import { useSendToken } from '@/hooks/stellar/use-send-token';
+import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
@@ -14,6 +21,7 @@ import { writeHandoff, coinbaseCanSell } from '@/lib/coinbase-offramp-rules';
 import { WalletSessionExpiredError } from '@/hooks/stellar/use-wallet-reconnect';
 import { cdn, isTestnet, createCoinbasePayOfframpURL } from '@normalfinance/utils';
 import { detectWalletEnv, assertTestnetAndAccountMatch } from '@/lib/mgi/preflight';
+import { withdrawVerdict, type WithdrawInstructions } from '@/lib/mgi/withdraw-settle';
 import {
   defaultSelection,
   filterSellableOptions,
@@ -153,6 +161,31 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
   const mgiLimits = useMgiLimits();
 
   const [, setMgiLoading] = useState(false);
+  // MoneyGram cash-out after the user commits on MoneyGram's page: we watch
+  // the SEP-24 transaction, then SEND the USDC (one passkey) once the anchor
+  // publishes its account + memo. Before 2026-10-14 this step did not exist
+  // on web — the row stayed 'incomplete' and the user saw nothing.
+  const [mgiWithdraw, setMgiWithdraw] = useState<{
+    id: string;
+    amount: number;
+    status: string;
+    instructions: WithdrawInstructions | null;
+    sentHash: string | null;
+    reference: string | null;
+    stop: string | null; // why we will never send (terminal / unsafe)
+    /** Diagnostics shown in the dialog so a stuck cash-out explains itself:
+     *  what MoneyGram last said we are waiting for, the last read error, and
+     *  how many reads failed in a row. */
+    waitReason: string | null;
+    lastError: string | null;
+    failures: number;
+    startedAt: number;
+  } | null>(null);
+  const [mgiSending, setMgiSending] = useState(false);
+  const [mgiSendError, setMgiSendError] = useState<string | null>(null);
+  const { send: sendStellar } = useSendToken();
+  const stellarTokens = useStellarTokens(open);
+  const stellarConfig = useStellarConfig();
   // Coinbase amount-entry step (only when assetBalance is provided)
   const [cbStep, setCbStep] = useState(false);
   const [cbAmount, setCbAmount] = useState('');
@@ -447,14 +480,33 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
         return;
       }
 
-      await runWithdrawFlow(
+      const { id } = await runWithdrawFlow(
         addr,
         withdrawAmount,
-        () => {
-          enqueueSnackbar(t('MoneyGram ready — send USDC when prompted'), { variant: 'info' });
+        (tx) => {
+          // MoneyGram's page says the user committed; the watcher below picks
+          // up the anchor account + memo and offers the send.
+          const txId = tx?.id ? String(tx.id) : null;
+          if (txId) reportMgiStatus(txId, { status: 'pending_user_transfer_start' });
         },
         popup
       );
+      if (id) {
+        setMgiWithdraw({
+          id,
+          amount: withdrawAmount,
+          status: 'incomplete',
+          instructions: null,
+          sentHash: null,
+          reference: null,
+          stop: null,
+          waitReason: null,
+          lastError: null,
+          failures: 0,
+          startedAt: Date.now(),
+        });
+        setMgiSendError(null);
+      }
     } catch (e: any) {
       popup?.close();
       // Session expiry already surfaced its own reconnect snackbar.
@@ -467,6 +519,165 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
       setMgiLoading(false);
     }
   }
+
+  // Watch the cash-out: every 5 s (cached SEP-10 token only — never a
+  // background passkey prompt) read MoneyGram's view, mirror the status into
+  // our DB so the USDC-page banner and Activity show it, and capture the send
+  // instructions / reference number as they appear.
+  useEffect(() => {
+    const id = mgiWithdraw?.id;
+    if (!open || !id || !userAddress) return undefined;
+    if (mgiWithdraw.stop || TERMINAL_MGI_STATUSES.has(mgiWithdraw.status)) return undefined;
+    let cancelled = false;
+    const tick = async () => {
+      if (!hasCachedMgiToken(userAddress, isTestnet())) return;
+      try {
+        const { getValidMgiToken } = await import('@/lib/mgi/client');
+        const token = getValidMgiToken(userAddress, isTestnet());
+        if (!token) return;
+        const tx: any = await getTransaction(id, token);
+        if (cancelled || !tx) return;
+        const status = String(tx.status ?? '');
+        const reference = tx.external_transaction_id ? String(tx.external_transaction_id) : null;
+        if (status)
+          reportMgiStatus(id, {
+            status,
+            ...(reference ? { externalTransactionId: reference } : {}),
+          });
+        setMgiWithdraw((prev) => {
+          if (!prev || prev.id !== id) return prev;
+          // Only look for send instructions while nothing has been sent.
+          const v = prev.sentHash ? null : withdrawVerdict(tx, prev.amount);
+          // One structured line per state change — shape only, never the
+          // memo or account — so a support thread can be read from the console.
+          if (status !== prev.status || (v && v.kind !== 'wait') || v?.reason !== prev.waitReason) {
+            logger.info('[mgi-withdraw]', {
+              id,
+              status,
+              verdict: v?.kind ?? (prev.sentHash ? 'sent' : 'n/a'),
+              reason: v && v.kind !== 'ready' ? v.reason : undefined,
+              hasAnchorAccount: !!tx.withdraw_anchor_account,
+              hasMemo: tx.withdraw_memo != null && tx.withdraw_memo !== '',
+              memoType: tx.withdraw_memo_type ?? null,
+              amountIn: tx.amount_in?.amount ?? tx.amount_in ?? null,
+              amountInAsset: tx.amount_in?.asset ?? null,
+              hasReference: !!reference,
+              elapsedS: Math.round((Date.now() - prev.startedAt) / 1000),
+            });
+          }
+          return {
+            ...prev,
+            status: status || prev.status,
+            reference: reference ?? prev.reference,
+            instructions: v?.kind === 'ready' ? v.instructions : prev.instructions,
+            stop: v?.kind === 'stop' ? v.reason : prev.stop,
+            waitReason: v?.kind === 'wait' ? v.reason : null,
+            lastError: null,
+            failures: 0,
+          };
+        });
+        if (status === 'completed') {
+          enqueueSnackbar(t('MoneyGram cash-out completed'), { variant: 'success' });
+          window.dispatchEvent(new Event('nf:activity-updated'));
+        }
+      } catch (e: any) {
+        // Transient reads retry on the next tick, but the dialog must SAY so:
+        // a silent loop is indistinguishable from "MoneyGram never answered".
+        const msg = String(e?.message ?? e ?? 'unknown error');
+        logger.warn('[mgi-withdraw] read failed', { id, error: msg });
+        setMgiWithdraw((prev) =>
+          prev && prev.id === id ? { ...prev, lastError: msg, failures: prev.failures + 1 } : prev
+        );
+      }
+    };
+    void tick();
+    const iv = setInterval(tick, 5_000);
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mgiWithdraw?.id, mgiWithdraw?.status, mgiWithdraw?.stop, userAddress]);
+
+  /** The USDC the user actually holds (issuer from the live token list, else
+   *  the configured savings issuer) — the send needs a full Token. */
+  const usdcToken = useMemo(() => {
+    const live = stellarTokens.find((tk) => tk.symbol === 'USDC');
+    if (live) return live;
+    const issuer = getSavingsUsdcIssuer(stellarConfig);
+    if (!issuer) return null;
+    return {
+      symbol: 'USDC',
+      issuer,
+      contract: '',
+      name: 'USD Coin',
+      org: '',
+      domain: '',
+      icon: cdn('tokens/USDC.webp'),
+      decimals: 7,
+      featured: true,
+      balance: '0',
+      price: '1',
+      percentageChange: 0,
+    };
+  }, [stellarTokens, stellarConfig]);
+
+  const handleMgiSend = async () => {
+    const w = mgiWithdraw;
+    if (!w?.instructions || w.sentHash || !usdcToken) return;
+    setMgiSending(true);
+    setMgiSendError(null);
+    logger.info('[mgi-withdraw] send start', {
+      id: w.id,
+      amount: w.instructions.amount,
+      memoType: w.instructions.memoType,
+      source: stellarRamp && selectedWallet?.address ? 'selected-wallet' : 'slot',
+    });
+    try {
+      const hash = await sendStellar({
+        destination: w.instructions.anchorAccount,
+        token: usdcToken,
+        amount: w.instructions.amount,
+        memo: w.instructions.memo,
+        memoType: w.instructions.memoType,
+        ...(stellarRamp && selectedWallet?.address
+          ? { sourceAddress: selectedWallet.address }
+          : {}),
+      });
+      if (!hash) {
+        // useSendToken surfaced the reason in a toast; keep it on screen too.
+        logger.warn('[mgi-withdraw] send returned no hash', { id: w.id });
+        setMgiSendError(
+          t('The send did not go through — see the message above, fix the cause and try again.')
+        );
+        return;
+      }
+      logger.info('[mgi-withdraw] sent', { id: w.id, hash });
+      setMgiWithdraw((prev) =>
+        prev && prev.id === w.id
+          ? { ...prev, sentHash: hash, status: 'pending_user_transfer_complete' }
+          : prev
+      );
+      reportMgiStatus(w.id, { status: 'pending_user_transfer_complete' });
+      enqueueSnackbar(t('USDC sent to MoneyGram — your reference number follows shortly.'), {
+        variant: 'success',
+      });
+    } catch (e: any) {
+      const friendly = friendlyAppError(e);
+      logger.error('[mgi-withdraw] send failed', { id: w.id, error: String(e?.message ?? e) });
+      setMgiSendError(friendly);
+      if (!(e instanceof WalletSessionExpiredError)) {
+        enqueueSnackbar(friendly, { variant: 'error' });
+      }
+    } finally {
+      setMgiSending(false);
+    }
+  };
+
+  const handleMgiDone = () => {
+    setMgiWithdraw(null);
+    handleClose();
+  };
 
   const ALL_OFFRAMPS: (OnrampOption & { id: OnrampProvider })[] = [
     {
@@ -517,9 +728,11 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
         <DialogTitle sx={{ p: 2, pb: '12px', width: '100%' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" color="text.primary">
-              {isStellarAsset && asset.symbol === 'USDC'
-                ? t('Withdraw Cash')
-                : t('Sell {{symbol}}', { symbol: asset.symbol })}
+              {mgiWithdraw
+                ? t('Complete your cash-out')
+                : isStellarAsset && asset.symbol === 'USDC'
+                  ? t('Withdraw Cash')
+                  : t('Sell {{symbol}}', { symbol: asset.symbol })}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <ModalCloseButton onClick={handleClose} aria-label="close dialog" />
@@ -538,7 +751,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
             },
           }}
         >
-          {stellarRamp && (
+          {stellarRamp && !mgiWithdraw && (
             <WalletChoice
               options={rampOptions}
               selectedKey={selectedKey}
@@ -547,7 +760,142 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
               symbol={asset.symbol}
             />
           )}
-          {cbStep ? (
+          {mgiWithdraw ? (
+            <Stack spacing={2} sx={{ py: 1 }}>
+              {mgiWithdraw.status === 'completed' ? (
+                <MgiPanel tone="ok" title={t('Cash-out complete')}>
+                  {t('MoneyGram has your USDC and your cash is ready at the location you chose.')}
+                </MgiPanel>
+              ) : mgiWithdraw.stop ? (
+                <MgiPanel tone="warn" title={t('This cash-out cannot be completed here')}>
+                  {t(
+                    'MoneyGram reports: {{reason}}. Nothing was sent. Start a new cash-out if needed.',
+                    {
+                      reason: mgiWithdraw.stop,
+                    }
+                  )}
+                </MgiPanel>
+              ) : mgiWithdraw.sentHash ? (
+                <MgiPanel tone="ok" title={t('USDC sent to MoneyGram')}>
+                  {mgiWithdraw.reference
+                    ? t(
+                        'Your reference number is {{ref}}. Take it to the MoneyGram location to collect your cash.',
+                        {
+                          ref: mgiWithdraw.reference,
+                        }
+                      )
+                    : t(
+                        'MoneyGram is confirming your transfer. Your reference number appears here and under Activity within a few minutes.'
+                      )}
+                </MgiPanel>
+              ) : mgiWithdraw.instructions ? (
+                <MgiPanel tone="info" title={t('Step 2 — send your USDC to MoneyGram')}>
+                  {t(
+                    'MoneyGram is ready. Send exactly {{amount}} USDC with one passkey confirmation; your cash reference number follows.',
+                    {
+                      amount: mgiWithdraw.instructions.amount,
+                    }
+                  )}
+                  <Box
+                    sx={{
+                      mt: 1,
+                      fontFamily: '"Geist Mono", monospace',
+                      fontSize: '12px',
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {t('To')}: {mgiWithdraw.instructions.anchorAccount}
+                    <br />
+                    {t('Memo')}: {mgiWithdraw.instructions.memo}
+                  </Box>
+                </MgiPanel>
+              ) : (
+                <MgiPanel tone="info" title={t('Finish on the MoneyGram page')}>
+                  {t(
+                    'Choose your pickup location and confirm on the MoneyGram page that opened. This screen updates by itself once MoneyGram is ready for your USDC.'
+                  )}
+                </MgiPanel>
+              )}
+
+              {/* Diagnostics: what we are waiting for, and whether the reads
+                  are failing. Without this a stuck cash-out looks identical
+                  to one that is simply slow. */}
+              {!mgiWithdraw.sentHash && !mgiWithdraw.stop && mgiWithdraw.status !== 'completed' && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: mgiWithdraw.failures >= 3 ? '#B91C1C' : 'rgba(10,10,15,0.45)',
+                    fontFamily: '"Geist Mono", monospace',
+                    fontSize: '11px',
+                  }}
+                >
+                  {mgiWithdraw.failures >= 3
+                    ? t('Could not reach MoneyGram ({{n}} tries): {{err}}', {
+                        n: mgiWithdraw.failures,
+                        err: mgiWithdraw.lastError ?? '',
+                      })
+                    : t('MoneyGram status: {{status}}{{reason}} · checked every 5 s', {
+                        status: mgiWithdraw.status,
+                        reason: mgiWithdraw.waitReason
+                          ? ` · waiting: ${mgiWithdraw.waitReason}`
+                          : '',
+                      })}
+                </Typography>
+              )}
+
+              {mgiSendError && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    px: '12px',
+                    py: '10px',
+                    borderRadius: '10px',
+                    bgcolor: 'rgba(220,38,38,0.05)',
+                    border: '1px solid rgba(220,38,38,0.15)',
+                    color: '#B91C1C',
+                    fontSize: '12.5px',
+                  }}
+                >
+                  {mgiSendError}
+                </Typography>
+              )}
+
+              {mgiWithdraw.instructions && !mgiWithdraw.sentHash && !mgiWithdraw.stop && (
+                <Button
+                  variant="contained"
+                  fullWidth
+                  size="large"
+                  onClick={handleMgiSend}
+                  disabled={mgiSending || !usdcToken}
+                  startIcon={
+                    mgiSending ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <Iconify icon="solar:shield-keyhole-bold" width={18} />
+                    )
+                  }
+                >
+                  {mgiSending
+                    ? t('Sending…')
+                    : t('Send {{amount}} USDC with passkey', {
+                        amount: mgiWithdraw.instructions.amount,
+                      })}
+                </Button>
+              )}
+
+              <Button variant="outlined" fullWidth size="large" onClick={handleMgiDone}>
+                {mgiWithdraw.sentHash || mgiWithdraw.status === 'completed'
+                  ? t('Done')
+                  : t('Close')}
+              </Button>
+
+              {!mgiWithdraw.sentHash && !mgiWithdraw.stop && (
+                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                  {t('Nothing leaves your wallet until you confirm the send with your passkey.')}
+                </Typography>
+              )}
+            </Stack>
+          ) : cbStep ? (
             // The send-dialog's visual language (Niko, 2026-08-13): labeled
             // boxes, mono amounts, unit-following Available, $/token toggle.
             <Stack spacing={2}>
@@ -870,5 +1218,40 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
     </>
   );
 };
+
+/** Status panel for the MoneyGram cash-out steps. */
+function MgiPanel({
+  tone,
+  title,
+  children,
+}: {
+  tone: 'info' | 'ok' | 'warn';
+  title: string;
+  children: React.ReactNode;
+}) {
+  const colors =
+    tone === 'ok'
+      ? { bg: 'rgba(16,185,129,0.05)', border: 'rgba(16,185,129,0.2)', fg: '#047857' }
+      : tone === 'warn'
+        ? { bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.25)', fg: '#92400E' }
+        : { bg: '#FAFAFB', border: 'rgba(10,10,15,0.08)', fg: '#0A0A0F' };
+  return (
+    <Box
+      sx={{
+        p: '14px',
+        borderRadius: '14px',
+        bgcolor: colors.bg,
+        border: `1px solid ${colors.border}`,
+      }}
+    >
+      <Typography sx={{ fontSize: '13px', fontWeight: 700, color: colors.fg, mb: '6px' }}>
+        {title}
+      </Typography>
+      <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.5 }}>
+        {children}
+      </Typography>
+    </Box>
+  );
+}
 
 export default OffRampDialog;
