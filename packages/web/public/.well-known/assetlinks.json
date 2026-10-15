@@ -1,12 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.get_login_creds"],
+    "relation": [
+      "delegate_permission/common.get_login_creds"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "io.normalfinance.app",
       "sha256_cert_fingerprints": [
-        "98:96:DC:EB:E0:82:64:48:82:02:15:AE:A9:18:82:B9:F8:E5:60:80:4B:95:A5:4B:A6:BF:20:16:7A:C1:1C:8A",
-        "27:82:52:D1:37:EF:3F:28:71:B0:92:6D:30:4C:70:75:23:44:51:CE:18:F2:D4:81:3D:36:D2:2A:AC:D2:DD:AB"
+        "27:82:52:D1:37:EF:3F:28:71:B0:92:6D:30:4C:70:75:23:44:51:CE:18:F2:D4:81:3D:36:D2:2A:AC:D2:DD:AB",
+        "B7:B2:30:D5:AF:05:40:5B:C3:78:E3:08:76:47:92:CF:01:38:3F:7A:77:76:14:91:4D:E7:D5:71:70:6C:1C:9C"
       ]
     }
   }
