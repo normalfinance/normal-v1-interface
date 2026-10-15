@@ -42,6 +42,7 @@ export const paths = {
     tos: '/legal/tos',
     pp: '/legal/pp',
     disclaimer: '/legal/disclaimer',
+    deleteAccount: '/legal/delete-account',
   },
   help: {
     buy: 'https://docs.normalfinance.io', // FIXME: update to help center when ready

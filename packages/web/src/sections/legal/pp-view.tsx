@@ -130,7 +130,7 @@ We share personal data only with the categories of recipients below, and only wh
 | Exchange and bridge services (Soroswap, LI.FI, Circle CCTP, DeFindex and Blend) | Your wallet addresses and transaction details. | To execute swaps and savings deposits and withdrawals you request. Most of this data is also public on the blockchain. |
 | Blockchain data and price providers (mempool.space, Helius, Etherscan, CoinGecko) | Your public wallet addresses. | To read your balances and activity and show prices. |
 | Email and notification providers (Customer.io, Apple and Google push services) | Your email address, marketing preference, push token, notification content. | To send transactional and, with consent, marketing messages. |
-| Analytics (Vercel Analytics, Vercel Speed Insights, Dune) | Page views and performance data; anonymised, aggregated transaction statistics. | To understand usage and performance. Dune receives no personal identifiers. |
+| Website analytics (Vercel Analytics and Speed Insights, on normalfinance.io only) and Dune | Anonymous page-view and performance data from the website; anonymised, aggregated transaction statistics. The mobile app contains no analytics or crash-reporting tools. | To understand website usage and performance. Dune receives no personal identifiers. |
 | Professional advisers, authorities, and parties to a corporate transaction | What is necessary in each case. | Legal, audit, compliance, or a merger or sale of the business. |
 
 We do not sell personal data and we do not share it with advertising networks. Public blockchains are, by design, public: transactions sent from your wallet are visible to anyone, forever, and we cannot remove them.
@@ -143,7 +143,7 @@ We do not sell personal data and we do not share it with advertising networks. P
 
 ## VI. Cookies, Local Storage and Analytics
 
-We use browser storage to keep you signed in and to remember your preferences (for example which wallet is selected). We use Cloudflare Turnstile to protect sign-in from bots; it may set a cookie for that purpose. We use Vercel Analytics and Speed Insights, which collect anonymous page-view and performance data without cross-site tracking. We do not use advertising cookies, ad networks or tracking pixels. You can clear browser storage through your browser settings; doing so signs you out.
+We use browser storage to keep you signed in and to remember your preferences (for example which wallet is selected). We use Cloudflare Turnstile to protect sign-in from bots; it may set a cookie for that purpose. On our website only, we use Vercel Analytics and Speed Insights, which collect anonymous page-view and performance data without cross-site tracking; the mobile app does not include analytics or crash-reporting tools. We do not use advertising cookies, ad networks or tracking pixels anywhere. You can clear browser storage through your browser settings; doing so signs you out.
 
 ## VII. Data Retention and Deletion
 
