@@ -107,6 +107,22 @@ const TEAM_MEMBERS: TeamMember[] = [
     ],
   },
   {
+    image: cdn('about-page/sam-sutton.webp'),
+    name: 'Sam Sutton',
+    jobTitle: 'Business Development',
+    bio: 'Co-founded Rich Habits, a custom athletic apparel brand, in high school and leads it as CEO. Also Head of Design at Skillsage Sports and a Tarleton State wrestler.',
+    socialLinks: [
+      {
+        href: 'https://x.com/samsu1tonRH',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
+      },
+      {
+        href: 'https://www.linkedin.com/in/sam-sutton/',
+        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
+      },
+    ],
+  },
+  {
     image: cdn('about-page/jay.webp'),
     name: 'Jay Malve',
     jobTitle: 'Full-Stack Developer',
