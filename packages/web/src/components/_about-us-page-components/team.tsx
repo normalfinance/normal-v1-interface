@@ -47,6 +47,42 @@ const TEAM_MEMBERS: TeamMember[] = [
     ],
   },
   {
+    image: cdn('about-page/niko.webp'),
+    name: 'Niko Gorjan',
+    jobTitle: 'CTO',
+    bio: 'Grew up in Slovenia, CS degree from FERI. Built a reputation for clean, component-driven React code across international clients before joining Normal.',
+    socialLinks: [
+      {
+        href: 'https://x.com/NikoGorjan',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
+      },
+      {
+        href: 'https://www.linkedin.com/in/niko-gorjan-582433276/',
+        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
+      },
+      {
+        href: 'https://github.com/nikogorjan',
+        icon: <GitHubIcon sx={{ fontSize: 15 }} />,
+      },
+    ],
+  },
+  {
+    image: cdn('about-page/sam-sutton.webp'),
+    name: 'Sam Sutton',
+    jobTitle: 'Business Development',
+    bio: 'Co-founded Rich Habits, a custom athletic apparel brand, in high school and leads it as CEO. Also a founding partner and project manager at Bloom, and a Tarleton State wrestler.',
+    socialLinks: [
+      {
+        href: 'https://x.com/samsu1tonRH',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
+      },
+      {
+        href: 'https://www.linkedin.com/in/sam-sutton/',
+        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
+      },
+    ],
+  },
+  {
     image: cdn('about-page/avm.webp'),
     name: 'Amit Anand',
     jobTitle: 'Head of Marketing',
@@ -83,42 +119,6 @@ const TEAM_MEMBERS: TeamMember[] = [
       {
         href: 'https://t.me/JakeTheCD',
         icon: <TelegramIcon sx={{ fontSize: 15, color: BRAND_TG }} />,
-      },
-    ],
-  },
-  {
-    image: cdn('about-page/niko.webp'),
-    name: 'Niko Gorjan',
-    jobTitle: 'Front-End Lead',
-    bio: 'Grew up in Slovenia, CS degree from FERI. Built a reputation for clean, component-driven React code across international clients before joining Normal.',
-    socialLinks: [
-      {
-        href: 'https://x.com/NikoGorjan',
-        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
-      },
-      {
-        href: 'https://www.linkedin.com/in/niko-gorjan-582433276/',
-        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
-      },
-      {
-        href: 'https://github.com/nikogorjan',
-        icon: <GitHubIcon sx={{ fontSize: 15 }} />,
-      },
-    ],
-  },
-  {
-    image: cdn('about-page/sam-sutton.webp'),
-    name: 'Sam Sutton',
-    jobTitle: 'Business Development',
-    bio: 'Co-founded Rich Habits, a custom athletic apparel brand, in high school and leads it as CEO. Also Head of Design at Skillsage Sports and a Tarleton State wrestler.',
-    socialLinks: [
-      {
-        href: 'https://x.com/samsu1tonRH',
-        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
-      },
-      {
-        href: 'https://www.linkedin.com/in/sam-sutton/',
-        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
       },
     ],
   },
