@@ -64,9 +64,9 @@ const MuiSlider: Components<Theme>['MuiSlider'] = {
         borderStyle: 'solid',
         width: SIZE.thumb.medium,
         height: SIZE.thumb.medium,
-        boxShadow: theme.vars.customShadows.z1,
+        boxShadow: 'none',
         color: theme.vars.palette.common.white,
-        borderColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
+        borderColor: varAlpha(theme.vars.palette.grey['900Channel'], 0.14),
         '&::before': {
           opacity: 0.4,
           boxShadow: 'none',
@@ -102,8 +102,8 @@ const MuiSlider: Components<Theme>['MuiSlider'] = {
       color: theme.vars.palette.text.disabled,
     }),
     valueLabel: ({ theme }) => ({
-      borderRadius: 8,
-      backgroundColor: theme.vars.palette.grey[800],
+      borderRadius: 'var(--radius-sm)',
+      backgroundColor: theme.vars.palette.grey[900],
       ...theme.applyStyles('dark', {
         backgroundColor: theme.vars.palette.grey[700],
       }),

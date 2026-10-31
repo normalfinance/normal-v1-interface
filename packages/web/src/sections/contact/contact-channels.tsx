@@ -6,6 +6,8 @@ import { Icon } from '@iconify/react';
 import { Box, Link, Typography } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
+import { BLOCK_SX, MONO_FONT, PageSection, SectionHeader } from '@/components/_common/brand';
+
 type Channel = {
   icon: React.ReactNode;
   name: string;
@@ -47,16 +49,12 @@ const ChannelCard: React.FC<{ channel: Channel }> = ({ channel }) => (
     rel="noopener noreferrer"
     underline="none"
     sx={{
+      ...BLOCK_SX,
       display: 'flex',
       flexDirection: 'column',
-      bgcolor: '#FFFFFF',
-      border: '1px solid rgba(10,10,15,0.08)',
-      borderRadius: '20px',
-      p: '24px',
-      boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(10,10,15,0.05)',
-      transition: 'box-shadow 180ms ease, transform 180ms ease',
+      transition: 'border-color 150ms ease',
       '&:hover': {
-        boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 28px rgba(10,10,15,0.1)',
+        borderColor: 'rgba(10,10,15,0.14)',
         '& .arrow-btn': {
           bgcolor: '#0A0A0F',
           color: '#fff',
@@ -82,7 +80,7 @@ const ChannelCard: React.FC<{ channel: Channel }> = ({ channel }) => (
           alignItems: 'center',
           justifyContent: 'center',
           bgcolor: '#F4F4F7',
-          borderRadius: '10px',
+          borderRadius: 'var(--radius-md)',
           color: '#0A0A0F',
         }}
       >
@@ -99,7 +97,7 @@ const ChannelCard: React.FC<{ channel: Channel }> = ({ channel }) => (
           alignItems: 'center',
           justifyContent: 'center',
           bgcolor: '#F4F4F7',
-          borderRadius: '8px',
+          borderRadius: 'var(--radius-md)',
           color: '#0A0A0F',
           transition: 'bgcolor 150ms ease, color 150ms ease',
         }}
@@ -110,10 +108,10 @@ const ChannelCard: React.FC<{ channel: Channel }> = ({ channel }) => (
 
     <Typography
       sx={{
-        fontSize: '17px',
-        fontWeight: 600,
+        fontSize: '18px',
+        fontWeight: 500,
         color: '#0A0A0F',
-        letterSpacing: '-0.01em',
+        letterSpacing: '-0.015em',
         mb: '4px',
       }}
     >
@@ -124,7 +122,7 @@ const ChannelCard: React.FC<{ channel: Channel }> = ({ channel }) => (
       sx={{
         fontSize: '13px',
         color: '#6B6B76',
-        fontFamily: '"Geist Mono", "Courier New", monospace',
+        fontFamily: MONO_FONT,
       }}
     >
       {channel.handle}
@@ -133,66 +131,25 @@ const ChannelCard: React.FC<{ channel: Channel }> = ({ channel }) => (
 );
 
 export const ContactChannels: React.FC = () => (
-  <Box
-    component="section"
-    sx={{ bgcolor: '#FAFAFB', pt: { xs: '80px', md: '110px' }, pb: { xs: '40px', md: '56px' } }}
-  >
-    <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: { xs: '40px', md: '48px' } }}>
-        <Typography
-          sx={{
-            fontSize: '11px',
-            letterSpacing: '0.16em',
-            textTransform: 'uppercase',
-            color: '#6B6B76',
-            mb: 1.5,
-          }}
-        >
-          — Find Us
-        </Typography>
-        <Typography
-          component="h2"
-          sx={{
-            fontWeight: 500,
-            fontSize: 'clamp(32px, 4vw, 52px)',
-            lineHeight: 1.15,
-            letterSpacing: '-0.03em',
-            color: '#0A0A0F',
-            mb: '16px',
-          }}
-        >
-          Other ways to reach us
-        </Typography>
-        <Typography
-          sx={{
-            fontSize: '16px',
-            color: '#6B6B76',
-            lineHeight: 1.55,
-            maxWidth: '480px',
-          }}
-        >
-          Join our community channels for the fastest updates, announcements, and real-time support.
-        </Typography>
-      </Box>
+  <PageSection>
+    <SectionHeader
+      eyebrow="Find Us"
+      title="Other ways to reach us"
+      subtitle="Join our community channels for the fastest updates, announcements, and real-time support."
+    />
 
-      {/* Grid */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr 1fr',
-            md: 'repeat(4, 1fr)',
-          },
-          gap: { xs: '16px', md: '24px' },
-        }}
-      >
-        {CHANNELS.map((channel) => (
-          <ChannelCard key={channel.name} channel={channel} />
-        ))}
-      </Box>
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' },
+        gap: { xs: 1.5, md: 2 },
+      }}
+    >
+      {CHANNELS.map((channel) => (
+        <ChannelCard key={channel.name} channel={channel} />
+      ))}
     </Box>
-  </Box>
+  </PageSection>
 );
 
 export default ContactChannels;

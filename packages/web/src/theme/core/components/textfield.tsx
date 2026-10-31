@@ -88,7 +88,7 @@ const MuiFilledInput: Components<Theme>['MuiFilledInput'] = {
    *************************************** */
   styleOverrides: {
     root: ({ theme }) => ({
-      borderRadius: theme.shape.borderRadius,
+      borderRadius: 'var(--radius-md)',
       backgroundColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
       '&:hover': { backgroundColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.16) },
       [`&.${filledInputClasses.focused}`]: {

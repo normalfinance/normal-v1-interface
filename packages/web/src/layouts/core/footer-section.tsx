@@ -95,7 +95,7 @@ export function FooterSection({ sx }: FooterProps = {}) {
       component="footer"
       sx={[
         {
-          bgcolor: '#0c0c0e',
+          bgcolor: '#0A0A0F',
           position: 'relative',
           '&::before': {
             content: '""',
@@ -105,7 +105,7 @@ export function FooterSection({ sx }: FooterProps = {}) {
             right: 0,
             height: '1px',
             background:
-              'linear-gradient(90deg, transparent 0%, #00aff7 25%, #6E4BFF 55%, #f8279c 80%, transparent 100%)',
+              'linear-gradient(90deg, transparent 0%, #5BCFFF 25%, #B17BFF 55%, #FF7BC5 80%, transparent 100%)',
           },
         },
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
@@ -113,11 +113,11 @@ export function FooterSection({ sx }: FooterProps = {}) {
     >
       <Box
         sx={{
-          maxWidth: 1200,
+          maxWidth: 'var(--page-max)',
           mx: 'auto',
-          px: '24px',
-          pt: '80px',
-          pb: '48px',
+          px: { xs: 2, sm: 3 },
+          pt: 'var(--section-y)',
+          pb: 6,
         }}
       >
         {/* Main grid */}
@@ -137,7 +137,7 @@ export function FooterSection({ sx }: FooterProps = {}) {
               sx={{
                 mt: '14px',
                 fontSize: 14,
-                color: '#8a8a93',
+                color: '#9A9AA3',
                 maxWidth: '30ch',
                 lineHeight: 1.6,
               }}
@@ -156,8 +156,8 @@ export function FooterSection({ sx }: FooterProps = {}) {
                     width: 32,
                     height: 32,
                     border: '1px solid rgba(255,255,255,0.12)',
-                    borderRadius: '50%',
-                    color: '#cfcfd6',
+                    borderRadius: 'var(--radius-md)',
+                    color: '#CFCFD6',
                     p: 0,
                     '&:hover': {
                       color: '#fff',
@@ -182,8 +182,8 @@ export function FooterSection({ sx }: FooterProps = {}) {
                   fontSize: 11,
                   fontWeight: 500,
                   textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  color: '#8a8a93',
+                  letterSpacing: '0.16em',
+                  color: '#9A9AA3',
                   mb: '14px',
                   mt: 0,
                 }}
@@ -202,7 +202,7 @@ export function FooterSection({ sx }: FooterProps = {}) {
                       sx={{
                         display: 'block',
                         fontSize: 14,
-                        color: '#cfcfd6',
+                        color: '#CFCFD6',
                         py: '5px',
                         textDecoration: 'none',
                         '&:hover': { color: '#fff' },
@@ -231,11 +231,11 @@ export function FooterSection({ sx }: FooterProps = {}) {
           }}
         >
           {}
-          <Typography sx={{ fontSize: 13, color: '#8a8a93' }}>
+          <Typography sx={{ fontSize: 13, color: '#9A9AA3' }}>
             © 2026 Normal Finance Inc.
           </Typography>
 
-          <Typography sx={{ fontSize: 13, color: '#8a8a93' }}>
+          <Typography sx={{ fontSize: 13, color: '#9A9AA3' }}>
             {t('Built on Stellar · Audited by Halborn')}
           </Typography>
         </Box>

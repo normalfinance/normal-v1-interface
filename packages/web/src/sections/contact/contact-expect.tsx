@@ -33,7 +33,7 @@ export const ContactExpect: React.FC = () => (
               color: '#6B6B76',
             }}
           >
-            — What to expect
+            What to expect
           </Typography>
         </Box>
 
@@ -68,7 +68,7 @@ export const ContactExpect: React.FC = () => (
               href={`mailto:${EMAIL}`}
               sx={{
                 color: '#0A0A0F',
-                fontWeight: 600,
+                fontWeight: 500,
                 textDecoration: 'none',
                 '&:hover': { textDecoration: 'underline' },
               }}
@@ -85,10 +85,9 @@ export const ContactExpect: React.FC = () => (
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
               border: '1px solid rgba(10,10,15,0.08)',
-              borderRadius: '16px',
+              borderRadius: 'var(--radius-lg)',
               overflow: 'hidden',
               bgcolor: '#FFFFFF',
-              boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(10,10,15,0.04)',
             }}
           >
             {RESPONSE_TIMES.map((item, i) => (
@@ -99,18 +98,18 @@ export const ContactExpect: React.FC = () => (
                   py: { xs: '20px', md: '28px' },
                   borderRight: {
                     xs: 'none',
-                    sm: i < RESPONSE_TIMES.length - 1 ? '1px solid rgba(10,10,15,0.07)' : 'none',
+                    sm: i < RESPONSE_TIMES.length - 1 ? '1px solid rgba(10,10,15,0.08)' : 'none',
                   },
                   borderBottom: {
-                    xs: i < RESPONSE_TIMES.length - 1 ? '1px solid rgba(10,10,15,0.07)' : 'none',
+                    xs: i < RESPONSE_TIMES.length - 1 ? '1px solid rgba(10,10,15,0.08)' : 'none',
                     sm: 'none',
                   },
                 }}
               >
                 <Typography
                   sx={{
-                    fontSize: '10px',
-                    letterSpacing: '0.1em',
+                    fontSize: '11px',
+                    letterSpacing: '0.16em',
                     textTransform: 'uppercase',
                     color: '#9A9AA3',
                     mb: '8px',
@@ -125,7 +124,7 @@ export const ContactExpect: React.FC = () => (
                     color: '#0A0A0F',
                     letterSpacing: '-0.03em',
                     lineHeight: 1,
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                   }}
                 >
                   {item.value}

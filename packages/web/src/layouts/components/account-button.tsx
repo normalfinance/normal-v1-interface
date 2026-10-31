@@ -8,7 +8,7 @@ import Avatar from '@mui/material/Avatar';
 import SvgIcon from '@mui/material/SvgIcon';
 import IconButton from '@mui/material/IconButton';
 
-import { varTap, varHover, transitionTap } from '@/components/template/animate';
+import { varTap, transitionTap } from '@/components/template/animate';
 
 // ----------------------------------------------------------------------
 
@@ -43,7 +43,6 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
     <IconButton
       component={m.button}
       whileTap={varTap(0.96)}
-      whileHover={varHover(1.04)}
       transition={transitionTap()}
       aria-label="Account button"
       sx={[{ p: 0 }, ...(Array.isArray(sx) ? sx : [sx])]}
@@ -56,12 +55,8 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
             borderRadius: '50%',
             width: 40,
             height: 40,
-            background: 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(16px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(16px) saturate(160%)',
+            background: '#FFFFFF',
             border: '1px solid rgba(10,10,15,0.08)',
-            boxShadow:
-              '0 1px 0 rgba(255,255,255,0.9) inset, 0 10px 32px rgba(10,10,15,0.07), 0 2px 6px rgba(10,10,15,0.04)',
           }}
         >
           <Avatar src={photoURL} alt={displayName} sx={{ width: 1, height: 1 }}>

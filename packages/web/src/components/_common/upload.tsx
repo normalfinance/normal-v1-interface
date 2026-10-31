@@ -85,7 +85,7 @@ export function Upload({
           (theme) => ({
             p: 5,
             outline: 'none',
-            borderRadius: 1,
+            borderRadius: 'var(--radius-md)',
             cursor: 'pointer',
             overflow: 'hidden',
             position: 'relative',

@@ -31,7 +31,7 @@ export function CustomTabs({ children, slotProps, sx, ...other }: CustomTabsProp
           [`& .${tabsClasses.scroller}`]: { p: 1, ...slotProps?.scroller },
           [`& .${tabsClasses.flexContainer}`]: { gap: 0, ...slotProps?.flexContainer },
           [`& .${tabsClasses.scrollButtons}`]: {
-            borderRadius: 1,
+            borderRadius: 'var(--radius-md)',
             minHeight: 'inherit',
             ...slotProps?.scrollButtons,
           },
@@ -42,10 +42,10 @@ export function CustomTabs({ children, slotProps, sx, ...other }: CustomTabsProp
             '& > span': {
               width: 1,
               height: 1,
-              borderRadius: 1,
+              borderRadius: 'var(--radius-sm)',
               display: 'block',
               bgcolor: 'common.white',
-              boxShadow: theme.vars.customShadows.z1,
+              boxShadow: 'none',
               ...theme.applyStyles('dark', {
                 bgcolor: 'grey.900',
               }),

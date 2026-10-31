@@ -598,7 +598,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
           sx={{
             bgcolor: '#0A0A0F',
             color: '#fff',
-            borderRadius: '999px',
+            borderRadius: 'var(--radius-md)',
             textTransform: 'none',
             fontWeight: 500,
             px: '12px',
@@ -606,7 +606,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
             fontSize: '14px',
             minWidth: 'unset',
             boxShadow: 'none',
-            '&:hover': { bgcolor: '#1a1a2e', boxShadow: 'none' },
+            '&:hover': { bgcolor: '#2A2A33', boxShadow: 'none' },
           }}
         >
           {t('Login')}
@@ -646,7 +646,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
               data-testid="close-drawer-button"
               sx={{
                 color: '#6B6B76',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
                 '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
               }}
             >
@@ -669,7 +669,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     }}
                     sx={{
                       color: '#6B6B76',
-                      borderRadius: '8px',
+                      borderRadius: 'var(--radius-md)',
                       '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
                     }}
                   >
@@ -704,7 +704,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   }}
                   sx={{
                     color: '#6B6B76',
-                    borderRadius: '8px',
+                    borderRadius: 'var(--radius-md)',
                     '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
                   }}
                 >
@@ -730,7 +730,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 sx={{
                   bgcolor: '#0A0A0F',
                   color: '#fff',
-                  borderRadius: '999px',
+                  borderRadius: 'var(--radius-md)',
                   textTransform: 'none',
                   fontWeight: 500,
                   fontSize: '13px',
@@ -738,10 +738,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   py: '7px',
                   minWidth: 'unset',
                   boxShadow: 'none',
-                  '&:hover': { bgcolor: '#1a1a22', boxShadow: 'none' },
+                  '&:hover': { bgcolor: '#2A2A33', boxShadow: 'none' },
                   '&.Mui-disabled': {
-                    bgcolor: 'rgba(10,10,15,0.4)',
-                    color: 'rgba(255,255,255,0.6)',
+                    bgcolor: 'rgba(10,10,15,0.08)',
+                    color: '#9A9AA3',
                   },
                 }}
               >
@@ -764,7 +764,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     <Typography
                       sx={{
                         fontSize: '15px',
-                        fontWeight: 600,
+                        fontWeight: 500,
                         letterSpacing: '-0.01em',
                         color: '#0A0A0F',
                       }}
@@ -908,7 +908,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         }
                         goToLogin();
                       }}
-                      sx={{ borderRadius: 1.5, px: 3 }}
+                      sx={{ borderRadius: 'var(--radius-md)', px: 3 }}
                     >
                       {t('Sign in again')}
                     </Button>
@@ -961,9 +961,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                           sx={{
                             bgcolor: '#0A0A0F',
                             color: '#fff',
-                            borderRadius: 1.5,
+                            borderRadius: 'var(--radius-md)',
                             px: 3,
-                            '&:hover': { bgcolor: '#1a1a25' },
+                            '&:hover': { bgcolor: '#2A2A33' },
                           }}
                         >
                           {t('Pick an asset')}
@@ -977,7 +977,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         <Button
                           variant="contained"
                           onClick={handleConnectClick}
-                          sx={{ borderRadius: 1.5, px: 3 }}
+                          sx={{ borderRadius: 'var(--radius-md)', px: 3 }}
                         >
                           {t('Sign in')}
                         </Button>
@@ -1024,7 +1024,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
               await handleDisconnect();
               setShowLogoutConfirm(false);
             }}
-            sx={{ textTransform: 'none', borderRadius: '999px' }}
+            sx={{ textTransform: 'none', borderRadius: 'var(--radius-md)' }}
           >
             {isDisconnecting ? t('Logging out…') : t('Log out')}
           </Button>

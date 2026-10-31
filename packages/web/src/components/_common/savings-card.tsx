@@ -398,18 +398,14 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     <Box
       sx={[
         (theme) => ({
-          p: '22px',
-          borderRadius: '22px',
+          p: { xs: '20px', md: '24px' },
+          borderRadius: 'var(--radius-lg)',
           textAlign: 'left',
-          background: 'rgba(255,255,255,0.88)',
-          backdropFilter: 'blur(20px) saturate(140%)',
+          background: '#FFFFFF',
           border: '1px solid rgba(10,10,15,0.08)',
-          boxShadow:
-            '0 1px 0 rgba(255,255,255,0.6) inset, 0 24px 60px rgba(10,10,15,0.10), 0 2px 8px rgba(10,10,15,0.06)',
           ...theme.applyStyles('dark', {
             background: 'rgba(20,26,33,0.92)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
+            border: '1px solid rgba(255,255,255,0.08)',
           }),
         }),
         ...(Array.isArray(sxProp) ? sxProp : [sxProp]),
@@ -421,7 +417,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         <Typography
           sx={(theme) => ({
             fontSize: '15px',
-            fontWeight: 600,
+            fontWeight: 500,
             color: '#0A0A0F',
             ...theme.applyStyles('dark', { color: '#FFFFFF' }),
           })}
@@ -437,8 +433,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               alignItems: 'center',
               gap: '7px',
               background: '#F7F7F9',
-              border: '1px solid rgba(10,10,15,0.07)',
-              borderRadius: '20px',
+              border: '1px solid rgba(10,10,15,0.08)',
+              borderRadius: 'var(--radius-sm)',
               px: '10px',
               py: '5px',
             }}
@@ -450,15 +446,14 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 borderRadius: '50%',
                 bgcolor: '#1AB37D',
                 flexShrink: 0,
-                boxShadow: '0 0 0 2px rgba(26,179,125,0.18)',
               }}
             />
             <Typography
               sx={{
                 fontSize: '12px',
-                fontWeight: 700,
+                fontWeight: 500,
                 lineHeight: 1,
-                fontFamily: '"Geist Mono", "Courier New", monospace',
+                fontFamily: '"Geist Mono", ui-monospace, monospace',
                 color: '#0A0A0F',
               }}
             >
@@ -470,14 +465,19 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 fontWeight: 500,
                 color: '#9A9AA3',
                 lineHeight: 1,
-                fontFamily: '"Geist Mono", "Courier New", monospace',
+                fontFamily: '"Geist Mono", ui-monospace, monospace',
               }}
             >
               APY
             </Typography>
           </Box>
         ) : (
-          <Skeleton variant="rounded" width={80} height={26} sx={{ borderRadius: '20px' }} />
+          <Skeleton
+            variant="rounded"
+            width={80}
+            height={26}
+            sx={{ borderRadius: 'var(--radius-lg)' }}
+          />
         )}
       </Stack>
 
@@ -503,12 +503,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   appearance: 'none',
                   border: selected
                     ? '1px solid rgba(10,10,15,0.9)'
-                    : '1px solid rgba(10,10,15,0.12)',
-                  borderRadius: '999px',
+                    : '1px solid rgba(10,10,15,0.14)',
+                  borderRadius: 'var(--radius-sm)',
                   px: '12px',
                   py: '6px',
                   fontSize: '12px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
                   bgcolor: selected ? '#0A0A0F' : 'transparent',
@@ -527,7 +527,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       {/* Stats */}
       <Box
         sx={(theme) => ({
-          borderRadius: '14px',
+          borderRadius: 'var(--radius-md)',
           p: '14px 16px',
           mb: '14px',
           background: '#F7F7F9',
@@ -545,7 +545,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   sx={{
                     fontSize: '13.5px',
                     fontWeight: 400,
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                     color: '#6B6B76',
                   }}
                 >
@@ -570,7 +570,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   sx={{
                     fontSize: '13.5px',
                     fontWeight: 400,
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                     color: '#6B6B76',
                   }}
                 >
@@ -587,7 +587,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                     sx={{
                       fontSize: '13.5px',
                       fontWeight: 400,
-                      fontFamily: '"Geist Mono", "Courier New", monospace',
+                      fontFamily: '"Geist Mono", ui-monospace, monospace',
                       fontFeatureSettings: '"ss01","ss02","zero"',
                       fontVariantNumeric: 'tabular-nums',
                       letterSpacing: '-0.02em',
@@ -606,12 +606,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       {/* Mode Toggle */}
       <Box
         sx={(theme) => ({
-          borderRadius: '12px',
+          borderRadius: 'var(--radius-md)',
           p: '4px',
           position: 'relative',
           display: 'flex',
           mb: '14px',
-          background: '#F0F0F4',
+          background: '#F4F4F7',
           ...theme.applyStyles('dark', { background: 'rgba(255,255,255,0.08)' }),
         })}
       >
@@ -622,13 +622,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             width: 'calc(50% - 4px)',
             height: 'calc(100% - 8px)',
             background: '#0A0A0F',
-            borderRadius: '9px',
+            borderRadius: 'var(--radius-sm)',
             top: '4px',
             left: '4px',
             transform: mode === 'withdraw' ? 'translateX(calc(100% + 4px))' : 'translateX(0)',
             transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
             pointerEvents: 'none',
-            boxShadow: '0 2px 8px rgba(10,10,15,0.2)',
             ...theme.applyStyles('dark', { background: '#FFFFFF' }),
           })}
         />
@@ -642,10 +641,10 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               color: mode === m ? '#FFFFFF' : '#6B6B76',
               zIndex: 1,
               fontSize: '14px',
-              fontWeight: 600,
+              fontWeight: 500,
               padding: '10px 0',
               minHeight: 'unset',
-              borderRadius: '9px',
+              borderRadius: 'var(--radius-md)',
               textTransform: 'none',
               transition: 'color 0.28s ease',
               '&:hover': { background: 'transparent' },
@@ -662,7 +661,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       {/* Amount Input */}
       <Box
         sx={(theme) => ({
-          borderRadius: '14px',
+          borderRadius: 'var(--radius-md)',
           p: '14px 16px',
           mb: '14px',
           background: '#FAFAFC',
@@ -697,12 +696,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               onClick={handleMax}
               sx={(theme) => ({
                 fontSize: '10px',
-                fontWeight: 700,
+                fontWeight: 500,
                 letterSpacing: '0.04em',
                 color: '#0A0A0F',
                 background: 'transparent',
                 border: '1px solid rgba(10,10,15,0.08)',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius-sm)',
                 px: '7px',
                 py: '2px',
                 cursor: 'pointer',
@@ -739,17 +738,17 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               gap: '6px',
               background: '#FFFFFF',
               border: '1px solid rgba(10,10,15,0.08)',
-              borderRadius: '20px',
+              borderRadius: 'var(--radius-md)',
               p: '7px 10px 7px 7px',
               flexShrink: 0,
               ...theme.applyStyles('dark', {
                 background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.08)',
               }),
             })}
           >
             <Iconify icon="cryptocurrency-color:usdc" width={22} sx={{ flexShrink: 0 }} />
-            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: 'text.primary' }}>
+            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: 'text.primary' }}>
               {availableAssetLabel}
             </Typography>
           </Box>
@@ -766,9 +765,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               outline: 'none',
               background: 'transparent',
               fontSize: '26px',
-              fontWeight: 700,
+              fontWeight: 500,
               color: '#0A0A0F',
-              fontFamily: '"Geist Mono", "Courier New", monospace',
+              fontFamily: '"Geist Mono", ui-monospace, monospace',
               textAlign: 'right',
               p: 0,
               appearance: 'textfield',
@@ -796,7 +795,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       {mode === 'deposit' && parsedAmount > 0 && (
         <Box
           sx={(theme) => ({
-            borderRadius: '10px',
+            borderRadius: 'var(--radius-md)',
             px: '14px',
             py: '10px',
             mb: '14px',
@@ -814,7 +813,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   fontSize: '12px',
                   fontWeight: 500,
                   color: 'text.primary',
-                  fontFamily: '"Geist Mono", "Courier New", monospace',
+                  fontFamily: '"Geist Mono", ui-monospace, monospace',
                 }}
               >
                 -{depositFee.toFixed(2)} USDC
@@ -829,7 +828,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   fontSize: '12px',
                   fontWeight: 500,
                   color: 'text.primary',
-                  fontFamily: '"Geist Mono", "Courier New", monospace',
+                  fontFamily: '"Geist Mono", ui-monospace, monospace',
                 }}
               >
                 {netDepositAmount.toFixed(2)} USDC
@@ -848,7 +847,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       {mode === 'withdraw' && parsedAmount > 0 && yieldCommission > 0 && (
         <Box
           sx={(theme) => ({
-            borderRadius: '10px',
+            borderRadius: 'var(--radius-md)',
             px: '14px',
             py: '10px',
             mb: '14px',
@@ -865,7 +864,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 fontSize: '12px',
                 fontWeight: 500,
                 color: 'text.primary',
-                fontFamily: '"Geist Mono", "Courier New", monospace',
+                fontFamily: '"Geist Mono", ui-monospace, monospace',
               }}
             >
               -{yieldCommission.toFixed(2)} USDC
@@ -889,7 +888,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           <Box
             sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#1AB37D', flexShrink: 0 }}
           />
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', lineHeight: 1.4 }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', lineHeight: 1.4 }}>
             {t('XLM fee reserve healthy — deposits & withdrawals covered.')}
           </Typography>
         </Stack>
@@ -901,7 +900,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             gap: '10px',
             p: '12px 14px',
             mb: '12px',
-            borderRadius: '14px',
+            borderRadius: 'var(--radius-md)',
             ...(feeStatus === 'blocked'
               ? {
                   bgcolor: 'rgba(220,38,38,0.06)',
@@ -928,7 +927,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             <Typography
               sx={{
                 fontSize: '13px',
-                fontWeight: 600,
+                fontWeight: 500,
                 color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
                 lineHeight: 1.4,
               }}
@@ -963,12 +962,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   bgcolor: '#0A0A0F',
                   color: '#fff',
                   fontSize: '12px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   textTransform: 'none',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--radius-md)',
                   px: '12px',
                   py: '6px',
-                  '&:hover': { bgcolor: '#1A1A28' },
+                  '&:hover': { bgcolor: '#2A2A33' },
                 }}
               >
                 {t('Swap USDC → XLM')}
@@ -979,9 +978,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   bgcolor: 'transparent',
                   color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
                   fontSize: '12px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   textTransform: 'none',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--radius-md)',
                   px: '12px',
                   py: '6px',
                   border:
@@ -1002,9 +1001,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   bgcolor: 'transparent',
                   color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
                   fontSize: '12px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   textTransform: 'none',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--radius-md)',
                   px: '12px',
                   py: '6px',
                   border:
@@ -1046,13 +1045,13 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               onClick={() => setSetupOpen(true)}
               sx={{
                 background: '#0A0A0F',
-                borderRadius: '14px',
+                borderRadius: 'var(--radius-md)',
                 padding: '14px 16px',
                 fontSize: '14px',
-                fontWeight: 600,
+                fontWeight: 500,
                 color: '#FFFFFF',
                 textTransform: 'none',
-                '&:hover': { background: '#1A1A28' },
+                '&:hover': { background: '#2A2A33' },
               }}
             >
               {accountExists ? t('Continue setup') : t('Set up savings')}
@@ -1065,47 +1064,20 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             onClick={handleAction}
             sx={{
               background: '#0A0A0F',
-              borderRadius: '14px',
+              borderRadius: 'var(--radius-md)',
               padding: '14px 16px',
               fontSize: '14px',
-              fontWeight: 600,
+              fontWeight: 500,
               color: '#FFFFFF',
               textTransform: 'none',
-              position: 'relative',
-              overflow: 'hidden',
-              boxShadow: '0 8px 22px rgba(10,10,15,0.22)',
-              transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+              transition: 'background 150ms ease',
               '&:hover': {
-                background: '#0A0A0F',
-                transform: 'translateY(-1px)',
-                boxShadow: '0 12px 30px rgba(10,10,15,0.28)',
+                background: '#2A2A33',
               },
-              '&:hover .btn-shine': { opacity: 0.9 },
-              '&.Mui-disabled': {
-                opacity: 0.5,
-                color: '#FFFFFF',
-                background: '#0A0A0F',
-              },
+              '&.Mui-disabled': { background: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
             }}
           >
-            <Box
-              className="btn-shine"
-              sx={{
-                position: 'absolute',
-                inset: 0,
-                background:
-                  'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)',
-                opacity: 0,
-                transition: 'opacity 0.35s ease',
-                pointerEvents: 'none',
-              }}
-            />
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={1}
-              sx={{ position: 'relative', zIndex: 1 }}
-            >
+            <Stack direction="row" alignItems="center" spacing={1}>
               {loading && <CircularProgress size={16} sx={{ color: '#FFFFFF' }} />}
               <span>{actionButtonText}</span>
             </Stack>
@@ -1131,9 +1103,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           <Typography
             sx={{
               fontSize: '11px',
-              fontWeight: 700,
+              fontWeight: 500,
               textTransform: 'uppercase',
-              letterSpacing: '0.14em',
+              letterSpacing: '0.16em',
               color: 'text.disabled',
             }}
           >
@@ -1246,7 +1218,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                     sx={{
                       fontSize: '11px',
                       color: 'text.disabled',
-                      fontFamily: '"Geist Mono", "Courier New", monospace',
+                      fontFamily: '"Geist Mono", ui-monospace, monospace',
                       letterSpacing: '-0.01em',
                       mt: '1px',
                       display: 'block',

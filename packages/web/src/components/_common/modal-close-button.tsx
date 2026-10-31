@@ -29,7 +29,7 @@ export default function ModalCloseButton({ onClick, sx, ...rest }: Props) {
       sx={{
         width: 28,
         height: 28,
-        borderRadius: '8px',
+        borderRadius: 'var(--radius-md)',
         border: 'none',
         bgcolor: 'rgba(10,10,15,0.06)',
         color: '#0A0A0F',

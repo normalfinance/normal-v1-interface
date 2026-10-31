@@ -141,18 +141,18 @@ export function DeleteAccountCard() {
     <>
       <Box
         sx={{
-          p: '22px',
-          borderRadius: '22px',
+          p: { xs: '20px', md: '24px' },
+          borderRadius: 'var(--radius-lg)',
           border: '1px solid rgba(220,38,38,0.2)',
           bgcolor: '#FFFFFF',
           maxWidth: 480,
           mt: 2,
         }}
       >
-        <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0A0A0F', mb: '4px' }}>
+        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
           {t('Delete account')}
         </Typography>
-        <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mb: '16px' }}>
+        <Typography sx={{ fontSize: '13px', color: '#6B6B76', mb: '16px' }}>
           {t(
             'Removes your Normal login and personal data. Your wallet stays yours: before deleting you must export its recovery phrase, which restores your funds in any wallet.'
           )}
@@ -162,9 +162,9 @@ export function DeleteAccountCard() {
           onClick={handleOpen}
           startIcon={<Iconify icon="solar:trash-bin-trash-bold" width={18} />}
           sx={{
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-md)',
             textTransform: 'none',
-            fontWeight: 600,
+            fontWeight: 500,
             color: '#B91C1C',
             borderColor: 'rgba(220,38,38,0.4)',
             '&:hover': { borderColor: '#B91C1C', bgcolor: 'rgba(220,38,38,0.04)' },
@@ -179,18 +179,18 @@ export function DeleteAccountCard() {
         onClose={() => !deleting && setOpen(false)}
         maxWidth="xs"
         fullWidth
-        slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+        slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
       >
         <DialogContent sx={{ px: '22px', py: '26px' }}>
           <Stack spacing={2}>
-            <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F' }}>
+            <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
               {t('Delete your account')}
             </Typography>
 
             {checking && !gate && (
               <Stack direction="row" spacing={1.5} alignItems="center">
                 <CircularProgress size={18} sx={{ color: '#0A0A0F' }} />
-                <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)' }}>
+                <Typography sx={{ fontSize: '13px', color: '#6B6B76' }}>
                   {t('Checking your wallet…')}
                 </Typography>
               </Stack>
@@ -210,7 +210,11 @@ export function DeleteAccountCard() {
                       variant="contained"
                       size="small"
                       onClick={() => setExportWalletId(id)}
-                      sx={{ borderRadius: '10px', bgcolor: '#0A0A0F', textTransform: 'none' }}
+                      sx={{
+                        borderRadius: 'var(--radius-md)',
+                        bgcolor: '#0A0A0F',
+                        textTransform: 'none',
+                      }}
                     >
                       {gate.wallets && gate.wallets.length > 1
                         ? t('Export wallet {{n}}', { n: i + 1 })
@@ -228,7 +232,7 @@ export function DeleteAccountCard() {
                     'A swap, purchase or cash-out has not finished yet. Wait for it to complete, then check again.'
                   )}
                 </Typography>
-                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', mt: 1 }}>
+                <Typography sx={{ fontSize: '12px', color: '#6B6B76', mt: 1 }}>
                   {t('Swaps: {{a}} · Purchases/sales: {{b}} · MoneyGram: {{c}}', {
                     a: gate.counts?.cctp ?? 0,
                     b: gate.counts?.ramp ?? 0,
@@ -339,7 +343,7 @@ export function DeleteAccountCard() {
                 variant="outlined"
                 onClick={() => setOpen(false)}
                 disabled={deleting}
-                sx={{ borderRadius: '12px', textTransform: 'none', color: '#0A0A0F' }}
+                sx={{ borderRadius: 'var(--radius-md)', textTransform: 'none', color: '#0A0A0F' }}
               >
                 {t('Cancel')}
               </Button>
@@ -349,10 +353,10 @@ export function DeleteAccountCard() {
                 disabled={!canDelete}
                 startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : null}
                 sx={{
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#B91C1C',
                   textTransform: 'none',
-                  fontWeight: 700,
+                  fontWeight: 500,
                   '&:hover': { bgcolor: '#991B1B' },
                 }}
               >
@@ -396,12 +400,12 @@ function GateBox({
     <Box
       sx={{
         p: '14px',
-        borderRadius: '14px',
+        borderRadius: 'var(--radius-md)',
         bgcolor: colors.bg,
         border: `1px solid ${colors.border}`,
       }}
     >
-      <Typography sx={{ fontSize: '13px', fontWeight: 700, color: colors.fg, mb: '6px' }}>
+      <Typography sx={{ fontSize: '13px', fontWeight: 500, color: colors.fg, mb: '6px' }}>
         {title}
       </Typography>
       {children}

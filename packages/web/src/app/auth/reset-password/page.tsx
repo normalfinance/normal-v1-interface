@@ -235,7 +235,7 @@ const ResetPasswordPage = () => {
                     sx={{
                       backgroundColor: 'error.light',
                       color: 'error.dark',
-                      borderRadius: 1,
+                      borderRadius: 'var(--radius-md)',
                       px: 2,
                       py: 1,
                     }}
@@ -263,7 +263,7 @@ const ResetPasswordPage = () => {
                 sx={{
                   backgroundColor: 'error.light',
                   color: 'error.dark',
-                  borderRadius: 1,
+                  borderRadius: 'var(--radius-md)',
                   px: 2,
                   py: 1,
                 }}

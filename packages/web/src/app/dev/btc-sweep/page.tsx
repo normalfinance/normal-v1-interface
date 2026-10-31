@@ -133,7 +133,7 @@ export default function BtcSweepPage() {
         <button
           onClick={reattach}
           disabled={busy || !fromAddress.trim()}
-          style={{ padding: '10px 18px', cursor: 'pointer', fontWeight: 700 }}
+          style={{ padding: '10px 18px', cursor: 'pointer', fontWeight: 500 }}
         >
           Reattach as my BTC address (no tx, no fees)
         </button>
@@ -165,7 +165,7 @@ export default function BtcSweepPage() {
           <button
             onClick={signAndBroadcast}
             disabled={busy}
-            style={{ marginTop: 12, padding: '10px 18px', cursor: 'pointer', fontWeight: 700 }}
+            style={{ marginTop: 12, padding: '10px 18px', cursor: 'pointer', fontWeight: 500 }}
           >
             {busy ? 'Signing…' : '2 — Sign with passkey & broadcast'}
           </button>

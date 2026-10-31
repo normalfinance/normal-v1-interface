@@ -117,7 +117,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
           pr: 1,
           pl: 0.5,
           py: 0.25,
-          borderRadius: 9999,
+          borderRadius: 'var(--radius-md)',
           cursor: 'pointer',
           bgcolor: _theme.palette.grey[100],
           border: `1px solid ${_theme.palette.divider}`,
@@ -168,7 +168,6 @@ export function Searchbar({ sx, ...other }: BoxProps) {
           cursor: 'inherit',
           bgcolor: _theme.palette.background.paper,
           fontSize: _theme.typography.pxToRem(12),
-          boxShadow: _theme.vars.customShadows.z1,
           display: { xs: 'none', [breakpoint]: 'inline-flex' },
           ..._theme.applyStyles('dark', {
             border: `1px solid ${_theme.palette.divider}`,
@@ -233,7 +232,7 @@ export function Searchbar({ sx, ...other }: BoxProps) {
                   borderColor: 'transparent',
                   borderBottomColor: theme.vars?.palette.divider || theme.palette.divider,
                   '&:hover': {
-                    borderRadius: 1,
+                    borderRadius: 'var(--radius-md)',
                     borderColor: theme.vars?.palette.primary.main || theme.palette.primary.main,
                     backgroundColor: theme.vars?.palette.action.hover || theme.palette.action.hover,
                   },

@@ -72,8 +72,8 @@ function OwnWalletChip({
         gap: '6px',
         px: '10px',
         py: '5px',
-        borderRadius: '999px',
-        border: selected ? '1px solid rgba(10,10,15,0.9)' : '1px solid rgba(10,10,15,0.12)',
+        borderRadius: 'var(--radius-sm)',
+        border: selected ? '1px solid rgba(10,10,15,0.9)' : '1px solid rgba(10,10,15,0.14)',
         bgcolor: selected ? '#0A0A0F' : 'transparent',
         cursor: disabled ? 'default' : 'pointer',
         fontFamily: 'inherit',
@@ -84,7 +84,7 @@ function OwnWalletChip({
     >
       <Typography
         component="span"
-        sx={{ fontSize: '11.5px', fontWeight: 600, color: selected ? '#fff' : '#6B6B76' }}
+        sx={{ fontSize: '11.5px', fontWeight: 500, color: selected ? '#fff' : '#6B6B76' }}
       >
         {candidate.label}
       </Typography>
@@ -119,7 +119,7 @@ export default function OwnWalletChips({
   if (candidates.length === 0) return null;
   return (
     <Box sx={{ mb: '10px' }}>
-      <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', mb: '6px' }}>
+      <Typography sx={{ fontSize: '11px', color: '#9A9AA3', mb: '6px' }}>
         {t('Your wallets')}
       </Typography>
       <Box sx={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>

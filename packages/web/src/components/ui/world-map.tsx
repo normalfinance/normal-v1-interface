@@ -50,7 +50,7 @@ const WorldMap: React.FC<MapProps> = ({
         width: '100%',
         aspectRatio: '2 / 1',
         bgcolor: theme.palette.background.paper,
-        borderRadius: 2,
+        borderRadius: 'var(--radius-lg)',
         overflow: 'hidden',
       }}
     >

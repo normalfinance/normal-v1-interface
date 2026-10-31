@@ -206,16 +206,16 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
 
   if (native && nativeLoading && !nativeToken) {
     return (
-      <DashboardContent maxWidth="xl">
+      <DashboardContent>
         <Skeleton
           variant="rectangular"
           height={220}
-          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
         />
         <Skeleton
           variant="rectangular"
           height={280}
-          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }}
+          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)', mt: 2 }}
         />
       </DashboardContent>
     );
@@ -348,7 +348,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
       ];
 
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent>
       {/* Back to portfolio */}
       <Box
         component="button"
@@ -359,7 +359,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
           gap: '6px',
           border: 'none',
           bgcolor: 'transparent',
-          color: 'rgba(10,10,15,0.5)',
+          color: '#6B6B76',
           fontSize: '13px',
           fontWeight: 500,
           cursor: 'pointer',
@@ -378,7 +378,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
-          gap: '20px',
+          gap: 2,
           alignItems: 'start',
         }}
       >
@@ -395,7 +395,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                 <Box
                   sx={{
                     fontSize: '17px',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     color: '#0A0A0F',
                     letterSpacing: '-0.01em',
                     lineHeight: 1.3,
@@ -405,20 +405,18 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                 </Box>
                 <NetworkBadge network={getAssetNetwork(token)} />
               </Box>
-              <Box sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.45)', lineHeight: 1.3 }}>
-                {token.symbol}
-              </Box>
+              <Box sx={{ fontSize: '13px', color: '#9A9AA3', lineHeight: 1.3 }}>{token.symbol}</Box>
             </Box>
           </Stack>
 
           <Box sx={{ mb: '22px' }}>
             <Box
               sx={{
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: 500,
-                color: 'rgba(10,10,15,0.45)',
+                color: '#9A9AA3',
                 textTransform: 'uppercase',
-                letterSpacing: '0.08em',
+                letterSpacing: '0.16em',
                 mb: '6px',
               }}
             >
@@ -430,8 +428,8 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                   sx={{
                     ...MONO,
                     fontSize: '28px',
-                    fontWeight: 600,
-                    color: 'rgba(10,10,15,0.3)',
+                    fontWeight: 500,
+                    color: '#9A9AA3',
                     letterSpacing: '-0.02em',
                     lineHeight: 1.2,
                   }}
@@ -465,7 +463,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                   sx={{
                     ...MONO,
                     fontSize: '28px',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     color: '#0A0A0F',
                     letterSpacing: '-0.02em',
                     lineHeight: 1.2,
@@ -473,7 +471,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                 >
                   {fTokenAmount(balance)} {token.symbol}
                 </Box>
-                <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
+                <Box sx={{ fontSize: '14px', color: '#6B6B76', mt: '4px' }}>
                   {price.isZero() ? '—' : fCurrencyTwoDecimals(value.toNumber())}
                   <Box component="span" sx={{ mx: '8px', color: 'rgba(10,10,15,0.2)' }}>
                     ·
@@ -483,7 +481,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                 {/* #75 2b: per-wallet split — the big number is the account
                     total, this line says who holds what. */}
                 {showWalletSplit && (
-                  <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', mt: '6px', ...MONO }}>
+                  <Box sx={{ fontSize: '12px', color: '#9A9AA3', mt: '6px', ...MONO }}>
                     {t('Normal wallet')} {fTokenAmount(companionBalance)}
                     <Box component="span" sx={{ mx: '6px', color: 'rgba(10,10,15,0.2)' }}>
                       ·
@@ -516,7 +514,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                 sx={{
                   appearance: 'none',
                   border: '1px solid rgba(10,10,15,0.08)',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   padding: '10px 6px',
                   cursor: 'pointer',
                   fontFamily: 'inherit',
@@ -542,7 +540,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                   sx={{
                     width: 28,
                     height: 28,
-                    borderRadius: '8px',
+                    borderRadius: 'var(--radius-md)',
                     bgcolor: '#F4F4F7',
                     display: 'flex',
                     alignItems: 'center',
@@ -564,11 +562,11 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                 mt: '14px',
                 px: '12px',
                 py: '10px',
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: 'rgba(247,147,26,0.06)',
                 border: '1px solid rgba(247,147,26,0.18)',
                 fontSize: '12.5px',
-                color: 'rgba(10,10,15,0.6)',
+                color: '#6B6B76',
                 lineHeight: 1.5,
               }}
             >
@@ -593,9 +591,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                   gap: '12px',
                 }}
               >
-                <Box sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', flexShrink: 0 }}>
-                  {row.label}
-                </Box>
+                <Box sx={{ fontSize: '13px', color: '#6B6B76', flexShrink: 0 }}>{row.label}</Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
                   <Box
                     sx={{
@@ -616,7 +612,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                       width={15}
                       sx={{
                         cursor: 'pointer',
-                        color: 'rgba(10,10,15,0.35)',
+                        color: '#9A9AA3',
                         flexShrink: 0,
                         '&:hover': { color: '#0A0A0F' },
                       }}
@@ -634,7 +630,7 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
       <AssetPriceChart symbol={token.symbol} />
 
       {/* Asset-scoped activity */}
-      <Box sx={{ mt: '20px' }}>
+      <Box sx={{ mt: 2 }}>
         {/* In-flight MoneyGram cash deposits/outs — USDC (Stellar) is the only
             asset MoneyGram ramps, so the banner only belongs here. */}
         {/* doc 89 F2: FAILED ramp handoffs for THIS asset (dismissible).

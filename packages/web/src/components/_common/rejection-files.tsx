@@ -54,7 +54,7 @@ const ListRoot = styled('ul')(({ theme }) => ({
   flexDirection: 'column',
   padding: theme.spacing(2),
   marginTop: theme.spacing(3),
-  borderRadius: theme.shape.borderRadius,
+  borderRadius: 'var(--radius-md)',
   border: `dashed 1px ${theme.vars.palette.error.main}`,
   backgroundColor: varAlpha(theme.vars.palette.error.mainChannel, 0.08),
 }));

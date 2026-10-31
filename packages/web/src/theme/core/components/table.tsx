@@ -93,7 +93,7 @@ const MuiTablePagination: Components<Theme>['MuiTablePagination'] = {
       paddingLeft: 8,
       display: 'flex',
       alignItems: 'center',
-      '&:focus': { borderRadius: theme.shape.borderRadius },
+      '&:focus': { borderRadius: 'var(--radius-md)' },
     }),
     selectIcon: {
       right: 4,

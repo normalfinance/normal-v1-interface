@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 
 import { SavingsChart } from './savings-chart';
 
-const MONO = '"Geist Mono", "Courier New", monospace';
+const MONO = '"Geist Mono", ui-monospace, monospace';
 
 // Divider shared style
 const DIVIDER_SX = {
@@ -48,9 +48,9 @@ export function SavingsHeroCard({
   return (
     <Box
       sx={{
-        borderRadius: '22px',
-        background: 'linear-gradient(135deg, #0A0A0F 0%, #1A1A2E 100%)',
-        p: { xs: '22px', sm: '28px 32px' },
+        borderRadius: 'var(--radius-lg)',
+        background: 'linear-gradient(135deg, #0A0A0F 0%, #2A2A33 100%)',
+        p: { xs: '24px', md: '32px' },
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -105,7 +105,7 @@ export function SavingsHeroCard({
               <Typography
                 sx={{
                   fontSize: '22px',
-                  fontWeight: 700,
+                  fontWeight: 500,
                   fontFamily: MONO,
                   letterSpacing: '-0.03em',
                   color: '#FFFFFF',
@@ -156,7 +156,7 @@ export function SavingsHeroCard({
               <Typography
                 sx={{
                   fontSize: '22px',
-                  fontWeight: 700,
+                  fontWeight: 500,
                   fontFamily: MONO,
                   letterSpacing: '-0.03em',
                   color: earnings > 0 ? '#4ADE80' : '#FFFFFF',
@@ -208,7 +208,7 @@ export function SavingsHeroCard({
               <Typography
                 sx={{
                   fontSize: '22px',
-                  fontWeight: 700,
+                  fontWeight: 500,
                   fontFamily: MONO,
                   letterSpacing: '-0.03em',
                   color: '#FFFFFF',
@@ -235,7 +235,7 @@ export function SavingsHeroCard({
               <Typography
                 sx={{
                   fontSize: '14px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   fontFamily: MONO,
                   letterSpacing: '-0.02em',
                   color: 'rgba(255,255,255,0.6)',
@@ -259,7 +259,7 @@ export function SavingsHeroCard({
               <Typography
                 sx={{
                   fontSize: '14px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   fontFamily: MONO,
                   letterSpacing: '-0.02em',
                   color: 'rgba(255,255,255,0.6)',
@@ -301,13 +301,12 @@ export function SavingsHeroCard({
                   borderRadius: '50%',
                   bgcolor: '#4ADE80',
                   flexShrink: 0,
-                  boxShadow: '0 0 0 2px rgba(74,222,128,0.25)',
                 }}
               />
               <Typography
                 sx={{
                   fontSize: '22px',
-                  fontWeight: 700,
+                  fontWeight: 500,
                   fontFamily: MONO,
                   letterSpacing: '-0.03em',
                   color: '#4ADE80',

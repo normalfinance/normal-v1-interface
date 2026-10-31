@@ -11,6 +11,7 @@ import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 
 import { Chart, useChart } from '@/components/template/chart';
+import { SegmentedControl } from '@/components/_common/brand';
 
 // ---------------------------------------------------------------------------
 
@@ -93,7 +94,7 @@ export function AssetPriceChart({ symbol }: { symbol: string }) {
   if (!supported) return null;
 
   return (
-    <Box sx={{ ...CARD_SX, mt: '20px', minWidth: 0 }}>
+    <Box sx={{ ...CARD_SX, mt: 2, minWidth: 0 }}>
       {/* Header */}
       <Box
         sx={{
@@ -117,7 +118,7 @@ export function AssetPriceChart({ symbol }: { symbol: string }) {
                 sx={{
                   ...MONO,
                   fontSize: '24px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   color: '#0A0A0F',
                   letterSpacing: '-0.02em',
                 }}
@@ -132,51 +133,16 @@ export function AssetPriceChart({ symbol }: { symbol: string }) {
           ) : null}
         </Box>
 
-        {/* Range tabs */}
-        <Box
-          sx={{
-            display: 'inline-flex',
-            bgcolor: 'rgba(10,10,15,0.04)',
-            borderRadius: '999px',
-            p: '4px',
-            gap: '2px',
-          }}
-        >
-          {RANGES.map((item) => (
-            <Box
-              key={item.value}
-              component="button"
-              onClick={() => setRange(item.value)}
-              sx={{
-                px: '14px',
-                py: '6px',
-                borderRadius: '999px',
-                border: 'none',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                transition: 'background 150ms, color 150ms',
-                bgcolor: range === item.value ? '#fff' : 'transparent',
-                color: range === item.value ? '#0A0A0F' : 'rgba(10,10,15,0.45)',
-                boxShadow: range === item.value ? '0 1px 2px rgba(10,10,15,0.08)' : 'none',
-              }}
-            >
-              {item.label}
-            </Box>
-          ))}
-        </Box>
+        <SegmentedControl value={range} onChange={setRange} options={RANGES} />
       </Box>
 
       {/* Chart */}
       {failed ? (
-        <Box
-          sx={{ color: 'rgba(10,10,15,0.4)', fontSize: '14px', py: '48px', textAlign: 'center' }}
-        >
+        <Box sx={{ color: '#9A9AA3', fontSize: '14px', py: '48px', textAlign: 'center' }}>
           {t('Price data is unavailable right now. Please try again later.')}
         </Box>
       ) : stillLoading && prices.length === 0 ? (
-        <Skeleton variant="rectangular" height={280} sx={{ borderRadius: '12px' }} />
+        <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 'var(--radius-md)' }} />
       ) : (
         <Chart
           type="area"

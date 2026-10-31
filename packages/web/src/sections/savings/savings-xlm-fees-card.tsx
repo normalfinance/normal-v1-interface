@@ -27,7 +27,7 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
-const MONO = { fontFamily: '"Geist Mono", "Courier New", monospace' } as const;
+const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace' } as const;
 
 const STATUS_STYLE = {
   ok: { dot: '#1AB37D', label: 'Healthy', color: '#0A6649', bg: 'rgba(26,179,125,0.12)' },
@@ -81,15 +81,15 @@ export function SavingsXlmFeesCard() {
   return (
     <Box
       sx={{
-        p: '22px',
-        borderRadius: '22px',
+        p: { xs: '20px', md: '24px' },
+        borderRadius: 'var(--radius-lg)',
         border: '1px solid rgba(10,10,15,0.08)',
         bgcolor: '#FAFAFB',
         alignSelf: 'start',
       }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '4px' }}>
-        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F' }}>
           {t('Network fees (XLM)')}
         </Typography>
         <Box
@@ -99,27 +99,25 @@ export function SavingsXlmFeesCard() {
             gap: '6px',
             px: '9px',
             py: '3px',
-            borderRadius: '999px',
+            borderRadius: 'var(--radius-sm)',
             bgcolor: style.bg,
           }}
         >
           <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: style.dot }} />
-          <Typography sx={{ fontSize: '11px', fontWeight: 600, color: style.color }}>
+          <Typography sx={{ fontSize: '11px', fontWeight: 500, color: style.color }}>
             {t(style.label)}
           </Typography>
         </Box>
       </Stack>
 
-      <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', lineHeight: 1.55 }}>
+      <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.55 }}>
         {t(
           'Every deposit and withdrawal is a Stellar transaction that costs a small XLM fee. No XLM means no way to move money in or out of savings.'
         )}
       </Typography>
 
       {hasActiveSavings && (
-        <Typography
-          sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', lineHeight: 1.55, mt: '8px' }}
-        >
+        <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.55, mt: '8px' }}>
           {t(
             'While you have savings, {{buffer}} XLM is kept aside so a withdrawal can always pay its fee — that is why Send and Swap show slightly less than your full XLM balance.',
             { buffer: SAVINGS_XLM_BUFFER }
@@ -139,9 +137,9 @@ export function SavingsXlmFeesCard() {
               sx={{
                 px: '12px',
                 py: '10px',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: '#fff',
-                border: '1px solid rgba(10,10,15,0.06)',
+                border: '1px solid rgba(10,10,15,0.08)',
               }}
             >
               <Stack direction="row" alignItems="center" gap="8px" sx={{ minWidth: 0 }}>
@@ -154,16 +152,16 @@ export function SavingsXlmFeesCard() {
                     flexShrink: 0,
                   }}
                 />
-                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
                   {r.label ?? t('Your wallet')}
                 </Typography>
               </Stack>
               {/* Total first, spendable-after-reserve second — showing only
                   the fee number read as a WRONG balance (Niko: "it tells
                   Lobstr has 0.5 XLM, but it actually has 2"). */}
-              <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+              <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
                 {r.xlm.toFixed(2)} XLM
-                <Box component="span" sx={{ color: 'rgba(10,10,15,0.45)', fontWeight: 500 }}>
+                <Box component="span" sx={{ color: '#9A9AA3', fontWeight: 500 }}>
                   {` · ${r.feeAvailable.toFixed(2)} ${t('for fees')}`}
                 </Box>
               </Typography>
@@ -181,11 +179,11 @@ export function SavingsXlmFeesCard() {
             bgcolor: '#0A0A0F',
             color: '#fff',
             fontSize: '13px',
-            fontWeight: 600,
+            fontWeight: 500,
             textTransform: 'none',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-md)',
             py: '9px',
-            '&:hover': { bgcolor: '#1A1A28' },
+            '&:hover': { bgcolor: '#2A2A33' },
           }}
         >
           {t('Get XLM — swap a little USDC')}

@@ -123,7 +123,7 @@ export default function ConnectedWallet({
       <Box
         sx={{
           width: 1,
-          borderRadius: '16px',
+          borderRadius: 'var(--radius-lg)',
           border: '1px solid rgba(10,10,15,0.08)',
           bgcolor: '#fff',
           p: '4px 4px 12px',
@@ -194,7 +194,7 @@ export default function ConnectedWallet({
             px: '14px',
             py: '12px',
             cursor: 'pointer',
-            borderRadius: '8px',
+            borderRadius: 'var(--radius-md)',
             transition: 'background 150ms',
             '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' },
           }}
@@ -217,7 +217,7 @@ export default function ConnectedWallet({
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))',
             gap: '6px',
             mt: '12px',
             mx: '8px',
@@ -231,7 +231,7 @@ export default function ConnectedWallet({
               sx={{
                 appearance: 'none',
                 border: '1px solid rgba(10,10,15,0.08)',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 padding: '12px 6px',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
@@ -257,7 +257,7 @@ export default function ConnectedWallet({
                 sx={{
                   width: 28,
                   height: 28,
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#F4F4F7',
                   display: 'flex',
                   alignItems: 'center',
@@ -325,12 +325,12 @@ export default function ConnectedWallet({
                       appearance: 'none',
                       border: selected
                         ? '1px solid rgba(10,10,15,0.9)'
-                        : '1px solid rgba(10,10,15,0.1)',
-                      borderRadius: '999px',
+                        : '1px solid rgba(10,10,15,0.08)',
+                      borderRadius: 'var(--radius-sm)',
                       px: '12px',
                       py: '6px',
                       fontSize: '12px',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       fontFamily: 'inherit',
                       cursor: 'pointer',
                       bgcolor: selected ? '#0A0A0F' : 'transparent',

@@ -66,7 +66,7 @@ export default function AddUsdcTrustlineButton({
       variant={variant}
       onClick={handleClick}
       disabled={disabled}
-      sx={{ borderRadius: 2, height: '100%', textTransform: 'none', ...sx }}
+      sx={{ borderRadius: 'var(--radius-lg)', height: '100%', textTransform: 'none', ...sx }}
     >
       {loading ? 'Adding trustline…' : 'Add USDC trustline'}
     </Button>

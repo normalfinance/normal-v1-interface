@@ -45,7 +45,6 @@ const MuiToggleButton: Components<Theme>['MuiToggleButton'] = {
         selected: {
           [`&.${toggleButtonClasses.selected}`]: {
             borderColor: 'currentColor',
-            boxShadow: '0 0 0 0.75px currentColor',
           },
         },
         disabled: {
@@ -60,7 +59,7 @@ const MuiToggleButton: Components<Theme>['MuiToggleButton'] = {
       };
 
       return {
-        fontWeight: theme.typography.fontWeightSemiBold,
+        fontWeight: theme.typography.fontWeightMedium,
         ...styled.colors,
         ...styled.selected,
         ...styled.disabled,

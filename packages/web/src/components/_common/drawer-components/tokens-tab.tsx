@@ -100,7 +100,7 @@ export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsPr
                 width: '100%',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 cursor: 'pointer',
                 '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' },
               }}
@@ -115,7 +115,7 @@ export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsPr
                   <Typography
                     sx={{
                       fontSize: '14px',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       color: '#0A0A0F',
                       letterSpacing: '-0.01em',
                       lineHeight: 1.3,

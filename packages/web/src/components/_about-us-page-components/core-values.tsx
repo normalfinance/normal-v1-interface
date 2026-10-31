@@ -10,6 +10,8 @@ import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
 
+import { HAIRLINE, PageSection, SectionHeader } from '@/components/_common/brand';
+
 type FeatureItem = {
   icon: React.ReactNode;
   heading: string;
@@ -62,135 +64,84 @@ export const CoreValuesDefaults: Props = {
 export const CoreValues: React.FC<CoreValuesProps> = (props) => {
   const { t } = useTranslate();
 
-  const { heading, features, ...sectionProps } = {
+  const { heading, features } = {
     ...CoreValuesDefaults,
     ...props,
   };
 
   return (
-    <Box
-      component="section"
-      {...sectionProps}
-      id="core-values"
-      sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
-    >
-      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
-        {/* Header */}
-        <Box sx={{ mb: { xs: '48px', md: '64px' }, maxWidth: '640px' }}>
-          <Typography
-            sx={{
-              fontSize: '11px',
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: '#6B6B76',
-              mb: 1.5,
-            }}
-          >
-            — Our Principles
-          </Typography>
-          <Typography
-            component="h2"
-            sx={{
-              fontWeight: 500,
-              fontSize: 'clamp(32px, 4vw, 52px)',
-              lineHeight: 1.15,
-              letterSpacing: '-0.03em',
-              color: '#0A0A0F',
-              mb: '16px',
-            }}
-          >
-            {t(heading)}
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: '16px',
-              color: '#6B6B76',
-              lineHeight: 1.55,
-            }}
-          >
-            {t(
-              'Five guiding principles that keep us focused on making crypto transparent, secure, and genuinely useful.'
-            )}
-          </Typography>
-        </Box>
+    <PageSection id="core-values">
+      <SectionHeader
+        eyebrow="Our Principles"
+        title={t(heading)}
+        subtitle={t(
+          'Five guiding principles that keep us focused on making crypto transparent, secure, and genuinely useful.'
+        )}
+      />
 
-        {/* List */}
-        <Box>
-          {features.map((feature) => (
+      {/* List */}
+      <Box>
+        {features.map((feature) => (
+          <Box
+            key={feature.heading}
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '48px 1fr 1fr' },
+              gap: { xs: '6px', sm: '40px' },
+              alignItems: 'start',
+              py: { xs: '24px', md: '32px' },
+              borderTop: HAIRLINE,
+              '&:last-child': { borderBottom: HAIRLINE },
+            }}
+          >
+            {/* Icon */}
             <Box
-              key={feature.heading}
               sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: '48px 1fr 1fr' },
-                gap: { xs: '6px', sm: '40px' },
-                alignItems: 'start',
-                py: { xs: '24px', md: '32px' },
-                borderTop: '1px solid rgba(10,10,15,0.07)',
-                '&:last-child': { borderBottom: '1px solid rgba(10,10,15,0.07)' },
+                width: 48,
+                height: 48,
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: '#FFFFFF',
+                border: HAIRLINE,
+                borderRadius: 'var(--radius-md)',
+                mt: { xs: 0, sm: '2px' },
+                mb: { xs: '16px', sm: 0 },
               }}
             >
-              {/* Icon */}
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: '#FFFFFF',
-                  border: '1px solid rgba(10,10,15,0.08)',
-                  borderRadius: '10px',
-                  mt: { xs: 0, sm: '2px' },
-                  mb: { xs: '16px', sm: 0 },
-                  boxShadow: '0 1px 4px rgba(10,10,15,0.06)',
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 34,
-                    height: 34,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'rgba(10,10,15,0.05)',
-                    borderRadius: '6px',
-                  }}
-                >
-                  {feature.icon}
-                </Box>
-              </Box>
-
-              {/* Heading */}
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  fontSize: { xs: '17px', md: '20px' },
-                  color: '#0A0A0F',
-                  letterSpacing: '-0.02em',
-                  lineHeight: 1.3,
-                  pt: { xs: 0, sm: '7px' },
-                }}
-              >
-                {t(feature.heading)}
-              </Typography>
-
-              {/* Description */}
-              <Typography
-                sx={{
-                  fontSize: '16px',
-                  color: '#6B6B76',
-                  lineHeight: 1.55,
-                  pt: { xs: 0, sm: '7px' },
-                }}
-              >
-                {t(feature.description)}
-              </Typography>
+              {feature.icon}
             </Box>
-          ))}
-        </Box>
+
+            {/* Heading */}
+            <Typography
+              sx={{
+                fontWeight: 500,
+                fontSize: { xs: '18px', md: '20px' },
+                color: '#0A0A0F',
+                letterSpacing: '-0.02em',
+                lineHeight: 1.3,
+                pt: { xs: 0, sm: '7px' },
+              }}
+            >
+              {t(feature.heading)}
+            </Typography>
+
+            {/* Description */}
+            <Typography
+              sx={{
+                fontSize: '16px',
+                color: '#6B6B76',
+                lineHeight: 1.55,
+                pt: { xs: 0, sm: '7px' },
+              }}
+            >
+              {t(feature.description)}
+            </Typography>
+          </Box>
+        ))}
       </Box>
-    </Box>
+    </PageSection>
   );
 };
 

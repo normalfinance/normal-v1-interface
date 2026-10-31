@@ -25,7 +25,7 @@ import { SoroswapProgressModal } from '../soroswap-progress-modal';
 
 import type { StellarSymbol, SwapEngineResult } from './types';
 
-const MONO = { fontFamily: '"Geist Mono", "Courier New", monospace' } as const;
+const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace' } as const;
 
 export interface SoroswapEngineProps {
   fromSymbol: StellarSymbol;
@@ -238,7 +238,7 @@ export function useSoroswapEngine({
         action: user ? () => setStellarSetupOpen(true) : null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t('One passkey adds Stellar to your wallet — swaps run right after.')}
           </Typography>
         ),
@@ -252,7 +252,7 @@ export function useSoroswapEngine({
         action: onNeedsSetup,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t('Your Normal wallet needs a quick setup step before it can swap.')}
           </Typography>
         ),
@@ -266,9 +266,7 @@ export function useSoroswapEngine({
         action: onNeedsSetup ?? (() => startAction('receive')),
         loading: false,
         helper: (
-          <Typography
-            sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', px: 1 }}
-          >
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center', px: 1 }}>
             {t(
               'Your Stellar account activates once it receives at least 1 XLM — then the USDC trustline can be added.'
             )}
@@ -281,7 +279,7 @@ export function useSoroswapEngine({
         action: isAddingTrustline ? null : handleAddTrustline,
         loading: isAddingTrustline,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t('A USDC trustline is required before swapping to USDC')}
           </Typography>
         ),
@@ -327,26 +325,24 @@ export function useSoroswapEngine({
       <Stack spacing={0.75}>
         {exchangeRate && (
           <Stack direction="row" justifyContent="space-between">
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-              {t('Rate')}
-            </Typography>
-            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Rate')}</Typography>
+            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
               1 {fromSymbol} = {exchangeRate} {toSymbol}
             </Typography>
           </Stack>
         )}
         <Stack direction="row" justifyContent="space-between">
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
             {t('Normal fee (0.5%)')}
           </Typography>
-          <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
             −{parseFloat(quote.fee || '0').toFixed(4)} {fromSymbol}
             {fromPrice.gt(0)
               ? ` (${fCurrency(BigNumber(quote.fee || '0').multipliedBy(fromPrice))})`
               : ''}
           </Typography>
         </Stack>
-        <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.5 }}>
+        <Typography sx={{ fontSize: '11px', color: '#9A9AA3', lineHeight: 1.5 }}>
           {quote?.embedded
             ? t('One signature — the Normal fee is included in the swap transaction.')
             : t("You'll sign two transactions: the Normal fee and your swap.")}

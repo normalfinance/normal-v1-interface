@@ -97,7 +97,7 @@ const AuthCallbackPage = () => {
           <>
             <Alert
               severity={isPkceError ? 'warning' : 'error'}
-              sx={{ borderRadius: 2, width: '100%' }}
+              sx={{ borderRadius: 'var(--radius-lg)', width: '100%' }}
             >
               {message}
             </Alert>
@@ -111,7 +111,7 @@ const AuthCallbackPage = () => {
             <Button
               variant="outlined"
               onClick={() => router.replace(paths.auth.login)}
-              sx={{ borderRadius: 2, mt: 1 }}
+              sx={{ borderRadius: 'var(--radius-lg)', mt: 1 }}
             >
               {t('Back to log in')}
             </Button>
@@ -124,7 +124,11 @@ const AuthCallbackPage = () => {
             <Typography variant="body2" color="text.secondary" textAlign="center">
               {t('This is taking longer than usual.')}
             </Typography>
-            <Button variant="outlined" href={paths.auth.login} sx={{ borderRadius: 2 }}>
+            <Button
+              variant="outlined"
+              href={paths.auth.login}
+              sx={{ borderRadius: 'var(--radius-lg)' }}
+            >
               {t('Back to log in')}
             </Button>
           </>

@@ -74,7 +74,7 @@ export function ChainReceiveModal({
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
     >
       <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box
@@ -86,7 +86,7 @@ export function ChainReceiveModal({
           }}
         >
           <Typography
-            sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+            sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.02em' }}
           >
             {t('Receive {{symbol}}', { symbol })}
           </Typography>
@@ -98,7 +98,7 @@ export function ChainReceiveModal({
               right: 0,
               width: 28,
               height: 28,
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
               bgcolor: 'rgba(10,10,15,0.06)',
               color: '#0A0A0F',
@@ -113,9 +113,7 @@ export function ChainReceiveModal({
             <Iconify icon="mingcute:close-line" width={16} />
           </Box>
         </Box>
-        <Typography
-          sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}
-        >
+        <Typography sx={{ fontSize: '13px', color: '#6B6B76', textAlign: 'center', mt: '4px' }}>
           {t('Scan the QR code or copy your {{chain}} address', { chain: chainLabel })}
         </Typography>
       </DialogTitle>
@@ -126,7 +124,7 @@ export function ChainReceiveModal({
           <Box
             sx={{
               p: '16px',
-              borderRadius: '16px',
+              borderRadius: 'var(--radius-lg)',
               bgcolor: '#FAFAFB',
               border: '1px solid rgba(10,10,15,0.08)',
               display: 'flex',
@@ -141,16 +139,14 @@ export function ChainReceiveModal({
                 component="img"
                 src={qrCodeUrl}
                 alt={`${chainLabel} address QR`}
-                sx={{ maxWidth: '100%', borderRadius: '4px' }}
+                sx={{ maxWidth: '100%', borderRadius: 'var(--radius-xs)' }}
               />
             ) : qrFailed ? (
-              <Typography
-                sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.45)', textAlign: 'center' }}
-              >
+              <Typography sx={{ fontSize: '12.5px', color: '#9A9AA3', textAlign: 'center' }}>
                 {t('QR unavailable — copy the address below.')}
               </Typography>
             ) : (
-              <CircularProgress size={36} sx={{ color: 'rgba(10,10,15,0.3)' }} />
+              <CircularProgress size={36} sx={{ color: '#9A9AA3' }} />
             )}
           </Box>
 
@@ -162,7 +158,7 @@ export function ChainReceiveModal({
               gap: '8px',
               px: '12px',
               py: '10px',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: 'rgba(245,158,11,0.06)',
               border: '1px solid rgba(245,158,11,0.2)',
               width: '100%',
@@ -173,7 +169,7 @@ export function ChainReceiveModal({
               width={15}
               sx={{ color: 'warning.main', flexShrink: 0 }}
             />
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: '12px', color: '#2A2A33', lineHeight: 1.5 }}>
               {warning}
             </Typography>
           </Box>
@@ -183,7 +179,7 @@ export function ChainReceiveModal({
             sx={{
               px: '14px',
               py: '12px',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: '#FAFAFB',
               border: '1px solid rgba(10,10,15,0.08)',
               width: '100%',
@@ -194,7 +190,7 @@ export function ChainReceiveModal({
               sx={{
                 fontSize: '12px',
                 color: '#0A0A0F',
-                fontFamily: '"Geist Mono", "Courier New", monospace',
+                fontFamily: '"Geist Mono", ui-monospace, monospace',
                 lineHeight: 1.6,
               }}
             >
@@ -211,8 +207,8 @@ export function ChainReceiveModal({
               gap: '6px',
               px: '14px',
               py: '8px',
-              borderRadius: '10px',
-              border: '1px solid rgba(10,10,15,0.12)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(10,10,15,0.14)',
               bgcolor: '#FFFFFF',
               color: '#0A0A0F',
               fontSize: '13px',

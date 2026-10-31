@@ -62,7 +62,7 @@ import { type CctpStage, CctpProgressModal } from '../cctp-progress-modal';
 
 import type { SwapSymbol, SwapEngineResult, CrosschainSymbol } from './types';
 
-const MONO = { fontFamily: '"Geist Mono", "Courier New", monospace' } as const;
+const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace' } as const;
 
 export interface CctpEngineProps {
   fromSymbol: SwapSymbol;
@@ -1342,7 +1342,7 @@ export function useCctpEngine({
         action: null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t('Cross-ecosystem swaps route through LI.FI, which has no testnet liquidity.')}
           </Typography>
         ),
@@ -1371,7 +1371,7 @@ export function useCctpEngine({
           action: () => startAction('receive'),
           loading: false,
           helper: (
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+            <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
               {t('Your Stellar account activates once it receives at least 1 XLM.')}
             </Typography>
           ),
@@ -1385,7 +1385,7 @@ export function useCctpEngine({
         action: user ? () => setSetupChain('stellar') : null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t('One passkey adds Stellar to your wallet — the swap continues right after.')}
           </Typography>
         ),
@@ -1414,9 +1414,7 @@ export function useCctpEngine({
                 },
             loading: false,
             helper: (
-              <Typography
-                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}
-              >
+              <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
                 {t(
                   'Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.'
                 )}
@@ -1431,7 +1429,7 @@ export function useCctpEngine({
         action: onNeedsSetup ?? (() => startAction('receive')),
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t(
               'The swap pays its Stellar network fee in XLM from {{which}} — a little XLM is needed there.',
               { which: onNeedsSetup ? t('your Normal wallet') : t('your wallet') }
@@ -1447,7 +1445,7 @@ export function useCctpEngine({
         action: user ? () => setSetupChain(chain) : null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t('One passkey creates your {{sym}} address — the swap continues right after.', {
               sym,
             })}
@@ -1461,7 +1459,7 @@ export function useCctpEngine({
         action: user ? () => setSetupChain('ethereum') : null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t(
               'The route travels via your own Base address — one passkey creates it, then the swap continues.'
             )}
@@ -1487,7 +1485,7 @@ export function useCctpEngine({
         action: null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t(
               'Each cross-ecosystem swap has fixed bridge costs — under $10 they outweigh the swap.'
             )}
@@ -1502,7 +1500,7 @@ export function useCctpEngine({
         action: null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t('This route costs ~${{gas}} in network gas regardless of size.', {
               gas: gasUsd.toFixed(2),
             })}
@@ -1520,7 +1518,7 @@ export function useCctpEngine({
         action: handleExecute,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t(
               'Your USDC moves to your Normal wallet first (one approval in {{wallet}}), then the swap runs with your passkey.',
               { wallet: fundFromExternal.label }
@@ -1571,16 +1569,16 @@ export function useCctpEngine({
   const details = quote ? (
     <Stack spacing={0.75}>
       <Stack direction="row" justifyContent="space-between">
-        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>{t('Route')}</Typography>
-        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+        <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Route')}</Typography>
+        <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
           {routeLabel}
         </Typography>
       </Stack>
       <Stack direction="row" justifyContent="space-between">
-        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+        <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
           {t('Bridge (Circle CCTP)')}
         </Typography>
-        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+        <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
           {t('Free')}
         </Typography>
       </Stack>
@@ -1588,13 +1586,11 @@ export function useCctpEngine({
           gas misled — the leg's REAL gas from the quote, always visible. */}
       {gasUsd > 0 && (
         <Stack direction="row" justifyContent="space-between">
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-            {t('Network gas')}
-          </Typography>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Network gas')}</Typography>
           <Typography
             sx={{
               fontSize: '12px',
-              fontWeight: 600,
+              fontWeight: 500,
               color: gasShare > 0.2 ? '#B45309' : '#0A0A0F',
               ...MONO,
             }}
@@ -1613,10 +1609,10 @@ export function useCctpEngine({
       )}
       {feePercent > 0 && amount.gt(0) && (
         <Stack direction="row" justifyContent="space-between">
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
             {t('Normal fee ({{pct}}%)', { pct: +(feePercent * 100).toFixed(2) })}
           </Typography>
-          <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
             −{amount.multipliedBy(feePercent).toFixed(6)} {fromSymbol}
             {fromPrice.gt(0)
               ? ` (${fCurrency(amount.multipliedBy(feePercent).multipliedBy(fromPrice))})`
@@ -1626,15 +1622,13 @@ export function useCctpEngine({
       )}
       {etaMinutes && (
         <Stack direction="row" justifyContent="space-between">
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-            {t('Estimated time')}
-          </Typography>
-          <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Estimated time')}</Typography>
+          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
             ~{etaMinutes} {t('min')}
           </Typography>
         </Stack>
       )}
-      <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.5 }}>
+      <Typography sx={{ fontSize: '11px', color: '#9A9AA3', lineHeight: 1.5 }}>
         {t('Funds travel via your own addresses at every step.')}
       </Typography>
     </Stack>

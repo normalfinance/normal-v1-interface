@@ -11,6 +11,8 @@ import GitHubIcon from '@mui/icons-material/GitHub';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TelegramIcon from '@mui/icons-material/Telegram';
 
+import { BLOCK_SX, PageSection, SectionHeader } from '@/components/_common/brand';
+
 type SocialLink = { href: string; icon: React.ReactNode };
 
 type TeamMember = {
@@ -195,13 +197,11 @@ const TEAM_MEMBERS: TeamMember[] = [
 const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
   <Box
     sx={{
+      ...BLOCK_SX,
+      p: 0,
       display: 'flex',
       flexDirection: 'column',
-      bgcolor: '#FFFFFF',
-      border: '1px solid rgba(10,10,15,0.08)',
-      borderRadius: '20px',
       overflow: 'hidden',
-      boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(10,10,15,0.05)',
     }}
   >
     {/* Photo */}
@@ -211,7 +211,7 @@ const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
           position: 'relative',
           overflow: 'hidden',
           aspectRatio: '4 / 5',
-          borderRadius: '12px',
+          borderRadius: 'var(--radius-md)',
         }}
       >
         <Box
@@ -234,9 +234,9 @@ const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
       <Typography
         sx={{
           fontSize: '18px',
-          fontWeight: 600,
+          fontWeight: 500,
           color: '#0A0A0F',
-          letterSpacing: '-0.01em',
+          letterSpacing: '-0.015em',
           mb: '2px',
         }}
       >
@@ -281,7 +281,7 @@ const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
               alignItems: 'center',
               justifyContent: 'center',
               bgcolor: '#F4F4F7',
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               color: '#0A0A0F',
               transition: 'bgcolor 120ms ease, color 120ms ease',
               '&:hover': {
@@ -303,67 +303,25 @@ export const Team: React.FC = () => {
   const { t } = useTranslate();
 
   return (
-    <>
-      {/* ── Team grid ── */}
-      <Box component="section" sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}>
-        <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
-          {/* Header */}
-          <Box mb={{ xs: '40px', md: '56px' }}>
-            <Typography
-              sx={{
-                fontSize: '11px',
-                letterSpacing: '0.16em',
-                textTransform: 'uppercase',
-                color: '#6B6B76',
-                mb: 1.5,
-              }}
-            >
-              — The Team
-            </Typography>
-            <Typography
-              component="h2"
-              sx={{
-                fontWeight: 500,
-                fontSize: 'clamp(32px, 4vw, 52px)',
-                lineHeight: 1.15,
-                letterSpacing: '-0.03em',
-                color: '#0A0A0F',
-                mb: '16px',
-              }}
-            >
-              {t('Meet the Crew')}
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '16px',
-                color: '#6B6B76',
-                lineHeight: 1.55,
-                maxWidth: '520px',
-              }}
-            >
-              {t('A small, focused team building the future of everyday crypto finance.')}
-            </Typography>
-          </Box>
+    <PageSection>
+      <SectionHeader
+        eyebrow="The Team"
+        title={t('Meet the Crew')}
+        subtitle={t('A small, focused team building the future of everyday crypto finance.')}
+      />
 
-          {/* Grid */}
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: '1fr',
-                sm: '1fr 1fr',
-                md: 'repeat(4, 1fr)',
-              },
-              gap: { xs: '24px', md: '32px' },
-            }}
-          >
-            {TEAM_MEMBERS.map((member) => (
-              <MemberCard key={member.name} member={member} />
-            ))}
-          </Box>
-        </Box>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
+          gap: 2,
+        }}
+      >
+        {TEAM_MEMBERS.map((member) => (
+          <MemberCard key={member.name} member={member} />
+        ))}
       </Box>
-    </>
+    </PageSection>
   );
 };
 

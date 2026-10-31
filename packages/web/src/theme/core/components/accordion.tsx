@@ -14,8 +14,8 @@ const MuiAccordion: Components<Theme>['MuiAccordion'] = {
     root: ({ theme }) => ({
       backgroundColor: 'transparent',
       [`&.${accordionClasses.expanded}`]: {
-        boxShadow: theme.vars.customShadows.z8,
-        borderRadius: theme.shape.borderRadius,
+        boxShadow: 'none',
+        borderRadius: 'var(--radius-md)',
         backgroundColor: theme.vars.palette.background.paper,
       },
       [`&.${accordionClasses.disabled}`]: { backgroundColor: 'transparent' },

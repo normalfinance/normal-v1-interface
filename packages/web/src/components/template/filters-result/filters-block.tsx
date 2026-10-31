@@ -31,7 +31,7 @@ const BlockRoot = styled('div')(({ theme }) => ({
   overflow: 'hidden',
   gap: theme.spacing(1),
   padding: theme.spacing(1),
-  borderRadius: theme.shape.borderRadius,
+  borderRadius: 'var(--radius-md)',
   border: `dashed 1px ${theme.vars.palette.divider}`,
 }));
 

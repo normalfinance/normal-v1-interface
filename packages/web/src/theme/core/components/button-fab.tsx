@@ -35,8 +35,7 @@ const filledVariant: Record<string, ComponentsVariants<Theme>['MuiFab']> = {
       FILLED_VARIANT.includes(ownerState.variant!) &&
       ownerState.color === color,
     style: ({ theme }) => ({
-      boxShadow: theme.vars.customShadows[color],
-      '&:hover': { boxShadow: 'none' },
+      boxShadow: 'none',
     }),
   })),
   base: [
@@ -44,7 +43,7 @@ const filledVariant: Record<string, ComponentsVariants<Theme>['MuiFab']> = {
       props: ({ ownerState }) =>
         FILLED_VARIANT.includes(ownerState.variant!) && DEFAULT_COLORS.includes(ownerState.color!),
       style: ({ theme }) => ({
-        boxShadow: theme.vars.customShadows.z8,
+        boxShadow: 'none',
         /**
          * @color default
          */
@@ -90,7 +89,7 @@ const outlinedVariant: Record<string, ComponentsVariants<Theme>['MuiFab']> = {
         border: `solid 1px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.32)}`,
         '&:hover': {
           borderColor: 'currentColor',
-          boxShadow: '0 0 0 0.75px currentColor',
+          boxShadow: 'none',
           backgroundColor: theme.vars.palette.action.hover,
         },
         [`&.${fabClasses.colorInherit}`]: { color: theme.vars.palette.text.primary },
@@ -154,17 +153,17 @@ const sizes: ComponentsVariants<Theme>['MuiFab'] = [
       height: 48,
       width: 'auto',
       minHeight: 48,
-      borderRadius: 48 / 2,
+      borderRadius: 'var(--radius-full)',
       gap: theme.spacing(1),
       padding: theme.spacing(0, 2),
       [`&.${fabClasses.sizeSmall}`]: {
         height: 34,
         minHeight: 34,
-        borderRadius: 34 / 2,
+        borderRadius: 'var(--radius-full)',
         gap: theme.spacing(0.5),
         padding: theme.spacing(0, 1),
       },
-      [`&.${fabClasses.sizeMedium}`]: { height: 40, minHeight: 40, borderRadius: 40 / 2 },
+      [`&.${fabClasses.sizeMedium}`]: { height: 40, minHeight: 40 },
     }),
   },
 ];

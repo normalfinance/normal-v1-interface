@@ -8,6 +8,8 @@ import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
 import { styled } from '@mui/material/styles';
 
+import { PageSection, SectionHeader } from '@/components/_common/brand';
+
 // ----------------------------------------------------------------------
 
 type Testimonial = {
@@ -86,25 +88,17 @@ const col2 = ALL.filter((_, i) => i % 2 === 1);
 
 // ----------------------------------------------------------------------
 
-const SectionRoot = styled('section')({
-  backgroundColor: '#FAFAFB',
-  overflow: 'hidden',
-});
-
 const Card = styled('figure')({
   margin: 0,
   backgroundColor: '#fff',
   border: '1px solid rgba(10,10,15,0.08)',
-  borderRadius: 22,
+  borderRadius: 'var(--radius-lg)',
   padding: '24px',
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
-  transition: 'border-color 200ms, background 200ms',
-  '&:hover': {
-    borderColor: 'rgba(10,10,15,0.13)',
-    backgroundColor: '#fdfdfd',
-  },
+  transition: 'border-color 150ms',
+  '&:hover': { borderColor: 'rgba(10,10,15,0.14)' },
 });
 
 // ----------------------------------------------------------------------
@@ -118,9 +112,9 @@ const TestimonialCard: React.FC<{ testimonial: Testimonial; hidden?: boolean }> 
       component="blockquote"
       sx={{
         m: 0,
-        fontSize: '18px',
+        fontSize: '16px',
         lineHeight: 1.65,
-        color: '#3a3a44',
+        color: '#2A2A33',
         letterSpacing: '-0.01em',
         flex: 1,
       }}
@@ -135,7 +129,7 @@ const TestimonialCard: React.FC<{ testimonial: Testimonial; hidden?: boolean }> 
         alignItems: 'center',
         gap: '12px',
         pt: '16px',
-        borderTop: '1px solid rgba(10,10,15,0.06)',
+        borderTop: '1px solid rgba(10,10,15,0.08)',
       }}
     >
       <Avatar
@@ -150,7 +144,7 @@ const TestimonialCard: React.FC<{ testimonial: Testimonial; hidden?: boolean }> 
             display: 'block',
             fontSize: '13px',
             fontWeight: 500,
-            color: '#0a0a0b',
+            color: '#0A0A0F',
             lineHeight: 1.3,
           }}
         >
@@ -211,92 +205,63 @@ const Column: React.FC<ColumnProps> = ({ items, duration, direction }) => {
 
 // ----------------------------------------------------------------------
 
-export type TestimonialGridProps = React.ComponentPropsWithoutRef<'section'>;
+export type TestimonialGridProps = Record<string, never>;
 
-export const TestimonialGrid: React.FC<TestimonialGridProps> = (props) => {
+export const TestimonialGrid: React.FC<TestimonialGridProps> = () => {
   const { t } = useTranslate();
 
   return (
-    <SectionRoot aria-labelledby="testimonials-heading" {...props}>
-      <Box sx={{ py: { xs: '40px', md: '56px' } }}>
-        {/* Header */}
-        <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3, mb: '56px', textAlign: 'center' }}>
-          <Box
-            component="p"
-            sx={{
-              m: 0,
-              mb: '14px',
-              fontSize: '11px',
-              fontWeight: 500,
-              textTransform: 'uppercase',
-              letterSpacing: '0.16em',
-              color: '#6b6b76',
-            }}
-          >
-            {t('— Loved by')}
-          </Box>
+    <PageSection aria-labelledby="testimonials-heading">
+      <SectionHeader
+        id="testimonials-heading"
+        eyebrow={t('Loved by')}
+        title={t('Loved by Normies')}
+      />
 
-          <Box
-            component="h2"
-            id="testimonials-heading"
-            sx={{
-              m: 0,
-              fontSize: 'clamp(34px, 4.4vw, 56px)',
-              fontWeight: 500,
-              letterSpacing: '-0.03em',
-              lineHeight: 1.04,
-              color: '#0a0a0b',
-            }}
-          >
-            {t('Loved by Normies')}
-          </Box>
-        </Box>
+      {/* Vertical marquee — 3 columns */}
+      <Box sx={{ position: 'relative' }}>
+        {/* Top fade */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 100,
+            background: 'linear-gradient(to bottom, #FAFAFB 0%, transparent 100%)',
+            zIndex: 2,
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Bottom fade */}
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 100,
+            background: 'linear-gradient(to top, #FAFAFB 0%, transparent 100%)',
+            zIndex: 2,
+            pointerEvents: 'none',
+          }}
+        />
 
-        {/* Vertical marquee — 3 columns */}
-        <Box sx={{ px: { xs: 2, sm: 3 }, maxWidth: 1200, mx: 'auto', position: 'relative' }}>
-          {/* Top fade */}
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 100,
-              background: 'linear-gradient(to bottom, #FAFAFB 0%, transparent 100%)',
-              zIndex: 2,
-              pointerEvents: 'none',
-            }}
-          />
-          {/* Bottom fade */}
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: 100,
-              background: 'linear-gradient(to top, #FAFAFB 0%, transparent 100%)',
-              zIndex: 2,
-              pointerEvents: 'none',
-            }}
-          />
-
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-              gap: '14px',
-              alignItems: 'start',
-            }}
-          >
-            <Column items={col1} duration={55} direction="up" />
-            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-              <Column items={col2} duration={72} direction="down" />
-            </Box>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+            gap: 2,
+            alignItems: 'start',
+          }}
+        >
+          <Column items={col1} duration={55} direction="up" />
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+            <Column items={col2} duration={72} direction="down" />
           </Box>
         </Box>
       </Box>
-    </SectionRoot>
+    </PageSection>
   );
 };
 

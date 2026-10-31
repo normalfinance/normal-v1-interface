@@ -59,7 +59,7 @@ export function MySavingsSection({
   ];
 
   return (
-    <Card sx={{ p: 3, borderRadius: 2 }}>
+    <Card sx={{ p: 3, borderRadius: 'var(--radius-lg)' }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
         <CardHeader title={t('Savings')} sx={{ p: 0 }} />
         <Stack direction="row" alignItems="center" spacing={1.5}>

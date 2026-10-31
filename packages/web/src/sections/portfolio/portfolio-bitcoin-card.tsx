@@ -93,13 +93,13 @@ function AddressPill({ address }: { address: string }) {
           gap: '6px',
           px: '10px',
           py: '5px',
-          borderRadius: '8px',
+          borderRadius: 'var(--radius-md)',
           border: '1px solid rgba(10,10,15,0.08)',
           bgcolor: '#F4F4F7',
           cursor: 'pointer',
           fontFamily: 'inherit',
           fontSize: '12px',
-          color: 'rgba(10,10,15,0.6)',
+          color: '#6B6B76',
           transition: 'all 0.15s',
           '&:hover': { bgcolor: 'rgba(10,10,15,0.06)', borderColor: 'rgba(10,10,15,0.14)' },
         }}
@@ -146,7 +146,7 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
         <Skeleton
           variant="rectangular"
           height={120}
-          sx={{ borderRadius: '12px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          sx={{ borderRadius: 'var(--radius-md)', bgcolor: 'rgba(10,10,15,0.06)' }}
         />
       </Box>
     );
@@ -160,7 +160,7 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
           <BtcIcon />
           <Box>
             <Box sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F' }}>Bitcoin</Box>
-            <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
+            <Box sx={{ fontSize: '12px', color: '#9A9AA3' }}>
               Non-custodial · secured by your device
             </Box>
           </Box>
@@ -183,9 +183,7 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
           <BtcIcon />
           <Box>
             <Box sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F' }}>Bitcoin</Box>
-            <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
-              Non-custodial · Turnkey TEE
-            </Box>
+            <Box sx={{ fontSize: '12px', color: '#9A9AA3' }}>Non-custodial · Turnkey TEE</Box>
           </Box>
         </Box>
         {btcAddress && <AddressPill address={btcAddress} />}
@@ -196,10 +194,10 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
         <Box
           sx={{
             fontSize: '11px',
-            color: 'rgba(10,10,15,0.35)',
+            color: '#9A9AA3',
             mb: '4px',
             textTransform: 'uppercase',
-            letterSpacing: '0.06em',
+            letterSpacing: '0.16em',
           }}
         >
           Balance
@@ -226,7 +224,7 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
               {balance != null ? `${balance.btc.toFixed(6)} BTC` : '0.000000 BTC'}
             </Box>
             {balance?.usd != null && (
-              <Box sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.4)', mt: '2px' }}>
+              <Box sx={{ fontSize: '13px', color: '#9A9AA3', mt: '2px' }}>
                 ≈ $
                 {balance.usd.toLocaleString('en-US', {
                   minimumFractionDigits: 2,
@@ -243,11 +241,11 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
         sx={{
           mt: '18px',
           p: '12px 14px',
-          borderRadius: '12px',
+          borderRadius: 'var(--radius-md)',
           bgcolor: 'rgba(247,147,26,0.05)',
           border: '1px solid rgba(247,147,26,0.15)',
           fontSize: '12px',
-          color: 'rgba(10,10,15,0.55)',
+          color: '#6B6B76',
           lineHeight: 1.55,
         }}
       >

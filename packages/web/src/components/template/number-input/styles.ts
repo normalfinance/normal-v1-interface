@@ -8,7 +8,7 @@ import InputBase, { inputBaseClasses } from '@mui/material/InputBase';
 export const NumberInputRoot = styled('div')(({ theme }) => ({
   display: 'flex',
   overflow: 'hidden',
-  borderRadius: theme.shape.borderRadius,
+  borderRadius: 'var(--radius-md)',
   border: 'solid 1px var(--border-color)',
 }));
 

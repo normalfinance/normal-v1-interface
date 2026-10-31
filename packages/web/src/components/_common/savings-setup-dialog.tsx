@@ -60,8 +60,8 @@ const pillBtn = {
   gap: '6px',
   px: '14px',
   py: '8px',
-  borderRadius: '10px',
-  border: '1px solid rgba(10,10,15,0.12)',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid rgba(10,10,15,0.14)',
   bgcolor: '#FFFFFF',
   color: '#0A0A0F',
   fontSize: '13px',
@@ -189,7 +189,7 @@ export function SavingsSetupDialog({
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
     >
       <DialogContent sx={{ px: '24px', py: '26px' }}>
         <Stack spacing={2.25}>
@@ -206,14 +206,14 @@ export function SavingsSetupDialog({
               <Typography
                 sx={{
                   fontSize: '18px',
-                  fontWeight: 700,
+                  fontWeight: 500,
                   color: '#0A0A0F',
                   letterSpacing: '-0.02em',
                 }}
               >
                 {t('Set up Normal Savings')}
               </Typography>
-              <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '2px' }}>
+              <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '2px' }}>
                 {t('A couple of quick steps to start earning yield on USDC.')}
               </Typography>
             </Box>
@@ -248,9 +248,9 @@ export function SavingsSetupDialog({
                           : active
                             ? '#0A0A0F'
                             : 'rgba(10,10,15,0.06)',
-                        color: done ? '#0A6649' : active ? '#fff' : 'rgba(10,10,15,0.4)',
+                        color: done ? '#0A6649' : active ? '#fff' : '#9A9AA3',
                         fontSize: '11px',
-                        fontWeight: 700,
+                        fontWeight: 500,
                       }}
                     >
                       {done ? <Iconify icon="eva:checkmark-outline" width={12} /> : i + 1}
@@ -259,7 +259,7 @@ export function SavingsSetupDialog({
                       sx={{
                         fontSize: '12px',
                         fontWeight: active ? 600 : 500,
-                        color: active || done ? '#0A0A0F' : 'rgba(10,10,15,0.4)',
+                        color: active || done ? '#0A0A0F' : '#9A9AA3',
                       }}
                     >
                       {s.label}
@@ -277,15 +277,13 @@ export function SavingsSetupDialog({
                 sx={{
                   px: '14px',
                   py: '12px',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: 'rgba(59,130,246,0.05)',
                   border: '1px solid rgba(59,130,246,0.15)',
                   width: '100%',
                 }}
               >
-                <Typography
-                  sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}
-                >
+                <Typography sx={{ fontSize: '13px', color: '#2A2A33', lineHeight: 1.55 }}>
                   {t(
                     'Your Stellar account needs a little XLM to activate before it can hold USDC. Scan the code or send at least 1 XLM to the account ID below — it activates automatically the moment funds arrive.'
                   )}
@@ -296,7 +294,7 @@ export function SavingsSetupDialog({
               <Box
                 sx={{
                   p: '16px',
-                  borderRadius: '16px',
+                  borderRadius: 'var(--radius-lg)',
                   bgcolor: '#FAFAFB',
                   border: '1px solid rgba(10,10,15,0.08)',
                   display: 'flex',
@@ -307,16 +305,16 @@ export function SavingsSetupDialog({
                 }}
               >
                 {isGeneratingQR ? (
-                  <CircularProgress size={32} sx={{ color: 'rgba(10,10,15,0.3)' }} />
+                  <CircularProgress size={32} sx={{ color: '#9A9AA3' }} />
                 ) : qrCodeUrl ? (
                   <Box
                     component="img"
                     src={qrCodeUrl}
                     alt="Wallet Address QR Code"
-                    sx={{ maxWidth: '100%', height: 'auto', borderRadius: '4px' }}
+                    sx={{ maxWidth: '100%', height: 'auto', borderRadius: 'var(--radius-xs)' }}
                   />
                 ) : (
-                  <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.4)' }}>
+                  <Typography sx={{ fontSize: '13px', color: '#9A9AA3' }}>
                     {t('Unable to generate QR code')}
                   </Typography>
                 )}
@@ -327,7 +325,7 @@ export function SavingsSetupDialog({
                 sx={{
                   px: '14px',
                   py: '12px',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#FAFAFB',
                   border: '1px solid rgba(10,10,15,0.08)',
                   width: '100%',
@@ -338,7 +336,7 @@ export function SavingsSetupDialog({
                   sx={{
                     fontSize: '12px',
                     color: '#0A0A0F',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                     lineHeight: 1.6,
                   }}
                 >
@@ -358,9 +356,7 @@ export function SavingsSetupDialog({
               </Stack>
 
               <Divider sx={{ width: '100%' }}>
-                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)' }}>
-                  {t('or')}
-                </Typography>
+                <Typography sx={{ fontSize: '12px', color: '#9A9AA3' }}>{t('or')}</Typography>
               </Divider>
 
               <Button
@@ -379,15 +375,15 @@ export function SavingsSetupDialog({
                   )
                 }
                 sx={{
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#0A0A0F',
                   color: '#fff',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   fontSize: '14px',
                   py: '13px',
                   textTransform: 'none',
-                  '&:hover': { bgcolor: '#1a1a25' },
-                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+                  '&:hover': { bgcolor: '#2A2A33' },
+                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
                 }}
               >
                 {isCoinbaseLoading ? t('Opening Coinbase…') : t('Buy XLM via Coinbase')}
@@ -406,13 +402,13 @@ export function SavingsSetupDialog({
                   background: 'transparent',
                   cursor: 'pointer',
                   fontFamily: 'inherit',
-                  color: 'rgba(10,10,15,0.5)',
+                  color: '#6B6B76',
                   fontSize: '12px',
                   py: '2px',
-                  '&:hover': { color: 'rgba(10,10,15,0.75)' },
+                  '&:hover': { color: '#2A2A33' },
                 }}
               >
-                <CircularProgress size={13} sx={{ color: 'rgba(10,10,15,0.35)' }} />
+                <CircularProgress size={13} sx={{ color: '#9A9AA3' }} />
                 {isCheckingAccount
                   ? t('Checking…')
                   : t('Watching for your XLM — activates automatically')}
@@ -427,14 +423,12 @@ export function SavingsSetupDialog({
                 sx={{
                   px: '14px',
                   py: '12px',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: 'rgba(59,130,246,0.05)',
                   border: '1px solid rgba(59,130,246,0.15)',
                 }}
               >
-                <Typography
-                  sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}
-                >
+                <Typography sx={{ fontSize: '13px', color: '#2A2A33', lineHeight: 1.55 }}>
                   {t(
                     'Nice — your account is active. Add a USDC trustline so it can hold and earn USDC. One quick signature, just a tiny network fee.'
                   )}
@@ -454,12 +448,12 @@ export function SavingsSetupDialog({
                 sx={{
                   background: '#0A0A0F',
                   color: '#fff',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   py: '13px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   textTransform: 'none',
-                  '&:hover': { background: '#1a1a25' },
-                  '&.Mui-disabled': { background: 'rgba(10,10,15,0.35)', color: '#fff' },
+                  '&:hover': { background: '#2A2A33' },
+                  '&.Mui-disabled': { background: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
                 }}
               >
                 {isAddingTrustline ? t('Adding trustline…') : t('Add USDC trustline')}
@@ -483,9 +477,7 @@ export function SavingsSetupDialog({
               >
                 <Iconify icon="solar:check-circle-bold" width={30} sx={{ color: '#0A6649' }} />
               </Box>
-              <Typography
-                sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.7)', textAlign: 'center' }}
-              >
+              <Typography sx={{ fontSize: '14px', color: '#2A2A33', textAlign: 'center' }}>
                 {t('You’re all set — deposit USDC to start earning.')}
               </Typography>
               <Button
@@ -494,11 +486,11 @@ export function SavingsSetupDialog({
                 sx={{
                   background: '#0A0A0F',
                   color: '#fff',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   py: '13px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   textTransform: 'none',
-                  '&:hover': { background: '#1a1a25' },
+                  '&:hover': { background: '#2A2A33' },
                 }}
               >
                 {t('Start saving')}

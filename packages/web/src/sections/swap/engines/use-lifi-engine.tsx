@@ -450,9 +450,7 @@ export function useLifiEngine({
         action: null,
         loading: false,
         helper: (
-          <Typography
-            sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', px: 1 }}
-          >
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center', px: 1 }}>
             {t('This route costs ~${{gas}} in network gas regardless of size.', {
               gas: gasUsd.toFixed(2),
             })}
@@ -495,23 +493,19 @@ export function useLifiEngine({
       <Stack spacing={0.75}>
         {rate && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-              {t('Rate')}
-            </Typography>
-            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Rate')}</Typography>
+            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
               1 {fromSymbol} ≈ {rate.toFixed(6)} {toSymbol}
             </Typography>
           </Box>
         )}
         {gasUsd > 0 && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-              {t('Network gas')}
-            </Typography>
+            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Network gas')}</Typography>
             <Typography
               sx={{
                 fontSize: '12px',
-                fontWeight: 600,
+                fontWeight: 500,
                 color: gasShare > 0.2 ? '#B45309' : '#0A0A0F',
                 ...MONO,
               }}
@@ -530,39 +524,35 @@ export function useLifiEngine({
         )}
         {toAmountMin && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
               {t('Minimum received')}
             </Typography>
-            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
               {toAmountMin.toFixed(6, BigNumber.ROUND_DOWN)} {toSymbol}
             </Typography>
           </Box>
         )}
         {feeToken && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-              {feeLabel}
-            </Typography>
-            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{feeLabel}</Typography>
+            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
               −{feeToken.toFixed(6, BigNumber.ROUND_DOWN)} {fromSymbol}
               {feeUsd ? ` (${fCurrency(feeUsd)})` : ''}
             </Typography>
           </Box>
         )}
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-            {t('Route')}
-          </Typography>
-          <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Route')}</Typography>
+          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F' }}>
             {quote.tool}
           </Typography>
         </Box>
         {etaMinutes !== null && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
               {t('Estimated time')}
             </Typography>
-            <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#0A0A0F' }}>
+            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F' }}>
               ~{etaMinutes} {t('min')}
             </Typography>
           </Box>
@@ -580,8 +570,8 @@ export function useLifiEngine({
         justifyContent: 'center',
       }}
     >
-      <Iconify icon="eva:info-outline" width={13} sx={{ color: 'rgba(10,10,15,0.35)' }} />
-      <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
+      <Iconify icon="eva:info-outline" width={13} sx={{ color: '#9A9AA3' }} />
+      <Typography sx={{ fontSize: '12px', color: '#9A9AA3' }}>
         {t('{{symbol}} is delivered to your own Normal wallet address.', { symbol: toSymbol })}
       </Typography>
     </Box>

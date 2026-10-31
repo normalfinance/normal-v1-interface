@@ -53,12 +53,12 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
           width: '100%',
           py: '13px',
           px: '20px',
-          borderRadius: '14px',
+          borderRadius: 'var(--radius-md)',
           border: '1px solid rgba(247,147,26,0.25)',
           bgcolor: 'rgba(247,147,26,0.06)',
           color: '#B45309',
           fontSize: '14px',
-          fontWeight: 600,
+          fontWeight: 500,
           fontFamily: 'inherit',
           cursor: loading ? 'not-allowed' : 'pointer',
           opacity: loading ? 0.7 : 1,
@@ -80,7 +80,7 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
       <Box
         sx={{
           fontSize: '11.5px',
-          color: 'rgba(10,10,15,0.4)',
+          color: '#9A9AA3',
           textAlign: 'center',
           lineHeight: 1.5,
         }}
@@ -95,7 +95,7 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
             color: '#B91C1C',
             bgcolor: 'rgba(185,28,28,0.06)',
             border: '1px solid rgba(185,28,28,0.15)',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius-md)',
             px: '12px',
             py: '8px',
           }}

@@ -42,7 +42,7 @@ const MuiAutocomplete: Components<Theme>['MuiAutocomplete'] = {
         textAlign: 'center',
         padding: theme.spacing(0, 0.75),
         color: theme.vars.palette.text.secondary,
-        borderRadius: theme.shape.borderRadius,
+        borderRadius: 'var(--radius-md)',
         backgroundColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.16),
       },
     }),

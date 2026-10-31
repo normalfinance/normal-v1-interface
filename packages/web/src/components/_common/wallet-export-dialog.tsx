@@ -246,17 +246,17 @@ export default function WalletExportDialog({
       onClose={handleClose}
       fullWidth
       maxWidth="sm"
-      PaperProps={{ sx: { borderRadius: '20px', p: '24px', maxWidth: 460 } }}
+      PaperProps={{ sx: { borderRadius: 'var(--radius-lg)', p: '24px', maxWidth: 460 } }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '8px' }}>
-        <Typography sx={{ fontSize: '18px', fontWeight: 700, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '18px', fontWeight: 500, color: '#0A0A0F' }}>
           {t('Your recovery phrase')}
         </Typography>
         {!locked && (
           <Box
             component="button"
             onClick={handleClose}
-            sx={{ all: 'unset', cursor: 'pointer', color: 'rgba(10,10,15,0.4)', display: 'flex' }}
+            sx={{ all: 'unset', cursor: 'pointer', color: '#9A9AA3', display: 'flex' }}
           >
             <Iconify icon="mingcute:close-line" width={22} />
           </Box>
@@ -269,16 +269,16 @@ export default function WalletExportDialog({
         sx={{
           px: '14px',
           py: '12px',
-          borderRadius: '12px',
+          borderRadius: 'var(--radius-md)',
           bgcolor: 'rgba(220,38,38,0.05)',
           border: '1px solid rgba(220,38,38,0.16)',
           mb: '16px',
         }}
       >
-        <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#991B1B', mb: '4px' }}>
+        <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#991B1B', mb: '4px' }}>
           {t('Anyone with this phrase controls all your crypto.')}
         </Typography>
-        <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.55 }}>
+        <Typography sx={{ fontSize: '12.5px', color: '#2A2A33', lineHeight: 1.55 }}>
           {t(
             'Write it on paper and store it offline. Never type it into any website or share it — Normal will never ask you for it.'
           )}
@@ -291,13 +291,13 @@ export default function WalletExportDialog({
         sx={{
           px: '14px',
           py: '12px',
-          borderRadius: '12px',
+          borderRadius: 'var(--radius-md)',
           bgcolor: 'rgba(10,10,15,0.03)',
           border: '1px solid rgba(10,10,15,0.08)',
           mb: '16px',
         }}
       >
-        <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: '#0A0A0F', mb: '6px' }}>
+        <Typography sx={{ fontSize: '12.5px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
           {seeds.length > 1
             ? t('This phrase restores {{label}} — and only these addresses:', {
                 label: seed?.label ?? t('this wallet'),
@@ -312,7 +312,7 @@ export default function WalletExportDialog({
               alignItems: 'center',
               gap: '8px',
               p: '10px 12px',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: 'rgba(220,38,38,0.06)',
               border: '1px solid rgba(220,38,38,0.2)',
               mb: '8px',
@@ -330,7 +330,7 @@ export default function WalletExportDialog({
               sx={{
                 border: '1px solid rgba(127,29,29,0.4)',
                 background: 'transparent',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
                 px: '10px',
                 py: '4px',
                 fontSize: '12px',
@@ -356,12 +356,12 @@ export default function WalletExportDialog({
                   cursor: 'pointer',
                   px: '10px',
                   py: '4px',
-                  borderRadius: '999px',
+                  borderRadius: 'var(--radius-sm)',
                   fontSize: '11.5px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   border: '1px solid',
                   borderColor: i === seedIndex ? '#0A0A0F' : 'rgba(10,10,15,0.15)',
-                  color: i === seedIndex ? '#FFF' : 'rgba(10,10,15,0.7)',
+                  color: i === seedIndex ? '#FFF' : '#2A2A33',
                   background: i === seedIndex ? '#0A0A0F' : 'transparent',
                 }}
               >
@@ -373,14 +373,12 @@ export default function WalletExportDialog({
         <Stack spacing={0.5}>
           {coveredChains.map((id) => (
             <Stack key={id} direction="row" justifyContent="space-between" alignItems="center">
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.55)' }}>
-                {CHAINS[id].name}
-              </Typography>
+              <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{CHAINS[id].name}</Typography>
               <Typography
                 sx={{
                   fontSize: '11.5px',
-                  color: 'rgba(10,10,15,0.7)',
-                  fontFamily: '"Geist Mono", "Courier New", monospace',
+                  color: '#2A2A33',
+                  fontFamily: '"Geist Mono", ui-monospace, monospace',
                 }}
               >
                 {format.fTruncate(seedAddress(id)!, 14)}
@@ -388,9 +386,7 @@ export default function WalletExportDialog({
             </Stack>
           ))}
         </Stack>
-        <Typography
-          sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '8px', lineHeight: 1.5 }}
-        >
+        <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', mt: '8px', lineHeight: 1.5 }}>
           {t(
             'Enter these words in MetaMask (Ethereum), Phantom (Solana), Freighter (Stellar) or Sparrow (Bitcoin) and the same addresses come back — even if Normal is unavailable.'
           )}
@@ -399,9 +395,7 @@ export default function WalletExportDialog({
 
       {phase === 'warn' && (
         <>
-          <Typography
-            sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.6)', lineHeight: 1.6, mb: '18px' }}
-          >
+          <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.6, mb: '18px' }}>
             {t(
               'You will confirm with your passkey. The phrase is shown only inside a secure Turnkey window — Normal never sees it.'
             )}
@@ -412,10 +406,10 @@ export default function WalletExportDialog({
             sx={{
               textTransform: 'none',
               fontSize: '14px',
-              fontWeight: 600,
+              fontWeight: 500,
               color: '#fff',
               bgcolor: '#0A0A0F',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               py: '11px',
               '&:hover': { bgcolor: '#0A0A0F', opacity: 0.85 },
             }}
@@ -428,7 +422,7 @@ export default function WalletExportDialog({
       {phase === 'revealing' && (
         <Stack alignItems="center" spacing={1.5} sx={{ py: '28px' }}>
           <CircularProgress size={22} sx={{ color: '#0A0A0F' }} />
-          <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.55)' }}>
+          <Typography sx={{ fontSize: '13px', color: '#6B6B76' }}>
             {t('Confirm with your passkey…')}
           </Typography>
         </Stack>
@@ -451,15 +445,15 @@ export default function WalletExportDialog({
           <Iconify
             icon="solar:lock-keyhole-minimalistic-bold"
             width={14}
-            sx={{ color: 'rgba(10,10,15,0.4)' }}
+            sx={{ color: '#9A9AA3' }}
           />
           <Typography
             sx={{
               fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.08em',
+              fontWeight: 500,
+              letterSpacing: '0.16em',
               textTransform: 'uppercase',
-              color: 'rgba(10,10,15,0.4)',
+              color: '#9A9AA3',
             }}
           >
             {t('Recovery phrase')}
@@ -470,10 +464,9 @@ export default function WalletExportDialog({
           sx={{
             px: '16px',
             py: '16px',
-            borderRadius: '14px',
-            border: '1px solid rgba(10,10,15,0.1)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid rgba(10,10,15,0.08)',
             bgcolor: '#F6F6F8',
-            boxShadow: 'inset 0 1px 2px rgba(10,10,15,0.04)',
             wordBreak: 'break-word',
             // The iframe fills the box; its own textarea is styled transparent
             // (applySettings) so this panel's background shows through.
@@ -484,9 +477,7 @@ export default function WalletExportDialog({
 
       {phase === 'revealed' && (
         <>
-          <Typography
-            sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '10px', lineHeight: 1.5 }}
-          >
+          <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', mt: '10px', lineHeight: 1.5 }}>
             {t(
               'Copy this from the box above into offline storage. A file on your computer is safer than nothing, but paper kept offline is safest.'
             )}
@@ -524,12 +515,12 @@ export default function WalletExportDialog({
               mt: '16px',
               textTransform: 'none',
               fontSize: '14px',
-              fontWeight: 600,
+              fontWeight: 500,
               color: '#fff',
               bgcolor: '#0A0A0F',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               py: '11px',
-              '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.2)', color: '#fff' },
+              '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
               '&:hover': { bgcolor: '#0A0A0F', opacity: 0.85 },
             }}
           >
@@ -544,16 +535,16 @@ export default function WalletExportDialog({
             sx={{
               px: '14px',
               py: '12px',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: 'rgba(10,10,15,0.03)',
-              border: '1px solid rgba(10,10,15,0.1)',
+              border: '1px solid rgba(10,10,15,0.08)',
               mb: '14px',
             }}
           >
-            <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: '13px', color: '#2A2A33', lineHeight: 1.5 }}>
               {error ?? t('Could not reveal the phrase.')}
             </Typography>
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', mt: '4px' }}>
+            <Typography sx={{ fontSize: '12px', color: '#9A9AA3', mt: '4px' }}>
               {t('Nothing was exposed. You can try again.')}
             </Typography>
           </Box>
@@ -563,10 +554,10 @@ export default function WalletExportDialog({
             sx={{
               textTransform: 'none',
               fontSize: '14px',
-              fontWeight: 600,
+              fontWeight: 500,
               color: '#0A0A0F',
               border: '1px solid rgba(10,10,15,0.14)',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               py: '11px',
             }}
           >

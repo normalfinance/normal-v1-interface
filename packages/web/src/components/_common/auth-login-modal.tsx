@@ -288,7 +288,7 @@ const AuthLoginModal = ({
       slotProps={{
         paper: {
           sx: {
-            borderRadius: 3,
+            borderRadius: 'var(--radius-lg)',
             px: 3,
             py: 2,
           },
@@ -306,7 +306,7 @@ const AuthLoginModal = ({
               sx={{
                 backgroundColor: 'success.light',
                 color: 'success.dark',
-                borderRadius: 1,
+                borderRadius: 'var(--radius-md)',
                 px: 2,
                 py: 1,
               }}
@@ -633,7 +633,7 @@ const AuthLoginModal = ({
             <Alert
               severity="error"
               sx={{
-                borderRadius: 1,
+                borderRadius: 'var(--radius-md)',
                 px: 2,
                 py: 1,
               }}

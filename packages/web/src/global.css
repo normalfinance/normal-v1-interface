@@ -28,6 +28,29 @@
 @import './components/template/chart/styles.css';
 
 /** **************************************
+* Design tokens (rules: packages/web/DESIGN.md)
+*************************************** */
+:root {
+  /* Corners. Change a value here and every page follows. */
+  --radius-xs: 4px; /* tracks, tiny tags */
+  --radius-sm: 6px; /* badges, chips, tooltips, menu items */
+  --radius-md: 8px; /* buttons, inputs, tabs, nested tiles */
+  --radius-lg: 12px; /* every block: cards, panels, dialogs, popovers */
+  --radius-full: 999px; /* true circles only: avatars, dots, switches */
+
+  /* The one content width, navbar and footer included. */
+  --page-max: 1200px;
+
+  /* The one section rhythm. */
+  --section-y: 64px;
+}
+@media (min-width: 900px) {
+  :root {
+    --section-y: 96px;
+  }
+}
+
+/** **************************************
 * Baseline
 *************************************** */
 html {

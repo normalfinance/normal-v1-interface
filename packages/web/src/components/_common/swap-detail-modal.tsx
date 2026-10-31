@@ -27,7 +27,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from '@/components/template/iconify';
 
-const MONO = { fontFamily: '"Geist Mono", "Courier New", monospace' } as const;
+const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace' } as const;
 
 /** The transfer id behind a `cctp:<id>` activity, or null for non-CCTP rows. */
 export function cctpTransferIdOf(a: Activity): string | null {
@@ -255,16 +255,16 @@ export function SwapDetailModal({
       onClose={onClose}
       fullWidth
       maxWidth="xs"
-      PaperProps={{ sx: { borderRadius: '24px', p: '22px', maxWidth: 420 } }}
+      PaperProps={{ sx: { borderRadius: 'var(--radius-lg)', p: '22px', maxWidth: 420 } }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '14px' }}>
-        <Typography sx={{ fontSize: '17px', fontWeight: 600, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
           {t('Swap details')}
         </Typography>
         <Box
           component="button"
           onClick={onClose}
-          sx={{ all: 'unset', cursor: 'pointer', color: 'rgba(10,10,15,0.4)', display: 'flex' }}
+          sx={{ all: 'unset', cursor: 'pointer', color: '#9A9AA3', display: 'flex' }}
         >
           <Iconify icon="mingcute:close-line" width={20} />
         </Box>
@@ -275,9 +275,7 @@ export function SwapDetailModal({
           <CircularProgress size={22} sx={{ color: '#0A0A0F' }} />
         </Stack>
       ) : !transfer ? (
-        <Typography
-          sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', py: '20px', textAlign: 'center' }}
-        >
+        <Typography sx={{ fontSize: '13px', color: '#6B6B76', py: '20px', textAlign: 'center' }}>
           {t('Could not load this transfer.')}
         </Typography>
       ) : (
@@ -286,14 +284,14 @@ export function SwapDetailModal({
           <Box
             sx={{
               p: '12px 14px',
-              borderRadius: '14px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: '#FAFAFB',
-              border: '1px solid rgba(10,10,15,0.06)',
+              border: '1px solid rgba(10,10,15,0.08)',
               mb: '14px',
             }}
           >
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', ...MONO }}>
+              <Typography sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
                 {fmt(transfer.srcAmount)} {transfer.srcAsset} → {fmt(transfer.dstAmount)}{' '}
                 {transfer.dstAsset}
               </Typography>
@@ -303,7 +301,7 @@ export function SwapDetailModal({
                 sx={{
                   height: 22,
                   fontSize: '11px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   color: chip?.color ?? '#8A4A00',
                   bgcolor: chip?.bg ?? 'rgba(245,158,11,0.12)',
                   '& .MuiChip-label': { px: '8px' },
@@ -368,16 +366,14 @@ export function SwapDetailModal({
                     <Typography
                       sx={{
                         fontSize: '13.5px',
-                        fontWeight: 600,
+                        fontWeight: 500,
                         color: '#0A0A0F',
                         lineHeight: 1.35,
                       }}
                     >
                       {s.label}
                     </Typography>
-                    <Typography
-                      sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', lineHeight: 1.4 }}
-                    >
+                    <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', lineHeight: 1.4 }}>
                       {s.sub}
                     </Typography>
                   </Box>
@@ -391,7 +387,7 @@ export function SwapDetailModal({
                         alignItems: 'center',
                         gap: '3px',
                         fontSize: '11px',
-                        color: 'rgba(10,10,15,0.5)',
+                        color: '#6B6B76',
                         textDecoration: 'none',
                         ...MONO,
                         flexShrink: 0,
@@ -408,7 +404,7 @@ export function SwapDetailModal({
           </Stack>
 
           {transfer.gasTopUpTxHash && !['skipped', 'pending'].includes(transfer.gasTopUpTxHash) && (
-            <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', mt: '8px' }}>
+            <Typography sx={{ fontSize: '11px', color: '#9A9AA3', mt: '8px' }}>
               {t('Network fees on Base were sponsored by Normal.')}
             </Typography>
           )}
@@ -419,7 +415,7 @@ export function SwapDetailModal({
                 mt: '12px',
                 px: '12px',
                 py: '10px',
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: 'rgba(220,38,38,0.05)',
                 border: '1px solid rgba(220,38,38,0.15)',
               }}
@@ -427,7 +423,7 @@ export function SwapDetailModal({
               <Typography
                 sx={{
                   fontSize: '12px',
-                  color: 'rgba(10,10,15,0.7)',
+                  color: '#2A2A33',
                   lineHeight: 1.5,
                   wordBreak: 'break-word',
                 }}
@@ -467,12 +463,12 @@ export function SwapDetailModal({
                   mt: '12px',
                   appearance: 'none',
                   border: 'none',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--radius-md)',
                   px: '16px',
                   py: '10px',
                   width: '100%',
                   fontSize: '13px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
                   bgcolor: '#0A0A0F',

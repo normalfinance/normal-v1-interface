@@ -92,7 +92,7 @@ export function StatCard({
         backgroundColor: 'grey.100',
         border: 1,
         borderColor: 'divider',
-        borderRadius: 9999,
+        borderRadius: 'var(--radius-sm)',
       }}
     >
       <Iconify
@@ -105,7 +105,7 @@ export function StatCard({
         sx={{ color: percent < 0 ? 'error.main' : 'success.main' }}
       />
 
-      <Box component="span" sx={{ typography: 'subtitle2', fontWeight: 700 }}>
+      <Box component="span" sx={{ typography: 'subtitle2', fontWeight: 500 }}>
         {percent > 0 && '+'}
         {fPercent(percent)}
       </Box>
@@ -124,7 +124,7 @@ export function StatCard({
       sx={[
         {
           p: 4,
-          borderRadius: 3,
+          borderRadius: 'var(--radius-lg)',
           alignItems: 'center',
           border: 1,
           borderColor: alpha(theme.palette.grey[500], 0.32),

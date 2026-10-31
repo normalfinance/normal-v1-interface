@@ -746,21 +746,21 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
   // ── Shared styles ─────────────────────────────────────────────────────────
 
   const btnPrimary = {
-    borderRadius: '12px',
+    borderRadius: 'var(--radius-md)',
     py: 1.5,
-    fontWeight: 600,
+    fontWeight: 500,
     fontSize: '0.9375rem',
     bgcolor: 'text.primary',
     color: 'background.paper',
     '&:hover': { bgcolor: 'text.secondary' },
     '&.Mui-disabled': {
-      bgcolor: alpha(theme.palette.text.primary, 0.12),
-      color: alpha(theme.palette.text.primary, 0.4),
+      bgcolor: alpha(theme.palette.text.primary, 0.08),
+      color: theme.palette.text.disabled,
     },
   };
 
   const btnOutlined = {
-    borderRadius: '12px',
+    borderRadius: 'var(--radius-md)',
     py: 1.5,
     fontWeight: 500,
     fontSize: '0.9375rem',
@@ -781,7 +781,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
   const renderChooseWallet = () => (
     <Stack spacing={2.5}>
       <Box>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
+        <Typography variant="h4" fontWeight={500} gutterBottom>
           {t('How do you want to start?')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
@@ -798,7 +798,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           }}
           sx={{
             p: 2,
-            borderRadius: 2,
+            borderRadius: 'var(--radius-lg)',
             cursor: 'pointer',
             border: `1.5px solid ${theme.palette.success.main}`,
             bgcolor: alpha(theme.palette.success.main, 0.03),
@@ -811,7 +811,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
               sx={{
                 width: 40,
                 height: 40,
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: alpha(theme.palette.success.main, 0.12),
                 display: 'flex',
                 alignItems: 'center',
@@ -823,20 +823,20 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
             </Box>
             <Box flex={1} minWidth={0}>
               <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" gap={0.5}>
-                <Typography variant="subtitle2" fontWeight={700}>
+                <Typography variant="subtitle2" fontWeight={500}>
                   {t('Create a Normal account')}
                 </Typography>
                 <Box
                   sx={{
                     px: 0.75,
                     py: 0.2,
-                    borderRadius: 1,
+                    borderRadius: 'var(--radius-md)',
                     bgcolor: alpha(theme.palette.success.main, 0.12),
                   }}
                 >
                   <Typography
                     variant="caption"
-                    fontWeight={700}
+                    fontWeight={500}
                     sx={{
                       color: 'success.dark',
                       textTransform: 'uppercase',
@@ -863,7 +863,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           onClick={() => setStep('import-wallet')}
           sx={{
             p: 2,
-            borderRadius: 2,
+            borderRadius: 'var(--radius-lg)',
             cursor: 'pointer',
             border: `1.5px solid ${theme.palette.divider}`,
             '&:hover': {
@@ -878,7 +878,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
               sx={{
                 width: 40,
                 height: 40,
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: alpha(theme.palette.text.primary, 0.06),
                 display: 'flex',
                 alignItems: 'center',
@@ -889,7 +889,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
               <Iconify icon="solar:key-bold" width={20} sx={{ color: 'text.primary' }} />
             </Box>
             <Box flex={1} minWidth={0}>
-              <Typography variant="subtitle2" fontWeight={700}>
+              <Typography variant="subtitle2" fontWeight={500}>
                 {t('Import an existing wallet')}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -905,7 +905,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           onClick={handleConnectStellarWallet}
           sx={{
             p: 2,
-            borderRadius: 2,
+            borderRadius: 'var(--radius-lg)',
             cursor: 'pointer',
             border: `1.5px solid ${alpha(theme.palette.warning.main, 0.6)}`,
             bgcolor: alpha(theme.palette.warning.main, 0.02),
@@ -918,7 +918,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
               sx={{
                 width: 40,
                 height: 40,
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: alpha(theme.palette.warning.main, 0.12),
                 display: 'flex',
                 alignItems: 'center',
@@ -930,20 +930,20 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
             </Box>
             <Box flex={1} minWidth={0}>
               <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" gap={0.5}>
-                <Typography variant="subtitle2" fontWeight={700}>
+                <Typography variant="subtitle2" fontWeight={500}>
                   {t('Connect a crypto wallet')}
                 </Typography>
                 <Box
                   sx={{
                     px: 0.75,
                     py: 0.2,
-                    borderRadius: 1,
+                    borderRadius: 'var(--radius-md)',
                     bgcolor: alpha(theme.palette.warning.main, 0.12),
                   }}
                 >
                   <Typography
                     variant="caption"
-                    fontWeight={700}
+                    fontWeight={500}
                     sx={{
                       color: 'warning.dark',
                       textTransform: 'uppercase',
@@ -979,7 +979,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
   const renderCreateWallet = () => (
     <Stack spacing={2.5}>
       <Box>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
+        <Typography variant="h4" fontWeight={500} gutterBottom>
           {t('Create your wallet')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
@@ -990,7 +990,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
       </Box>
 
       {walletCreateError && (
-        <Alert severity="error" sx={{ borderRadius: 2 }}>
+        <Alert severity="error" sx={{ borderRadius: 'var(--radius-lg)' }}>
           {walletCreateError}
         </Alert>
       )}
@@ -1015,7 +1015,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
               sx={{
                 width: 34,
                 height: 34,
-                borderRadius: '9px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: alpha(theme.palette.success.main, 0.1),
                 display: 'flex',
                 alignItems: 'center',
@@ -1063,7 +1063,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
   const renderImportWallet = () => (
     <Stack spacing={2.5}>
       <Box>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
+        <Typography variant="h4" fontWeight={500} gutterBottom>
           {t('Import an existing wallet')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
@@ -1072,7 +1072,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
       </Box>
 
       {importError && (
-        <Alert severity="error" sx={{ borderRadius: 2 }}>
+        <Alert severity="error" sx={{ borderRadius: 'var(--radius-lg)' }}>
           {importError}
         </Alert>
       )}
@@ -1108,7 +1108,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           error={!!importMnemonicError}
           helperText={importMnemonicError || t('Enter your 12 or 24 word recovery phrase')}
           disabled={isImporting}
-          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 'var(--radius-lg)' } }}
         />
       ) : (
         <TextField
@@ -1127,7 +1127,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
             importPrivateKeyError || t('Your private key starts with S and is 56 characters')
           }
           disabled={isImporting}
-          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 'var(--radius-lg)' } }}
         />
       )}
 
@@ -1203,7 +1203,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
     return (
       <Stack spacing={2.5}>
         <Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>
+          <Typography variant="h4" fontWeight={500} gutterBottom>
             {t('Send 1+ XLM to activate')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -1213,7 +1213,11 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
 
         {/* QR + address in same bordered box */}
         <Box
-          sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2, overflow: 'hidden' }}
+          sx={{
+            border: `1px solid ${theme.palette.divider}`,
+            borderRadius: 'var(--radius-lg)',
+            overflow: 'hidden',
+          }}
         >
           <Stack alignItems="center" sx={{ p: 2.5, bgcolor: alpha(theme.palette.grey[500], 0.04) }}>
             <Box
@@ -1268,7 +1272,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                 else enqueueSnackbar(t('Copy failed — please copy manually'), { variant: 'error' });
               }}
               sx={{
-                borderRadius: 1.5,
+                borderRadius: 'var(--radius-md)',
                 flexShrink: 0,
                 fontSize: '0.8rem',
                 py: 0.5,
@@ -1325,7 +1329,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
   const renderAddTrustline = () => (
     <Stack spacing={2.5}>
       <Box>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
+        <Typography variant="h4" fontWeight={500} gutterBottom>
           {t('Add the USDC trustline')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
@@ -1337,7 +1341,11 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
 
       {/* Info table */}
       <Box
-        sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2, overflow: 'hidden' }}
+        sx={{
+          border: `1px solid ${theme.palette.divider}`,
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+        }}
       >
         {[
           { label: t('Asset'), value: 'USDC' },
@@ -1362,7 +1370,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
             <Typography variant="body2" color="text.secondary">
               {label}
             </Typography>
-            <Typography variant="body2" fontWeight={600}>
+            <Typography variant="body2" fontWeight={500}>
               {value}
             </Typography>
           </Stack>
@@ -1370,7 +1378,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
       </Box>
 
       {trustlineError && (
-        <Alert severity="error" sx={{ borderRadius: 2 }}>
+        <Alert severity="error" sx={{ borderRadius: 'var(--radius-lg)' }}>
           {trustlineError}
         </Alert>
       )}
@@ -1408,14 +1416,13 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 8px 24px rgba(129, 140, 248, 0.4)',
         }}
       >
         <Iconify icon="solar:check-circle-bold" width={40} sx={{ color: '#fff' }} />
       </Box>
 
       <Box textAlign="center">
-        <Typography variant="h4" fontWeight={700} gutterBottom>
+        <Typography variant="h4" fontWeight={500} gutterBottom>
           {t("You're all set.")}
         </Typography>
         <Typography variant="body2" color="text.secondary">
@@ -1499,13 +1506,12 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 8px 24px rgba(129, 140, 248, 0.4)',
               }}
             >
               <Iconify icon="solar:check-circle-bold" width={36} sx={{ color: '#fff' }} />
             </Box>
             <Box textAlign="center">
-              <Typography variant="h4" fontWeight={700} gutterBottom>
+              <Typography variant="h4" fontWeight={500} gutterBottom>
                 {t("You're all set!")}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -1515,7 +1521,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           </Stack>
         ) : (
           <Box>
-            <Typography variant="h4" fontWeight={700} gutterBottom>
+            <Typography variant="h4" fontWeight={500} gutterBottom>
               {t('Linked accounts')}
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -1532,7 +1538,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
             onClick={() => handleUseWallet(turnkeyStellarAddress)}
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: 'var(--radius-lg)',
               cursor: 'pointer',
               border: `1.5px solid ${theme.palette.success.main}`,
               bgcolor: alpha(theme.palette.success.main, 0.04),
@@ -1545,7 +1551,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                 sx={{
                   width: 40,
                   height: 40,
-                  borderRadius: '10px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: alpha(theme.palette.success.main, 0.12),
                   display: 'flex',
                   alignItems: 'center',
@@ -1564,7 +1570,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                 )}
               </Box>
               <Box flex={1} minWidth={0}>
-                <Typography variant="subtitle2" fontWeight={700}>
+                <Typography variant="subtitle2" fontWeight={500}>
                   {t('Continue with Turnkey')}
                 </Typography>
                 <Typography
@@ -1589,7 +1595,11 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
             {linkedWalletsForStep.map((wallet) => (
               <Box
                 key={wallet.id}
-                sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2, p: 2 }}
+                sx={{
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 'var(--radius-lg)',
+                  p: 2,
+                }}
               >
                 {linkedWalletEditingAddr === wallet.walletAddress ? (
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
@@ -1600,7 +1610,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                       onChange={(e) => setLinkedWalletEditName(e.target.value)}
                       placeholder={t('Account name')}
                       slotProps={{ htmlInput: { maxLength: 50 } }}
-                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 'var(--radius-md)' } }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleSaveLinkedWalletName(wallet.walletAddress);
                         if (e.key === 'Escape') {
@@ -1634,7 +1644,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                   </Stack>
                 ) : (
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                    <Typography variant="subtitle2" fontWeight={600} sx={{ flex: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={500} sx={{ flex: 1 }}>
                       {wallet.walletName || t('Unnamed account')}
                     </Typography>
                     <IconButton
@@ -1663,12 +1673,12 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                       sx={{
                         px: 1,
                         py: 0.25,
-                        borderRadius: 1,
+                        borderRadius: 'var(--radius-md)',
                         bgcolor: alpha(theme.palette.success.main, 0.12),
                         border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
                       }}
                     >
-                      <Typography variant="caption" color="success.main" fontWeight={600}>
+                      <Typography variant="caption" color="success.main" fontWeight={500}>
                         {t('Active')}
                       </Typography>
                     </Box>
@@ -1678,7 +1688,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                       variant="outlined"
                       disabled={connectingWalletAddr === wallet.walletAddress}
                       onClick={() => handleUseWallet(wallet.walletAddress)}
-                      sx={{ borderRadius: 1.5, fontSize: '0.8rem' }}
+                      sx={{ borderRadius: 'var(--radius-md)', fontSize: '0.8rem' }}
                     >
                       {connectingWalletAddr === wallet.walletAddress ? (
                         <CircularProgress size={14} color="inherit" sx={{ mr: 0.5 }} />
@@ -1703,7 +1713,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
             onClick={() => setStep('import-wallet')}
             sx={{
               p: 1.5,
-              borderRadius: 2,
+              borderRadius: 'var(--radius-lg)',
               cursor: 'pointer',
               border: `1px solid ${theme.palette.divider}`,
               '&:hover': {
@@ -1718,7 +1728,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                 sx={{
                   width: 34,
                   height: 34,
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: alpha(theme.palette.text.primary, 0.06),
                   display: 'flex',
                   alignItems: 'center',
@@ -1729,7 +1739,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                 <Iconify icon="solar:key-bold" width={18} sx={{ color: 'text.primary' }} />
               </Box>
               <Box flex={1} minWidth={0}>
-                <Typography variant="body2" fontWeight={600}>
+                <Typography variant="body2" fontWeight={500}>
                   {t('Import a Normal wallet')}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -1744,7 +1754,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
             onClick={handleConnectStellarWallet}
             sx={{
               p: 1.5,
-              borderRadius: 2,
+              borderRadius: 'var(--radius-lg)',
               cursor: 'pointer',
               border: `1.5px solid ${alpha(theme.palette.warning.main, 0.5)}`,
               bgcolor: alpha(theme.palette.warning.main, 0.02),
@@ -1757,7 +1767,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                 sx={{
                   width: 34,
                   height: 34,
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: alpha(theme.palette.warning.main, 0.1),
                   display: 'flex',
                   alignItems: 'center',
@@ -1768,7 +1778,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                 <Iconify icon="solar:card-bold" width={18} sx={{ color: 'warning.dark' }} />
               </Box>
               <Box flex={1} minWidth={0}>
-                <Typography variant="body2" fontWeight={600}>
+                <Typography variant="body2" fontWeight={500}>
                   {t('Connect a crypto wallet')}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -1838,7 +1848,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           sx: {
             width: 480,
             maxWidth: '95vw',
-            borderRadius: '20px',
+            borderRadius: 'var(--radius-lg)',
             overflow: 'hidden',
             bgcolor: 'background.paper',
           },
@@ -1877,7 +1887,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           variant="caption"
           sx={{
             flex: 1,
-            fontWeight: 600,
+            fontWeight: 500,
             letterSpacing: 0.3,
             color: 'text.secondary',
             fontSize: '0.7rem',

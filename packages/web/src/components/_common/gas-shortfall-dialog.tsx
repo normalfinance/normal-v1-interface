@@ -38,20 +38,18 @@ export default function GasShortfallDialog({
     <Dialog
       open={open}
       onClose={onCancel}
-      PaperProps={{ sx: { borderRadius: '20px', maxWidth: 400, p: '24px' } }}
+      PaperProps={{ sx: { borderRadius: 'var(--radius-lg)', maxWidth: 400, p: '24px' } }}
     >
-      <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', mb: '10px' }}>
+      <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', mb: '10px' }}>
         {t('Network fee just went up')}
       </Typography>
-      <Typography sx={{ fontSize: '13.5px', color: 'rgba(10,10,15,0.6)', lineHeight: 1.6 }}>
+      <Typography sx={{ fontSize: '13.5px', color: '#6B6B76', lineHeight: 1.6 }}>
         {t(
           'Gas on Ethereum rose between your quote and now, so {{tried}} ETH plus the fee no longer fits your balance. You can swap up to {{affordable}} ETH at the current fee.',
           { tried: triedAmountEth, affordable: affordableEth }
         )}
       </Typography>
-      <Typography
-        sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', lineHeight: 1.6, mt: '10px' }}
-      >
+      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', lineHeight: 1.6, mt: '10px' }}>
         {t(
           'Nothing was signed or sent. Choosing the smaller amount refreshes your quote — review it and press Swap to confirm.'
         )}
@@ -63,10 +61,10 @@ export default function GasShortfallDialog({
             flex: 1,
             textTransform: 'none',
             fontSize: '13.5px',
-            fontWeight: 600,
+            fontWeight: 500,
             color: '#0A0A0F',
             border: '1px solid rgba(10,10,15,0.14)',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-md)',
             py: '9px',
           }}
         >
@@ -78,10 +76,10 @@ export default function GasShortfallDialog({
             flex: 1.4,
             textTransform: 'none',
             fontSize: '13.5px',
-            fontWeight: 600,
+            fontWeight: 500,
             color: '#fff',
             bgcolor: '#0A0A0F',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-md)',
             py: '9px',
             '&:hover': { bgcolor: '#0A0A0F', opacity: 0.85 },
           }}

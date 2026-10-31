@@ -141,7 +141,7 @@ const ItemRoot = styled(ButtonBase, { shouldForwardProp })<StyledState>(({
     left: -13,
     height: 16,
     content: '""',
-    borderRadius: 3,
+    borderRadius: 'var(--radius-lg)',
     position: 'absolute',
     backgroundColor: 'currentColor',
     transform: active ? 'scale(1)' : 'scale(0)',

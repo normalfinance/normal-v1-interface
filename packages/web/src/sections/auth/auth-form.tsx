@@ -69,7 +69,7 @@ const HEADINGS: Record<AuthMode, { title: string; subtitle: string }> = {
   },
 };
 
-const fieldSx = { '& .MuiOutlinedInput-root': { borderRadius: '12px' } };
+const fieldSx = { '& .MuiOutlinedInput-root': { borderRadius: 'var(--radius-md)' } };
 
 const backButtonSx = { color: 'text.secondary', fontSize: '0.8125rem' };
 
@@ -124,22 +124,22 @@ export function AuthForm() {
   const showConfirmError = confirmChecked && passwordsDiffer;
 
   const btnPrimary = {
-    borderRadius: '12px',
+    borderRadius: 'var(--radius-md)',
     py: 1.5,
-    fontWeight: 600,
+    fontWeight: 500,
     fontSize: '0.9375rem',
     boxShadow: 'none',
     bgcolor: 'var(--auth-ink)',
     color: 'var(--auth-on-ink)',
     '&:hover': { bgcolor: 'var(--auth-ink)', opacity: 0.86, boxShadow: 'none' },
     '&.Mui-disabled': {
-      bgcolor: alpha(theme.palette.text.primary, 0.12),
-      color: alpha(theme.palette.text.primary, 0.4),
+      bgcolor: alpha(theme.palette.text.primary, 0.08),
+      color: theme.palette.text.disabled,
     },
   };
 
   const btnOutlined = {
-    borderRadius: '12px',
+    borderRadius: 'var(--radius-md)',
     py: 1.5,
     fontWeight: 500,
     fontSize: '0.9375rem',
@@ -390,7 +390,7 @@ export function AuthForm() {
         component="h1"
         sx={{
           fontSize: 30,
-          fontWeight: 700,
+          fontWeight: 500,
           lineHeight: 1.15,
           letterSpacing: '-0.02em',
           color: 'var(--auth-ink)',
@@ -409,7 +409,7 @@ export function AuthForm() {
     error && (
       <Alert
         severity="error"
-        sx={{ borderRadius: '12px', alignItems: 'center' }}
+        sx={{ borderRadius: 'var(--radius-md)', alignItems: 'center' }}
         action={
           error.nudge === 'signup' || error.nudge === 'login' ? (
             <Button
@@ -422,7 +422,7 @@ export function AuthForm() {
               }}
               size="small"
               color="inherit"
-              sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}
+              sx={{ fontWeight: 500, whiteSpace: 'nowrap' }}
             >
               {error.nudge === 'signup' ? t('Create an account') : t('Log in instead')}
             </Button>
@@ -470,7 +470,7 @@ export function AuthForm() {
             textAlign: 'center',
             letterSpacing: '0.6em',
             fontSize: '1.5rem',
-            fontWeight: 600,
+            fontWeight: 500,
           },
         },
       }}
@@ -498,7 +498,7 @@ export function AuthForm() {
         {renderHeading(t(HEADINGS[mode].title), t(HEADINGS[mode].subtitle))}
 
         {passwordWasReset && mode === 'login' && (
-          <Alert severity="success" sx={{ borderRadius: '12px' }}>
+          <Alert severity="success" sx={{ borderRadius: 'var(--radius-md)' }}>
             {t('Password updated. Log in with your new password.')}
           </Alert>
         )}
@@ -676,7 +676,7 @@ export function AuthForm() {
     <Stack spacing={3}>
       {renderHeading(t('Reset your password'), t("We'll email you a link to set a new one."))}
       {resetSent ? (
-        <Alert severity="success" sx={{ borderRadius: '12px' }}>
+        <Alert severity="success" sx={{ borderRadius: 'var(--radius-md)' }}>
           {t('Check your inbox at')} <strong>{email.trim()}</strong> {t('for a reset link.')}
         </Alert>
       ) : (

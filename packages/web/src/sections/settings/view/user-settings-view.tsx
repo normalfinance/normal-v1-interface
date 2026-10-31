@@ -4,12 +4,11 @@ import { useTranslate } from '@/locales';
 import { useTabs } from 'minimal-shared/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
 
-import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+
+import { AppPageHeader, SegmentedControl } from '@/components/_common/brand';
 
 import { SettingsGeneral } from '../settings-general';
 import { SettingsAccounts } from '../settings-accounts';
@@ -33,58 +32,18 @@ export function UserSettingsView() {
   const tabs = useTabs('general');
 
   return (
-    <DashboardContent maxWidth="xl">
-      {/* Page title */}
-      <Stack spacing={0.5} sx={{ mb: '24px' }}>
-        <Typography
-          sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
-        >
-          {t('Settings')}
-        </Typography>
-        <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)' }}>
-          {t('Manage your account, wallets and security preferences.')}
-        </Typography>
-      </Stack>
+    <DashboardContent>
+      <AppPageHeader
+        title={t('Settings')}
+        subtitle={t('Manage your account, wallets and security preferences.')}
+      />
 
-      {/* Pill tab bar */}
-      <Box
-        sx={{
-          display: 'inline-flex',
-          gap: '4px',
-          p: '4px',
-          borderRadius: '12px',
-          bgcolor: '#F4F4F7',
-          mb: '24px',
-        }}
-      >
-        {TABS.map((tab) => (
-          <Box
-            key={tab.value}
-            component="button"
-            onClick={() => tabs.onChange(null as any, tab.value)}
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              px: '16px',
-              py: '8px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              fontSize: '14px',
-              fontWeight: tabs.value === tab.value ? 600 : 500,
-              bgcolor: tabs.value === tab.value ? '#FFFFFF' : 'transparent',
-              color: tabs.value === tab.value ? '#0A0A0F' : 'rgba(10,10,15,0.5)',
-              boxShadow: tabs.value === tab.value ? '0 1px 3px rgba(10,10,15,0.1)' : 'none',
-              transition: 'all 150ms ease',
-            }}
-          >
-            {tab.icon}
-            {t(tab.label)}
-          </Box>
-        ))}
-      </Box>
+      <SegmentedControl
+        value={tabs.value as string}
+        onChange={(value) => tabs.onChange(null as any, value)}
+        options={TABS.map((tab) => ({ value: tab.value, label: t(tab.label), icon: tab.icon }))}
+        sx={{ mb: 3 }}
+      />
 
       {/* Tab content */}
       {tabs.value === 'general' && <SettingsGeneral />}

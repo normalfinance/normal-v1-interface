@@ -654,7 +654,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           <Typography
             sx={{
               fontSize: '12px',
-              color: 'rgba(10,10,15,0.5)',
+              color: '#6B6B76',
               textAlign: 'center',
               lineHeight: 1.5,
             }}
@@ -751,7 +751,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           gap: '8px',
           px: '12px',
           py: '8px',
-          borderRadius: '100px',
+          borderRadius: 'var(--radius-md)',
           bgcolor: '#FFFFFF',
           border: '1px solid rgba(10,10,15,0.08)',
           cursor: 'pointer',
@@ -766,11 +766,11 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           sx={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }}
         />
         <Typography
-          sx={{ fontSize: '14px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+          sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.01em' }}
         >
           {sym}
         </Typography>
-        <Iconify icon="eva:chevron-down-fill" width={18} sx={{ color: 'rgba(10,10,15,0.4)' }} />
+        <Iconify icon="eva:chevron-down-fill" width={18} sx={{ color: '#9A9AA3' }} />
       </Box>
     );
   };
@@ -783,7 +783,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         <Box
           sx={{
             p: '16px',
-            borderRadius: '16px',
+            borderRadius: 'var(--radius-lg)',
             bgcolor: '#FAFAFB',
             border: '1px solid rgba(10,10,15,0.08)',
           }}
@@ -800,11 +800,11 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           >
             <Typography
               sx={{
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: 500,
-                color: 'rgba(10,10,15,0.45)',
+                color: '#9A9AA3',
                 textTransform: 'uppercase',
-                letterSpacing: '0.08em',
+                letterSpacing: '0.16em',
               }}
             >
               {t('You pay')}
@@ -813,7 +813,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               component="div"
               sx={{
                 fontSize: '12px',
-                color: 'rgba(10,10,15,0.45)',
+                color: '#9A9AA3',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
@@ -823,7 +823,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               {fromLoading ? (
                 <Skeleton variant="text" width={64} sx={{ fontSize: '12px' }} />
               ) : (
-                <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 600 }}>
+                <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 500 }}>
                   {isFiatMode && fromPrice.gt(0)
                     ? fCurrency(activeFromBalance.multipliedBy(fromPrice))
                     : `${activeFromBalance.toFixed(6, BigNumber.ROUND_DOWN)} ${fromSymbol}`}
@@ -832,7 +832,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               {/* #32 chunk 4a/4b/4f: name the wallet this number belongs to —
                   the swap spends exactly the SELECTED wallet's balance. */}
               {(showCctpSourcePicker || showStellarSourcePicker) && (
-                <Box component="span" sx={{ color: 'rgba(10,10,15,0.4)' }}>
+                <Box component="span" sx={{ color: '#9A9AA3' }}>
                   {(pairType === 'cctp' ? cctpSourceActive : stellarSourceActive) === 'normal'
                     ? t('· Normal wallet')
                     : `· ${connectedWalletLabel(wallet.walletType)}`}
@@ -874,12 +874,12 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                       appearance: 'none',
                       border: selected
                         ? '1px solid rgba(10,10,15,0.9)'
-                        : '1px solid rgba(10,10,15,0.12)',
-                      borderRadius: '999px',
+                        : '1px solid rgba(10,10,15,0.14)',
+                      borderRadius: 'var(--radius-sm)',
                       px: '11px',
                       py: '5px',
                       fontSize: '11.5px',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       fontFamily: 'inherit',
                       cursor: 'pointer',
                       bgcolor: selected ? '#0A0A0F' : 'transparent',
@@ -913,11 +913,11 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                 bgcolor: 'rgba(10,10,15,0.06)',
                 color: '#0A0A0F',
                 fontSize: '11px',
-                fontWeight: 700,
+                fontWeight: 500,
                 letterSpacing: '0.06em',
                 px: '8px',
                 py: '4px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius-sm)',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
@@ -932,8 +932,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               <Typography
                 sx={{
                   fontSize: '24px',
-                  fontWeight: 600,
-                  color: insufficient ? '#DC2626' : 'rgba(10,10,15,0.35)',
+                  fontWeight: 500,
+                  color: insufficient ? '#DC2626' : '#9A9AA3',
                   letterSpacing: '-0.02em',
                   lineHeight: 1,
                   ...MONO,
@@ -957,7 +957,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                 outline: 'none',
                 bgcolor: 'transparent',
                 fontSize: '24px',
-                fontWeight: 600,
+                fontWeight: 500,
                 color: insufficient ? '#DC2626' : '#0A0A0F',
                 letterSpacing: '-0.02em',
                 ...MONO,
@@ -973,8 +973,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               <Typography
                 sx={{
                   fontSize: '14px',
-                  fontWeight: 600,
-                  color: 'rgba(10,10,15,0.45)',
+                  fontWeight: 500,
+                  color: '#9A9AA3',
                   flexShrink: 0,
                 }}
               >
@@ -991,7 +991,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                   border: 'none',
                   bgcolor: 'rgba(10,10,15,0.06)',
                   color: '#0A0A0F',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius-md)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1008,7 +1008,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           <Typography
             sx={{
               fontSize: '12px',
-              color: insufficient ? '#DC2626' : 'rgba(10,10,15,0.45)',
+              color: insufficient ? '#DC2626' : '#9A9AA3',
               mt: '4px',
             }}
           >
@@ -1036,8 +1036,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
             sx={{
               width: 36,
               height: 36,
-              borderRadius: '10px',
-              border: '1px solid rgba(10,10,15,0.1)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(10,10,15,0.08)',
               bgcolor: '#FFFFFF',
               color: '#0A0A0F',
               display: 'flex',
@@ -1057,18 +1057,18 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         <Box
           sx={{
             p: '16px',
-            borderRadius: '16px',
+            borderRadius: 'var(--radius-lg)',
             bgcolor: '#FAFAFB',
             border: '1px solid rgba(10,10,15,0.08)',
           }}
         >
           <Typography
             sx={{
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: 500,
-              color: 'rgba(10,10,15,0.45)',
+              color: '#9A9AA3',
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              letterSpacing: '0.16em',
               mb: '12px',
             }}
           >
@@ -1099,7 +1099,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                 flexWrap: 'wrap',
               }}
             >
-              <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)' }}>
+              <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>
                 {t('Deliver to:')}
               </Typography>
               {(
@@ -1129,12 +1129,12 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                       appearance: 'none',
                       border: selected
                         ? '1px solid rgba(10,10,15,0.9)'
-                        : '1px solid rgba(10,10,15,0.12)',
-                      borderRadius: '999px',
+                        : '1px solid rgba(10,10,15,0.14)',
+                      borderRadius: 'var(--radius-sm)',
                       px: '11px',
                       py: '5px',
                       fontSize: '11.5px',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       fontFamily: 'inherit',
                       cursor: trustlineBusy ? 'wait' : 'pointer',
                       bgcolor: selected ? '#0A0A0F' : 'transparent',
@@ -1151,12 +1151,16 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           )}
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '8px', mt: '12px' }}>
             {quoteLoading ? (
-              <Skeleton variant="text" width={150} sx={{ fontSize: '24px', borderRadius: '6px' }} />
+              <Skeleton
+                variant="text"
+                width={150}
+                sx={{ fontSize: '24px', borderRadius: 'var(--radius-sm)' }}
+              />
             ) : (
               <Typography
                 sx={{
                   fontSize: '24px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   color: toAmount ? '#0A0A0F' : 'rgba(10,10,15,0.25)',
                   letterSpacing: '-0.02em',
                   ...MONO,
@@ -1165,7 +1169,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                 {toAmount ? toAmount.toFixed(6, BigNumber.ROUND_DOWN) : '0'}
               </Typography>
             )}
-            <Typography sx={{ fontSize: '14px', fontWeight: 600, color: 'rgba(10,10,15,0.45)' }}>
+            <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#9A9AA3' }}>
               {toSymbol}
             </Typography>
           </Box>
@@ -1174,7 +1178,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           ) : (
             toAmount &&
             toPrice.gt(0) && (
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', mt: '4px' }}>
+              <Typography sx={{ fontSize: '12px', color: '#9A9AA3', mt: '4px' }}>
                 ≈ {fCurrency(toAmount.multipliedBy(toPrice))}
               </Typography>
             )
@@ -1187,9 +1191,9 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
             sx={{
               mt: '12px',
               p: '12px 14px',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: '#FAFAFB',
-              border: '1px solid rgba(10,10,15,0.06)',
+              border: '1px solid rgba(10,10,15,0.08)',
             }}
           >
             {engine.details}
@@ -1203,12 +1207,12 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               mt: '12px',
               px: '12px',
               py: '10px',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: 'rgba(220,38,38,0.05)',
               border: '1px solid rgba(220,38,38,0.15)',
             }}
           >
-            <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: '12.5px', color: '#2A2A33', lineHeight: 1.5 }}>
               {quoteError}
             </Typography>
           </Box>
@@ -1228,15 +1232,15 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           startIcon={button.loading ? <CircularProgress size={16} color="inherit" /> : undefined}
           sx={{
             mt: button.helper ? '10px' : '14px',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: '#0A0A0F',
-            fontWeight: 700,
+            fontWeight: 500,
             fontSize: '15px',
             py: '13px',
             textTransform: 'none',
             letterSpacing: '-0.01em',
-            '&:hover': { bgcolor: '#1a1a25' },
-            '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+            '&:hover': { bgcolor: '#2A2A33' },
+            '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
           }}
         >
           {button.label}

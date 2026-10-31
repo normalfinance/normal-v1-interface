@@ -35,7 +35,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 
-const MONO = { fontFamily: '"Geist Mono", "Courier New", monospace' } as const;
+const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace' } as const;
 
 // 1 XLM activates the account; the USDC trustline locks ~0.5 more, plus a
 // little for fees — 2 keeps the user from having to top up twice.
@@ -119,23 +119,21 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
       onClose={busy ? undefined : onClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: '22px', p: '22px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)', p: '22px' } } }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '6px' }}>
-        <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
           {t('Set up {{wallet}} for USDC', { wallet: walletLabel })}
         </Typography>
         <Box
           component="button"
           onClick={busy ? undefined : onClose}
-          sx={{ all: 'unset', cursor: 'pointer', color: 'rgba(10,10,15,0.4)', display: 'flex' }}
+          sx={{ all: 'unset', cursor: 'pointer', color: '#9A9AA3', display: 'flex' }}
         >
           <Iconify icon="mingcute:close-line" width={20} />
         </Box>
       </Stack>
-      <Typography
-        sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', mb: '14px', lineHeight: 1.5 }}
-      >
+      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', mb: '14px', lineHeight: 1.5 }}>
         {t('Two one-time steps and this wallet can hold and receive USDC.')}
       </Typography>
 
@@ -177,7 +175,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
                   />
                 )}
               </Box>
-              <Typography sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F' }}>
+              <Typography sx={{ fontSize: '13.5px', fontWeight: 500, color: '#0A0A0F' }}>
                 {s.label}
               </Typography>
             </Stack>
@@ -190,7 +188,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
           <Typography
             sx={{
               fontSize: '12px',
-              color: 'rgba(10,10,15,0.55)',
+              color: '#6B6B76',
               textAlign: 'center',
               lineHeight: 1.55,
             }}
@@ -208,7 +206,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
               sx={{
                 width: 180,
                 height: 180,
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 border: '1px solid rgba(10,10,15,0.08)',
               }}
             />
@@ -224,8 +222,8 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
               maxWidth: '100%',
               px: '12px',
               py: '8px',
-              borderRadius: '10px',
-              border: '1px solid rgba(10,10,15,0.12)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(10,10,15,0.14)',
               bgcolor: '#FAFAFB',
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -246,12 +244,12 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
             <Iconify
               icon="solar:copy-outline"
               width={14}
-              sx={{ color: 'rgba(10,10,15,0.45)', flexShrink: 0 }}
+              sx={{ color: '#9A9AA3', flexShrink: 0 }}
             />
           </Box>
           <Stack direction="row" spacing={0.75} alignItems="center">
-            <CircularProgress size={12} sx={{ color: 'rgba(10,10,15,0.35)' }} />
-            <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)' }}>
+            <CircularProgress size={12} sx={{ color: '#9A9AA3' }} />
+            <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>
               {t('Watching for the payment…')}
             </Typography>
           </Stack>
@@ -260,7 +258,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
 
       {step === 'trustline' && (
         <Stack spacing={1.25}>
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.55)', lineHeight: 1.55 }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', lineHeight: 1.55 }}>
             {t(
               '{{wallet}} is active. One approval in your wallet adds the USDC trustline (reserves ~0.5 XLM) — after that it can hold and receive USDC.',
               { wallet: walletLabel }
@@ -272,10 +270,10 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
             sx={{
               appearance: 'none',
               border: 'none',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               py: '12px',
               fontSize: '14px',
-              fontWeight: 600,
+              fontWeight: 500,
               fontFamily: 'inherit',
               cursor: busy ? 'default' : 'pointer',
               bgcolor: '#0A0A0F',
@@ -297,7 +295,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
       {step === 'ready' && (
         <Stack alignItems="center" spacing={1.25} sx={{ py: '6px' }}>
           <Iconify icon="lets-icons:check-fill" width={36} sx={{ color: '#1AB37D' }} />
-          <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.65)', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '13px', color: '#2A2A33', textAlign: 'center' }}>
             {t('{{wallet}} can now hold and receive USDC.', { wallet: walletLabel })}
           </Typography>
           <Box
@@ -306,11 +304,11 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
             sx={{
               appearance: 'none',
               border: 'none',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               px: '28px',
               py: '10px',
               fontSize: '14px',
-              fontWeight: 600,
+              fontWeight: 500,
               fontFamily: 'inherit',
               cursor: 'pointer',
               bgcolor: '#0A0A0F',

@@ -1,11 +1,21 @@
 'use client';
 
 import * as React from 'react';
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
 import { useTheme } from '@mui/material/styles';
-import { Box, Stack, Container, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
+
+import {
+  HAIRLINE,
+  HeroLede,
+  HeroBadge,
+  HeroTitle,
+  BrandButton,
+  GradientText,
+} from '@/components/_common/brand';
 
 import { WavyBackground } from './wavy-background';
 import { HeroPortfolioCard } from '../hero-portfolio-card';
@@ -46,9 +56,9 @@ export const HeroHeader: React.FC = () => {
       sx={(th) => ({
         position: 'relative',
         overflow: 'hidden',
-        px: '5%',
-        py: { xs: 7, md: 9, lg: 11 },
-        bgcolor: '#FAFAFB',
+        pt: 7,
+        pb: { xs: 7, md: 9, lg: 11 },
+        bgcolor: 'background.default',
         ...th.applyStyles('dark', { bgcolor: 'background.paper' }),
       })}
     >
@@ -57,7 +67,7 @@ export const HeroHeader: React.FC = () => {
         <WavyBackground
           sizing="viewport"
           baseline="center"
-          yOffset={0}
+          yOffset={200}
           colors={['#38bdf8', '#818cf8', '#c084fc', '#e879f9', '#22d3ee']}
           waveOpacity={0.35}
           blur={36}
@@ -104,172 +114,102 @@ export const HeroHeader: React.FC = () => {
         })}
       />
 
-      {/* Content */}
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2, px: 0 }}>
-        <Stack alignItems="center">
-          <Box sx={{ textAlign: 'center', width: '100%' }}>
-            {/* ---- Hero pill ---- */}
+      {/* Content: text on the left, the portfolio block on the right */}
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 2,
+          mx: 'auto',
+          maxWidth: 'var(--page-max)',
+          px: { xs: 2, sm: 3 },
+          display: 'grid',
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) minmax(0, 440px)' },
+          gap: { xs: 6, md: 8 },
+          alignItems: 'start',
+        }}
+      >
+        {/* Top-aligned: centring against the tall block pushes the text and the
+            trust row below the fold on a 13" laptop. */}
+        <Box sx={{ pt: { md: 5 } }}>
+          <HeroBadge>
+            {t('Investing that works for you')}
+            <Box sx={{ width: '1px', height: 12, flexShrink: 0, bgcolor: 'rgba(10,10,15,0.12)' }} />
             <Box
-              sx={(th) => ({
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '10px',
-                px: '14px',
-                py: '7px',
-                background: 'rgba(255,255,255,0.85)',
-                backdropFilter: 'blur(16px) saturate(160%)',
-                border: '1px solid rgba(10,10,15,0.08)',
-                borderRadius: '999px',
-                boxShadow:
-                  '0 1px 0 rgba(255,255,255,0.9) inset, 0 10px 32px rgba(10,10,15,0.07), 0 2px 6px rgba(10,10,15,0.04)',
-                mb: '28px',
-                ...th.applyStyles('dark', {
-                  background: 'rgba(20,26,33,0.85)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  boxShadow: '0 1px 0 rgba(255,255,255,0.06) inset, 0 10px 32px rgba(0,0,0,0.2)',
-                }),
-              })}
-            >
-              <Typography
-                sx={(th) => ({
-                  fontSize: '13.5px',
-                  fontWeight: 500,
-                  color: '#6B6B76',
-                  lineHeight: 1,
-                  ...th.applyStyles('dark', { color: '#9A9AA3' }),
-                })}
-              >
-                {t('Investing that works for you')}
-              </Typography>
-              <Box
-                sx={(th) => ({
-                  width: '1px',
-                  height: '12px',
-                  background: 'rgba(10,10,15,0.12)',
-                  flexShrink: 0,
-                  ...th.applyStyles('dark', { background: 'rgba(255,255,255,0.12)' }),
-                })}
-              />
-              <Box
-                component="img"
-                src={cdn('homepage/normal-long.svg')}
-                alt="Normal"
-                sx={{ width: '64px', height: '14px', objectFit: 'contain' }}
-              />
-            </Box>
+              component="img"
+              src={cdn('homepage/normal-long.svg')}
+              alt="Normal"
+              sx={{ width: 64, height: 14, objectFit: 'contain' }}
+            />
+          </HeroBadge>
 
-            {/* ---- Title ---- */}
-            <Typography
-              component="h1"
-              sx={(th) => ({
-                fontSize: 'clamp(40px, 5.6vw, 68px)',
-                fontWeight: 500,
-                letterSpacing: '-0.035em',
-                lineHeight: 1.08,
-                mb: { xs: '32px', md: '40px' },
-                color: '#0A0A0F',
-                ...th.applyStyles('dark', { color: '#FFFFFF' }),
-              })}
+          <HeroTitle>
+            {t('Buy crypto.')} <Box component="br" sx={{ display: { sm: 'none' } }} />
+            {t('Earn yield.')}
+            <br />
+            <GradientText>{t('All in one place.')}</GradientText>
+          </HeroTitle>
+
+          <HeroLede>{t('Self-custody savings. Live yield. Built on Stellar.')}</HeroLede>
+
+          <Stack direction="row" flexWrap="wrap" gap={1.5} sx={{ mt: 4 }}>
+            <BrandButton href={paths.savings}>{t('Start saving →')}</BrandButton>
+            <BrandButton
+              emphasis="secondary"
+              href="https://normalfi.substack.com/p/making-crypto-normal-simple-safe"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              {t('Buy crypto. Earn yield.')}
-              <br />
-              <Box
-                component="span"
+              {t('Read whitepaper')}
+            </BrandButton>
+          </Stack>
+
+          {/* ---- Trust row ---- */}
+          <Stack direction="row" flexWrap="wrap" sx={{ mt: 5, rowGap: 2 }}>
+            {trustItems.map((item, i) => (
+              <Stack
+                key={item.alt}
+                spacing="6px"
                 sx={{
-                  background:
-                    'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
+                  pr: { xs: 2, sm: 3 },
+                  ...(i > 0 && { pl: { xs: 2, sm: 3 }, borderLeft: HAIRLINE }),
                 }}
               >
-                {t('All in one place.')}
-              </Box>
-            </Typography>
+                <Typography
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    letterSpacing: '0.16em',
+                    textTransform: 'uppercase',
+                    color: 'text.disabled',
+                    whiteSpace: 'nowrap',
+                    lineHeight: 1,
+                  }}
+                >
+                  {item.label}
+                </Typography>
+                <Box
+                  component="img"
+                  src={item.src}
+                  alt={item.alt}
+                  sx={{
+                    width: item.width,
+                    height: item.height,
+                    objectFit: 'contain',
+                    objectPosition: 'left',
+                    filter:
+                      theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)',
+                    opacity: 0.55,
+                  }}
+                />
+              </Stack>
+            ))}
+          </Stack>
+        </Box>
 
-            {/* ---- Portfolio card ---- */}
-            <Box sx={{ maxWidth: 480, width: '100%', mx: 'auto', mb: '24px' }}>
-              <HeroPortfolioCard />
-            </Box>
-
-            {/* ---- Trust pill ---- */}
-            <Box
-              sx={(th) => ({
-                display: 'inline-flex',
-                alignItems: 'center',
-                background: 'rgba(255,255,255,0.6)',
-                backdropFilter: 'blur(14px)',
-                border: '1px solid rgba(10,10,15,0.07)',
-                borderRadius: '999px',
-                overflow: 'hidden',
-                mb: '16px',
-                ...th.applyStyles('dark', {
-                  background: 'rgba(20,26,33,0.6)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                }),
-              })}
-            >
-              {trustItems.map((item, i) => (
-                <React.Fragment key={i}>
-                  <Stack alignItems="center" spacing="5px" sx={{ px: '18px', py: '10px' }}>
-                    <Typography
-                      sx={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        color: '#9A9AA3',
-                        whiteSpace: 'nowrap',
-                        lineHeight: 1,
-                      }}
-                    >
-                      {item.label}
-                    </Typography>
-                    <Box
-                      component="img"
-                      src={item.src}
-                      alt={item.alt}
-                      sx={{
-                        width: item.width,
-                        height: item.height,
-                        objectFit: 'contain',
-                        filter:
-                          theme.palette.mode === 'dark'
-                            ? 'brightness(0) invert(1)'
-                            : 'brightness(0)',
-                        opacity: 0.55,
-                      }}
-                    />
-                  </Stack>
-                  {i < trustItems.length - 1 && (
-                    <Box
-                      sx={(th) => ({
-                        width: '1px',
-                        alignSelf: 'stretch',
-                        background: 'rgba(10,10,15,0.07)',
-                        ...th.applyStyles('dark', { background: 'rgba(255,255,255,0.07)' }),
-                      })}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
-            </Box>
-
-            {/* ---- Sub text ---- */}
-            <Typography
-              sx={(th) => ({
-                fontSize: '14px',
-                color: '#9A9AA3',
-                letterSpacing: '-0.01em',
-                lineHeight: 1.6,
-                ...th.applyStyles('dark', { color: '#6B6B76' }),
-              })}
-            >
-              {t('Self-custody savings. Live yield. Built on Stellar.')}
-            </Typography>
-          </Box>
-        </Stack>
-      </Container>
+        <Box sx={{ width: '100%', justifySelf: { md: 'end' } }}>
+          <HeroPortfolioCard />
+        </Box>
+      </Box>
     </Box>
   );
 };

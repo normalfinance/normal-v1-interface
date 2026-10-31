@@ -39,7 +39,7 @@ export default function WalletChoice({ options, selectedKey, onSelect, flow, sym
   if (options.length === 1) {
     const only = options[0];
     return (
-      <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.55)', mb: '10px' }}>
+      <Typography sx={{ fontSize: '12px', color: '#6B6B76', mb: '10px' }}>
         {flow === 'onramp'
           ? t('Funds will arrive in {{label}}', { label: only.label })
           : flow === 'send'
@@ -52,7 +52,7 @@ export default function WalletChoice({ options, selectedKey, onSelect, flow, sym
 
   return (
     <Box sx={{ mb: '12px' }}>
-      <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.55)', mb: '6px' }}>
+      <Typography sx={{ fontSize: '12px', color: '#6B6B76', mb: '6px' }}>
         {flow === 'onramp' ? t('Deposit to') : flow === 'send' ? t('Send from') : t('Sell from')}
       </Typography>
       <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', rowGap: '6px' }}>
@@ -66,12 +66,12 @@ export default function WalletChoice({ options, selectedKey, onSelect, flow, sym
               onClick={() => onSelect(opt)}
               sx={{
                 appearance: 'none',
-                border: selected ? '1px solid rgba(10,10,15,0.9)' : '1px solid rgba(10,10,15,0.12)',
-                borderRadius: '999px',
+                border: selected ? '1px solid rgba(10,10,15,0.9)' : '1px solid rgba(10,10,15,0.14)',
+                borderRadius: 'var(--radius-sm)',
                 px: '11px',
                 py: '5px',
                 fontSize: '11.5px',
-                fontWeight: 600,
+                fontWeight: 500,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
                 bgcolor: selected ? '#0A0A0F' : 'transparent',

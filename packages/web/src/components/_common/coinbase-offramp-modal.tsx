@@ -483,17 +483,17 @@ export function CoinbaseOfframpModal({
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
     >
       <DialogContent sx={{ px: '22px', py: '26px' }}>
         <Stack spacing={2.5}>
           <Box sx={{ textAlign: 'center' }}>
             <Typography
-              sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+              sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.02em' }}
             >
               {title}
             </Typography>
-            <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
+            <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '4px' }}>
               {stage === 'searching' && t('Looking for your Coinbase sell order…')}
               {stage === 'ready' &&
                 t(
@@ -535,7 +535,7 @@ export function CoinbaseOfframpModal({
               <Box
                 sx={{
                   p: '14px',
-                  borderRadius: '14px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#FAFAFB',
                   border: '1px solid rgba(10,10,15,0.08)',
                 }}
@@ -554,7 +554,7 @@ export function CoinbaseOfframpModal({
                       <Typography
                         sx={{
                           fontSize: '17px',
-                          fontWeight: 700,
+                          fontWeight: 500,
                           color: '#0A0A0F',
                           letterSpacing: '-0.01em',
                           fontFamily: 'monospace',
@@ -563,7 +563,7 @@ export function CoinbaseOfframpModal({
                         {txn.amount} {symbol}
                       </Typography>
                       {Number(token.price) > 0 && (
-                        <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)' }}>
+                        <Typography sx={{ fontSize: '12.5px', color: '#6B6B76' }}>
                           ≈ ${(parseFloat(txn.amount) * Number(token.price)).toFixed(2)}
                         </Typography>
                       )}
@@ -604,7 +604,7 @@ export function CoinbaseOfframpModal({
               sx={{
                 px: '12px',
                 py: '10px',
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: 'rgba(220,38,38,0.05)',
                 border: '1px solid rgba(220,38,38,0.15)',
               }}
@@ -623,11 +623,11 @@ export function CoinbaseOfframpModal({
                 disabled={windowExpired}
                 startIcon={<Iconify icon="solar:shield-keyhole-bold" width={18} />}
                 sx={{
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#0A0A0F',
                   textTransform: 'none',
-                  fontWeight: 700,
-                  '&:hover': { bgcolor: '#1a1a25' },
+                  fontWeight: 500,
+                  '&:hover': { bgcolor: '#2A2A33' },
                 }}
               >
                 {t('Send with passkey')}
@@ -638,11 +638,11 @@ export function CoinbaseOfframpModal({
                 variant="contained"
                 onClick={handleSend}
                 sx={{
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#0A0A0F',
                   textTransform: 'none',
-                  fontWeight: 700,
-                  '&:hover': { bgcolor: '#1a1a25' },
+                  fontWeight: 500,
+                  '&:hover': { bgcolor: '#2A2A33' },
                 }}
               >
                 {t('Try again')}
@@ -653,7 +653,7 @@ export function CoinbaseOfframpModal({
               onClick={onClose}
               disabled={stage === 'sending'}
               sx={{
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 textTransform: 'none',
                 fontWeight: 500,
                 borderColor: 'rgba(10,10,15,0.16)',
@@ -684,13 +684,11 @@ function Row({
     <Box
       sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
     >
-      <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', flexShrink: 0 }}>
-        {label}
-      </Typography>
+      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', flexShrink: 0 }}>{label}</Typography>
       <Typography
         sx={{
           fontSize: '12.5px',
-          fontWeight: 600,
+          fontWeight: 500,
           color: '#0A0A0F',
           fontFamily: mono ? '"Geist Mono", monospace' : 'inherit',
           ...(truncate

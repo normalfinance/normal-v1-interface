@@ -115,12 +115,12 @@ export function ChainSetupDialog({
       onClose={loading ? undefined : onClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
     >
       <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography
-            sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+            sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.02em' }}
           >
             {t('Set up your {{chain}} wallet', { chain: label })}
           </Typography>
@@ -131,7 +131,7 @@ export function ChainSetupDialog({
             sx={{
               width: 28,
               height: 28,
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
               bgcolor: 'rgba(10,10,15,0.06)',
               color: '#0A0A0F',
@@ -155,12 +155,12 @@ export function ChainSetupDialog({
             sx={{
               px: '14px',
               py: '12px',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: 'rgba(59,130,246,0.05)',
               border: '1px solid rgba(59,130,246,0.15)',
             }}
           >
-            <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
+            <Typography sx={{ fontSize: '13px', color: '#2A2A33', lineHeight: 1.55 }}>
               {t(
                 'You don’t have a {{chain}} address yet. To continue, add {{chain}} to your Normal wallet — it takes one passkey confirmation and is created on the same secure wallet you already use.',
                 { chain: label }
@@ -181,17 +181,17 @@ export function ChainSetupDialog({
                 width: '100%',
                 py: '13px',
                 px: '20px',
-                borderRadius: '14px',
+                borderRadius: 'var(--radius-md)',
                 border: 'none',
                 bgcolor: '#0A0A0F',
                 color: '#fff',
                 fontSize: '14px',
-                fontWeight: 600,
+                fontWeight: 500,
                 fontFamily: 'inherit',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 opacity: loading ? 0.7 : 1,
                 transition: 'all 0.15s',
-                '&:hover:not(:disabled)': { bgcolor: '#1a1a25' },
+                '&:hover:not(:disabled)': { bgcolor: '#2A2A33' },
               }}
             >
               {loading ? (
@@ -205,7 +205,7 @@ export function ChainSetupDialog({
             <Box
               sx={{
                 fontSize: '11.5px',
-                color: 'rgba(10,10,15,0.4)',
+                color: '#9A9AA3',
                 textAlign: 'center',
                 lineHeight: 1.5,
               }}
@@ -220,7 +220,7 @@ export function ChainSetupDialog({
                   color: '#B91C1C',
                   bgcolor: 'rgba(185,28,28,0.06)',
                   border: '1px solid rgba(185,28,28,0.15)',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--radius-md)',
                   px: '12px',
                   py: '8px',
                 }}

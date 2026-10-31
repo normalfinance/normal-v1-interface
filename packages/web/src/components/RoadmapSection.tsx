@@ -5,6 +5,8 @@ import { useTranslate } from '@/locales';
 import Box from '@mui/material/Box';
 import { styled } from '@mui/material/styles';
 
+import { LiveDot, PageSection, SectionHeader } from '@/components/_common/brand';
+
 // ----------------------------------------------------------------------
 
 type Status = 'live' | 'soon' | 'plan';
@@ -67,16 +69,13 @@ const statusStyles: Record<Status, { bg: string; color: string }> = {
 const PhaseCard = styled('article')({
   backgroundColor: '#fff',
   border: '1px solid rgba(10,10,15,0.08)',
-  borderRadius: 22,
-  padding: 28,
+  borderRadius: 'var(--radius-lg)',
+  padding: 24,
   display: 'flex',
   flexDirection: 'column',
   height: '100%',
-  transition: 'border-color 200ms, background 200ms',
-  '&:hover': {
-    borderColor: 'rgba(10,10,15,0.12)',
-    background: '#fdfdfd',
-  },
+  transition: 'border-color 150ms',
+  '&:hover': { borderColor: 'rgba(10,10,15,0.14)' },
 });
 
 // ----------------------------------------------------------------------
@@ -85,200 +84,124 @@ export default function RoadmapSection() {
   const { t } = useTranslate();
 
   return (
-    <Box
-      component="section"
-      aria-labelledby="roadmap-heading"
-      sx={{
-        bgcolor: '#FAFAFB',
-        pt: { xs: '80px', md: '110px' },
-        pb: { xs: '40px', md: '56px' },
-      }}
-    >
-      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
-        {/* Header */}
-        <Box sx={{ textAlign: 'center' }}>
-          <Box
-            component="p"
-            sx={{
-              m: 0,
-              mb: '14px',
-              fontSize: 11,
-              fontWeight: 500,
-              textTransform: 'uppercase',
-              letterSpacing: '0.16em',
-              color: '#6b6b76',
-            }}
-          >
-            {t('— Roadmap')}
-          </Box>
+    <PageSection aria-labelledby="roadmap-heading">
+      <SectionHeader
+        id="roadmap-heading"
+        eyebrow={t('Roadmap')}
+        title={t("Where we're going.")}
+        subtitle={t(
+          'A three-phase plan to make crypto feel as effortless as opening a checking account — and a lot more rewarding.'
+        )}
+      />
 
-          <Box
-            component="h2"
-            id="roadmap-heading"
-            sx={{
-              m: 0,
-              fontSize: 'clamp(34px, 4.4vw, 56px)',
-              fontWeight: 500,
-              letterSpacing: '-0.03em',
-              lineHeight: 1.04,
-              color: '#0a0a0b',
-            }}
-          >
-            {t("Where we're going.")}
-          </Box>
+      {/* Phase grid */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+          gap: 2,
+          alignItems: 'stretch',
+        }}
+      >
+        {PHASES.map((phase) => {
+          const s = statusStyles[phase.status];
+          return (
+            <PhaseCard key={phase.title}>
+              {/* Status tag */}
+              {/* Status tag */}
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  alignSelf: 'flex-start',
+                  px: '8px',
+                  py: '4px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  bgcolor: s.bg,
+                  color: s.color,
+                }}
+              >
+                <LiveDot color={phase.status === 'live' ? '#1AB37D' : s.color} />
+                {t(phase.statusLabel)}
+              </Box>
 
-          <Box
-            component="p"
-            sx={{
-              m: 0,
-              mt: '14px',
-              fontSize: '15px',
-              color: '#6b6b76',
-              maxWidth: '60ch',
-              lineHeight: 1.6,
-              mx: 'auto',
-            }}
-          >
-            {t(
-              'A three-phase plan to make crypto feel as effortless as opening a checking account — and a lot more rewarding.'
-            )}
-          </Box>
-        </Box>
+              {/* Title */}
+              <Box
+                component="h3"
+                sx={{
+                  m: 0,
+                  mt: '16px',
+                  mb: '4px',
+                  fontSize: '20px',
+                  fontWeight: 500,
+                  letterSpacing: '-0.02em',
+                  color: '#0A0A0F',
+                }}
+              >
+                {t(phase.title)}
+              </Box>
 
-        {/* Phase grid */}
-        <Box
-          sx={{
-            mt: '56px',
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-            gap: '14px',
-            alignItems: 'stretch',
-          }}
-        >
-          {PHASES.map((phase) => {
-            const s = statusStyles[phase.status];
-            return (
-              <PhaseCard key={phase.title}>
-                {/* Status tag */}
-                {/* Status tag */}
-                <Box
-                  component="span"
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    alignSelf: 'flex-start',
-                    pl: phase.status === 'live' ? '10px' : '10px',
-                    pr: '12px',
-                    py: '5px',
-                    borderRadius: '999px',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    bgcolor: s.bg,
-                    color: s.color,
-                  }}
-                >
-                  {phase.status === 'live' ? (
+              {/* Timeframe */}
+              <Box
+                component="span"
+                sx={{
+                  fontSize: '13px',
+                  color: '#6B6B76',
+                }}
+              >
+                {phase.when}
+              </Box>
+
+              {/* Bullets */}
+              <Box
+                component="ul"
+                sx={{
+                  m: 0,
+                  mt: '20px',
+                  p: 0,
+                  listStyle: 'none',
+                  flex: 1,
+                  display: 'grid',
+                  gap: '10px',
+                }}
+              >
+                {phase.bullets.map((bullet) => (
+                  <Box
+                    component="li"
+                    key={bullet}
+                    sx={{
+                      display: 'flex',
+                      gap: '10px',
+                      alignItems: 'flex-start',
+                      fontSize: '14.5px',
+                      color: '#2A2A33',
+                      lineHeight: 1.5,
+                    }}
+                  >
                     <Box
                       component="span"
+                      aria-hidden="true"
                       sx={{
                         width: 6,
                         height: 6,
                         borderRadius: '50%',
-                        background: '#1AB37D',
-                        boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
+                        background: '#0A0A0F',
                         flexShrink: 0,
+                        mt: '8px',
                       }}
                     />
-                  ) : (
-                    <Box
-                      component="span"
-                      sx={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: '50%',
-                        background: s.color,
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-                  {t(phase.statusLabel)}
-                </Box>
-
-                {/* Title */}
-                <Box
-                  component="h3"
-                  sx={{
-                    m: 0,
-                    mt: '16px',
-                    mb: '4px',
-                    fontSize: '20px',
-                    fontWeight: 500,
-                    letterSpacing: '-0.02em',
-                    color: '#0a0a0b',
-                  }}
-                >
-                  {t(phase.title)}
-                </Box>
-
-                {/* Timeframe */}
-                <Box
-                  component="span"
-                  sx={{
-                    fontSize: '13px',
-                    color: '#6B6B76',
-                  }}
-                >
-                  {phase.when}
-                </Box>
-
-                {/* Bullets */}
-                <Box
-                  component="ul"
-                  sx={{
-                    m: 0,
-                    mt: '20px',
-                    p: 0,
-                    listStyle: 'none',
-                    flex: 1,
-                    display: 'grid',
-                    gap: '10px',
-                  }}
-                >
-                  {phase.bullets.map((bullet) => (
-                    <Box
-                      component="li"
-                      key={bullet}
-                      sx={{
-                        display: 'flex',
-                        gap: '10px',
-                        alignItems: 'flex-start',
-                        fontSize: '14.5px',
-                        color: '#2A2A33',
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      <Box
-                        component="span"
-                        aria-hidden="true"
-                        sx={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          background: '#0A0A0F',
-                          flexShrink: 0,
-                          mt: '8px',
-                        }}
-                      />
-                      {t(bullet)}
-                    </Box>
-                  ))}
-                </Box>
-              </PhaseCard>
-            );
-          })}
-        </Box>
+                    {t(bullet)}
+                  </Box>
+                ))}
+              </Box>
+            </PhaseCard>
+          );
+        })}
       </Box>
-    </Box>
+    </PageSection>
   );
 }

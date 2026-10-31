@@ -172,7 +172,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
     height: 2,
     margin: '2px 0',
     backgroundColor: 'currentColor',
-    borderRadius: 9999,
+    borderRadius: 'var(--radius-xs)',
   };
 
   return (
@@ -188,7 +188,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         width: '100%',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderBottom: '1px solid rgba(10,10,15,0.04)',
+        borderBottom: '1px solid rgba(10,10,15,0.08)',
         background:
           theme.palette.mode === 'dark'
             ? alpha(theme.palette.background.paper, 0.92)
@@ -196,14 +196,14 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
         backdropFilter: 'blur(14px) saturate(140%)',
         WebkitBackdropFilter: 'blur(14px) saturate(140%)',
         minHeight: { xs: 64, lg: 72 },
-        px: { xs: 2, lg: 4 },
       }}
     >
       <Box
         sx={{
           width: '100%',
-          maxWidth: 1400,
+          maxWidth: 'var(--page-max)',
           mx: 'auto',
+          px: { xs: 2, sm: 3 },
           display: 'grid',
           gridTemplateColumns: { xs: '1fr auto', lg: 'auto auto 1fr' },
           alignItems: 'center',
@@ -248,9 +248,10 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               display: 'inline-flex',
               alignItems: 'center',
               flexShrink: 0,
-              borderRadius: '999px',
+              borderRadius: 'var(--radius-md)',
               overflow: 'hidden',
               p: '6px',
+              ml: { lg: '-6px' },
               transition: 'background 0.15s',
               '&:hover': { background: 'rgba(10,10,15,0.04)' },
             }}
@@ -279,10 +280,16 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                 href={item.url}
                 sx={{
                   textTransform: 'none',
-                  py: 0.5,
-                  px: 1.5,
+                  py: '6px',
+                  px: '12px',
+                  fontSize: '14px',
                   color: 'text.primary',
-                  fontWeight: pathname.startsWith(item.url) ? 600 : 500,
+                  fontWeight: 500,
+                  minWidth: 'unset',
+                  bgcolor: pathname.startsWith(item.url)
+                    ? alpha(theme.palette.text.primary, 0.05)
+                    : 'transparent',
+                  '&:hover': { background: alpha(theme.palette.text.primary, 0.06) },
                 }}
               >
                 {t(item.label)}
@@ -315,7 +322,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                       fontSize: '14px',
                       color: 'text.primary',
                       fontWeight: 500,
-                      borderRadius: '999px',
+                      borderRadius: 'var(--radius-md)',
                       minWidth: 'unset',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -355,7 +362,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                     fontSize: '14px',
                     color: 'text.primary',
                     fontWeight: 500,
-                    borderRadius: '999px',
+                    borderRadius: 'var(--radius-md)',
                     minWidth: 'unset',
                     '&:hover': { background: alpha(theme.palette.text.primary, 0.06) },
                   }}
@@ -383,7 +390,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
                 color: 'text.primary',
                 px: '12px',
                 py: '6px',
-                borderRadius: '999px',
+                borderRadius: 'var(--radius-md)',
                 minWidth: 'unset',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -427,7 +434,7 @@ export const NormalNavbar: React.FC<NormalNavbarProps> = (props) => {
               sx={{
                 height: '100%',
                 overflow: 'auto',
-                px: '5%',
+                px: { xs: 2, sm: 3 },
                 py: 2,
                 display: 'flex',
                 flexDirection: 'column',
@@ -472,10 +479,9 @@ function DesktopDock({
     >
       <Box
         sx={{
-          borderRadius: '16px',
-          border: `1px solid ${alpha(theme.palette.text.primary, 0.07)}`,
+          borderRadius: 'var(--radius-lg)',
+          border: `1px solid ${theme.palette.divider}`,
           background: theme.palette.background.paper,
-          boxShadow: `0 4px 6px ${alpha('#000', 0.04)}, 0 16px 48px ${alpha('#000', 0.1)}`,
           overflow: 'hidden',
         }}
       >
@@ -499,10 +505,10 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
         display: 'block',
         px: '12px',
         mb: '6px',
-        fontSize: '10px',
-        fontWeight: 700,
+        fontSize: '11px',
+        fontWeight: 500,
         textTransform: 'uppercase',
-        letterSpacing: '0.10em',
+        letterSpacing: '0.16em',
         color: isDark ? 'rgba(255,255,255,0.35)' : '#9A9AA3',
       }}
     >
@@ -527,7 +533,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
           px: '12px',
           textDecoration: 'none',
           color: 'inherit',
-          borderRadius: '10px',
+          borderRadius: 'var(--radius-md)',
           transition: 'background 0.15s',
           '&:hover': { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(10,10,15,0.04)' },
         }}
@@ -541,7 +547,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
             alignItems: 'center',
             justifyContent: 'center',
             background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(10,10,15,0.05)',
-            borderRadius: '8px',
+            borderRadius: 'var(--radius-md)',
             border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(10,10,15,0.08)'}`,
             p: '7px',
           }}
@@ -625,7 +631,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
             m: '8px',
             mt: bottomGroup ? '4px' : '8px',
             p: mega.banner.image ? '10px 12px' : '12px 14px',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: '#0A0A0F',
             display: 'flex',
             alignItems: 'center',
@@ -648,7 +654,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                 sx={{
                   width: 60,
                   height: 42,
-                  borderRadius: '6px',
+                  borderRadius: 'var(--radius-sm)',
                   objectFit: 'cover',
                   flexShrink: 0,
                 }}
@@ -661,7 +667,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                       px: '7px',
                       py: '2px',
                       mb: '5px',
-                      borderRadius: '999px',
+                      borderRadius: 'var(--radius-sm)',
                       bgcolor: 'rgba(255,255,255,0.12)',
                       border: '1px solid rgba(255,255,255,0.14)',
                     }}
@@ -669,7 +675,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                     <Typography
                       sx={{
                         fontSize: '9px',
-                        fontWeight: 700,
+                        fontWeight: 500,
                         color: '#fff',
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
@@ -683,7 +689,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                 <Typography
                   sx={{
                     fontSize: '12.5px',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     color: '#fff',
                     lineHeight: 1.3,
                     mb: '4px',
@@ -703,7 +709,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                 sx={{
                   width: 28,
                   height: 28,
-                  borderRadius: '50%',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: 'rgba(255,255,255,0.12)',
                   display: 'flex',
                   alignItems: 'center',
@@ -722,7 +728,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                   sx={{
                     px: '10px',
                     py: '4px',
-                    borderRadius: '999px',
+                    borderRadius: 'var(--radius-sm)',
                     bgcolor: 'rgba(255,255,255,0.10)',
                     border: '1px solid rgba(255,255,255,0.14)',
                     flexShrink: 0,
@@ -731,7 +737,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                   <Typography
                     sx={{
                       fontSize: '11px',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       color: '#fff',
                       lineHeight: 1,
                       whiteSpace: 'nowrap',
@@ -743,7 +749,7 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
               )}
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography
-                  sx={{ fontSize: '13px', fontWeight: 600, color: '#fff', lineHeight: 1.3 }}
+                  sx={{ fontSize: '13px', fontWeight: 500, color: '#fff', lineHeight: 1.3 }}
                 >
                   {tDock(mega.banner.title)}
                 </Typography>
@@ -770,11 +776,11 @@ function DockContent({ mega }: { mega: MegaMenuProps }) {
                   alignItems: 'center',
                   px: '14px',
                   py: '7px',
-                  borderRadius: '999px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#fff',
                   color: '#0A0A0F',
                   fontSize: '12px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   textDecoration: 'none',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
@@ -814,7 +820,7 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
           px: '12px',
           textDecoration: 'none',
           color: 'inherit',
-          borderRadius: '10px',
+          borderRadius: 'var(--radius-md)',
           transition: 'background 0.15s',
           '&:hover': { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(10,10,15,0.04)' },
         }}
@@ -828,7 +834,7 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
             alignItems: 'center',
             justifyContent: 'center',
             background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(10,10,15,0.05)',
-            borderRadius: '8px',
+            borderRadius: 'var(--radius-md)',
             border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(10,10,15,0.08)'}`,
             p: '7px',
           }}
@@ -878,10 +884,10 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
               display: 'block',
               px: '12px',
               mb: '4px',
-              fontSize: '10px',
-              fontWeight: 700,
+              fontSize: '11px',
+              fontWeight: 500,
               textTransform: 'uppercase',
-              letterSpacing: '0.10em',
+              letterSpacing: '0.16em',
               color: isDark ? 'rgba(255,255,255,0.35)' : '#9A9AA3',
             }}
           >
@@ -903,7 +909,7 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
             mt: '4px',
             mb: '20px',
             p: megaMenu.banner.image ? '10px 12px' : '14px 16px',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: '#0A0A0F',
             display: 'flex',
             alignItems: 'center',
@@ -924,7 +930,7 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
                 sx={{
                   width: 56,
                   height: 40,
-                  borderRadius: '6px',
+                  borderRadius: 'var(--radius-sm)',
                   objectFit: 'cover',
                   flexShrink: 0,
                 }}
@@ -937,7 +943,7 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
                       px: '7px',
                       py: '2px',
                       mb: '5px',
-                      borderRadius: '999px',
+                      borderRadius: 'var(--radius-sm)',
                       bgcolor: 'rgba(255,255,255,0.12)',
                       border: '1px solid rgba(255,255,255,0.14)',
                     }}
@@ -945,7 +951,7 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
                     <Typography
                       sx={{
                         fontSize: '9px',
-                        fontWeight: 700,
+                        fontWeight: 500,
                         color: '#fff',
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
@@ -959,7 +965,7 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
                 <Typography
                   sx={{
                     fontSize: '13px',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     color: '#fff',
                     lineHeight: 1.3,
                     mb: '3px',
@@ -979,7 +985,7 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
                 sx={{
                   width: 28,
                   height: 28,
-                  borderRadius: '50%',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: 'rgba(255,255,255,0.12)',
                   display: 'flex',
                   alignItems: 'center',
@@ -1006,21 +1012,21 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
                     sx={{
                       px: '10px',
                       py: '4px',
-                      borderRadius: '999px',
+                      borderRadius: 'var(--radius-sm)',
                       bgcolor: 'rgba(255,255,255,0.10)',
                       border: '1px solid rgba(255,255,255,0.14)',
                       flexShrink: 0,
                     }}
                   >
                     <Typography
-                      sx={{ fontSize: '11px', fontWeight: 600, color: '#fff', lineHeight: 1 }}
+                      sx={{ fontSize: '11px', fontWeight: 500, color: '#fff', lineHeight: 1 }}
                     >
                       {megaMenu.banner.badge}
                     </Typography>
                   </Box>
                 )}
                 <Typography
-                  sx={{ fontSize: '13px', fontWeight: 600, color: '#fff', lineHeight: 1.3 }}
+                  sx={{ fontSize: '13px', fontWeight: 500, color: '#fff', lineHeight: 1.3 }}
                 >
                   {tMobile(megaMenu.banner.title)}
                 </Typography>
@@ -1044,11 +1050,11 @@ function MobileMega({ megaMenu }: { megaMenu: MegaMenuProps }) {
                   justifyContent: 'center',
                   px: '16px',
                   py: '9px',
-                  borderRadius: '999px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#fff',
                   color: '#0A0A0F',
                   fontSize: '13px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   textDecoration: 'none',
                   transition: 'opacity 0.15s',
                   '&:hover': { opacity: 0.85 },

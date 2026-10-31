@@ -13,23 +13,22 @@ export default function Loading() {
   return (
     <Box
       sx={{
-        bgcolor: (theme) => theme.palette.grey[100],
         minHeight: '100vh',
         width: '100%',
         display: 'flex',
         justifyContent: 'center',
       }}
     >
-      <DashboardContent maxWidth="xl">
+      <DashboardContent>
         <Grid2 container justifyContent="center" alignItems="center" sx={{ minHeight: '60vh' }}>
           <Stack
             spacing={3}
             textAlign="center"
             sx={{
               bgcolor: 'common.white',
-              p: { xs: 3, md: 6 },
-              borderRadius: 2,
-              boxShadow: 3,
+              border: '1px solid rgba(10,10,15,0.08)',
+              p: { xs: 3, md: 5 },
+              borderRadius: 'var(--radius-lg)',
               maxWidth: 520,
               width: '100%',
             }}

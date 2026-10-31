@@ -125,7 +125,7 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
           py: '5px',
           background: 'rgba(255,255,255,0.08)',
           border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '999px',
+          borderRadius: 'var(--radius-sm)',
           fontSize: '12px',
           fontWeight: 500,
           color: 'rgba(255,255,255,0.85)',
@@ -140,7 +140,6 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
             borderRadius: '50%',
             bgcolor: '#1AB37D',
             flexShrink: 0,
-            boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
             animation: 'earnChipPulse 2.4s ease-in-out infinite',
             '@keyframes earnChipPulse': {
               '0%,100%': { boxShadow: '0 0 0 3px rgba(26,179,125,0.18)' },
@@ -242,7 +241,7 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
             },
           }}
         />
-        <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#1AB37D' }}>
+        <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#1AB37D' }}>
           +${fmt(earned)}&nbsp;{t('earned')}
         </Typography>
       </Stack>
@@ -349,7 +348,6 @@ const EarnAnimation: React.FC<{ liveApy?: number | null }> = ({ liveApy = null }
               height: 8,
               borderRadius: '50%',
               background: 'linear-gradient(135deg, #6E8BFF 0%, #B17BFF 100%)',
-              boxShadow: '0 0 8px rgba(177,123,255,0.7)',
               transform: 'translate(-50%, -50%)',
             }}
           />

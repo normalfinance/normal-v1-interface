@@ -8,7 +8,7 @@ import Grid2 from '@mui/material/Grid2';
 
 export default function Loading() {
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent>
       <Grid2 container spacing={3} sx={{ mt: 3 }}>
         <Grid2 size={{ xs: 12, md: 4 }}>
           {/* Placeholder for SwapCard */}

@@ -106,11 +106,11 @@ export const WalletGate: React.FC<WalletGateProps> = ({
           mt: 2,
           bgcolor: '#0A0A0F',
           color: '#fff',
-          borderRadius: '999px',
+          borderRadius: 'var(--radius-md)',
           textTransform: 'none',
           fontWeight: 500,
           boxShadow: 'none',
-          '&:hover': { bgcolor: '#1a1a2e', boxShadow: 'none' },
+          '&:hover': { bgcolor: '#2A2A33', boxShadow: 'none' },
         }}
       >
         {t(buttonText)}

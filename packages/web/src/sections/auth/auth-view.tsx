@@ -88,7 +88,7 @@ function AuthVisual() {
           position: 'relative',
           height: '100%',
           overflow: 'hidden',
-          borderRadius: '24px',
+          borderRadius: 'var(--radius-lg)',
           bgcolor: '#0A0A0F',
           isolation: 'isolate',
         }}
@@ -121,9 +121,9 @@ function AuthVisual() {
         <Box sx={{ position: 'relative', p: { md: 5, lg: 6 }, maxWidth: 560 }}>
           <Typography
             sx={{
-              fontSize: 12,
-              fontWeight: 600,
-              letterSpacing: '0.14em',
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: '0.16em',
               textTransform: 'uppercase',
               color: 'rgba(255,255,255,0.56)',
               mb: 1.5,

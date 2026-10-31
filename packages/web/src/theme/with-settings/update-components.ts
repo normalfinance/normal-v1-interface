@@ -33,21 +33,9 @@ export function updateComponentsWithSettings(
 ): Pick<ThemeOptions, 'components'> {
   const MuiCard: Components<Theme>['MuiCard'] = {
     styleOverrides: {
-      root: (props) => {
-        const { theme } = props;
-
-        const rootStyles = getSlotStyles<'MuiCard', 'root'>(
-          components?.MuiCard?.styleOverrides?.root,
-          props
-        );
-
-        return {
-          ...rootStyles,
-          ...(settingsState?.contrast === 'hight' && {
-            boxShadow: theme.vars.customShadows.z1,
-          }),
-        };
-      },
+      root: (props) => ({
+        ...getSlotStyles<'MuiCard', 'root'>(components?.MuiCard?.styleOverrides?.root, props),
+      }),
     },
   };
 

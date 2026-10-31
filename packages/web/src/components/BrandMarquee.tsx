@@ -90,14 +90,14 @@ export default function BrandMarquee() {
                 component="span"
                 sx={{
                   fontFamily: 'Satoshi, sans-serif',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   fontSize: '0.8125rem',
                   letterSpacing: '0.01em',
                   color: '#9A9AA3',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
                   transition: 'color 200ms',
-                  '&:hover': { color: '#0a0a0b' },
+                  '&:hover': { color: '#0A0A0F' },
                 }}
               >
                 {brand}

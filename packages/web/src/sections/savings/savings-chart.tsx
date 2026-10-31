@@ -198,7 +198,7 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
       <Typography
         sx={{
           fontSize: '9.5px',
-          fontWeight: 600,
+          fontWeight: 500,
           color: 'rgba(255,255,255,0.28)',
           letterSpacing: '0.09em',
           textTransform: 'uppercase',
@@ -209,7 +209,7 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
       <Typography
         sx={{
           fontSize: '13px',
-          fontWeight: 600,
+          fontWeight: 500,
           fontFamily: MONO,
           letterSpacing: '-0.01em',
           color: accent
@@ -273,7 +273,7 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
               sx={{
                 px: '9px',
                 py: '4px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius-sm)',
                 border: 'none',
                 fontSize: '11px',
                 fontWeight: 500,
@@ -297,7 +297,7 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
         <Skeleton
           variant="rectangular"
           height={CHART_H + 24}
-          sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}
+          sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-sm)' }}
         />
       ) : (
         <Box>

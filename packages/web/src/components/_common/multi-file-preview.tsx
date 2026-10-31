@@ -103,7 +103,7 @@ const ItemRow = styled('li')(({ theme }) => ({
   alignItems: 'center',
   gap: theme.spacing(1.5),
   padding: theme.spacing(1, 1, 1, 1.5),
-  borderRadius: theme.shape.borderRadius,
+  borderRadius: 'var(--radius-md)',
   border: `solid 1px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.16)}`,
 }));
 

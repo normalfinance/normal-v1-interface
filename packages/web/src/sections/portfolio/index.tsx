@@ -29,12 +29,12 @@ import type { HoldingData } from './_shared';
 // card owns its own skeleton, so a slow source never blanks the whole page.
 function PortfolioSkeleton() {
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent>
       {/* Hero skeleton */}
       <Skeleton
         variant="rectangular"
         height={220}
-        sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }}
+        sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.08)' }}
       />
 
       {/* Holdings + Savings skeleton */}
@@ -42,19 +42,19 @@ function PortfolioSkeleton() {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
-          gap: '20px',
-          mt: '20px',
+          gap: 2,
+          mt: 2,
         }}
       >
         <Skeleton
           variant="rectangular"
           height={320}
-          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
         />
         <Skeleton
           variant="rectangular"
           height={320}
-          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
         />
       </Box>
 
@@ -62,7 +62,7 @@ function PortfolioSkeleton() {
       <Skeleton
         variant="rectangular"
         height={280}
-        sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }}
+        sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)', mt: 2 }}
       />
     </DashboardContent>
   );
@@ -230,17 +230,16 @@ export default function PortfolioView() {
     // an asset here instead of a dead-end "Sign in". Not signed in → sign in.
     if (user) {
       return (
-        <DashboardContent maxWidth="xl">
+        <DashboardContent>
           <Box sx={{ display: 'flex', justifyContent: 'center', pt: { xs: 4, md: 7 } }}>
             <Box
               sx={{
                 width: '100%',
                 maxWidth: 460,
-                p: { xs: '24px', md: '32px' },
-                borderRadius: '22px',
+                p: { xs: '20px', md: '24px' },
+                borderRadius: 'var(--radius-lg)',
                 border: '1px solid rgba(10,10,15,0.08)',
                 bgcolor: '#fff',
-                boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(10,10,15,0.04)',
               }}
             >
               <GetStartedPicker />
@@ -251,7 +250,7 @@ export default function PortfolioView() {
     }
 
     return (
-      <DashboardContent maxWidth="xl">
+      <DashboardContent>
         <Box
           sx={{
             display: 'flex',
@@ -267,12 +266,12 @@ export default function PortfolioView() {
             sx={{
               width: 56,
               height: 56,
-              borderRadius: '16px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: '#F4F4F7',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'rgba(10,10,15,0.4)',
+              color: '#9A9AA3',
             }}
           >
             <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 28 }} />
@@ -281,7 +280,7 @@ export default function PortfolioView() {
             <Box sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
               Connect your wallet
             </Box>
-            <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', maxWidth: 280 }}>
+            <Box sx={{ fontSize: '14px', color: '#6B6B76', maxWidth: 280 }}>
               Sign in to view your portfolio, holdings, and activity.
             </Box>
           </Box>
@@ -292,7 +291,7 @@ export default function PortfolioView() {
               mt: '4px',
               px: '24px',
               py: '10px',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
               bgcolor: '#0A0A0F',
               color: '#fff',
@@ -312,7 +311,7 @@ export default function PortfolioView() {
   }
 
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent>
       <HeroCard
         totalBalance={totalBalance}
         walletBalance={walletBalance}
@@ -334,8 +333,8 @@ export default function PortfolioView() {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
-          gap: '20px',
-          mt: '20px',
+          gap: 2,
+          mt: 2,
         }}
       >
         <HoldingsCard
@@ -354,7 +353,7 @@ export default function PortfolioView() {
         <SavingsCard sx={{ minWidth: 0, overflow: 'hidden' }} />
       </Box>
 
-      <Box sx={{ mt: '20px' }}>
+      <Box sx={{ mt: 2 }}>
         <ActivityCard
           walletAddress={wallet.address}
           bitcoinAddress={bitcoinAddress}

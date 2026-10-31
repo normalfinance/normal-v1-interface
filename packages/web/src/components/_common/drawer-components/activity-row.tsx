@@ -295,7 +295,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
         alignItems="center"
         onClick={cctpId ? () => setDetailOpen(true) : undefined}
         sx={{
-          borderRadius: '12px',
+          borderRadius: 'var(--radius-md)',
           padding: '4px 8px',
           mx: '-8px',
           transition: 'background .15s ease',
@@ -320,10 +320,10 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                 sx={{
                   height: 20,
                   fontSize: '11px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   color: chip.color,
                   bgcolor: chip.bg,
-                  borderRadius: '6px',
+                  borderRadius: 'var(--radius-sm)',
                   '& .MuiChip-label': { px: '8px' },
                 }}
               />
@@ -335,11 +335,11 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                     alignItems: 'center',
                     height: 20,
                     px: '7px',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--radius-sm)',
                     bgcolor: 'rgba(245,158,11,0.1)',
                     color: '#B45309',
                     fontSize: '10px',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     letterSpacing: '0.02em',
                   }}
                 >
@@ -358,11 +358,11 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                     alignItems: 'center',
                     height: 20,
                     px: '7px',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--radius-sm)',
                     bgcolor: 'rgba(220,38,38,0.1)',
                     color: '#B91C1C',
                     fontSize: '10px',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     letterSpacing: '0.02em',
                   }}
                 >
@@ -377,11 +377,11 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                     alignItems: 'center',
                     height: 20,
                     px: '7px',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--radius-sm)',
                     bgcolor: 'rgba(245,158,11,0.1)',
                     color: '#B45309',
                     fontSize: '10px',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     letterSpacing: '0.02em',
                   }}
                 >

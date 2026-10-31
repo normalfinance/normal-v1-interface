@@ -38,7 +38,7 @@ const GetHelpButton: React.FC<GetHelpButtonProps> = ({ label = 'Get help', url, 
           border: `1px solid ${theme.palette.divider}`,
         },
         gap: 1,
-        borderRadius: '32px',
+        borderRadius: 'var(--radius-md)',
         px: '6px',
         py: '4px',
       }}

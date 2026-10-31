@@ -123,7 +123,6 @@ const HeaderRoot = styled(AppBar, {
     borderRadius: '50%',
     width: `calc(100% - 48px)`,
     zIndex: pauseZindex.bottom,
-    boxShadow: theme.vars.customShadows.z8,
     ...(isOffset && { opacity: 0.48, visibility: 'visible' }),
   };
 

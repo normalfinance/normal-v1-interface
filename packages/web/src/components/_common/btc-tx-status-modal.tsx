@@ -107,14 +107,14 @@ export function BtcTxStatusModal({
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
     >
       <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography
             sx={{
               fontSize: '15px',
-              fontWeight: 600,
+              fontWeight: 500,
               color: '#0A0A0F',
               letterSpacing: '-0.01em',
               lineHeight: '28px',
@@ -128,7 +128,7 @@ export function BtcTxStatusModal({
             sx={{
               width: 28,
               height: 28,
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
               bgcolor: 'rgba(10,10,15,0.06)',
               color: '#0A0A0F',
@@ -155,7 +155,7 @@ export function BtcTxStatusModal({
               flexDirection: 'column',
               alignItems: 'center',
               py: '24px',
-              borderRadius: '16px',
+              borderRadius: 'var(--radius-lg)',
               bgcolor: isConfirmed ? 'rgba(26,179,125,0.06)' : '#FAFAFB',
               border: '1px solid',
               borderColor: isConfirmed ? 'rgba(26,179,125,0.2)' : 'rgba(10,10,15,0.08)',
@@ -178,13 +178,13 @@ export function BtcTxStatusModal({
                 <Iconify icon="eva:checkmark-circle-2-fill" width={28} sx={{ color: '#1AB37D' }} />
               </Box>
             ) : (
-              <CircularProgress size={36} thickness={3} sx={{ color: 'rgba(10,10,15,0.3)' }} />
+              <CircularProgress size={36} thickness={3} sx={{ color: '#9A9AA3' }} />
             )}
 
             <Typography
               sx={{
                 fontSize: '15px',
-                fontWeight: 600,
+                fontWeight: 500,
                 letterSpacing: '-0.01em',
                 color: isConfirmed ? '#1AB37D' : '#0A0A0F',
                 transition: 'color 400ms ease',
@@ -194,15 +194,13 @@ export function BtcTxStatusModal({
             </Typography>
 
             {!isConfirmed && (
-              <Typography
-                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', textAlign: 'center' }}
-              >
+              <Typography sx={{ fontSize: '12px', color: '#9A9AA3', textAlign: 'center' }}>
                 {t('Bitcoin confirmations take ~10 minutes on average')}
               </Typography>
             )}
 
             {isConfirmed && blockHeight && (
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+              <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
                 {t('Block')} {blockHeight.toLocaleString()}
               </Typography>
             )}
@@ -217,7 +215,7 @@ export function BtcTxStatusModal({
                 gap: '8px',
                 px: '14px',
                 py: '10px',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: 'rgba(26,179,125,0.1)',
                 border: '1px solid rgba(26,179,125,0.25)',
               }}
@@ -236,7 +234,7 @@ export function BtcTxStatusModal({
           {/* Details card */}
           <Box
             sx={{
-              borderRadius: '16px',
+              borderRadius: 'var(--radius-lg)',
               border: '1px solid rgba(10,10,15,0.08)',
               overflow: 'hidden',
             }}
@@ -251,22 +249,22 @@ export function BtcTxStatusModal({
                 alignItems: 'flex-start',
               }}
             >
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', fontWeight: 500 }}>
+              <Typography sx={{ fontSize: '12px', color: '#9A9AA3', fontWeight: 500 }}>
                 {t('Amount')}
               </Typography>
               <Box sx={{ textAlign: 'right' }}>
                 <Typography
                   sx={{
                     fontSize: '13px',
-                    fontWeight: 700,
+                    fontWeight: 500,
                     color: '#0A0A0F',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                   }}
                 >
                   {BigNumber(amountBtc).toFixed(8)} BTC
                 </Typography>
                 {amountFiat && (
-                  <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.45)' }}>
+                  <Typography sx={{ fontSize: '11px', color: '#9A9AA3' }}>
                     ≈ {fCurrency(amountFiat)}
                   </Typography>
                 )}
@@ -289,7 +287,7 @@ export function BtcTxStatusModal({
               <Typography
                 sx={{
                   fontSize: '12px',
-                  color: 'rgba(10,10,15,0.45)',
+                  color: '#9A9AA3',
                   fontWeight: 500,
                   flexShrink: 0,
                 }}
@@ -300,7 +298,7 @@ export function BtcTxStatusModal({
                 sx={{
                   fontSize: '12px',
                   color: '#0A0A0F',
-                  fontFamily: '"Geist Mono", "Courier New", monospace',
+                  fontFamily: '"Geist Mono", ui-monospace, monospace',
                   wordBreak: 'break-all',
                   textAlign: 'right',
                 }}
@@ -321,24 +319,22 @@ export function BtcTxStatusModal({
                     alignItems: 'flex-start',
                   }}
                 >
-                  <Typography
-                    sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', fontWeight: 500 }}
-                  >
+                  <Typography sx={{ fontSize: '12px', color: '#9A9AA3', fontWeight: 500 }}>
                     {t('Miner fee')}
                   </Typography>
                   <Box sx={{ textAlign: 'right' }}>
                     <Typography
                       sx={{
                         fontSize: '12px',
-                        fontWeight: 600,
+                        fontWeight: 500,
                         color: '#0A0A0F',
-                        fontFamily: '"Geist Mono", "Courier New", monospace',
+                        fontFamily: '"Geist Mono", ui-monospace, monospace',
                       }}
                     >
                       {actualFeeSat.toLocaleString()} sat
                     </Typography>
                     {feeFiat && (
-                      <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.45)' }}>
+                      <Typography sx={{ fontSize: '11px', color: '#9A9AA3' }}>
                         ≈ {fCurrency(feeFiat)}
                       </Typography>
                     )}
@@ -363,7 +359,7 @@ export function BtcTxStatusModal({
               <Typography
                 sx={{
                   fontSize: '12px',
-                  color: 'rgba(10,10,15,0.45)',
+                  color: '#9A9AA3',
                   fontWeight: 500,
                   flexShrink: 0,
                 }}
@@ -375,7 +371,7 @@ export function BtcTxStatusModal({
                   sx={{
                     fontSize: '11px',
                     color: '#0A0A0F',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                   }}
                 >
                   {truncate(txid, 6, 6)}
@@ -389,13 +385,13 @@ export function BtcTxStatusModal({
                       height: 24,
                       border: 'none',
                       bgcolor: 'rgba(10,10,15,0.06)',
-                      borderRadius: '6px',
+                      borderRadius: 'var(--radius-sm)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
                       flexShrink: 0,
-                      color: copied ? 'success.main' : 'rgba(10,10,15,0.5)',
+                      color: copied ? 'success.main' : '#6B6B76',
                       fontFamily: 'inherit',
                       '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
                     }}
@@ -422,9 +418,9 @@ export function BtcTxStatusModal({
               justifyContent: 'center',
               gap: '6px',
               py: '10px',
-              borderRadius: '12px',
-              border: '1px solid rgba(10,10,15,0.1)',
-              color: 'rgba(10,10,15,0.55)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(10,10,15,0.08)',
+              color: '#6B6B76',
               fontSize: '13px',
               fontWeight: 500,
               textDecoration: 'none',
@@ -445,15 +441,15 @@ export function BtcTxStatusModal({
           size="large"
           onClick={onClose}
           sx={{
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: isConfirmed ? '#1AB37D' : '#0A0A0F',
-            fontWeight: 700,
+            fontWeight: 500,
             fontSize: '15px',
             py: '13px',
             textTransform: 'none',
             letterSpacing: '-0.01em',
             transition: 'background 400ms ease',
-            '&:hover': { bgcolor: isConfirmed ? '#15946a' : '#1a1a25' },
+            '&:hover': { bgcolor: isConfirmed ? '#15946a' : '#2A2A33' },
           }}
         >
           {isConfirmed ? t('Done') : t('Close')}

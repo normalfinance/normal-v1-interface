@@ -11,7 +11,7 @@ import Stack from '@mui/material/Stack';
 
 export default function Loading() {
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent>
       {/* Header title */}
       <Stack spacing={1}>
         <Skeleton height={40} width="8rem" />

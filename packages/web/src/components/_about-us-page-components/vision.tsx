@@ -10,6 +10,8 @@ import { Box, Typography } from '@mui/material';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TelegramIcon from '@mui/icons-material/Telegram';
 
+import { HAIRLINE, BLOCK_SX, PageSection, SectionHeader } from '@/components/_common/brand';
+
 type SocialLink = { href: string; icon: React.ReactNode };
 
 type Founder = {
@@ -57,223 +59,181 @@ export const Vision: React.FC = () => {
   const { t } = useTranslate();
 
   return (
-    <Box
-      component="section"
-      id="our-vision"
-      sx={{ bgcolor: '#FAFAFB', py: { xs: '40px', md: '56px' } }}
-    >
-      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
-        {/* Header */}
-        <Box mb={{ xs: '40px', md: '56px' }}>
-          <Typography
-            sx={{
-              fontSize: '11px',
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: '#6B6B76',
-              mb: 1.5,
-            }}
-          >
-            — Our Founder
-          </Typography>
-          <Typography
-            component="h2"
-            sx={{
-              fontWeight: 500,
-              fontSize: 'clamp(32px, 4vw, 52px)',
-              lineHeight: 1.15,
-              letterSpacing: '-0.03em',
-              color: '#0A0A0F',
-              mb: '16px',
-            }}
-          >
-            {t('Our Founder')}
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: '16px',
-              color: '#6B6B76',
-              lineHeight: 1.55,
-              maxWidth: '520px',
-            }}
-          >
-            {t(
-              'The person behind the vision — building the savings account crypto always deserved.'
-            )}
-          </Typography>
-        </Box>
+    <PageSection id="our-vision">
+      <SectionHeader
+        eyebrow="Our Founder"
+        title={t('Our Founder')}
+        subtitle={t(
+          'The person behind the vision — building the savings account crypto always deserved.'
+        )}
+      />
 
-        {/* Founder card */}
+      {/* Founder card */}
+      <Box
+        sx={{
+          ...BLOCK_SX,
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1.4fr' },
+          gap: { xs: '24px', md: '48px' },
+          alignItems: 'stretch',
+        }}
+      >
+        {/* Photo */}
         <Box
+          component="img"
+          src={FOUNDER.image}
+          alt={FOUNDER.name}
           sx={{
-            bgcolor: '#FFFFFF',
-            border: '1px solid rgba(10,10,15,0.08)',
-            borderRadius: '22px',
-            p: { xs: '20px', md: '28px' },
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '1fr 1.4fr' },
-            gap: { xs: '24px', md: '48px' },
-            alignItems: 'stretch',
-            boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 32px rgba(10,10,15,0.06)',
+            width: '100%',
+            minHeight: { xs: '260px', md: '440px' },
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'top',
+            borderRadius: 'var(--radius-md)',
+            display: 'block',
           }}
-        >
-          {/* Photo */}
-          <Box
-            component="img"
-            src={FOUNDER.image}
-            alt={FOUNDER.name}
-            sx={{
-              width: '100%',
-              minHeight: { xs: '260px', md: '440px' },
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'top',
-              borderRadius: '14px',
-              display: 'block',
-            }}
-          />
+        />
 
-          {/* Content */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '22px', py: { md: '8px' } }}>
-            {/* Name + role */}
+        {/* Content */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '22px', py: { md: '8px' } }}>
+          {/* Name + role */}
+          <Box>
+            <Typography
+              sx={{
+                fontSize: '32px',
+                fontWeight: 500,
+                color: '#0A0A0F',
+                letterSpacing: '-0.03em',
+                lineHeight: 1.1,
+                mb: '6px',
+              }}
+            >
+              {FOUNDER.name}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '15px',
+                color: '#6B6B76',
+                fontWeight: 400,
+              }}
+            >
+              {FOUNDER.role}
+            </Typography>
+          </Box>
+
+          {/* Blockquote */}
+          <Box
+            component="blockquote"
+            sx={{
+              m: 0,
+              pl: '18px',
+              borderLeft: '2px solid #0A0A0F',
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: '18px',
+                fontWeight: 500,
+                color: '#0A0A0F',
+                lineHeight: 1.5,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              &ldquo;{FOUNDER.quote}&rdquo;
+            </Typography>
+          </Box>
+
+          {/* Bio */}
+          <Typography
+            sx={{
+              fontSize: '15px',
+              color: '#2A2A33',
+              lineHeight: 1.65,
+            }}
+          >
+            {FOUNDER.bio}
+          </Typography>
+
+          {/* Extra bio */}
+          <Typography
+            sx={{
+              fontSize: '15px',
+              color: '#2A2A33',
+              lineHeight: 1.65,
+            }}
+          >
+            {FOUNDER.extraBio}
+          </Typography>
+
+          {/* Stat + socials row */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              pt: '20px',
+              borderTop: HAIRLINE,
+              mt: 'auto',
+            }}
+          >
             <Box>
               <Typography
                 sx={{
-                  fontSize: '32px',
+                  fontSize: '28px',
                   fontWeight: 500,
                   color: '#0A0A0F',
                   letterSpacing: '-0.03em',
-                  lineHeight: 1.1,
-                  mb: '6px',
+                  lineHeight: 1,
+                  mb: '4px',
                 }}
               >
-                {FOUNDER.name}
+                {FOUNDER.stat.value}
               </Typography>
               <Typography
                 sx={{
-                  fontSize: '15px',
-                  color: '#6B6B76',
-                  fontWeight: 400,
-                }}
-              >
-                {FOUNDER.role}
-              </Typography>
-            </Box>
-
-            {/* Blockquote */}
-            <Box
-              component="blockquote"
-              sx={{
-                m: 0,
-                pl: '18px',
-                borderLeft: '3px solid #0A0A0F',
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: '18px',
+                  fontSize: '11px',
                   fontWeight: 500,
-                  color: '#0A0A0F',
-                  lineHeight: 1.5,
-                  letterSpacing: '-0.01em',
+                  color: '#6B6B76',
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
                 }}
               >
-                &ldquo;{FOUNDER.quote}&rdquo;
+                {FOUNDER.stat.label}
               </Typography>
             </Box>
 
-            {/* Bio */}
-            <Typography
-              sx={{
-                fontSize: '15px',
-                color: '#2A2A33',
-                lineHeight: 1.65,
-              }}
-            >
-              {FOUNDER.bio}
-            </Typography>
-
-            {/* Extra bio */}
-            <Typography
-              sx={{
-                fontSize: '15px',
-                color: '#2A2A33',
-                lineHeight: 1.65,
-              }}
-            >
-              {FOUNDER.extraBio}
-            </Typography>
-
-            {/* Stat + socials row */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                pt: '20px',
-                borderTop: '1px solid rgba(10,10,15,0.07)',
-                mt: 'auto',
-              }}
-            >
-              <Box>
-                <Typography
+            <Box sx={{ display: 'flex', gap: '8px' }}>
+              {FOUNDER.socialLinks.map((link, idx) => (
+                <Link
+                  key={idx}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   sx={{
-                    fontSize: '28px',
-                    fontWeight: 600,
+                    width: 32,
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: '#F4F4F7',
+                    borderRadius: 'var(--radius-md)',
                     color: '#0A0A0F',
-                    letterSpacing: '-0.03em',
-                    lineHeight: 1,
-                    mb: '4px',
+                    transition: 'bgcolor 120ms ease, color 120ms ease',
+                    '&:hover': {
+                      bgcolor: '#0A0A0F',
+                      color: '#fff',
+                      '& svg': { color: '#fff !important' },
+                    },
                   }}
                 >
-                  {FOUNDER.stat.value}
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    color: '#6B6B76',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {FOUNDER.stat.label}
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: 'flex', gap: '8px' }}>
-                {FOUNDER.socialLinks.map((link, idx) => (
-                  <Link
-                    key={idx}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: '#F4F4F7',
-                      borderRadius: '8px',
-                      color: '#0A0A0F',
-                      transition: 'bgcolor 120ms ease, color 120ms ease',
-                      '&:hover': {
-                        bgcolor: '#0A0A0F',
-                        color: '#fff',
-                        '& svg': { color: '#fff !important' },
-                      },
-                    }}
-                  >
-                    {link.icon}
-                  </Link>
-                ))}
-              </Box>
+                  {link.icon}
+                </Link>
+              ))}
             </Box>
           </Box>
         </Box>
       </Box>
-    </Box>
+    </PageSection>
   );
 };
 

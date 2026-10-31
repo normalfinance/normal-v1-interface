@@ -211,8 +211,8 @@ export function SettingsAccounts() {
           <Box
             key={index}
             sx={{
-              p: '22px',
-              borderRadius: '22px',
+              p: { xs: '20px', md: '24px' },
+              borderRadius: 'var(--radius-lg)',
               border: '1px solid rgba(10,10,15,0.08)',
               bgcolor: '#FFFFFF',
             }}
@@ -228,7 +228,11 @@ export function SettingsAccounts() {
                 <Skeleton variant="text" width={70} />
                 <Skeleton variant="text" width={120} />
               </Stack>
-              <Skeleton variant="rounded" height={44} sx={{ borderRadius: '12px', mt: '8px' }} />
+              <Skeleton
+                variant="rounded"
+                height={44}
+                sx={{ borderRadius: 'var(--radius-md)', mt: '8px' }}
+              />
             </Stack>
           </Box>
         ))}
@@ -249,12 +253,12 @@ export function SettingsAccounts() {
             gap: '8px',
             px: '16px',
             py: '10px',
-            borderRadius: '12px',
-            border: '1px solid rgba(10,10,15,0.12)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid rgba(10,10,15,0.14)',
             bgcolor: '#FFFFFF',
             color: '#0A0A0F',
             fontSize: '14px',
-            fontWeight: 600,
+            fontWeight: 500,
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'background 150ms ease',
@@ -275,18 +279,14 @@ export function SettingsAccounts() {
             gap: '10px',
             px: '14px',
             py: '10px',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: '#FFFFFF',
             border: '1px solid rgba(10,10,15,0.08)',
             '&:focus-within': { borderColor: 'rgba(10,10,15,0.24)' },
             transition: 'border-color 150ms ease',
           }}
         >
-          <Iconify
-            icon="eva:search-fill"
-            width={17}
-            sx={{ color: 'rgba(10,10,15,0.3)', flexShrink: 0 }}
-          />
+          <Iconify icon="eva:search-fill" width={17} sx={{ color: '#9A9AA3', flexShrink: 0 }} />
           <Box
             component="input"
             type="text"
@@ -301,7 +301,7 @@ export function SettingsAccounts() {
               fontSize: '14px',
               color: '#0A0A0F',
               fontFamily: 'inherit',
-              '&::placeholder': { color: 'rgba(10,10,15,0.3)' },
+              '&::placeholder': { color: '#9A9AA3' },
             }}
           />
         </Box>
@@ -311,14 +311,14 @@ export function SettingsAccounts() {
       {wallets.length === 0 && (
         <Box
           sx={{
-            p: '40px 22px',
-            borderRadius: '22px',
+            p: '40px 24px',
+            borderRadius: 'var(--radius-lg)',
             border: '1px solid rgba(10,10,15,0.08)',
             bgcolor: '#FFFFFF',
             textAlign: 'center',
           }}
         >
-          <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.4)' }}>
+          <Typography sx={{ fontSize: '14px', color: '#9A9AA3' }}>
             {t('No linked accounts')}
           </Typography>
         </Box>
@@ -327,14 +327,14 @@ export function SettingsAccounts() {
       {wallets.length > 0 && filteredWallets.length === 0 && (
         <Box
           sx={{
-            p: '40px 22px',
-            borderRadius: '22px',
+            p: '40px 24px',
+            borderRadius: 'var(--radius-lg)',
             border: '1px solid rgba(10,10,15,0.08)',
             bgcolor: '#FFFFFF',
             textAlign: 'center',
           }}
         >
-          <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.4)' }}>
+          <Typography sx={{ fontSize: '14px', color: '#9A9AA3' }}>
             {t('No accounts found')}
           </Typography>
         </Box>
@@ -345,8 +345,8 @@ export function SettingsAccounts() {
         <Box
           key={wallet.id}
           sx={{
-            p: '22px',
-            borderRadius: '22px',
+            p: { xs: '20px', md: '24px' },
+            borderRadius: 'var(--radius-lg)',
             border: '1px solid rgba(10,10,15,0.08)',
             bgcolor: '#FFFFFF',
           }}
@@ -365,10 +365,10 @@ export function SettingsAccounts() {
                   px: '12px',
                   py: '8px',
                   border: '1px solid rgba(10,10,15,0.16)',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#FAFAFB',
                   fontSize: '14px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   color: '#0A0A0F',
                   fontFamily: 'inherit',
                   outline: 'none',
@@ -382,7 +382,7 @@ export function SettingsAccounts() {
                 sx={{
                   width: 32,
                   height: 32,
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius-md)',
                   border: 'none',
                   bgcolor: '#0A0A0F',
                   color: '#FFFFFF',
@@ -406,7 +406,7 @@ export function SettingsAccounts() {
                 sx={{
                   width: 32,
                   height: 32,
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius-md)',
                   border: 'none',
                   bgcolor: 'rgba(10,10,15,0.06)',
                   color: '#0A0A0F',
@@ -424,7 +424,7 @@ export function SettingsAccounts() {
               <Typography
                 sx={{
                   fontSize: '15px',
-                  fontWeight: 700,
+                  fontWeight: 500,
                   color: '#0A0A0F',
                   letterSpacing: '-0.01em',
                   flex: 1,
@@ -439,10 +439,10 @@ export function SettingsAccounts() {
                   sx={{
                     px: '8px',
                     py: '2px',
-                    borderRadius: '999px',
+                    borderRadius: 'var(--radius-sm)',
                     bgcolor: 'rgba(10,10,15,0.06)',
                     fontSize: '11px',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     color: '#2A2A33',
                     flexShrink: 0,
                   }}
@@ -456,7 +456,7 @@ export function SettingsAccounts() {
                 sx={{
                   width: 28,
                   height: 28,
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius-md)',
                   border: 'none',
                   bgcolor: 'rgba(10,10,15,0.06)',
                   color: '#0A0A0F',
@@ -488,10 +488,10 @@ export function SettingsAccounts() {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     py: '10px',
-                    borderBottom: '1px solid rgba(10,10,15,0.06)',
+                    borderBottom: '1px solid rgba(10,10,15,0.08)',
                   }}
                 >
-                  <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                  <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
                     {t('{{chain}} address', { chain: CHAINS[id].name })}
                   </Typography>
                   <Stack direction="row" spacing={0.5} alignItems="center">
@@ -500,7 +500,7 @@ export function SettingsAccounts() {
                         fontSize: '12px',
                         fontWeight: 500,
                         color: '#0A0A0F',
-                        fontFamily: '"Geist Mono", "Courier New", monospace',
+                        fontFamily: '"Geist Mono", ui-monospace, monospace',
                       }}
                     >
                       {format.fTruncate(turnkeyInfo[CHAINS[id].addressField]!, 20)}
@@ -519,10 +519,10 @@ export function SettingsAccounts() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   py: '10px',
-                  borderBottom: '1px solid rgba(10,10,15,0.06)',
+                  borderBottom: '1px solid rgba(10,10,15,0.08)',
                 }}
               >
-                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
                   {t('Account ID')}
                 </Typography>
                 <Stack direction="row" spacing={0.5} alignItems="center">
@@ -531,7 +531,7 @@ export function SettingsAccounts() {
                       fontSize: '12px',
                       fontWeight: 500,
                       color: '#0A0A0F',
-                      fontFamily: '"Geist Mono", "Courier New", monospace',
+                      fontFamily: '"Geist Mono", ui-monospace, monospace',
                     }}
                   >
                     {format.fTruncate(wallet.walletAddress, 20)}
@@ -548,10 +548,10 @@ export function SettingsAccounts() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   py: '10px',
-                  borderBottom: '1px solid rgba(10,10,15,0.06)',
+                  borderBottom: '1px solid rgba(10,10,15,0.08)',
                 }}
               >
-                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
                   {t('Last Used')}
                 </Typography>
                 <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F' }}>
@@ -578,8 +578,8 @@ export function SettingsAccounts() {
                 mb: '16px',
                 px: '14px',
                 py: '11px',
-                borderRadius: '12px',
-                border: '1px solid rgba(10,10,15,0.12)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid rgba(10,10,15,0.14)',
                 bgcolor: 'transparent',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
@@ -589,18 +589,14 @@ export function SettingsAccounts() {
             >
               <Iconify icon="solar:key-bold" width={18} sx={{ color: '#0A0A0F' }} />
               <Box sx={{ flex: 1 }}>
-                <Typography sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F' }}>
+                <Typography sx={{ fontSize: '13.5px', fontWeight: 500, color: '#0A0A0F' }}>
                   {t('Export recovery phrase')}
                 </Typography>
-                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
                   {t('One phrase backs up all four addresses above — restores in any wallet app')}
                 </Typography>
               </Box>
-              <Iconify
-                icon="eva:chevron-right-fill"
-                width={18}
-                sx={{ color: 'rgba(10,10,15,0.35)' }}
-              />
+              <Iconify icon="eva:chevron-right-fill" width={18} sx={{ color: '#9A9AA3' }} />
             </Box>
           )}
 
@@ -633,7 +629,7 @@ export function SettingsAccounts() {
               user's funds and backs the ownership checks swap logging uses
               (the server refuses the unlink as well). */}
           {wallet.walletAddress === turnkeyStellar ? (
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: '12px', color: '#9A9AA3', lineHeight: 1.5 }}>
               {t('This is your Normal wallet — it stays linked to your account.')}
             </Typography>
           ) : (
@@ -646,7 +642,7 @@ export function SettingsAccounts() {
                 gap: '6px',
                 px: '12px',
                 py: '8px',
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 border: '1px solid rgba(239,68,68,0.2)',
                 bgcolor: 'rgba(239,68,68,0.04)',
                 color: '#DC2626',
@@ -671,12 +667,12 @@ export function SettingsAccounts() {
         onClose={() => !isUnlinking && setUnlinkDialogOpen(false)}
         maxWidth="xs"
         fullWidth
-        slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+        slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
       >
         <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography
-              sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+              sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.01em' }}
             >
               {t('Disconnect Account')}
             </Typography>
@@ -687,7 +683,7 @@ export function SettingsAccounts() {
               sx={{
                 width: 28,
                 height: 28,
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
                 border: 'none',
                 bgcolor: 'rgba(10,10,15,0.06)',
                 color: '#0A0A0F',
@@ -709,7 +705,7 @@ export function SettingsAccounts() {
               display: 'flex',
               gap: '10px',
               p: '14px',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: 'rgba(239,68,68,0.05)',
               border: '1px solid rgba(239,68,68,0.15)',
             }}
@@ -719,7 +715,7 @@ export function SettingsAccounts() {
               width={16}
               sx={{ color: '#DC2626', flexShrink: 0, mt: '1px' }}
             />
-            <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
+            <Typography sx={{ fontSize: '13px', color: '#2A2A33', lineHeight: 1.55 }}>
               {t('Are you sure you want to disconnect this account? This action cannot be undone.')}
             </Typography>
           </Box>
@@ -733,12 +729,12 @@ export function SettingsAccounts() {
             sx={{
               flex: 1,
               py: '12px',
-              borderRadius: '12px',
-              border: '1px solid rgba(10,10,15,0.12)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(10,10,15,0.14)',
               bgcolor: '#FFFFFF',
               color: '#0A0A0F',
               fontSize: '14px',
-              fontWeight: 600,
+              fontWeight: 500,
               cursor: isUnlinking ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
               opacity: isUnlinking ? 0.5 : 1,
@@ -761,14 +757,14 @@ export function SettingsAccounts() {
             sx={{
               flex: 1,
               py: '12px',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: '#DC2626',
-              fontWeight: 700,
+              fontWeight: 500,
               fontSize: '14px',
               textTransform: 'none',
               letterSpacing: '-0.01em',
               '&:hover': { bgcolor: '#B91C1C' },
-              '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+              '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
             }}
           >
             {isUnlinking ? t('Disconnecting...') : t('Disconnect')}
@@ -789,15 +785,15 @@ export function SettingsAccounts() {
         <Box
           sx={{
             border: '1px solid rgba(10,10,15,0.08)',
-            borderRadius: '16px',
+            borderRadius: 'var(--radius-lg)',
             p: '18px',
             mt: '16px',
           }}
         >
-          <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#0A0A0F', mb: '4px' }}>
+          <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
             {t('Your Normal wallets')}
           </Typography>
-          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.55)', mb: '14px' }}>
+          <Typography sx={{ fontSize: '12px', color: '#6B6B76', mb: '14px' }}>
             {t(
               'Each of these is a separate recovery phrase with its own addresses. Save the phrase for every wallet you hold funds on.'
             )}
@@ -807,7 +803,7 @@ export function SettingsAccounts() {
             {seeds.map((w) => (
               <Box key={w.walletId}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F' }}>
+                  <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>
                     {w.label}
                   </Typography>
                   <Typography
@@ -817,7 +813,7 @@ export function SettingsAccounts() {
                     }}
                     sx={{
                       fontSize: '12px',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       color: '#0A0A0F',
                       cursor: 'pointer',
                       textDecoration: 'underline',
@@ -834,15 +830,15 @@ export function SettingsAccounts() {
                     alignItems="center"
                     sx={{ py: '6px' }}
                   >
-                    <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                    <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
                       {CHAINS[id].name}
                     </Typography>
                     <Stack direction="row" spacing={0.5} alignItems="center">
                       <Typography
                         sx={{
                           fontSize: '11.5px',
-                          color: 'rgba(10,10,15,0.7)',
-                          fontFamily: '"Geist Mono", "Courier New", monospace',
+                          color: '#2A2A33',
+                          fontFamily: '"Geist Mono", ui-monospace, monospace',
                         }}
                       >
                         {format.fTruncate(w.addresses[id]!, 20)}

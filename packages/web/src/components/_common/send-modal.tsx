@@ -684,14 +684,14 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
         onClose={onClose}
         maxWidth="xs"
         fullWidth
-        slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+        slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
       >
         <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography
               sx={{
                 fontSize: '15px',
-                fontWeight: 600,
+                fontWeight: 500,
                 color: '#0A0A0F',
                 letterSpacing: '-0.01em',
                 lineHeight: '28px',
@@ -705,7 +705,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               sx={{
                 width: 28,
                 height: 28,
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
                 border: 'none',
                 bgcolor: 'rgba(10,10,15,0.06)',
                 color: '#0A0A0F',
@@ -730,7 +730,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               onClick={() => setPickerOpen(true)}
               sx={{
                 p: '16px',
-                borderRadius: '16px',
+                borderRadius: 'var(--radius-lg)',
                 bgcolor: '#FAFAFB',
                 border: '1px solid rgba(10,10,15,0.08)',
                 cursor: 'pointer',
@@ -743,18 +743,18 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: '10px' }}>
                     <Typography
                       sx={{
-                        fontSize: '12px',
+                        fontSize: '11px',
                         fontWeight: 500,
-                        color: 'rgba(10,10,15,0.45)',
+                        color: '#9A9AA3',
                         textTransform: 'uppercase',
-                        letterSpacing: '0.08em',
+                        letterSpacing: '0.16em',
                       }}
                     >
                       {t('Asset')}
                     </Typography>
-                    <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
+                    <Typography sx={{ fontSize: '12px', color: '#9A9AA3' }}>
                       {t('Available:')}{' '}
-                      <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 600 }}>
+                      <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 500 }}>
                         {/* Follow the amount toggle (Niko, 2026-08-13): typing
                             dollars against a token-unit readout gives no way
                             to know what fits. Same ROUND_DOWN cents as the
@@ -773,7 +773,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                           compact pill shows only the symbol, and a hybrid
                           account has two wallets holding the same asset. */}
                       {isExternalSlot && !isNative && (
-                        <Box component="span" sx={{ color: 'rgba(10,10,15,0.4)' }}>
+                        <Box component="span" sx={{ color: '#9A9AA3' }}>
                           {isCompanionToken
                             ? ` · ${t('Normal wallet')}`
                             : ` · ${connectedWalletLabel(persist.wallet.walletType)}`}
@@ -791,7 +791,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                         gap: '8px',
                         px: '12px',
                         py: '8px',
-                        borderRadius: '100px',
+                        borderRadius: 'var(--radius-md)',
                         bgcolor: '#FFFFFF',
                         border: '1px solid rgba(10,10,15,0.08)',
                       }}
@@ -804,7 +804,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       <Typography
                         sx={{
                           fontSize: '14px',
-                          fontWeight: 700,
+                          fontWeight: 500,
                           color: '#0A0A0F',
                           letterSpacing: '-0.01em',
                         }}
@@ -826,11 +826,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                           bgcolor: 'rgba(10,10,15,0.06)',
                           color: '#0A0A0F',
                           fontSize: '11px',
-                          fontWeight: 700,
+                          fontWeight: 500,
                           letterSpacing: '0.06em',
                           px: '8px',
                           py: '4px',
-                          borderRadius: '6px',
+                          borderRadius: 'var(--radius-sm)',
                           cursor: maxLoading ? 'default' : 'pointer',
                           opacity: maxLoading ? 0.5 : 1,
                           flexShrink: 0,
@@ -840,16 +840,12 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       >
                         {maxLoading ? '…' : 'MAX'}
                       </Box>
-                      <Iconify
-                        icon="eva:chevron-down-fill"
-                        width={18}
-                        sx={{ color: 'rgba(10,10,15,0.4)' }}
-                      />
+                      <Iconify icon="eva:chevron-down-fill" width={18} sx={{ color: '#9A9AA3' }} />
                     </Box>
                   </Box>
                 </>
               ) : (
-                <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.4)' }}>
+                <Typography sx={{ fontSize: '14px', color: '#9A9AA3' }}>
                   {t('Select asset')}
                 </Typography>
               )}
@@ -871,7 +867,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
             <Box
               sx={{
                 p: '16px',
-                borderRadius: '16px',
+                borderRadius: 'var(--radius-lg)',
                 bgcolor: '#FAFAFB',
                 border: '1px solid',
                 borderColor: insufficientBalance ? 'error.main' : 'rgba(10,10,15,0.08)',
@@ -883,11 +879,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
             >
               <Typography
                 sx={{
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: 500,
-                  color: 'rgba(10,10,15,0.45)',
+                  color: '#9A9AA3',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
+                  letterSpacing: '0.16em',
                   mb: '10px',
                 }}
               >
@@ -898,8 +894,8 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                   <Typography
                     sx={{
                       fontSize: '24px',
-                      fontWeight: 600,
-                      color: 'rgba(10,10,15,0.35)',
+                      fontWeight: 500,
+                      color: '#9A9AA3',
                       letterSpacing: '-0.02em',
                       lineHeight: 1,
                     }}
@@ -921,10 +917,10 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     outline: 'none',
                     bgcolor: 'transparent',
                     fontSize: '24px',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     color: insufficientBalance ? 'error.main' : '#0A0A0F',
                     letterSpacing: '-0.02em',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                     width: '100%',
                     minWidth: 0,
                     '&::placeholder': { color: 'rgba(10,10,15,0.2)' },
@@ -937,8 +933,8 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                   <Typography
                     sx={{
                       fontSize: '14px',
-                      fontWeight: 600,
-                      color: 'rgba(10,10,15,0.45)',
+                      fontWeight: 500,
+                      color: '#9A9AA3',
                       flexShrink: 0,
                     }}
                   >
@@ -955,7 +951,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       border: 'none',
                       bgcolor: 'rgba(10,10,15,0.06)',
                       color: '#0A0A0F',
-                      borderRadius: '8px',
+                      borderRadius: 'var(--radius-md)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -972,7 +968,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               <Typography
                 sx={{
                   fontSize: '12px',
-                  color: insufficientBalance ? 'error.main' : 'rgba(10,10,15,0.45)',
+                  color: insufficientBalance ? 'error.main' : '#9A9AA3',
                   mt: '6px',
                 }}
               >
@@ -990,7 +986,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
             <Box
               sx={{
                 p: '16px',
-                borderRadius: '16px',
+                borderRadius: 'var(--radius-lg)',
                 bgcolor: '#FAFAFB',
                 border: '1px solid',
                 borderColor: destination && !isAddressValid ? 'error.main' : 'rgba(10,10,15,0.08)',
@@ -1003,11 +999,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
             >
               <Typography
                 sx={{
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: 500,
-                  color: 'rgba(10,10,15,0.45)',
+                  color: '#9A9AA3',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
+                  letterSpacing: '0.16em',
                   mb: '10px',
                 }}
               >
@@ -1039,7 +1035,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     bgcolor: 'transparent',
                     fontSize: '13px',
                     color: '#0A0A0F',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                     width: '100%',
                     minWidth: 0,
                     '&::placeholder': { color: 'rgba(10,10,15,0.25)' },
@@ -1074,7 +1070,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                         mt: '8px',
                         px: '10px',
                         py: '7px',
-                        borderRadius: '9px',
+                        borderRadius: 'var(--radius-md)',
                         bgcolor: ns.bg,
                         border: `1px solid ${ns.dot}33`,
                       }}
@@ -1089,7 +1085,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                         }}
                       />
                       <Typography
-                        sx={{ fontSize: '12px', fontWeight: 600, color: ns.color, lineHeight: 1.4 }}
+                        sx={{ fontSize: '12px', fontWeight: 500, color: ns.color, lineHeight: 1.4 }}
                       >
                         {t('{{network}} network — the address must be a {{network}} address', {
                           network: netName,
@@ -1124,7 +1120,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       alignItems: 'flex-start',
                       gap: '8px',
                       p: '12px 14px',
-                      borderRadius: '12px',
+                      borderRadius: 'var(--radius-md)',
                       bgcolor: 'rgba(245,158,11,0.08)',
                       border: '1px solid rgba(245,158,11,0.35)',
                       mb: '8px',
@@ -1149,7 +1145,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       alignItems: 'flex-start',
                       gap: '8px',
                       p: '12px 14px',
-                      borderRadius: '12px',
+                      borderRadius: 'var(--radius-md)',
                       bgcolor: 'rgba(245,158,11,0.08)',
                       border: '1px solid rgba(245,158,11,0.35)',
                     }}
@@ -1180,7 +1176,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       gap: '6px',
                       border: 'none',
                       bgcolor: 'transparent',
-                      color: 'rgba(10,10,15,0.5)',
+                      color: '#6B6B76',
                       fontSize: '13px',
                       cursor: 'pointer',
                       fontFamily: 'inherit',
@@ -1201,7 +1197,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     sx={{
                       mt: '10px',
                       p: '16px',
-                      borderRadius: '16px',
+                      borderRadius: 'var(--radius-lg)',
                       bgcolor: '#FAFAFB',
                       border: '1px solid rgba(10,10,15,0.08)',
                       transition: 'border-color 150ms ease',
@@ -1210,11 +1206,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                   >
                     <Typography
                       sx={{
-                        fontSize: '12px',
+                        fontSize: '11px',
                         fontWeight: 500,
-                        color: 'rgba(10,10,15,0.45)',
+                        color: '#9A9AA3',
                         textTransform: 'uppercase',
-                        letterSpacing: '0.08em',
+                        letterSpacing: '0.16em',
                         mb: '10px',
                       }}
                     >
@@ -1260,9 +1256,9 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               <Box
                 sx={{
                   p: '12px 14px',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#FAFAFB',
-                  border: '1px solid rgba(10,10,15,0.06)',
+                  border: '1px solid rgba(10,10,15,0.08)',
                 }}
               >
                 <Stack spacing={0.75}>
@@ -1270,11 +1266,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                      <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
                         {t('Network fee')}
                       </Typography>
                       <Tooltip title={feeDisplay.tooltip}>
-                        <Box sx={{ display: 'flex', color: 'rgba(10,10,15,0.3)', cursor: 'help' }}>
+                        <Box sx={{ display: 'flex', color: '#9A9AA3', cursor: 'help' }}>
                           <Iconify icon="eva:info-outline" width={13} />
                         </Box>
                       </Tooltip>
@@ -1282,13 +1278,13 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     <Typography
                       sx={{
                         fontSize: '12px',
-                        fontWeight: 600,
+                        fontWeight: 500,
                         color: '#0A0A0F',
-                        fontFamily: '"Geist Mono", "Courier New", monospace',
+                        fontFamily: '"Geist Mono", ui-monospace, monospace',
                       }}
                     >
                       {feeDisplay.label}{' '}
-                      <Box component="span" sx={{ color: 'rgba(10,10,15,0.45)', fontWeight: 400 }}>
+                      <Box component="span" sx={{ color: '#9A9AA3', fontWeight: 400 }}>
                         {feeDisplay.fiatLabel}
                       </Box>
                     </Typography>
@@ -1306,7 +1302,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                         }}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+                          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
                             {t('Minimum reserve')}
                           </Typography>
                           <Tooltip
@@ -1314,9 +1310,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                               'Stellar requires every account to keep a minimum XLM balance (2 XLM base + 0.5 XLM per trustline/offer). This amount stays in your account and is not sent.'
                             )}
                           >
-                            <Box
-                              sx={{ display: 'flex', color: 'rgba(10,10,15,0.3)', cursor: 'help' }}
-                            >
+                            <Box sx={{ display: 'flex', color: '#9A9AA3', cursor: 'help' }}>
                               <Iconify icon="eva:info-outline" width={13} />
                             </Box>
                           </Tooltip>
@@ -1324,18 +1318,16 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                         <Typography
                           sx={{
                             fontSize: '12px',
-                            fontWeight: 600,
+                            fontWeight: 500,
                             color: '#0A0A0F',
-                            fontFamily: '"Geist Mono", "Courier New", monospace',
+                            fontFamily: '"Geist Mono", ui-monospace, monospace',
                           }}
                         >
                           {((2 + xlmSubentries) * 0.5).toFixed(1)} XLM
                         </Typography>
                       </Box>
                       {savingsBufferApplies && (
-                        <Typography
-                          sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.4 }}
-                        >
+                        <Typography sx={{ fontSize: '11px', color: '#9A9AA3', lineHeight: 1.4 }}>
                           {t(
                             'MAX keeps ~{{buffer}} XLM extra so you can always pay savings deposit & withdrawal fees.',
                             { buffer: SAVINGS_XLM_BUFFER }
@@ -1353,12 +1345,12 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               <Box
                 sx={{
                   p: '12px 14px',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#FAFAFB',
-                  border: '1px solid rgba(10,10,15,0.06)',
+                  border: '1px solid rgba(10,10,15,0.08)',
                 }}
               >
-                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)' }}>
+                <Typography sx={{ fontSize: '12px', color: '#9A9AA3' }}>
                   {t('Fetching fee estimate…')}
                 </Typography>
               </Box>
@@ -1372,15 +1364,15 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               disabled={!isReviewReady}
               onClick={handleReviewClick}
               sx={{
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: '#0A0A0F',
-                fontWeight: 700,
+                fontWeight: 500,
                 fontSize: '15px',
                 py: '13px',
                 textTransform: 'none',
                 letterSpacing: '-0.01em',
-                '&:hover': { bgcolor: '#1a1a25' },
-                '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+                '&:hover': { bgcolor: '#2A2A33' },
+                '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
               }}
             >
               {getButtonLabel()}

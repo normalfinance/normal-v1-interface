@@ -34,16 +34,15 @@ function OnrampButton({
         alignItems: 'center',
         gap: '14px',
         p: '14px 16px',
-        borderRadius: '14px',
+        borderRadius: 'var(--radius-md)',
         border: '1px solid rgba(10,10,15,0.08)',
         bgcolor: '#FFFFFF',
         cursor: 'pointer',
         textAlign: 'left',
         fontFamily: 'inherit',
-        transition: 'border-color 0.15s, box-shadow 0.15s',
+        transition: 'border-color 0.15s',
         '&:hover': {
-          borderColor: 'rgba(10,10,15,0.2)',
-          boxShadow: '0 2px 12px rgba(10,10,15,0.08)',
+          borderColor: 'rgba(10,10,15,0.14)',
         },
       }}
     >
@@ -51,7 +50,7 @@ function OnrampButton({
         sx={{
           width: 40,
           height: 40,
-          borderRadius: '12px',
+          borderRadius: 'var(--radius-md)',
           bgcolor: '#F4F4F7',
           display: 'flex',
           alignItems: 'center',
@@ -62,10 +61,10 @@ function OnrampButton({
         {icon}
       </Box>
       <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0A0A0F', lineHeight: 1.3 }}>
+        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', lineHeight: 1.3 }}>
           {label}
         </Typography>
-        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', mt: '2px' }}>
+        <Typography sx={{ fontSize: '12px', color: '#6B6B76', mt: '2px' }}>
           {description}
         </Typography>
       </Box>
@@ -84,17 +83,16 @@ export function SavingsOnrampCard() {
   return (
     <Box
       sx={{
-        p: '22px',
-        borderRadius: '22px',
+        p: { xs: '20px', md: '24px' },
+        borderRadius: 'var(--radius-lg)',
         border: '1px solid rgba(10,10,15,0.08)',
-        bgcolor: '#FAFAFB',
-        alignSelf: 'start',
+        bgcolor: '#FFFFFF',
       }}
     >
-      <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', mb: '4px' }}>
+      <Typography sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
         {t('Need USDC?')}
       </Typography>
-      <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mb: '16px' }}>
+      <Typography sx={{ fontSize: '13px', color: '#6B6B76', mb: '16px' }}>
         {t('Add funds to start earning.')}
       </Typography>
 

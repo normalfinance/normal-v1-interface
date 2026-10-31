@@ -15,6 +15,7 @@ import { useUserActivity } from '@/hooks/stellar/use-user-activity';
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 
+import { SegmentedControl } from '@/components/_common/brand';
 import MoneyGramDetailModal from '@/components/_common/moneygram-detail-modal';
 import { SwapDetailModal, cctpTransferIdOf } from '@/components/_common/swap-detail-modal';
 
@@ -25,9 +26,9 @@ import type { ActivityTab } from './_shared';
 const ACTIVITY_COLS = '130px minmax(0,1.4fr) 1fr 1fr 1fr minmax(0,1.2fr)';
 
 const COL_HEADER_SX = {
-  fontSize: '10.5px',
+  fontSize: '11px',
   fontWeight: 500,
-  color: 'rgba(10,10,15,0.35)',
+  color: '#9A9AA3',
   textTransform: 'uppercase' as const,
   letterSpacing: '0.16em',
 };
@@ -248,7 +249,7 @@ function PaginationBar({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '8px',
+    borderRadius: 'var(--radius-md)',
     fontSize: '13px',
     ...MONO,
     fontWeight: 400,
@@ -267,7 +268,7 @@ function PaginationBar({
         gap: '4px',
         px: '20px',
         py: '14px',
-        borderTop: '1px solid rgba(10,10,15,0.06)',
+        borderTop: '1px solid rgba(10,10,15,0.08)',
       }}
     >
       <Box
@@ -276,7 +277,7 @@ function PaginationBar({
         disabled={page === 1}
         sx={{
           ...btnBase,
-          color: page === 1 ? 'rgba(10,10,15,0.25)' : 'rgba(10,10,15,0.6)',
+          color: page === 1 ? 'rgba(10,10,15,0.25)' : '#6B6B76',
           cursor: page === 1 ? 'default' : 'pointer',
           '&:hover': page === 1 ? {} : { bgcolor: '#F4F4F7' },
         }}
@@ -289,13 +290,11 @@ function PaginationBar({
           <Box
             component="button"
             onClick={() => onPage(1)}
-            sx={{ ...btnBase, color: 'rgba(10,10,15,0.6)', '&:hover': { bgcolor: '#F4F4F7' } }}
+            sx={{ ...btnBase, color: '#6B6B76', '&:hover': { bgcolor: '#F4F4F7' } }}
           >
             1
           </Box>
-          {left > 2 && (
-            <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.3)', px: '4px' }}>…</Box>
-          )}
+          {left > 2 && <Box sx={{ fontSize: '12px', color: '#9A9AA3', px: '4px' }}>…</Box>}
         </>
       )}
 
@@ -306,7 +305,7 @@ function PaginationBar({
           onClick={() => onPage(p)}
           sx={{
             ...btnBase,
-            color: p === page ? '#FFFFFF' : 'rgba(10,10,15,0.6)',
+            color: p === page ? '#FFFFFF' : '#6B6B76',
             bgcolor: p === page ? '#0A0A0F' : 'transparent',
             borderColor: p === page ? '#0A0A0F' : 'transparent',
             '&:hover': p === page ? {} : { bgcolor: '#F4F4F7' },
@@ -319,12 +318,12 @@ function PaginationBar({
       {right < totalPages && (
         <>
           {right < totalPages - 1 && (
-            <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.3)', px: '4px' }}>…</Box>
+            <Box sx={{ fontSize: '12px', color: '#9A9AA3', px: '4px' }}>…</Box>
           )}
           <Box
             component="button"
             onClick={() => onPage(totalPages)}
-            sx={{ ...btnBase, color: 'rgba(10,10,15,0.6)', '&:hover': { bgcolor: '#F4F4F7' } }}
+            sx={{ ...btnBase, color: '#6B6B76', '&:hover': { bgcolor: '#F4F4F7' } }}
           >
             {totalPages}
           </Box>
@@ -337,7 +336,7 @@ function PaginationBar({
         disabled={page === totalPages}
         sx={{
           ...btnBase,
-          color: page === totalPages ? 'rgba(10,10,15,0.25)' : 'rgba(10,10,15,0.6)',
+          color: page === totalPages ? 'rgba(10,10,15,0.25)' : '#6B6B76',
           cursor: page === totalPages ? 'default' : 'pointer',
           '&:hover': page === totalPages ? {} : { bgcolor: '#F4F4F7' },
         }}
@@ -360,7 +359,7 @@ function TypeTag({ tagKey }: { tagKey: TagKey }) {
         display: 'inline-block',
         px: '10px',
         py: '4px',
-        borderRadius: '999px',
+        borderRadius: 'var(--radius-sm)',
         bgcolor: s.bg,
         color: s.color,
         fontSize: '11px',
@@ -535,55 +534,27 @@ export function ActivityCard({
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '12px',
-          p: '20px 20px 16px',
+          p: { xs: '20px 20px 16px', md: '24px 24px 16px' },
         }}
       >
         <Box sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F' }}>{t('Activity')}</Box>
 
-        <Box
-          sx={{
-            display: 'inline-flex',
-            bgcolor: 'rgba(10,10,15,0.04)',
-            borderRadius: '999px',
-            p: '4px',
-            gap: '2px',
-          }}
-        >
-          {TABS.map((tabItem) => (
-            <Box
-              key={tabItem.value}
-              component="button"
-              onClick={() => handleTabChange(tabItem.value)}
-              sx={{
-                px: '14px',
-                py: '6px',
-                borderRadius: '999px',
-                border: 'none',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'background 150ms, color 150ms',
-                bgcolor: tab === tabItem.value ? '#fff' : 'transparent',
-                color: tab === tabItem.value ? '#0A0A0F' : 'rgba(10,10,15,0.45)',
-                boxShadow: tab === tabItem.value ? '0 1px 2px rgba(10,10,15,0.08)' : 'none',
-              }}
-            >
-              {tabItem.label}
-            </Box>
-          ))}
-        </Box>
+        <SegmentedControl value={tab} onChange={handleTabChange} options={TABS} />
       </Box>
 
       {isLoading ? (
         <Box sx={{ p: '0 12px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} variant="rectangular" height={48} sx={{ borderRadius: '10px' }} />
+            <Skeleton
+              key={i}
+              variant="rectangular"
+              height={48}
+              sx={{ borderRadius: 'var(--radius-md)' }}
+            />
           ))}
         </Box>
       ) : items.length === 0 ? (
-        <Box
-          sx={{ color: 'rgba(10,10,15,0.4)', fontSize: '14px', py: '48px', textAlign: 'center' }}
-        >
+        <Box sx={{ color: '#9A9AA3', fontSize: '14px', py: '48px', textAlign: 'center' }}>
           {t('No activity yet')}
         </Box>
       ) : (
@@ -597,8 +568,8 @@ export function ActivityCard({
                 gap: '16px',
                 px: '14px',
                 py: '10px',
-                borderTop: '1px solid rgba(10,10,15,0.04)',
-                borderBottom: '1px solid rgba(10,10,15,0.04)',
+                borderTop: '1px solid rgba(10,10,15,0.08)',
+                borderBottom: '1px solid rgba(10,10,15,0.08)',
               }}
             >
               {[t('Type'), t('Asset'), t('Amount'), t('Value'), t('Date'), t('Tx')].map((h, i) => (
@@ -634,7 +605,7 @@ export function ActivityCard({
                       gap: '16px',
                       px: '8px',
                       py: '12px',
-                      borderRadius: '10px',
+                      borderRadius: 'var(--radius-md)',
                       cursor: handleRowClick ? 'pointer' : 'default',
                       '&:hover': { bgcolor: 'rgba(10,10,15,0.025)' },
                     }}
@@ -644,10 +615,7 @@ export function ActivityCard({
                     >
                       <TypeTag tagKey={tagKey} />
                       {(activity as Activity & { walletTag?: string }).walletTag && (
-                        <Box
-                          component="span"
-                          sx={{ fontSize: '10.5px', color: 'rgba(10,10,15,0.4)' }}
-                        >
+                        <Box component="span" sx={{ fontSize: '10.5px', color: '#9A9AA3' }}>
                           {(activity as Activity & { walletTag?: string }).walletTag}
                         </Box>
                       )}
@@ -665,7 +633,7 @@ export function ActivityCard({
                             display: 'inline-block',
                             px: '8px',
                             py: '3px',
-                            borderRadius: '999px',
+                            borderRadius: 'var(--radius-sm)',
                             bgcolor: 'rgba(245,158,11,0.1)',
                             color: '#B45309',
                             fontSize: '10px',
@@ -689,7 +657,7 @@ export function ActivityCard({
                             display: 'inline-block',
                             px: '8px',
                             py: '3px',
-                            borderRadius: '999px',
+                            borderRadius: 'var(--radius-sm)',
                             bgcolor: 'rgba(220,38,38,0.1)',
                             color: '#B91C1C',
                             fontSize: '10px',
@@ -708,7 +676,7 @@ export function ActivityCard({
                             display: 'inline-block',
                             px: '8px',
                             py: '3px',
-                            borderRadius: '999px',
+                            borderRadius: 'var(--radius-sm)',
                             bgcolor: 'rgba(245,158,11,0.1)',
                             color: '#B45309',
                             fontSize: '10px',
@@ -743,7 +711,7 @@ export function ActivityCard({
                       {row.value}
                     </Box>
 
-                    <Box sx={{ fontSize: '12px', fontWeight: 400, color: 'rgba(10,10,15,0.5)' }}>
+                    <Box sx={{ fontSize: '12px', fontWeight: 400, color: '#6B6B76' }}>
                       {formatRelative(activity.timestamp)}
                     </Box>
 
@@ -756,7 +724,7 @@ export function ActivityCard({
                             gap: '4px',
                             fontSize: '12px',
                             fontWeight: 400,
-                            color: 'rgba(10,10,15,0.35)',
+                            color: '#9A9AA3',
                             ...MONO,
                           }}
                         >
@@ -779,7 +747,7 @@ export function ActivityCard({
                             gap: '4px',
                             fontSize: '12px',
                             fontWeight: 400,
-                            color: 'rgba(10,10,15,0.35)',
+                            color: '#9A9AA3',
                             ...MONO,
                           }}
                         >
@@ -799,7 +767,7 @@ export function ActivityCard({
                           sx={{
                             fontSize: '12px',
                             fontWeight: 400,
-                            color: 'rgba(10,10,15,0.35)',
+                            color: '#9A9AA3',
                             ...MONO,
                           }}
                         >
