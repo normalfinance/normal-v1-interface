@@ -3,7 +3,13 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getAccessToken } from '@/utils/http';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
-import { needsSecondFactor, MFA_REQUIRED_ERROR } from '@/lib/auth/two-factor';
+import {
+  needsActionCode,
+  needsSecondFactor,
+  MFA_REQUIRED_ERROR,
+  ACTION_CODE_REQUIRED_ERROR,
+  ACTION_CODE_EXPIRED_MESSAGE,
+} from '@/lib/auth/two-factor';
 
 // ---------------------------------------------------------------------------
 // Authentication as the DEFAULT for API routes, not something each route must
@@ -72,4 +78,21 @@ export function withAuth(handler: AuthedHandler, options: WithAuthOptions = {}) 
     }
     return handler(request, { user, params: routeContext?.params ?? {}, accessToken });
   };
+}
+
+/**
+ * The first line of every route that spends. An account with 2FA enters its code
+ * before each action, so a token whose code is old never came through that
+ * screen. Called in the handler, not an option on withAuth, because some routes
+ * only need it for part of what they do. route-auth-conformance lists them.
+ */
+export function actionCodeRefusal(
+  user: AuthedUser,
+  accessToken: string | undefined
+): Response | null {
+  if (!needsActionCode(user, accessToken)) return null;
+  return NextResponse.json(
+    { success: false, error: ACTION_CODE_EXPIRED_MESSAGE, code: ACTION_CODE_REQUIRED_ERROR },
+    { status: 403 }
+  );
 }

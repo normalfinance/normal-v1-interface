@@ -19,13 +19,17 @@ type TwoFactorChallengeProps = {
   onCancel: () => void;
   /** A recovery code removed 2FA and ended every session, so they log in again. */
   onRecovered: () => void;
+  /** Set when the code confirms an action rather than finishing a login. */
+  onVerified?: () => void;
 };
 
 // The second step of signing in. It sits between the first step and the app:
 // the session exists but the provider doesn't count it as signed in until the
-// code upgrades it, so when this succeeds the page simply moves on.
-export function TwoFactorChallenge({ onCancel, onRecovered }: TwoFactorChallengeProps) {
+// code upgrades it, so when this succeeds the page simply moves on. The same
+// screen confirms each action afterwards (components/_common/action-code-gate).
+export function TwoFactorChallenge({ onCancel, onRecovered, onVerified }: TwoFactorChallengeProps) {
   const { t } = useTranslate();
+  const confirmingAction = !!onVerified;
 
   const [useRecoveryCode, setUseRecoveryCode] = useState(false);
   const [code, setCode] = useState('');
@@ -52,7 +56,8 @@ export function TwoFactorChallenge({ onCancel, onRecovered }: TwoFactorChallenge
         code: digits,
       });
       if (verifyError) throw verifyError;
-      // Stays busy: the session just changed, so the page is already moving on.
+      // A login stays busy: the session just changed, so the page is moving on.
+      onVerified?.();
     } catch (err) {
       setCode('');
       setBusy(false);
@@ -92,17 +97,27 @@ export function TwoFactorChallenge({ onCancel, onRecovered }: TwoFactorChallenge
     setBusy(false);
   };
 
-  const heading = useRecoveryCode ? t('Use a recovery code') : t('Enter your code');
-  const subtitle = useRecoveryCode
-    ? t('This turns off two-factor authentication. You can set it up again in Settings.')
-    : t('Open your authenticator app and enter the 6-digit code for Normal.');
+  let heading = t('Enter your code');
+  let subtitle = t('Open your authenticator app and enter the 6-digit code for Normal.');
+  if (useRecoveryCode) {
+    heading = t('Use a recovery code');
+    subtitle = t('This turns off two-factor authentication. You can set it up again in Settings.');
+  } else if (confirmingAction) {
+    heading = t('Confirm with your code');
+    subtitle = t('Enter the 6-digit code from your authenticator app to continue.');
+  }
 
   return (
     <Stack spacing={3}>
       <Stack spacing={0.75}>
         <Typography
           component="h1"
-          sx={{ fontSize: 30, fontWeight: 500, lineHeight: 1.15, letterSpacing: '-0.02em' }}
+          sx={{
+            fontSize: confirmingAction ? 18 : 30,
+            fontWeight: 500,
+            lineHeight: 1.15,
+            letterSpacing: '-0.02em',
+          }}
         >
           {heading}
         </Typography>
@@ -190,7 +205,7 @@ export function TwoFactorChallenge({ onCancel, onRecovered }: TwoFactorChallenge
           {useRecoveryCode ? t('Use your authenticator app') : t('Lost your phone?')}
         </Button>
         <Button variant="text" size="small" disabled={busy} onClick={onCancel} sx={linkButtonSx}>
-          {t('Cancel and log out')}
+          {confirmingAction ? t('Cancel') : t('Cancel and log out')}
         </Button>
       </Stack>
     </Stack>

@@ -5,6 +5,7 @@ import type { Token } from '@normalfinance/types';
 import { BigNumber } from 'bignumber.js';
 import { buildAuthHeaders } from '@/utils/http';
 import { announceTransaction } from '@/lib/tx-events';
+import { confirmAction } from '@/lib/auth/action-code';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 import { BTC_DUST_MESSAGE, BTC_DUST_LIMIT_SAT } from '@/lib/send/native-dust';
@@ -117,6 +118,8 @@ export function createBitcoinAdapter(
       try {
         const amountSat = Math.round(parseFloat(params.amount) * 1e8);
         if (!amountSat || amountSat <= 0) throw new Error('Invalid amount');
+
+        if (!(await confirmAction())) return '';
 
         // Step 1 — build unsigned PSBT on the server
         const { psbtHex, subOrgId } = await buildBtcTransaction(params.destination, amountSat);

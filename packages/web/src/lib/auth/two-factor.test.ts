@@ -1,10 +1,15 @@
 import { it, expect, describe } from '@jest/globals';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 
 import {
   assuranceLevel,
+  needsActionCode,
+  secondsSinceCode,
   hasVerifiedFactor,
   needsSecondFactor,
   twoFactorErrorMessage,
+  ACTION_CODE_EXPIRED_MESSAGE,
+  ACTION_CODE_MAX_AGE_SECONDS,
 } from './two-factor';
 
 const token = (claims: object) => {
@@ -79,5 +84,73 @@ describe('twoFactorErrorMessage', () => {
       'Something went wrong. Please try again.'
     );
     expect(twoFactorErrorMessage(null)).toBe('Something went wrong. Please try again.');
+  });
+});
+
+describe('secondsSinceCode', () => {
+  const now = 1_800_000_000_000;
+  const at = (secondsAgo: number) => now / 1000 - secondsAgo;
+
+  it('measures from the most recent code', () => {
+    const amr = [
+      { method: 'password', timestamp: at(5) },
+      { method: 'totp', timestamp: at(400) },
+      { method: 'totp', timestamp: at(90) },
+    ];
+    expect(secondsSinceCode(token({ amr }), now)).toBe(90);
+  });
+
+  it('accepts both names Supabase uses for an authenticator code', () => {
+    expect(secondsSinceCode(token({ amr: [{ method: 'totp', timestamp: at(10) }] }), now)).toBe(10);
+    expect(secondsSinceCode(token({ amr: [{ method: 'mfa/totp', timestamp: at(10) }] }), now)).toBe(
+      10
+    );
+  });
+
+  it('never counts another sign-in method as a code', () => {
+    const amr = [
+      { method: 'password', timestamp: at(1) },
+      { method: 'otp', timestamp: at(1) },
+    ];
+    expect(secondsSinceCode(token({ amr }), now)).toBeNull();
+  });
+
+  it('treats a missing or malformed claim as no code', () => {
+    expect(secondsSinceCode(token({}), now)).toBeNull();
+    expect(secondsSinceCode(token({ amr: ['totp'] }), now)).toBeNull();
+    expect(secondsSinceCode(token({ amr: [{ method: 'totp' }] }), now)).toBeNull();
+    expect(secondsSinceCode('not-a-token', now)).toBeNull();
+    expect(secondsSinceCode(undefined, now)).toBeNull();
+  });
+});
+
+describe('needsActionCode', () => {
+  const seconds = (ago: number) => Math.floor(Date.now() / 1000) - ago;
+  const withCode = (ago: number) => token({ amr: [{ method: 'totp', timestamp: seconds(ago) }] });
+
+  it('never touches an account without 2FA', () => {
+    expect(needsActionCode({}, token({}))).toBe(false);
+    expect(needsActionCode(unverified, token({}))).toBe(false);
+  });
+
+  it('accepts a code inside the window', () => {
+    expect(needsActionCode(verified, withCode(ACTION_CODE_MAX_AGE_SECONDS - 10))).toBe(false);
+  });
+
+  it('refuses a code outside the window', () => {
+    expect(needsActionCode(verified, withCode(ACTION_CODE_MAX_AGE_SECONDS + 10))).toBe(true);
+  });
+
+  it('refuses when the token shows no code at all', () => {
+    expect(needsActionCode(verified, token({ aal: 'aal2' }))).toBe(true);
+    expect(needsActionCode(verified, undefined)).toBe(true);
+  });
+});
+
+describe('the expired-code message', () => {
+  it('reaches people intact through the shared error formatter', () => {
+    expect(friendlyAppError(new Error(ACTION_CODE_EXPIRED_MESSAGE))).toBe(
+      ACTION_CODE_EXPIRED_MESSAGE
+    );
   });
 });

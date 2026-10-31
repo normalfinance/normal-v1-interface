@@ -12,12 +12,15 @@ import { Box, Stack, Alert, Button, TextField, Typography } from '@mui/material'
 
 import { useSnackbar } from '@/components/template/snackbar';
 import { BLOCK_SX, MONO_FONT } from '@/components/_common/brand';
+import WalletExportDialog from '@/components/_common/wallet-export-dialog';
 
 const RECOVERY_CODES_URL = '/api/auth/two-factor/recovery-codes';
+const WALLETS_URL = '/api/turnkey/wallets';
 const CODE_LENGTH = 6;
 
 type Step =
   | { name: 'idle' }
+  | { name: 'phrase'; wallets: string[]; saved: string[] }
   | { name: 'setup'; factorId: string; qrCode: string; secret: string }
   | { name: 'codes'; codes: string[] }
   | { name: 'confirm'; action: 'turn-off' | 'new-codes' };
@@ -94,6 +97,7 @@ export function TwoFactorCard() {
   const [factor, setFactor] = useState<Factor | null | undefined>(undefined);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [step, setStep] = useState<Step>({ name: 'idle' });
+  const [exportingWallet, setExportingWallet] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,6 +126,37 @@ export function TwoFactorCard() {
     const { codes } = (await res.json()) as { codes: string[] };
     setStep({ name: 'codes', codes });
   };
+
+  // With a code on every send and export, someone who loses their phone and
+  // recovery codes has only this phrase left, so it comes before 2FA can start.
+  // Each wallet has its own. An account with no Normal wallet has none to save,
+  // and a failed lookup stops here rather than skipping the step.
+  const beginTurnOn = async () => {
+    setBusy(true);
+    setError(null);
+    let wallets: string[];
+    try {
+      const res = await authedFetch(WALLETS_URL);
+      if (!res.ok) throw new Error('wallets failed');
+      const data = (await res.json()) as { wallets?: { walletId: string }[] };
+      wallets = (data.wallets ?? []).map(({ walletId }) => walletId);
+    } catch {
+      setError('Something went wrong. Please try again.');
+      setBusy(false);
+      return;
+    }
+    if (wallets.length === 0) {
+      await startSetup();
+      return;
+    }
+    setBusy(false);
+    setStep({ name: 'phrase', wallets, saved: [] });
+  };
+
+  const markPhraseSaved = (walletId: string) =>
+    setStep((current) =>
+      current.name === 'phrase' ? { ...current, saved: [...current.saved, walletId] } : current
+    );
 
   const startSetup = async () => {
     setBusy(true);
@@ -252,6 +287,51 @@ export function TwoFactorCard() {
     </Typography>
   );
 
+  const renderPhrase = (wallets: string[], saved: string[]) => (
+    <>
+      <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
+        {t('Save your recovery phrase first')}
+      </Typography>
+      {renderDescription(
+        "If you lose your phone and your recovery codes, this phrase is the only way back to your funds. Normal can't recover it for you."
+      )}
+      <Stack spacing={1} sx={{ mb: '12px' }}>
+        {wallets.map((walletId, index) => {
+          const isSaved = saved.includes(walletId);
+          const label =
+            wallets.length > 1
+              ? t('Export wallet {{n}}', { n: index + 1 })
+              : t('Export recovery phrase');
+          return (
+            <Button
+              key={walletId}
+              fullWidth
+              disabled={isSaved}
+              onClick={() => setExportingWallet(walletId)}
+              sx={secondaryButtonSx}
+            >
+              {isSaved ? t('Saved') : label}
+            </Button>
+          );
+        })}
+      </Stack>
+      <Button
+        fullWidth
+        variant="contained"
+        disabled={busy || saved.length < wallets.length}
+        onClick={startSetup}
+        sx={primaryButtonSx}
+      >
+        {busy ? t('One moment…') : t('Continue')}
+      </Button>
+      <Stack alignItems="center" sx={{ mt: '4px' }}>
+        <Button variant="text" size="small" disabled={busy} onClick={backToIdle}>
+          {t('Cancel')}
+        </Button>
+      </Stack>
+    </>
+  );
+
   const renderSetup = (qrCode: string, secret: string) => (
     <>
       {renderDescription(
@@ -350,7 +430,9 @@ export function TwoFactorCard() {
   const renderIdle = () =>
     factor ? (
       <>
-        {renderDescription("You'll enter a code from your authenticator app each time you log in.")}
+        {renderDescription(
+          "You'll enter a code from your authenticator app when you log in and before you send, swap, deposit or withdraw."
+        )}
         {remaining !== null && (
           <Typography sx={{ fontSize: '13px', color: '#0A0A0F', mb: '12px' }}>
             {t('Recovery codes left')}: <strong>{remaining}</strong>
@@ -374,13 +456,13 @@ export function TwoFactorCard() {
     ) : (
       <>
         {renderDescription(
-          'Ask for a 6-digit code from an authenticator app every time you log in, so your email or password alone is never enough.'
+          'Ask for a 6-digit code from an authenticator app when you log in and before you send, swap, deposit or withdraw, so your email or password alone is never enough.'
         )}
         <Button
           fullWidth
           variant="contained"
           disabled={busy}
-          onClick={startSetup}
+          onClick={beginTurnOn}
           sx={primaryButtonSx}
         >
           {busy ? t('One moment…') : t('Turn on')}
@@ -393,6 +475,7 @@ export function TwoFactorCard() {
       {step.name !== 'codes' && renderHeader()}
 
       {step.name === 'idle' && renderIdle()}
+      {step.name === 'phrase' && renderPhrase(step.wallets, step.saved)}
       {step.name === 'setup' && renderSetup(step.qrCode, step.secret)}
       {step.name === 'codes' && renderCodes(step.codes)}
       {step.name === 'confirm' && renderConfirm(step.action)}
@@ -402,6 +485,15 @@ export function TwoFactorCard() {
           {t(error)}
         </Alert>
       )}
+
+      <WalletExportDialog
+        open={!!exportingWallet}
+        preselectWalletId={exportingWallet ?? undefined}
+        requireConfirm
+        cancellable
+        onConfirmedBackup={() => exportingWallet && markPhraseSaved(exportingWallet)}
+        onClose={() => setExportingWallet(null)}
+      />
     </Box>
   );
 }

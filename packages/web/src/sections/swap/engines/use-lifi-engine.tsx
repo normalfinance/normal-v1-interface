@@ -10,6 +10,7 @@ import { fCurrency } from '@/utils/format-number';
 import { useDebounce } from '@/hooks/use-debounce';
 import { MONO } from '@/sections/portfolio/_shared';
 import { executeLifiSwap } from '@/lib/lifi/execute';
+import { confirmAction } from '@/lib/auth/action-code';
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
@@ -326,6 +327,8 @@ export function useLifiEngine({
     if (!quote) return;
     setExecuting(true);
     try {
+      if (!(await confirmAction())) return;
+
       // ------------------------------------------------------------------
       // Doc 95 Wave 6: a LI.FI quote carries a BUILT transaction. For Bitcoin
       // that is a Chainflip deposit CHANNEL, which expires — so executing a

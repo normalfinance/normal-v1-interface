@@ -3,11 +3,11 @@ import type { FeeEscrowKind, FeeEscrowEntry } from '@/server/fee-escrow';
 import type { TxRecordInput, SwapRecordInput, SavingsRecordInput } from '@/server/tx-records';
 
 import { cookies } from 'next/headers';
-import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { networkFromCookie } from '@/server/network-cookie';
+import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 import { getFeesDepositAddress } from '@/lib/build-fee-payment';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
@@ -130,7 +130,9 @@ function formatResultCodes(resultCodes: unknown): string {
   return parts.length ? parts.join(', ') : 'transaction rejected';
 }
 
-export const POST = withAuth(async (request: NextRequest, { user }) => {
+export const POST = withAuth(async (request: NextRequest, { user, accessToken }) => {
+  const refusal = actionCodeRefusal(user, accessToken);
+  if (refusal) return refusal;
   const { success: withinLimit } = await rateLimiter.limit(user.id);
   if (!withinLimit) {
     return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });

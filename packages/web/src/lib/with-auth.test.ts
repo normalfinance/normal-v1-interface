@@ -18,7 +18,7 @@ const { getAuthenticatedUser } = jest.requireMock('@/lib/createSupabaseServerCli
   >;
 };
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { withAuth } = require('@/lib/with-auth') as typeof WithAuthModule;
+const { withAuth, actionCodeRefusal } = require('@/lib/with-auth') as typeof WithAuthModule;
 
 const request = new Request('http://localhost/api/test') as never;
 
@@ -103,5 +103,31 @@ describe('withAuth', () => {
     );
 
     expect(await res.json()).toEqual({ id: 'abc' });
+  });
+});
+
+describe('actionCodeRefusal', () => {
+  const secondsAgo = (seconds: number) => Math.floor(Date.now() / 1000) - seconds;
+  const tokenWithCode = (seconds: number) =>
+    `header.${Buffer.from(
+      JSON.stringify({ aal: 'aal2', amr: [{ method: 'totp', timestamp: secondsAgo(seconds) }] })
+    ).toString('base64url')}.signature`;
+
+  it('lets an account without 2FA straight through', () => {
+    expect(actionCodeRefusal({ id: 'user-1' } as never, tokenAt('aal1'))).toBeNull();
+  });
+
+  it('lets a code entered moments ago through', () => {
+    expect(actionCodeRefusal(withTwoFactor as never, tokenWithCode(20))).toBeNull();
+  });
+
+  it('refuses an old code with a message the flows can show', async () => {
+    const res = actionCodeRefusal(withTwoFactor as never, tokenWithCode(3600));
+
+    expect(res?.status).toBe(403);
+    const body = await res?.json();
+    expect(body.code).toBe('action_code_required');
+    expect(body.success).toBe(false);
+    expect(body.error).toMatch(/nothing was sent/);
   });
 });

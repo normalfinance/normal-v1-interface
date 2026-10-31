@@ -30,6 +30,7 @@ import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executeLifiSwap } from '@/lib/lifi/execute';
 import { abortTimeout } from '@/utils/abort-timeout';
 import { scopedAmountWire } from '@/lib/cctp/amounts';
+import { confirmAction } from '@/lib/auth/action-code';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
@@ -1191,6 +1192,7 @@ export function useCctpEngine({
     // for user to enable one signature when swapping"). Safe now that the
     // ceremony is idempotent; "Not now" is remembered and never re-asks.
     await maybeOfferConsent();
+    if (!(await confirmAction())) return;
     setStageError(null);
     setRefundStage(null);
     setRefundError(null);

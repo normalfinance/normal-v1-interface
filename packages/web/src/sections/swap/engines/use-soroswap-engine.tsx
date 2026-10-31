@@ -5,6 +5,7 @@ import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { useDebounce } from '@/hooks/use-debounce';
+import { confirmAction } from '@/lib/auth/action-code';
 import { usePersistStore } from '@normalfinance/state';
 import { awaitTxVisible } from '@/lib/stellar/await-tx-visible';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
@@ -174,6 +175,7 @@ export function useSoroswapEngine({
 
   const handleSwap = useCallback(async () => {
     if (!quote) return;
+    if (!(await confirmAction())) return;
     setError(null);
     setDoneHash(null);
     setWasEmbedded(!!quote.embedded);

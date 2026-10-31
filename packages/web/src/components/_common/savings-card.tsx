@@ -142,14 +142,10 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     if (!amount || parseFloat(amount) <= 0) return;
     const parsedAmt = parseFloat(amount);
 
-    if (mode === 'deposit') {
-      const hash = await deposit(amount);
-      if (hash) {
-        setSpentOnDeposits((prev) => prev + parsedAmt);
-      }
-    } else {
-      await withdraw(amount);
-    }
+    // Nothing happened, so don't make them type it again.
+    const hash = await (mode === 'deposit' ? deposit(amount) : withdraw(amount));
+    if (!hash) return;
+    if (mode === 'deposit') setSpentOnDeposits((prev) => prev + parsedAmt);
     setAmount('');
   }, [mode, amount, deposit, withdraw]);
 

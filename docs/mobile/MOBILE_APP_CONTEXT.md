@@ -247,5 +247,18 @@ route.** Installed apps can't be force-updated, so this ships in the app before 
 - **Turning it on in the app:** `mfa.enroll({ factorType: 'totp', friendlyName: 'Authenticator app',
   issuer: 'Normal' })`. On a phone show `totp.uri` as an "open in authenticator" link, since a QR code
   can't be scanned on its own screen. Then `POST /api/auth/two-factor/recovery-codes` and show the codes once.
+- **Saving the phrase first:** the web requires the recovery phrase to be saved for every wallet before
+  turning 2FA on, because it's the only way back for someone who loses their phone and recovery codes.
+  Do the same on the phone.
+- **The code before every action:** an account with 2FA enters a fresh code before each send, swap,
+  deposit, withdrawal, cash-out, phrase export and autopilot grant. Call `mfa.challengeAndVerify` as above
+  at the start of the action, once per press, not per signature. Accounts without 2FA skip this.
+  `cctp/transfers`, `fees/execute-pair`, `savings/deposit`, `savings/withdraw`, `send/execute`,
+  `send/stellar`, `swap/submit-single`, `turnkey/broadcast-btc` and `turnkey/build-btc-tx` refuse a code
+  older than 5 minutes with `403 { "code": "action_code_required", "error": "<message to show>" }`, having
+  sent nothing. CCTP refunds, finishing a swap and autopilot never ask, so a lost phone can't strand funds.
+  2FA accounts submit Stellar sends through `POST /api/send/stellar` with `{ signedXdr }` instead of going
+  straight to Horizon. Answers: 200 `{ hash }`; 400 `{ resultCodes }`; 502 means no verdict, so check the
+  chain before retrying.
 - **Passkey emails:** `notifyNewDevice` still only logs. It's deferred to the mobile work; Supabase can't
   send it because passkeys live in Turnkey, so use the same email provider as Supabase's SMTP.

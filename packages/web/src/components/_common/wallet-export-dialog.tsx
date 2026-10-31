@@ -21,6 +21,7 @@
 import { useTranslate } from '@/locales';
 import { format } from '@normalfinance/utils';
 import { buildAuthHeaders } from '@/utils/http';
+import { confirmAction } from '@/lib/auth/action-code';
 import { CHAINS, CHAIN_IDS } from '@/lib/chains/registry';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { runWebauthnCeremony } from '@/lib/turnkey/webauthn-guard';
@@ -59,6 +60,8 @@ export default function WalletExportDialog({
    *  confirm they saved the phrase before the flow proceeds. onClose is
    *  disabled until 'revealed'; onConfirmedBackup fires on the checkbox. */
   requireConfirm = false,
+  /** Lets someone back out of mandatory mode, for flows they chose to start. */
+  cancellable = false,
   onConfirmedBackup,
 }: {
   open: boolean;
@@ -68,6 +71,7 @@ export default function WalletExportDialog({
    *  a different seed than the row they clicked. */
   preselectWalletId?: string;
   requireConfirm?: boolean;
+  cancellable?: boolean;
   onConfirmedBackup?: () => void;
 }) {
   const { t } = useTranslate();
@@ -139,16 +143,19 @@ export default function WalletExportDialog({
   const handleClose = useCallback(() => {
     // In mandatory mode the dialog can only close once the phrase has been
     // revealed AND the user ticked "I saved it" — never before.
-    if (requireConfirm && !(phase === 'revealed' && confirmed)) return;
+    if (requireConfirm && !cancellable && !(phase === 'revealed' && confirmed)) return;
     teardown();
     setPhase('warn');
     setError(null);
     setConfirmed(false);
     onClose();
-  }, [requireConfirm, phase, confirmed, teardown, onClose]);
+  }, [requireConfirm, cancellable, phase, confirmed, teardown, onClose]);
 
   const reveal = useCallback(async () => {
     setError(null);
+    // The phrase is the whole wallet, so without this the code on every other
+    // action would mean nothing.
+    if (!(await confirmAction())) return;
     setPhase('revealing');
     try {
       const wallet = await getTurnkeyWalletInfo();
@@ -238,7 +245,7 @@ export default function WalletExportDialog({
     }
   }, [t, teardown, seed?.walletId, seedsFailed]);
 
-  const locked = requireConfirm && !(phase === 'revealed' && confirmed);
+  const locked = requireConfirm && !cancellable && !(phase === 'revealed' && confirmed);
 
   return (
     <Dialog
