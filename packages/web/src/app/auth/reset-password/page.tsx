@@ -1,11 +1,12 @@
 'use client';
 
+import { paths } from '@/routes/paths';
 import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { updatePassword } from '@/services/auth';
-import { clearLoginIntent } from '@/lib/loginIntent';
+import { clearLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 import { createSupabaseClientWithUrlDetection } from '@/lib/createSupabaseClient';
 
 import { Box, Stack, Button, TextField, Typography, CircularProgress } from '@mui/material';
@@ -139,13 +140,16 @@ const ResetPasswordPage = () => {
       const {
         data: { session: currentSession },
       } = await supabase.auth.getSession();
-      const userEmail = currentSession?.user?.email || '';
       setStatus('success');
       setTimeout(() => {
-        const redirectUrl = userEmail
-          ? `/?passwordResetSuccess=true&email=${encodeURIComponent(userEmail)}`
-          : '/?passwordResetSuccess=true';
-        router.replace(redirectUrl);
+        // The reset link signs the user in, so they normally go straight to
+        // the app, through the same wallet step as any other login.
+        if (currentSession) {
+          rememberLoginIntent();
+          router.replace(paths.portfolio);
+        } else {
+          router.replace(`${paths.auth.login}?passwordReset=1`);
+        }
       }, 2000);
     } catch (err) {
       setStatus('error');

@@ -33,6 +33,10 @@ export const paths = {
     details: (symbol: string) => `/assets/${symbol}`,
   },
   settings: '/settings',
+  auth: {
+    login: '/login',
+    signup: '/signup',
+  },
   transaction: {
     root: '/trx',
     details: (hash: string) => `/trx/${hash}`,

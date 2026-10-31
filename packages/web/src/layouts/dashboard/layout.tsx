@@ -5,7 +5,9 @@ import type { NavSectionProps } from '@/components/template/nav-section';
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { usePathname } from '@/routes/hooks';
 import { isTestnet } from '@normalfinance/utils';
+import { isAuthPage } from '@/lib/auth/auth-routes';
 
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
@@ -56,6 +58,8 @@ export function DashboardLayout({
 
   const settings = useSettingsContext();
 
+  const pathname = usePathname();
+
   const navVars = dashboardNavColorVars(theme, settings.state.navColor, settings.state.navLayout);
 
   const isNavMini = settings.state.navLayout === 'mini';
@@ -97,6 +101,9 @@ export function DashboardLayout({
   const renderFooter = () => <FooterSection />;
 
   const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
+
+  // Sign-in is a full-screen page of its own: no navbar, no footer.
+  if (isAuthPage(pathname)) return <>{children}</>;
 
   return (
     <LayoutSection

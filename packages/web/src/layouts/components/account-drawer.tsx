@@ -12,16 +12,17 @@ import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, logger } from '@normalfinance/utils';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { usePersistStore } from '@normalfinance/state';
+import { useGoToLogin } from '@/hooks/use-go-to-login';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getLinkedWallets } from '@/services/linked-wallets';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { clearLoginIntent, consumeLoginIntent } from '@/lib/loginIntent';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import { CHAINS, CHAIN_IDS, getChainAddress, availableChains } from '@/lib/chains/registry';
-import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
 import AddOutlined from '@mui/icons-material/AddOutlined';
 import CloseOutlined from '@mui/icons-material/CloseOutlined';
@@ -318,6 +319,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const persist = usePersistStore();
   const { t } = useTranslate();
   const router = useRouter();
+  const goToLogin = useGoToLogin();
   const searchParams = useSearchParams();
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
   const {
@@ -400,12 +402,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [wizardInitialStep, setWizardInitialStep] = useState<WizardStep | undefined>(undefined);
-  const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
   const [showImportOptionInSelection, setShowImportOptionInSelection] = useState(false);
-  const [resetEmail, setResetEmail] = useState<string | null>(null);
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
 
   const handleDisconnect = async () => {
@@ -507,8 +507,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   const handleConnectClick = async () => {
     if (!session) {
-      rememberLoginIntent();
-      setShowLoginModal(true);
+      goToLogin();
       return;
     }
 
@@ -524,19 +523,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [showLoginModal]);
 
   useEffect(() => {
-    const passwordResetParam = searchParams.get('passwordResetSuccess');
-    const emailParam = searchParams.get('email');
-    if (passwordResetParam === 'true') {
-      setPasswordResetSuccess(true);
-      if (emailParam) {
-        setResetEmail(decodeURIComponent(emailParam));
-      }
-      setShowLoginModal(true);
-      router.replace('/', { scroll: false });
-    }
-  }, [searchParams, router]);
-
-  useEffect(() => {
     if (searchParams.get('setup') !== 'continue') return;
     // Legacy onramp return: savings setup (activation + trustline) now completes
     // on /savings itself, so just land the user there — the savings card guides
@@ -546,14 +532,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   useEffect(() => {
     const handler = () => {
-      if (!session) {
-        rememberLoginIntent();
-        setShowLoginModal(true);
-      }
+      if (!session) goToLogin();
     };
     window.addEventListener('nf:open-login', handler);
     return () => window.removeEventListener('nf:open-login', handler);
-  }, [session]);
+  }, [session, goToLogin]);
 
   // Opens the wizard regardless of session — used when a logged-in user
   // starts an action that needs a wallet they don't have yet (lazy setup).
@@ -572,10 +555,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
         hasHandledAuthRef.current = false;
       }
       setIsAutoConnecting(false);
-      // Don't close the wizard if it's currently open handling its own flow
-      if (!passwordResetSuccess && !showLoginModalRef.current) {
-        setShowLoginModal(false);
-      }
       return;
     }
 
@@ -596,7 +575,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
       setIsAutoConnecting(false);
       return;
     }
-  }, [authLoading, session, passwordResetSuccess, isWalletConnected]);
+  }, [authLoading, session, isWalletConnected]);
 
   return (
     <>
@@ -927,8 +906,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         } catch {
                           /* stale session — nothing to clear */
                         }
-                        setWizardInitialStep(undefined);
-                        setShowLoginModal(true);
+                        goToLogin();
                       }}
                       sx={{ borderRadius: 1.5, px: 3 }}
                     >
@@ -1059,11 +1037,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
         onClose={() => {
           setShowLoginModal(false);
           setWizardInitialStep(undefined);
-          setPasswordResetSuccess(false);
-          setResetEmail(null);
         }}
-        passwordResetSuccess={passwordResetSuccess}
-        resetEmail={resetEmail}
       />
       <WalletSelectionModal
         open={showWalletSelection}

@@ -10,6 +10,7 @@ import { buildAuthHeaders } from '@/utils/http';
 import { supabase } from '@/lib/createSupabaseClient';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
+import { consumeMarketingOptIn } from '@/lib/auth/auth-routes';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
@@ -17,7 +18,6 @@ import { readExternalWalletMemo } from '@/lib/wallet-reconnect-memo';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { importMnemonicIntoTurnkey } from '@/lib/turnkey/import-mnemonic';
-import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { shouldAdoptIntoSlot, shouldReattachExternalOnLogin } from '@/lib/wallet-slot';
@@ -38,16 +38,6 @@ import {
   validatePrivateKey,
   createCoinbasePayOnrampURL,
 } from '@normalfinance/utils';
-import {
-  verifyOtp,
-  signInWithOtp,
-  resetPassword,
-  verifySignupOtp,
-  signInWithGoogle,
-  signInWithPassword,
-  signUpWithPassword,
-  resendConfirmationEmail,
-} from '@/services/auth';
 
 import { alpha, useTheme } from '@mui/material/styles';
 import {
@@ -60,14 +50,11 @@ import {
   Dialog,
   Divider,
   Tooltip,
-  Checkbox,
   TextField,
   IconButton,
   Typography,
   DialogContent,
-  Link as MuiLink,
   CircularProgress,
-  FormControlLabel,
 } from '@mui/material';
 
 import { Iconify } from '@/components/template/iconify';
@@ -81,8 +68,7 @@ import { GetStartedPicker } from './get-started-picker';
 // ---------------------------------------------------------------------------
 
 export type WizardStep =
-  | 'sign-in'
-  | 'verify-email'
+  | 'account-check'
   | 'get-started'
   | 'choose-wallet'
   | 'create-wallet'
@@ -92,15 +78,13 @@ export type WizardStep =
   | 'all-set'
   | 'linked-accounts';
 
-type AuthMode = 'magic-link' | 'password';
 type ImportType = 'mnemonic' | 'private-key';
 
 const TOTAL_DOTS = 6;
 
 // Maps each step to its dot position (0-indexed, 0–5)
 const STEP_DOT: Record<WizardStep, number> = {
-  'sign-in': 0,
-  'verify-email': 0,
+  'account-check': 0,
   'get-started': 1,
   'choose-wallet': 1,
   'create-wallet': 2,
@@ -112,8 +96,7 @@ const STEP_DOT: Record<WizardStep, number> = {
 };
 
 const STEP_NUMBER: Record<WizardStep, number> = {
-  'sign-in': 1,
-  'verify-email': 1,
+  'account-check': 1,
   'get-started': 2,
   'choose-wallet': 2,
   'create-wallet': 3,
@@ -125,8 +108,7 @@ const STEP_NUMBER: Record<WizardStep, number> = {
 };
 
 const STEP_LABEL: Record<WizardStep, string> = {
-  'sign-in': 'SIGN IN',
-  'verify-email': 'VERIFY EMAIL',
+  'account-check': 'SIGN IN',
   'get-started': 'GET STARTED',
   'choose-wallet': 'CHOOSE WALLET',
   'create-wallet': 'CREATE WALLET',
@@ -150,18 +132,10 @@ const PREV_STEP: Partial<Record<WizardStep, WizardStep>> = {
 export type OnboardingWizardProps = {
   open: boolean;
   onClose: () => void;
-  passwordResetSuccess?: boolean;
-  resetEmail?: string | null;
   initialStep?: WizardStep;
 };
 
-export default function OnboardingWizard({
-  open,
-  onClose,
-  passwordResetSuccess = false,
-  resetEmail = null,
-  initialStep,
-}: OnboardingWizardProps) {
+export default function OnboardingWizard({ open, onClose, initialStep }: OnboardingWizardProps) {
   const theme = useTheme();
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
@@ -170,7 +144,6 @@ export default function OnboardingWizard({
   const config = useStellarConfig();
   const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
   const { session, isLoading: authHookLoading } = useSupabaseAuth();
-  const { disclaimer, setDisclaimerAccepted } = persist;
 
   const { importWalletFromMnemonic, importWalletFromPrivateKey, connectWalletWithoutKeypair } =
     useNormalWallet();
@@ -180,7 +153,9 @@ export default function OnboardingWizard({
   const { addTrustLine, txBroadcasting: isAddingTrustline } = useTrustLine();
 
   // ── Navigation ───────────────────────────────────────────────────────────
-  const [step, setStep] = useState<WizardStep>('sign-in');
+  // 'account-check' is the silent first step: the user is signed in and
+  // handleAfterAuth is working out where they go. Nothing is shown during it.
+  const [step, setStep] = useState<WizardStep>('account-check');
   const [wizardWalletAddress, setWizardWalletAddress] = useState('');
 
   // ── Account status ────────────────────────────────────────────────────────
@@ -190,27 +165,6 @@ export default function OnboardingWizard({
     hasUsdcTrustline,
     refetch: refetchAccountStatus,
   } = useAccountStatus(wizardWalletAddress, { assetIssuer: savingsUsdcIssuer });
-
-  // ── Auth state ────────────────────────────────────────────────────────────
-  const [tosAccepted, setTosAccepted] = useState(disclaimer.accepted);
-  const [showTosHelper, setShowTosHelper] = useState(false);
-  const [marketingConsent, setMarketingConsent] = useState(false);
-  const [authMode, setAuthMode] = useState<AuthMode>('password');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpToken, setOtpToken] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [forgotPassword, setForgotPassword] = useState(false);
-  const [resetEmailSent, setResetEmailSent] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [verifyEmailAddress, setVerifyEmailAddress] = useState('');
-  const [isResendingConfirmation, setIsResendingConfirmation] = useState(false);
-  const [signupCode, setSignupCode] = useState('');
-  const [signupCodeError, setSignupCodeError] = useState<string | null>(null);
-  const [isVerifyingSignup, setIsVerifyingSignup] = useState(false);
 
   // ── Create-wallet (Turnkey) state ─────────────────────────────────────────
   const [isCreatingWallet, setIsCreatingWallet] = useState(false);
@@ -232,7 +186,6 @@ export default function OnboardingWizard({
   const [isCoinbaseLoading, setIsCoinbaseLoading] = useState(false);
   const [isCheckingXlm, setIsCheckingXlm] = useState(false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const turnstileRef = useRef<TurnstileInstance>(null);
 
   // ── Trustline state ───────────────────────────────────────────────────────
   const [trustlineError, setTrustlineError] = useState<string | null>(null);
@@ -252,7 +205,6 @@ export default function OnboardingWizard({
   const [isReturningUser, setIsReturningUser] = useState(false);
 
   // ── Derived ──────────────────────────────────────────────────────────────
-  const isTosAcceptanceMissing = !tosAccepted;
   const dotIndex = STEP_DOT[step];
   const stepNumber = STEP_NUMBER[step];
   const canGoBack = !!PREV_STEP[step];
@@ -261,8 +213,6 @@ export default function OnboardingWizard({
 
   useEffect(() => {
     if (open) {
-      setTosAccepted(disclaimer.accepted);
-      setShowTosHelper(false);
       if (initialStep) {
         setStep(initialStep);
         // Seed the wallet address so fund-xlm / add-trustline screens work
@@ -272,14 +222,7 @@ export default function OnboardingWizard({
         }
       }
     }
-  }, [open, disclaimer.accepted]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (passwordResetSuccess && open) {
-      setAuthMode('password');
-      if (resetEmail) setEmail(resetEmail);
-    }
-  }, [passwordResetSuccess, open, resetEmail]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasHandledAuthRef = useRef(false);
   const syncMarketingOptIn = useCallback(async (optIn: boolean) => {
@@ -299,7 +242,7 @@ export default function OnboardingWizard({
   const handleAfterAuth = useCallback(async () => {
     try {
       const wallets = await getLinkedWallets();
-      if (marketingConsent) syncMarketingOptIn(true);
+      if (consumeMarketingOptIn()) syncMarketingOptIn(true);
 
       if (wallets.length === 0) {
         // New user — asset-first. No wallet is created until they pick an asset.
@@ -360,7 +303,7 @@ export default function OnboardingWizard({
       logger.error('[OnboardingWizard] handleAfterAuth error:', err);
       setStep('get-started');
     }
-  }, [marketingConsent, syncMarketingOptIn, connectWalletWithoutKeypair, persist, onClose]);
+  }, [syncMarketingOptIn, connectWalletWithoutKeypair, persist, onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -369,7 +312,7 @@ export default function OnboardingWizard({
     if (
       !initialStep &&
       session &&
-      (step === 'sign-in' || step === 'verify-email') &&
+      step === 'account-check' &&
       !authHookLoading &&
       !hasHandledAuthRef.current
     ) {
@@ -378,6 +321,11 @@ export default function OnboardingWizard({
     }
     if (!session) hasHandledAuthRef.current = false;
   }, [open, session, step, authHookLoading, handleAfterAuth, initialStep]);
+
+  // Signing in happens on /login now, so there's nothing to show without a session.
+  useEffect(() => {
+    if (open && !session && !authHookLoading) onClose();
+  }, [open, session, authHookLoading, onClose]);
 
   // Generate QR when entering fund-xlm
   useEffect(() => {
@@ -477,15 +425,6 @@ export default function OnboardingWizard({
     }
   };
 
-  const persistTos = async () => {
-    if (tosAccepted) await setDisclaimerAccepted(true);
-  };
-  const enforceTos = (): boolean => {
-    if (!isTosAcceptanceMissing) return true;
-    setShowTosHelper(true);
-    return false;
-  };
-
   const handleBack = () => {
     const prev = PREV_STEP[step];
     if (!prev) return;
@@ -504,23 +443,8 @@ export default function OnboardingWizard({
 
   const fullReset = () => {
     stopPolling();
-    setStep('sign-in');
+    setStep('account-check');
     setWizardWalletAddress('');
-    setEmail('');
-    setPassword('');
-    setOtpToken('');
-    setOtpSent(false);
-    setAuthError(null);
-    setAuthMode('password');
-    setIsSignUp(false);
-    setForgotPassword(false);
-    setResetEmailSent(false);
-    setCaptchaToken(null);
-    setVerifyEmailAddress('');
-    setIsResendingConfirmation(false);
-    setSignupCode('');
-    setSignupCodeError(null);
-    setIsVerifyingSignup(false);
     setWalletCreateError(null);
     setIsCreatingWallet(false);
     setImportMnemonic('');
@@ -540,153 +464,6 @@ export default function OnboardingWizard({
 
   const handleClose = () => {
     onClose();
-  };
-
-  // ── Auth handlers ─────────────────────────────────────────────────────────
-
-  const resetCaptcha = () => {
-    turnstileRef.current?.reset();
-    setCaptchaToken(null);
-  };
-
-  const handleGoogle = async () => {
-    if (!enforceTos()) return;
-    setIsAuthLoading(true);
-    setAuthError(null);
-    try {
-      await persistTos();
-      await signInWithGoogle();
-    } catch (err: any) {
-      setAuthError(err.message || t('Unable to start Google sign-in.'));
-      setIsAuthLoading(false);
-    }
-  };
-
-  const handleEmailAuth = async () => {
-    if (!enforceTos()) return;
-    if (!email.trim()) {
-      setAuthError(t('Please enter your email address'));
-      return;
-    }
-    if (!captchaToken) {
-      setAuthError(t('Please complete the captcha'));
-      return;
-    }
-    if (authMode === 'password' && !password.trim()) {
-      setAuthError(t('Please enter your password'));
-      return;
-    }
-    setIsAuthLoading(true);
-    setAuthError(null);
-    try {
-      await persistTos();
-      if (authMode === 'password') {
-        if (isSignUp) {
-          const data = await signUpWithPassword(email.trim(), password, captchaToken);
-          setIsAuthLoading(false);
-          if (!data.session) {
-            // Email confirmation required — show verify-email step
-            setVerifyEmailAddress(email.trim());
-            setStep('verify-email');
-          }
-          // If session exists (auto-confirm), the auth effect handles navigation
-        } else {
-          await signInWithPassword(email.trim(), password, captchaToken);
-        }
-      } else {
-        await signInWithOtp(email.trim(), captchaToken);
-        setOtpSent(true);
-        setIsAuthLoading(false);
-      }
-    } catch (err: any) {
-      setAuthError(err.message || t('Unable to sign in. Please try again.'));
-      setIsAuthLoading(false);
-      resetCaptcha();
-    }
-  };
-
-  const handleVerifyOtp = async (token?: string) => {
-    if (!enforceTos()) return;
-    const code = token ?? otpToken;
-    if (!code.trim() || code.length !== 6) {
-      setAuthError(t('Please enter the 6-digit code'));
-      return;
-    }
-    setIsAuthLoading(true);
-    setAuthError(null);
-    try {
-      await persistTos();
-      await verifyOtp(email.trim(), code.trim());
-    } catch (err: any) {
-      setAuthError(err.message || t('Invalid code. Please try again.'));
-      setIsAuthLoading(false);
-    }
-  };
-
-  const handleOtpChange = (value: string) => {
-    const numeric = value.replace(/\D/g, '').slice(0, 6);
-    setOtpToken(numeric);
-    setAuthError(null);
-    if (numeric.length === 6) handleVerifyOtp(numeric);
-  };
-
-  const handleForgotPassword = async () => {
-    if (!email.trim()) {
-      setAuthError(t('Please enter your email address'));
-      return;
-    }
-    if (!captchaToken) {
-      setAuthError(t('Please complete the captcha'));
-      return;
-    }
-    setIsAuthLoading(true);
-    setAuthError(null);
-    try {
-      await resetPassword(email.trim(), captchaToken);
-      setResetEmailSent(true);
-    } catch (err: any) {
-      setAuthError(err.message || t('Unable to send password reset email.'));
-      resetCaptcha();
-    } finally {
-      setIsAuthLoading(false);
-    }
-  };
-
-  const handleResendConfirmation = async () => {
-    if (!verifyEmailAddress) return;
-    setIsResendingConfirmation(true);
-    try {
-      await resendConfirmationEmail(verifyEmailAddress);
-      enqueueSnackbar(t('Confirmation email resent!'), { variant: 'success' });
-    } catch (err: any) {
-      enqueueSnackbar(err?.message || t('Failed to resend confirmation email'), {
-        variant: 'error',
-      });
-    } finally {
-      setIsResendingConfirmation(false);
-    }
-  };
-
-  // Confirms the sign-up with the emailed code. On success Supabase returns a
-  // session and the auth effect moves the wizard on, same as any other sign-in.
-  const handleVerifySignup = async (code: string) => {
-    if (!verifyEmailAddress || isVerifyingSignup) return;
-    setIsVerifyingSignup(true);
-    setSignupCodeError(null);
-    try {
-      await verifySignupOtp(verifyEmailAddress, code);
-    } catch (err: any) {
-      setSignupCodeError(err?.message || t('Invalid code. Please try again.'));
-      setSignupCode('');
-      setIsVerifyingSignup(false);
-    }
-  };
-
-  const handleSignupCodeChange = (value: string) => {
-    const numeric = value.replace(/\D/g, '').slice(0, 6);
-    setSignupCode(numeric);
-    setSignupCodeError(null);
-    if (numeric.length === 6) handleVerifySignup(numeric);
   };
 
   // ── Wallet creation handler (Turnkey) ─────────────────────────────────────
@@ -993,449 +770,6 @@ export default function OnboardingWizard({
   };
 
   // ── Step renderers ────────────────────────────────────────────────────────
-
-  const renderSignIn = () => (
-    <Stack spacing={2.5}>
-      {passwordResetSuccess && (
-        <Alert severity="success" sx={{ borderRadius: 2 }}>
-          {t('Password updated! You can now sign in with your new password.')}
-        </Alert>
-      )}
-
-      <Box>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
-          {t('Welcome to Normal')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("Sign in or create an account. We'll set up your wallet next.")}
-        </Typography>
-      </Box>
-
-      {showTosHelper && isTosAcceptanceMissing && (
-        <Alert severity="warning" sx={{ borderRadius: 2 }}>
-          {t('Please accept the Terms of Service to continue')}
-        </Alert>
-      )}
-
-      {!otpSent && !forgotPassword ? (
-        <>
-          <TextField
-            label={t('Email')}
-            type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setAuthError(null);
-            }}
-            fullWidth
-            disabled={isAuthLoading}
-            placeholder="you@email.com"
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-          />
-
-          {authMode === 'magic-link' ? (
-            <>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={tosAccepted}
-                    onChange={(e) => {
-                      setShowTosHelper(!e.target.checked);
-                      setTosAccepted(e.target.checked);
-                    }}
-                    sx={{ p: 0.5, mr: 0.5 }}
-                  />
-                }
-                label={
-                  <Typography variant="body2" color="text.secondary">
-                    {t('I agree to the ')}
-                    <MuiLink
-                      href={paths.legal.tos}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      color="inherit"
-                      underline="always"
-                    >
-                      {t('Terms of Service')}
-                    </MuiLink>
-                    {t(' and ')}
-                    <MuiLink
-                      href={paths.legal.pp}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      color="inherit"
-                      underline="always"
-                    >
-                      {t('Privacy Policy')}
-                    </MuiLink>
-                    {t('.')}
-                  </Typography>
-                }
-                sx={{ alignItems: 'flex-start', mr: 0 }}
-              />
-              <Button
-                fullWidth
-                variant="contained"
-                size="large"
-                onClick={handleEmailAuth}
-                disabled={isAuthLoading || !email.trim() || isTosAcceptanceMissing}
-                sx={btnPrimary}
-              >
-                {isAuthLoading ? t('Sending…') : t('Continue with email')}
-              </Button>
-            </>
-          ) : (
-            <>
-              <TextField
-                label={t('Password')}
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setAuthError(null);
-                }}
-                fullWidth
-                disabled={isAuthLoading}
-                autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-              />
-              <Stack direction="row" justifyContent="space-between" sx={{ mt: -1 }}>
-                <Button
-                  variant="text"
-                  size="small"
-                  onClick={() => {
-                    setIsSignUp(!isSignUp);
-                    setAuthError(null);
-                  }}
-                  disabled={isAuthLoading}
-                  sx={{ color: 'text.secondary', fontSize: '0.8rem' }}
-                >
-                  {isSignUp ? t('Already have an account?') : t('Need an account?')}
-                </Button>
-                {!isSignUp && (
-                  <Button
-                    variant="text"
-                    size="small"
-                    onClick={() => {
-                      setForgotPassword(true);
-                      setAuthError(null);
-                    }}
-                    disabled={isAuthLoading}
-                    sx={{ color: 'text.secondary', fontSize: '0.8rem' }}
-                  >
-                    {t('Forgot password?')}
-                  </Button>
-                )}
-              </Stack>
-              <Stack spacing={0.5}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={tosAccepted}
-                      onChange={(e) => {
-                        setShowTosHelper(!e.target.checked);
-                        setTosAccepted(e.target.checked);
-                      }}
-                      sx={{ p: 0.5, mr: 0.5 }}
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" color="text.secondary">
-                      {t('I agree to the ')}
-                      <MuiLink
-                        href={paths.legal.tos}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        color="inherit"
-                        underline="always"
-                      >
-                        {t('Terms of Service')}
-                      </MuiLink>
-                      {t(' and ')}
-                      <MuiLink
-                        href={paths.legal.pp}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        color="inherit"
-                        underline="always"
-                      >
-                        {t('Privacy Policy')}
-                      </MuiLink>
-                      {t('.')}
-                    </Typography>
-                  }
-                  sx={{ alignItems: 'flex-start', mr: 0 }}
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={marketingConsent}
-                      onChange={(e) => setMarketingConsent(e.target.checked)}
-                      sx={{ p: 0.5, mr: 0.5 }}
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" color="text.secondary">
-                      {t('Send me product updates (optional).')}
-                    </Typography>
-                  }
-                  sx={{ alignItems: 'flex-start', mr: 0 }}
-                />
-              </Stack>
-              <Button
-                fullWidth
-                variant="contained"
-                size="large"
-                onClick={handleEmailAuth}
-                disabled={
-                  isAuthLoading || !email.trim() || !password.trim() || isTosAcceptanceMissing
-                }
-                sx={btnPrimary}
-              >
-                {isAuthLoading ? t('Processing…') : isSignUp ? t('Create account') : t('Sign in')}
-              </Button>
-            </>
-          )}
-
-          <Button
-            variant="text"
-            size="small"
-            fullWidth
-            onClick={() => setAuthMode(authMode === 'magic-link' ? 'password' : 'magic-link')}
-            sx={{ color: 'text.secondary', fontSize: '0.8rem' }}
-          >
-            {authMode === 'magic-link' ? t('Use password instead') : t('Use magic link instead')}
-          </Button>
-
-          <Divider sx={{ my: 0.5 }}>
-            <Typography variant="caption" color="text.disabled" sx={{ px: 1 }}>
-              OR
-            </Typography>
-          </Divider>
-
-          <Button
-            fullWidth
-            variant="outlined"
-            size="large"
-            onClick={handleGoogle}
-            disabled={isAuthLoading || isTosAcceptanceMissing}
-            startIcon={<Iconify icon="logos:google-icon" width={20} />}
-            sx={btnOutlined}
-          >
-            {t('Continue with Google')}
-          </Button>
-        </>
-      ) : forgotPassword ? (
-        <>
-          {resetEmailSent ? (
-            <Alert severity="success" sx={{ borderRadius: 2 }}>
-              {t('Check your inbox at')} <strong>{email}</strong> {t('for a reset link.')}
-            </Alert>
-          ) : (
-            <>
-              <Typography variant="body2" color="text.secondary">
-                {t("Enter your email and we'll send a reset link.")}
-              </Typography>
-              <TextField
-                label={t('Email')}
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setAuthError(null);
-                }}
-                fullWidth
-                disabled={isAuthLoading}
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-              />
-              <Button
-                fullWidth
-                variant="contained"
-                size="large"
-                onClick={handleForgotPassword}
-                disabled={isAuthLoading || !email.trim()}
-                sx={btnPrimary}
-              >
-                {isAuthLoading ? t('Sending…') : t('Send reset link')}
-              </Button>
-            </>
-          )}
-          <Button
-            variant="text"
-            size="small"
-            onClick={() => {
-              setForgotPassword(false);
-              setResetEmailSent(false);
-              setAuthError(null);
-            }}
-            sx={{ color: 'text.secondary', fontSize: '0.8rem' }}
-          >
-            ← {t('Back to sign in')}
-          </Button>
-        </>
-      ) : (
-        <>
-          <Alert severity="info" sx={{ borderRadius: 2 }}>
-            {t('We sent a 6-digit code to')} <strong>{email}</strong>
-          </Alert>
-          <TextField
-            label={t('6-digit code')}
-            value={otpToken}
-            onChange={(e) => handleOtpChange(e.target.value)}
-            fullWidth
-            disabled={isAuthLoading}
-            slotProps={{
-              htmlInput: {
-                maxLength: 6,
-                style: {
-                  textAlign: 'center',
-                  letterSpacing: '0.6em',
-                  fontSize: '1.5rem',
-                  fontWeight: 600,
-                },
-              },
-            }}
-            autoFocus
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-          />
-          {isAuthLoading && (
-            <Stack alignItems="center">
-              <CircularProgress size={24} />
-            </Stack>
-          )}
-          <Button
-            variant="text"
-            size="small"
-            onClick={() => {
-              setOtpSent(false);
-              setOtpToken('');
-              setAuthError(null);
-            }}
-            sx={{ color: 'text.secondary', fontSize: '0.8rem' }}
-          >
-            ← {t('Change email')}
-          </Button>
-        </>
-      )}
-
-      {authError && (
-        <Alert
-          severity={authError.includes('created') ? 'success' : 'error'}
-          sx={{ borderRadius: 2 }}
-        >
-          {authError}
-        </Alert>
-      )}
-
-      <Turnstile
-        ref={turnstileRef}
-        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
-        onSuccess={(tk) => setCaptchaToken(tk)}
-      />
-
-      <Typography variant="caption" color="text.disabled" align="center" display="block">
-        {t('Protected by Cloudflare Turnstile.')}
-      </Typography>
-    </Stack>
-  );
-
-  const renderVerifyEmail = () => (
-    <Stack spacing={2.5}>
-      <Stack spacing={2} alignItems="center" sx={{ py: 1 }}>
-        <Box
-          sx={{
-            width: 72,
-            height: 72,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #60a5fa 0%, #818cf8 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.35)',
-          }}
-        >
-          <Iconify icon="solar:letter-bold" width={36} sx={{ color: '#fff' }} />
-        </Box>
-        <Box textAlign="center">
-          <Typography variant="h4" fontWeight={700} gutterBottom>
-            {t('Check your email')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('We sent a 6-digit code to')} <strong>{verifyEmailAddress}</strong>.{' '}
-            {t('Enter the code below to activate your account.')}
-          </Typography>
-        </Box>
-      </Stack>
-
-      <TextField
-        label={t('6-digit code')}
-        value={signupCode}
-        onChange={(e) => handleSignupCodeChange(e.target.value)}
-        fullWidth
-        disabled={isVerifyingSignup}
-        slotProps={{
-          htmlInput: {
-            maxLength: 6,
-            inputMode: 'numeric',
-            autoComplete: 'one-time-code',
-            style: {
-              textAlign: 'center',
-              letterSpacing: '0.6em',
-              fontSize: '1.5rem',
-              fontWeight: 600,
-            },
-          },
-        }}
-        autoFocus
-        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-      />
-      {isVerifyingSignup && (
-        <Stack alignItems="center">
-          <CircularProgress size={24} />
-        </Stack>
-      )}
-      {signupCodeError && (
-        <Alert severity="error" sx={{ borderRadius: 2 }}>
-          {signupCodeError}
-        </Alert>
-      )}
-
-      <Stack spacing={1.5}>
-        <Button
-          fullWidth
-          variant="outlined"
-          size="large"
-          onClick={handleResendConfirmation}
-          disabled={isResendingConfirmation}
-          startIcon={
-            isResendingConfirmation ? (
-              <CircularProgress size={16} color="inherit" />
-            ) : (
-              <Iconify icon="solar:restart-bold" width={18} />
-            )
-          }
-          sx={btnOutlined}
-        >
-          {isResendingConfirmation ? t('Resending…') : t('Resend confirmation email')}
-        </Button>
-        <Button
-          fullWidth
-          variant="text"
-          size="small"
-          onClick={() => {
-            setStep('sign-in');
-            setVerifyEmailAddress('');
-            setSignupCode('');
-            setSignupCodeError(null);
-            setAuthError(null);
-          }}
-          sx={{ color: 'text.secondary', fontSize: '0.8rem' }}
-        >
-          ← {t('Back to sign in')}
-        </Button>
-      </Stack>
-    </Stack>
-  );
 
   // Asset-first landing for new users — the shared picker (choose an asset → buy
   // or receive; wallet provisioned lazily). "Bring your own wallet" drops to the
@@ -2470,24 +1804,7 @@ export default function OnboardingWizard({
   };
 
   const renderContent = () => {
-    // Already have a session — handleAfterAuth is running. Show a spinner
-    // instead of flashing the sign-in form while we wait for the redirect.
-    if (step === 'sign-in' && (session || authHookLoading)) {
-      return (
-        <Stack alignItems="center" spacing={2} sx={{ py: 6 }}>
-          <CircularProgress size={36} />
-          <Typography variant="body2" color="text.secondary">
-            {t('Loading your account…')}
-          </Typography>
-        </Stack>
-      );
-    }
-
     switch (step) {
-      case 'sign-in':
-        return renderSignIn();
-      case 'verify-email':
-        return renderVerifyEmail();
       case 'get-started':
         return renderGetStarted();
       case 'choose-wallet':
@@ -2513,7 +1830,7 @@ export default function OnboardingWizard({
 
   return (
     <Dialog
-      open={open}
+      open={open && step !== 'account-check'}
       onClose={handleClose}
       maxWidth={false}
       slotProps={{

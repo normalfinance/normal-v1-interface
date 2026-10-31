@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
+import { useGoToLogin } from '@/hooks/use-go-to-login';
 import { usePersistStore } from '@normalfinance/state';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
@@ -8,7 +9,6 @@ import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import { Button } from '@mui/material';
 
-import OnboardingWizard from '@/components/_common/onboarding-wizard';
 import NormalWalletCreate from '@/components/_common/normal-wallet-create';
 import WalletSelectionModal, {
   hasSeenWalletSelectionModal,
@@ -33,6 +33,7 @@ export const WalletGate: React.FC<WalletGateProps> = ({
 }) => {
   const persist = usePersistStore();
   const { t } = useTranslate();
+  const goToLogin = useGoToLogin();
   const { session, isLoading } = useSupabaseAuth();
   const { connectWallet, isConnected } = useStellarWalletsKit();
   const {
@@ -43,13 +44,12 @@ export const WalletGate: React.FC<WalletGateProps> = ({
   const isWalletConnected = !!persist.wallet.address || isConnected || isNormalConnected;
   const isGatePassed = !isLoading && !!session && (!requireWalletConnection || isWalletConnected);
 
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
 
   const handleConnectClick = async () => {
     if (!session) {
-      setShowAuthModal(true);
+      goToLogin();
       return;
     }
     if (!requireWalletConnection) {
@@ -130,7 +130,6 @@ export const WalletGate: React.FC<WalletGateProps> = ({
           />
         </>
       )}
-      <OnboardingWizard open={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </>
   );
 };
