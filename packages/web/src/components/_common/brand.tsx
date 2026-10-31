@@ -89,12 +89,9 @@ export function BandBackdrop({ dots = true }: { dots?: boolean }) {
 
 // ----------------------------------------------------------------------
 
-const BAND_BACKGROUND = { light: 'background.default', white: '#FFFFFF', dark: '#0A0A0F' };
-
 type PageSectionProps = WithSx & {
   id?: string;
-  /** light is the page, white lifts a text-led section, dark carries a statement. */
-  tone?: keyof typeof BAND_BACKGROUND;
+  tone?: Tone;
   children: ReactNode;
   'aria-labelledby'?: string;
 };
@@ -118,7 +115,7 @@ export function PageSection({ tone = 'light', children, sx, ...other }: PageSect
           isolation: 'isolate',
           py: 'var(--section-y)',
           color: dark ? '#FFFFFF' : 'text.primary',
-          bgcolor: BAND_BACKGROUND[tone],
+          bgcolor: dark ? '#0A0A0F' : 'background.default',
           '[data-tone="light"] + &[data-tone="light"]': { pt: 0 },
         },
         ...sxArray(sx),

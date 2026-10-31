@@ -29,6 +29,26 @@ const BRAND_TG = '#0088CC';
 
 const TEAM_MEMBERS: TeamMember[] = [
   {
+    image: cdn('about-page/justin.webp'),
+    name: 'Justin Benjamin',
+    jobTitle: 'Founder & CEO',
+    bio: 'Justin designed products at Bitcoin of America and CoinFlip before starting Normal. Crypto investor for 7+ years, BS from Northwestern.',
+    socialLinks: [
+      {
+        href: 'https://x.com/justinbenjaminn',
+        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
+      },
+      {
+        href: 'https://www.linkedin.com/in/justin-benjamin1/',
+        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
+      },
+      {
+        href: 'https://t.me/justinbenjamin',
+        icon: <TelegramIcon sx={{ fontSize: 15, color: BRAND_TG }} />,
+      },
+    ],
+  },
+  {
     image: cdn('about-page/niko.webp'),
     name: 'Niko Gorjan',
     jobTitle: 'CTO',
@@ -180,7 +200,7 @@ const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
       ...BLOCK_SX,
       p: 0,
       display: 'flex',
-      flexDirection: { xs: 'row', sm: 'column' },
+      flexDirection: { xs: 'row', md: 'column' },
       overflow: 'hidden',
     }}
   >
@@ -188,9 +208,9 @@ const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
     <Box
       sx={{
         p: '12px',
-        pb: { xs: '12px', sm: 0 },
-        pr: { xs: 0, sm: '12px' },
-        width: { xs: 112, sm: 'auto' },
+        pb: { xs: '12px', md: 0 },
+        pr: { xs: 0, md: '12px' },
+        width: { xs: 112, md: 'auto' },
         flexShrink: 0,
       }}
     >
@@ -198,7 +218,7 @@ const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
         sx={{
           position: 'relative',
           overflow: 'hidden',
-          aspectRatio: '4 / 5',
+          aspectRatio: { xs: '4 / 5', md: '1 / 1' },
           borderRadius: 'var(--radius-md)',
         }}
       >
@@ -224,7 +244,7 @@ const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
         minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
-        p: { xs: 2, sm: '18px' },
+        p: { xs: 2, md: '18px' },
       }}
     >
       <Typography
@@ -309,7 +329,7 @@ export const Team: React.FC = () => {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(3, minmax(0, 1fr))' },
           gap: { xs: 1.5, md: 2 },
         }}
       >

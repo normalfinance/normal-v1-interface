@@ -86,7 +86,8 @@ Eyebrows never start with a dash or line **(tested)**.
 - One content width: `--page-max`, 1200px, with 24px gutters and 16px on phones. The navbar, footer, marketing pages and app pages all share it, so everything lines up on one left edge.
 - Legal pages are the one exception: long text stays readable in a 900px column.
 - One rhythm: `--section-y`, 96px on desktop and 64px on phones. Two light bands in a row share one gap.
-- Bands come in three tones: `light` (the page), `white` for text-led sections, and `dark` for statements. Use them to break up long runs, so a page never reads as one grey sheet. Text sitting directly on a band uses ink or `#2A2A33`, not muted.
+- Break up long runs of light bands with a dark band, so a page never reads as one grey sheet.
+- Long text belongs on a block, not directly on a band. A list of five equal rows is a sign the section needs a lead card and some variety.
 - Section headers are left-aligned. Only the closing call-to-action band is centred.
 - A hero has text on the left and its visual on the right on desktop, and stacks on phones.
 - Blocks use 24px padding, 20px on phones. Grid gaps are 16px, 12px on phones.
