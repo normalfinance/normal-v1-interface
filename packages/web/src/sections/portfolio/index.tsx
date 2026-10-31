@@ -17,6 +17,7 @@ import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import SavingsCard from '@/components/_common/savings-card';
+import { TwoFactorPrompt } from '@/components/_common/two-factor-prompt';
 import { GetStartedPicker } from '@/components/_common/get-started-picker';
 
 import { HeroCard } from './portfolio-hero-card';
@@ -312,6 +313,8 @@ export default function PortfolioView() {
 
   return (
     <DashboardContent>
+      <TwoFactorPrompt hasFunds={totalBalance > 0} />
+
       <HeroCard
         totalBalance={totalBalance}
         walletBalance={walletBalance}

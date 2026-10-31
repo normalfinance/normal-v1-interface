@@ -34,6 +34,21 @@ export async function createSupabaseServerClient() {
   });
 }
 
+/**
+ * The service-role client. It bypasses every per-user check, so it stays on the
+ * server and is created per use. Throws when unconfigured: callers turn that
+ * into an honest failure rather than a silent no-op.
+ */
+export function createSupabaseAdminClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Supabase URL / SUPABASE_SERVICE_ROLE_KEY not configured');
+  }
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Session verification: cached, bounded, and de-duplicated.
 //

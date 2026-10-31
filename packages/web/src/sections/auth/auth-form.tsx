@@ -53,6 +53,7 @@ import { useSnackbar } from '@/components/template/snackbar';
 
 import { AuthConsent } from './auth-consent';
 import { AuthModeSwitch } from './auth-mode-switch';
+import { TwoFactorChallenge } from './two-factor-challenge';
 
 type View = 'form' | 'code' | 'forgot' | 'verify-email';
 type CaptchaAction = 'submit' | 'forgot';
@@ -80,7 +81,7 @@ export function AuthForm() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { enqueueSnackbar } = useSnackbar();
-  const { session } = useSupabaseAuth();
+  const { session, mfaRequired, signOut } = useSupabaseAuth();
   const { disclaimer, setDisclaimerAccepted } = usePersistStore();
 
   const mode: AuthMode = pathname === paths.auth.signup ? 'signup' : 'login';
@@ -153,6 +154,17 @@ export function AuthForm() {
     consumePostAuthNext();
     router.replace(next ?? DEFAULT_POST_AUTH_PATH);
   }, [session, next, router]);
+
+  // The first step worked, so this form is done. If they cancel the 6-digit step
+  // it comes back, and it has to come back usable rather than still busy.
+  useEffect(() => {
+    if (!mfaRequired) return;
+    setIsBusy(false);
+    setView('form');
+    setCode('');
+    setPassword('');
+    setError(null);
+  }, [mfaRequired]);
 
   // Pressing Back on Google's screen restores this page from the browser's
   // back/forward cache exactly as it was left: frozen in the busy state.
@@ -738,6 +750,20 @@ export function AuthForm() {
       </Stack>
     );
   };
+
+  if (mfaRequired) {
+    return (
+      <TwoFactorChallenge
+        onCancel={signOut}
+        onRecovered={async () => {
+          await signOut();
+          enqueueSnackbar(t('Two-factor authentication is off. Log in to continue.'), {
+            variant: 'success',
+          });
+        }}
+      />
+    );
+  }
 
   if (session) {
     return (

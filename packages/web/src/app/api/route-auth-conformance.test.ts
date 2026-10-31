@@ -42,6 +42,14 @@ const PUBLIC_ROUTES: Record<string, string> = {
     'Stripe → us; authenticated by the Stripe-Signature HMAC (STRIPE_WEBHOOK_SECRET), not a user session; 503 when unconfigured',
 };
 
+/**
+ * Routes reachable by a login that hasn't entered its 6-digit code. Every entry
+ * here is a way past two-factor sign-in, so this list should stay this short.
+ */
+const PARTIAL_LOGIN_ROUTES: Record<string, string> = {
+  'auth/two-factor/recover': 'a lost authenticator leaves a recovery code as the only proof',
+};
+
 const API_DIR = path.join(__dirname);
 
 function findRouteFiles(dir: string): string[] {
@@ -86,6 +94,14 @@ describe('route auth conformance', () => {
         );
       }
       expect(wrapped || allowlisted).toBe(true);
+    }
+  );
+
+  it.each(routeFiles.map((f) => [routeKey(f), f]))(
+    '%s only skips the 6-digit code if it is on the short list',
+    (key, file) => {
+      const skips = fs.readFileSync(file as string, 'utf-8').includes('allowPartialLogin');
+      expect(skips).toBe(key in PARTIAL_LOGIN_ROUTES);
     }
   );
 

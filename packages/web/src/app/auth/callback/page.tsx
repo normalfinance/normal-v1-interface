@@ -1,12 +1,20 @@
 'use client';
 
+import type { Session } from '@supabase/supabase-js';
+
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useRef, useState, useEffect } from 'react';
 import { supabase } from '@/lib/createSupabaseClient';
 import { exchangeCodeForSession } from '@/services/auth';
+import { needsSecondFactor } from '@/lib/auth/two-factor';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { safeNextPath, consumePostAuthNext, DEFAULT_POST_AUTH_PATH } from '@/lib/auth/auth-routes';
+import {
+  authHref,
+  safeNextPath,
+  consumePostAuthNext,
+  DEFAULT_POST_AUTH_PATH,
+} from '@/lib/auth/auth-routes';
 
 import { Box, Stack, Alert, Button, Typography, CircularProgress } from '@mui/material';
 
@@ -14,6 +22,10 @@ type Status = 'pending' | 'success' | 'error';
 
 // A spinner must never be the end of the road: past this, offer a way out.
 const SLOW_SIGN_IN_MS = 20_000;
+
+/** Someone with 2FA isn't signed in yet: their code comes before the app. */
+const destination = (session: Session | null, next: string) =>
+  session && needsSecondFactor(session.user, session.access_token) ? authHref('login', next) : next;
 
 const AuthCallbackPage = () => {
   const { t } = useTranslate();
@@ -43,10 +55,10 @@ const AuthCallbackPage = () => {
 
     const run = async () => {
       try {
-        await exchangeCodeForSession(code);
+        const session = await exchangeCodeForSession(code);
         setStatus('success');
         setMessage('Signed in. Redirecting...');
-        router.replace(next);
+        router.replace(destination(session, next));
       } catch (error) {
         // Reloading this page reuses a spent code. The person is already signed
         // in by then, so that isn't a failure.
@@ -54,7 +66,7 @@ const AuthCallbackPage = () => {
           data: { session },
         } = await supabase.auth.getSession();
         if (session) {
-          router.replace(next);
+          router.replace(destination(session, next));
           return;
         }
 

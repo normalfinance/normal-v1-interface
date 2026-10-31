@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useTranslate } from '@/locales';
 import { useTabs } from 'minimal-shared/hooks';
 import { DashboardContent } from '@/layouts/dashboard';
@@ -10,6 +11,7 @@ import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalance
 
 import { AppPageHeader, SegmentedControl } from '@/components/_common/brand';
 
+import { TwoFactorCard } from '../two-factor-card';
 import { SettingsGeneral } from '../settings-general';
 import { SettingsAccounts } from '../settings-accounts';
 import { SettingsSecurity } from '../settings-security';
@@ -30,6 +32,13 @@ const TABS = [
 export function UserSettingsView() {
   const { t } = useTranslate();
   const tabs = useTabs('general');
+  const { setValue: setTab } = tabs;
+
+  // Read directly: useSearchParams would need a Suspense boundary around the page.
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (TABS.some(({ value }) => value === tab)) setTab(tab as string);
+  }, [setTab]);
 
   return (
     <DashboardContent>
@@ -51,6 +60,7 @@ export function UserSettingsView() {
       {tabs.value === 'security' && (
         <>
           <SettingsSecurity />
+          <TwoFactorCard />
           <DeleteAccountCard />
         </>
       )}

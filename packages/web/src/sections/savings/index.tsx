@@ -16,6 +16,7 @@ import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalance
 
 import { AppPageHeader } from '@/components/_common/brand';
 import SavingsCard from '@/components/_common/savings-card';
+import { TwoFactorPrompt } from '@/components/_common/two-factor-prompt';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 
 import { SavingsHeroCard } from './savings-hero-card';
@@ -217,6 +218,8 @@ export default function SavingsView() {
         title="Savings"
         subtitle="Earn yield on your USDC by depositing into Normal Savings."
       />
+
+      <TwoFactorPrompt hasFunds={currentValue > 0} />
 
       {/* Hero stats */}
       <SavingsHeroCard

@@ -62,6 +62,7 @@
 
     // CloudFlare
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+    "NEXT_PUBLIC_TWO_FACTOR_ENABLED",
 
     // Missing
     "POSTHOG_TESTNET_ENV_ID",
