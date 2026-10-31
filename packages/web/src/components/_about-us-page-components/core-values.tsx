@@ -29,31 +29,31 @@ export const CoreValuesDefaults: Props = {
   heading: 'Core Values',
   features: [
     {
-      icon: <PeopleAltOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
+      icon: <PeopleAltOutlinedIcon sx={{ fontSize: 22, color: '#FFFFFF' }} />,
       heading: 'Keep Crypto Human',
       description:
         "Remove complexity, speak plainly, and design for real people — not power users. Every screen, every error message, and every transaction should be explainable in a single sentence. If your parents can't use it, we're not done.",
     },
     {
-      icon: <VerifiedUserOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
+      icon: <VerifiedUserOutlinedIcon sx={{ fontSize: 22, color: '#FFFFFF' }} />,
       heading: 'Security First',
       description:
         "Audited contracts, battle-tested code, and 24/7 monitoring on every deployment. Halborn reviews every release before it touches mainnet. We treat your savings with the same seriousness you do — because cutting corners on security isn't a tradeoff, it's a failure.",
     },
     {
-      icon: <CodeOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
+      icon: <CodeOutlinedIcon sx={{ fontSize: 22, color: '#FFFFFF' }} />,
       heading: 'Permissionless Innovation',
       description:
         'Build composable primitives that anyone can extend, fork, or build on top of. Open SDK, public smart contracts, MIT-licensed components. We believe the best financial infrastructure is infrastructure no single company controls.',
     },
     {
-      icon: <GroupsOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
+      icon: <GroupsOutlinedIcon sx={{ fontSize: 22, color: '#FFFFFF' }} />,
       heading: 'Community Ownership',
       description:
         "NORM token holders create and vote on every proposal that shapes the protocol. No backroom decisions, no surprise upgrades. The roadmap belongs to the people using the product — we're here to build what the community decides.",
     },
     {
-      icon: <InsightsOutlinedIcon sx={{ fontSize: 18, color: '#0A0A0F' }} />,
+      icon: <InsightsOutlinedIcon sx={{ fontSize: 22, color: '#FFFFFF' }} />,
       heading: 'Data > Hype',
       description:
         "Let on-chain metrics guide every product decision. We don't ship features because they're trending — we ship them because usage data says users need them. Hype fades. Real yield, real volume, and real retention don't.",
@@ -70,76 +70,75 @@ export const CoreValues: React.FC<CoreValuesProps> = (props) => {
   };
 
   return (
-    <PageSection id="core-values">
-      <SectionHeader
-        eyebrow="Our Principles"
-        title={t(heading)}
-        subtitle={t(
-          'Five guiding principles that keep us focused on making crypto transparent, secure, and genuinely useful.'
-        )}
-      />
+    // overflow: visible so the heading can stay pinned while the list scrolls.
+    <PageSection id="core-values" tone="white" sx={{ overflow: 'visible' }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 5fr) minmax(0, 7fr)' },
+          gap: { xs: 5, md: 10 },
+          alignItems: 'start',
+        }}
+      >
+        <SectionHeader
+          eyebrow="Our Principles"
+          title={t(heading)}
+          subtitle={t(
+            'Five guiding principles that keep us focused on making crypto transparent, secure, and genuinely useful.'
+          )}
+          sx={{ mb: 0, position: { md: 'sticky' }, top: { md: 120 } }}
+        />
 
-      {/* List */}
-      <Box>
-        {features.map((feature) => (
-          <Box
-            key={feature.heading}
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: '48px 1fr 1fr' },
-              gap: { xs: '6px', sm: '40px' },
-              alignItems: 'start',
-              py: { xs: '24px', md: '32px' },
-              borderTop: HAIRLINE,
-              '&:last-child': { borderBottom: HAIRLINE },
-            }}
-          >
-            {/* Icon */}
+        <Box>
+          {features.map((feature, i) => (
             <Box
+              key={feature.heading}
               sx={{
-                width: 48,
-                height: 48,
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: '#FFFFFF',
-                border: HAIRLINE,
-                borderRadius: 'var(--radius-md)',
-                mt: { xs: 0, sm: '2px' },
-                mb: { xs: '16px', sm: 0 },
+                display: 'grid',
+                gridTemplateColumns: '48px minmax(0, 1fr)',
+                gap: { xs: 2, md: 3 },
+                py: { xs: 3, md: 4 },
+                ...(i > 0 && { borderTop: HAIRLINE }),
+                '&:first-of-type': { pt: 0 },
+                '&:last-of-type': { pb: 0 },
               }}
             >
-              {feature.icon}
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: '#0A0A0F',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                {feature.icon}
+              </Box>
+
+              <Box>
+                <Typography
+                  component="h3"
+                  sx={{
+                    fontSize: { xs: 20, md: 22 },
+                    fontWeight: 500,
+                    lineHeight: 1.25,
+                    letterSpacing: '-0.02em',
+                    color: '#0A0A0F',
+                  }}
+                >
+                  {t(feature.heading)}
+                </Typography>
+                <Typography
+                  sx={{ mt: 1, fontSize: 16, lineHeight: 1.6, color: '#2A2A33', maxWidth: 560 }}
+                >
+                  {t(feature.description)}
+                </Typography>
+              </Box>
             </Box>
-
-            {/* Heading */}
-            <Typography
-              sx={{
-                fontWeight: 500,
-                fontSize: { xs: '18px', md: '20px' },
-                color: '#0A0A0F',
-                letterSpacing: '-0.02em',
-                lineHeight: 1.3,
-                pt: { xs: 0, sm: '7px' },
-              }}
-            >
-              {t(feature.heading)}
-            </Typography>
-
-            {/* Description */}
-            <Typography
-              sx={{
-                fontSize: '16px',
-                color: '#6B6B76',
-                lineHeight: 1.55,
-                pt: { xs: 0, sm: '7px' },
-              }}
-            >
-              {t(feature.description)}
-            </Typography>
-          </Box>
-        ))}
+          ))}
+        </Box>
       </Box>
     </PageSection>
   );

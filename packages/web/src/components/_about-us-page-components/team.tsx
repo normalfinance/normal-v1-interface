@@ -29,26 +29,6 @@ const BRAND_TG = '#0088CC';
 
 const TEAM_MEMBERS: TeamMember[] = [
   {
-    image: cdn('about-page/justin.webp'),
-    name: 'Justin Benjamin',
-    jobTitle: 'Founder & CEO',
-    bio: 'Justin designed products at Bitcoin of America and CoinFlip before starting Normal. Crypto investor for 7+ years, BS from Northwestern.',
-    socialLinks: [
-      {
-        href: 'https://x.com/justinbenjaminn',
-        icon: <Icon icon="fa6-brands:x-twitter" width={15} height={15} color={BRAND_X} />,
-      },
-      {
-        href: 'https://www.linkedin.com/in/justin-benjamin1/',
-        icon: <LinkedInIcon sx={{ fontSize: 15, color: BRAND_LI }} />,
-      },
-      {
-        href: 'https://t.me/justinbenjamin',
-        icon: <TelegramIcon sx={{ fontSize: 15, color: BRAND_TG }} />,
-      },
-    ],
-  },
-  {
     image: cdn('about-page/niko.webp'),
     name: 'Niko Gorjan',
     jobTitle: 'CTO',
@@ -200,12 +180,20 @@ const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
       ...BLOCK_SX,
       p: 0,
       display: 'flex',
-      flexDirection: 'column',
+      flexDirection: { xs: 'row', sm: 'column' },
       overflow: 'hidden',
     }}
   >
     {/* Photo */}
-    <Box sx={{ p: '12px', pb: 0 }}>
+    <Box
+      sx={{
+        p: '12px',
+        pb: { xs: '12px', sm: 0 },
+        pr: { xs: 0, sm: '12px' },
+        width: { xs: 112, sm: 'auto' },
+        flexShrink: 0,
+      }}
+    >
       <Box
         sx={{
           position: 'relative',
@@ -230,7 +218,15 @@ const MemberCard: React.FC<{ member: TeamMember }> = ({ member }) => (
     </Box>
 
     {/* Info */}
-    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: '18px' }}>
+    <Box
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        p: { xs: 2, sm: '18px' },
+      }}
+    >
       <Typography
         sx={{
           fontSize: '18px',
@@ -313,8 +309,8 @@ export const Team: React.FC = () => {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
-          gap: 2,
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
+          gap: { xs: 1.5, md: 2 },
         }}
       >
         {TEAM_MEMBERS.map((member) => (
