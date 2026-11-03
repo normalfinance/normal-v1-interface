@@ -21,8 +21,12 @@ import { importMnemonicIntoTurnkey } from '@/lib/turnkey/import-mnemonic';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { usePersistStore, useStellarWalletKitStore } from '@normalfinance/state';
 import { shouldAdoptIntoSlot, shouldReattachExternalOnLogin } from '@/lib/wallet-slot';
-import { getTurnkeyWalletInfo, isTurnkeyStellarAddress } from '@/lib/turnkey/wallet-info';
 import { linkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
+import {
+  getTurnkeyWalletInfo,
+  isTurnkeyStellarAddress,
+  getTurnkeyWalletInfoStrict,
+} from '@/lib/turnkey/wallet-info';
 import {
   useNormalWallet,
   hasStoredNormalWalletKey,
@@ -280,28 +284,40 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
       // (Post-DB-consolidation, returning users have BOTH their Turnkey wallet
       // and their old-architecture wallets linked — the picker here made every
       // login start with a modal.)
-      const tk = await getTurnkeyWalletInfo();
-      const tkAddress = tk?.stellarAddress ?? null;
+      //
+      // Login never shows the account picker (Niko, 2026-11-03). It used to
+      // appear whenever the best-effort lookup below came back empty, and that
+      // happens on a slow or failed /api/turnkey/wallet (10 s timeout, a cold
+      // dev route) as well as for a user with no Turnkey wallet: an UNKNOWN
+      // answer was read as "no Turnkey wallet" and the picker listed the
+      // user's own wallet as an "Unnamed account". Strict lookup now, and every
+      // outcome just closes: the wallet self-heal in use-normal-wallet connects
+      // the Turnkey wallet once its lookup succeeds, and other wallets stay
+      // reachable from the account drawer.
+      let tkAddress: string | null = null;
+      try {
+        const tk = await getTurnkeyWalletInfoStrict();
+        tkAddress = tk?.stellarAddress ?? null;
+      } catch (err) {
+        logger.warn('[OnboardingWizard] Turnkey wallet lookup failed; skipping picker:', err);
+      }
       setTurnkeyStellarAddress(tkAddress);
 
       if (tkAddress) {
         try {
           await connectWalletWithoutKeypair(tkAddress);
-          onClose();
-          return;
         } catch (err) {
           logger.error('[OnboardingWizard] Turnkey auto-connect failed:', err);
-          // fall through to the picker
         }
       }
-
-      // Legacy-only user (no Turnkey wallet yet) — show the picker so they can
-      // reconnect one of their old wallets or import it into Turnkey.
-      setIsReturningUser(true);
-      setStep('linked-accounts');
+      onClose();
     } catch (err) {
+      // Couldn't read the linked wallets, so we don't know whether this is a
+      // new user. Guessing "new" opened the get-started flow on returning
+      // accounts; closing is safe because new users start from picking an
+      // asset anyway.
       logger.error('[OnboardingWizard] handleAfterAuth error:', err);
-      setStep('get-started');
+      onClose();
     }
   }, [syncMarketingOptIn, connectWalletWithoutKeypair, persist, onClose]);
 
