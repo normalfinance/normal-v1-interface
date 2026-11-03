@@ -53,7 +53,8 @@ describe('isAuthPage', () => {
   it('matches only the sign-in pages', () => {
     expect(isAuthPage('/login')).toBe(true);
     expect(isAuthPage('/signup')).toBe(true);
-    expect(isAuthPage('/auth/callback')).toBe(false);
+    expect(isAuthPage('/auth/callback')).toBe(true);
     expect(isAuthPage('/')).toBe(false);
+    expect(isAuthPage('/auth/reset-password')).toBe(false);
   });
 });

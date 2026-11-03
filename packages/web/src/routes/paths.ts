@@ -36,6 +36,7 @@ export const paths = {
   auth: {
     login: '/login',
     signup: '/signup',
+    callback: '/auth/callback',
   },
   transaction: {
     root: '/trx',

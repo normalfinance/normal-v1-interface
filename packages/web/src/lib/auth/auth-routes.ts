@@ -15,7 +15,11 @@ const MARKETING_OPT_IN_KEY = 'nf:pending-marketing-opt-in';
 
 /** The sign-in pages render without the app navbar and footer. */
 export function isAuthPage(pathname: string): boolean {
-  return pathname === paths.auth.login || pathname === paths.auth.signup;
+  return (
+    pathname === paths.auth.login ||
+    pathname === paths.auth.signup ||
+    pathname === paths.auth.callback
+  );
 }
 
 /**
