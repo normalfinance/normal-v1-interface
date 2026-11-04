@@ -30,7 +30,7 @@ export default function SavingsView() {
     setMounted(true);
   }, []);
 
-  const { user } = useSupabaseAuth();
+  const { user, isLoading: authLoading } = useSupabaseAuth();
   const [walletSetupOpen, setWalletSetupOpen] = useState(false);
   const { setGlobalIsLoading } = useAppStore();
   const { wallet } = usePersistStore();
@@ -99,7 +99,7 @@ export default function SavingsView() {
     return () => clearTimeout(timer);
   }, [wallet.address, setGlobalIsLoading]);
 
-  if (!mounted || (!firstPaintDone && heroLoading)) {
+  if (!mounted || authLoading || (!firstPaintDone && heroLoading)) {
     return (
       <DashboardContent>
         <Skeleton
@@ -130,7 +130,9 @@ export default function SavingsView() {
     );
   }
 
-  if (!wallet.address) {
+  // A remembered wallet address is not a login (see the portfolio view): signed
+  // out always gets the sign-in screen.
+  if (!user || !wallet.address) {
     return (
       <DashboardContent>
         <Box

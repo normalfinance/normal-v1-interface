@@ -75,7 +75,7 @@ export default function PortfolioView() {
     setMounted(true);
   }, []);
 
-  const { user } = useSupabaseAuth();
+  const { user, isLoading: authLoading } = useSupabaseAuth();
   // Single source of truth for all balances + savings.
   const {
     getAsset,
@@ -222,11 +222,15 @@ export default function PortfolioView() {
     ];
   }, [holdingsData, walletBalances.companionStellar, wallet.walletType]);
 
-  if (!mounted || walletChecking) {
+  if (!mounted || authLoading || walletChecking) {
     return <PortfolioSkeleton />;
   }
 
-  if (!hasAnyWallet) {
+  // Signed out means the sign-in screen, whatever the browser remembers: the
+  // persisted wallet slot can still hold an address after a sign-out (or while
+  // a login waits for its 2FA code), and showing that wallet's savings to a
+  // signed-out visitor is the bug Niko hit on 2026-11-03.
+  if (!user || !hasAnyWallet) {
     // Signed in but no wallet yet (e.g. skipped the asset picker) → let them pick
     // an asset here instead of a dead-end "Sign in". Not signed in → sign in.
     if (user) {

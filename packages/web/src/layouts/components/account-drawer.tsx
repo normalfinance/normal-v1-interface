@@ -433,7 +433,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
       enqueueSnackbar('Logged out successfully', { variant: 'success' });
 
-      window.location.reload();
+      // Land on the home page, not the page you logged out from: a dashboard
+      // page has nothing to show a signed-out visitor. A full navigation (not
+      // router.push) also drops every in-memory wallet and balance.
+      window.location.assign(paths.root);
     } catch (error) {
       logger.error('Error disconnecting wallet:', error);
 

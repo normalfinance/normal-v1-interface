@@ -33,7 +33,7 @@ export default function SwapView() {
     setMounted(true);
   }, []);
 
-  const { user } = useSupabaseAuth();
+  const { user, isLoading: authLoading } = useSupabaseAuth();
   const { setGlobalIsLoading } = useAppStore();
   const { wallet } = usePersistStore();
   const { bitcoinAddress } = useBtcPortfolio(true);
@@ -63,7 +63,7 @@ export default function SwapView() {
     refreshTokens();
   }, [wallet.address, setGlobalIsLoading]);
 
-  if (!mounted || walletChecking) {
+  if (!mounted || authLoading || walletChecking) {
     return (
       <DashboardContent>
         <Skeleton
@@ -90,7 +90,9 @@ export default function SwapView() {
     );
   }
 
-  if (!hasAnyWallet) {
+  // A remembered wallet address is not a login (see the portfolio view): signed
+  // out always gets the sign-in screen.
+  if (!user || !hasAnyWallet) {
     // Signed in but no wallet yet → pick an asset (sets up the wallet), rather
     // than a dead-end "Sign in". Not signed in → sign in.
     if (user) {

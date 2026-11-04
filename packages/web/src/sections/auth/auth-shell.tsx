@@ -7,7 +7,7 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
-import { Box, Stack, Typography, Link as MuiLink } from '@mui/material';
+import { Box, Stack, Link as MuiLink } from '@mui/material';
 
 const PORTFOLIO_MOCKUP = cdn('mockups/portfolio.webp');
 
@@ -113,38 +113,6 @@ function AuthVisual() {
             mixBlendMode: 'lighten',
           }}
         />
-
-        <Box sx={{ position: 'relative', p: { md: 5, lg: 6 }, maxWidth: 560 }}>
-          <Typography
-            sx={{
-              fontSize: 11,
-              fontWeight: 500,
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.56)',
-              mb: 1.5,
-            }}
-          >
-            {t('Your portfolio')}
-          </Typography>
-          <Typography
-            component="p"
-            sx={{
-              fontSize: { md: 34, lg: 44 },
-              lineHeight: 1.08,
-              fontWeight: 500,
-              letterSpacing: '-0.03em',
-              color: '#fff',
-              mb: 2,
-              textWrap: 'balance',
-            }}
-          >
-            {t('Track everything in one place')}
-          </Typography>
-          <Typography sx={{ fontSize: 16, lineHeight: 1.5, color: 'rgba(255,255,255,0.64)' }}>
-            {t('Wallet balance, savings position, and lifetime earnings — all in one view.')}
-          </Typography>
-        </Box>
       </Box>
     </Box>
   );
