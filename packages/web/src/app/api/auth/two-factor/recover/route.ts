@@ -12,7 +12,7 @@ import { isRecoveryCode, hashRecoveryCode, normalizeRecoveryCode } from '@/lib/a
 // POST /api/auth/two-factor/recover — spend a recovery code to remove 2FA.
 //
 // Body: { code }
-// 200 { success: true }             — 2FA is off and every session has ended
+// 200 { success: true }             — 2FA is off and every session is signed out
 // 400 { error: 'invalid_code' }
 // 429 { error: 'Too many requests' }
 // 503 { error: 'unavailable' }      — nothing changed; the code still works
@@ -24,6 +24,20 @@ import { isRecoveryCode, hashRecoveryCode, normalizeRecoveryCode } from '@/lib/a
 // recovery codes as well goes through support, by hand.
 // ---------------------------------------------------------------------------
 export const dynamic = 'force-dynamic';
+
+// Deleting a factor doesn't end a session: Supabase only drops the sessions that
+// used it back to aal1 (supabase/auth DowngradeSessionsToAAL1). Someone spending a
+// recovery code has lost a device, and that device may still be signed in, so
+// every session ends here, this one included. 2FA is already gone by now, so a
+// failure is logged rather than reported as a failed recovery.
+async function endEverySession(accessToken: string, userId: string): Promise<void> {
+  try {
+    const { error } = await createSupabaseAdminClient().auth.admin.signOut(accessToken, 'global');
+    if (error) throw error;
+  } catch (error) {
+    logger.error('[two-factor] sessions survived a recovery', { uid: userId, error });
+  }
+}
 
 async function removeTwoFactor(userId: string): Promise<void> {
   const admin = createSupabaseAdminClient().auth.admin.mfa;
@@ -70,7 +84,10 @@ export const POST = withAuth(
     }
 
     await prisma.mfaRecoveryCode.deleteMany({ where: { supabaseUid: user.id } });
-    if (accessToken) invalidateAuthCache(accessToken);
+    if (accessToken) {
+      invalidateAuthCache(accessToken);
+      await endEverySession(accessToken, user.id);
+    }
     logger.warn('[two-factor] removed with a recovery code', { uid: user.id });
 
     return NextResponse.json({ success: true });

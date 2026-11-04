@@ -10,6 +10,7 @@ const listFactors =
     (args: unknown) => Promise<{ data: { factors: { id: string }[] } | null; error: Error | null }>
   >();
 const deleteFactor = jest.fn<(args: unknown) => Promise<{ error: Error | null }>>();
+const signOut = jest.fn<(jwt: string, scope: string) => Promise<{ error: Error | null }>>();
 const invalidateAuthCache = jest.fn();
 const getAuthenticatedUser = jest.fn<() => Promise<object | null>>();
 
@@ -22,7 +23,9 @@ jest.mock('@/utils/http', () => ({ getAccessToken: () => currentToken }));
 jest.mock('@/lib/createSupabaseServerClient', () => ({
   getAuthenticatedUser,
   invalidateAuthCache,
-  createSupabaseAdminClient: () => ({ auth: { admin: { mfa: { listFactors, deleteFactor } } } }),
+  createSupabaseAdminClient: () => ({
+    auth: { admin: { signOut, mfa: { listFactors, deleteFactor } } },
+  }),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -49,6 +52,7 @@ describe('POST /api/auth/two-factor/recover', () => {
     deleteMany.mockResolvedValue({ count: 9 });
     listFactors.mockResolvedValue({ data: { factors: [{ id: 'factor-1' }] }, error: null });
     deleteFactor.mockResolvedValue({ error: null });
+    signOut.mockResolvedValue({ error: null });
   });
 
   it('works for a login that has not entered its 6-digit code: that is its purpose', async () => {
@@ -59,6 +63,22 @@ describe('POST /api/auth/two-factor/recover', () => {
     // No code from this set may outlive the 2FA it belonged to.
     expect(deleteMany).toHaveBeenCalledWith({ where: { supabaseUid: 'user-1' } });
     expect(invalidateAuthCache).toHaveBeenCalledWith(halfLogin);
+  });
+
+  it('signs out every session, since the lost device may still be signed in', async () => {
+    await post({ code: CODE });
+
+    // Deleting the factor only drops sessions to aal1; it ends none of them.
+    expect(signOut).toHaveBeenCalledWith(halfLogin, 'global');
+  });
+
+  it('still reports success when the sign-out fails: 2FA is already gone', async () => {
+    signOut.mockRejectedValue(new Error('down'));
+
+    const res = await post({ code: CODE });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
   });
 
   it('refuses without a signed-in user', async () => {
@@ -90,6 +110,7 @@ describe('POST /api/auth/two-factor/recover', () => {
     expect(await res.json()).toEqual({ error: 'invalid_code' });
     expect(deleteFactor).not.toHaveBeenCalled();
     expect(deleteMany).not.toHaveBeenCalled();
+    expect(signOut).not.toHaveBeenCalled();
   });
 
   it.each([[{}], [{ code: 123 }], [{ code: 'short' }], [{ code: '0000-OOOO-1111-IIII' }]])(
@@ -120,5 +141,6 @@ describe('POST /api/auth/two-factor/recover', () => {
     expect(updateMany).toHaveBeenCalledTimes(2);
     expect(updateMany.mock.calls[1][0]).toMatchObject({ data: { usedAt: null } });
     expect(deleteMany).not.toHaveBeenCalled();
+    expect(signOut).not.toHaveBeenCalled();
   });
 });

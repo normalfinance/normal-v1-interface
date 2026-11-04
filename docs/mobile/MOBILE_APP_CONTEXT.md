@@ -242,6 +242,7 @@ route.** Installed apps can't be force-updated, so this ships in the app before 
   code })`. Supabase saves the upgraded session itself.
 - **Lost phone:** `POST /api/auth/two-factor/recover` with `{ code }` and the bearer token. This is the
   one route that works before the code. 200 means 2FA is gone and every session ended, so sign in again.
+  (The route signs out globally itself: deleting a factor alone only drops sessions to aal1.)
   400 `invalid_code`, 429 too many tries, 503 nothing changed. Never add an email-based reset: a stolen
   inbox is what 2FA stops.
 - **Turning it on in the app:** `mfa.enroll({ factorType: 'totp', friendlyName: 'Authenticator app',
@@ -262,3 +263,7 @@ route.** Installed apps can't be force-updated, so this ships in the app before 
   chain before retrying.
 - **Passkey emails:** `notifyNewDevice` still only logs. It's deferred to the mobile work; Supabase can't
   send it because passkeys live in Turnkey, so use the same email provider as Supabase's SMTP.
+- **Oldest supported build:** `GET /api/app/min-version` (public) answers `{ ios, android }`, the lowest
+  build number (iOS CFBundleVersion, Android versionCode) the API still supports. The app reads it on
+  launch and on foreground and shows "Update Normal" when its own build is lower; a failed read blocks
+  nothing. Set with `APP_MIN_BUILD_IOS` / `APP_MIN_BUILD_ANDROID`; unset or not a whole number means 0.

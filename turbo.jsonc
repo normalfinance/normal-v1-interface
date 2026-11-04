@@ -15,6 +15,10 @@
     "NEXT_PUBLIC_CDN_URL",
     "CDN_ORIGIN",
 
+    // Oldest app build the API supports (server only, /api/app/min-version)
+    "APP_MIN_BUILD_IOS",
+    "APP_MIN_BUILD_ANDROID",
+
     // Stripe fiat-to-crypto onramp (server only)
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",

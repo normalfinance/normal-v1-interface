@@ -32,6 +32,8 @@ const PUBLIC_ROUTES: Record<string, string> = {
   // the chain, so it is now withAuth + ownership-checked and must never
   // return to this list.
   'mgi/info': 'static SEP anchor info, cached 300s, no user data',
+  'app/min-version':
+    'oldest supported app build from env, no user data; an old build must read it before sign-in',
   'cron/cctp-advance': 'cron-secret auth, not user sessions',
   'cron/dune-sync': 'cron-secret auth, not user sessions',
   'cron/fee-escrow-sweep': 'cron-secret auth, not user sessions',
