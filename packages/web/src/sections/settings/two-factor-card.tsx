@@ -8,8 +8,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { TWO_FACTOR_ENABLED, twoFactorErrorMessage } from '@/lib/auth/two-factor';
 
-import { Box, Stack, Alert, Button, TextField, Typography } from '@mui/material';
+import { Box, Stack, Alert, Button, Typography } from '@mui/material';
 
+import { CodeInput } from '@/components/_common/code-input';
 import { useSnackbar } from '@/components/template/snackbar';
 import { BLOCK_SX, MONO_FONT } from '@/components/_common/brand';
 import WalletExportDialog from '@/components/_common/wallet-export-dialog';
@@ -53,7 +54,6 @@ const dangerButtonSx = {
 };
 
 function CodeField({ busy, onComplete }: { busy: boolean; onComplete: (code: string) => void }) {
-  const { t } = useTranslate();
   const [code, setCode] = useState('');
 
   // Clears itself after a wrong code, once the attempt is over.
@@ -62,26 +62,14 @@ function CodeField({ busy, onComplete }: { busy: boolean; onComplete: (code: str
   }, [busy]);
 
   return (
-    <TextField
-      label={t('6-digit code')}
+    <CodeInput
       value={code}
-      onChange={(event) => {
-        const digits = event.target.value.replace(/\D/g, '').slice(0, CODE_LENGTH);
-        setCode(digits);
-        if (digits.length === CODE_LENGTH) onComplete(digits);
-      }}
-      fullWidth
-      autoFocus
+      onChange={setCode}
+      onComplete={onComplete}
+      length={CODE_LENGTH}
       disabled={busy}
-      slotProps={{
-        htmlInput: {
-          maxLength: CODE_LENGTH,
-          inputMode: 'numeric',
-          autoComplete: 'one-time-code',
-          style: { textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.25rem' },
-        },
-      }}
-      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 'var(--radius-md)' } }}
+      size="small"
+      autoFocus
     />
   );
 }

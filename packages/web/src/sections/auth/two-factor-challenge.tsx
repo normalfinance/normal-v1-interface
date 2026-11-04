@@ -1,18 +1,54 @@
 'use client';
 
+import type { SvgIconComponent } from '@mui/icons-material';
+
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { authedFetch } from '@/utils/authed-fetch';
 import { supabase } from '@/lib/createSupabaseClient';
 import { twoFactorErrorMessage } from '@/lib/auth/two-factor';
 
-import { Alert, Stack, Button, TextField, Typography, CircularProgress } from '@mui/material';
+import KeyOutlined from '@mui/icons-material/KeyOutlined';
+import AccessTimeOutlined from '@mui/icons-material/AccessTimeOutlined';
+import VerifiedUserOutlined from '@mui/icons-material/VerifiedUserOutlined';
+import PhonelinkLockOutlined from '@mui/icons-material/PhonelinkLockOutlined';
+import { Box, Alert, Stack, Button, TextField, Typography, CircularProgress } from '@mui/material';
+
+import { CodeInput } from '@/components/_common/code-input';
+import { HAIRLINE, MONO_FONT } from '@/components/_common/brand';
 
 const CODE_LENGTH = 6;
 
 const fieldSx = { '& .MuiOutlinedInput-root': { borderRadius: 'var(--radius-md)' } };
 
 const linkButtonSx = { color: 'text.secondary', fontSize: '0.8125rem' };
+
+// The icon tile from the navbar menus, a size up: soft fill, hairline, outlined icon.
+function IconTile({ icon: Icon, small }: { icon: SvgIconComponent; small: boolean }) {
+  return (
+    <Box
+      sx={(theme) => ({
+        width: small ? 40 : 48,
+        height: small ? 40 : 48,
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: '#F4F4F7',
+        border: HAIRLINE,
+        borderRadius: 'var(--radius-md)',
+        color: '#0A0A0F',
+        ...theme.applyStyles('dark', {
+          bgcolor: 'rgba(255,255,255,0.06)',
+          borderColor: 'rgba(255,255,255,0.10)',
+          color: 'text.primary',
+        }),
+      })}
+    >
+      <Icon sx={{ fontSize: small ? 20 : 24 }} />
+    </Box>
+  );
+}
 
 type TwoFactorChallengeProps = {
   /** Signs out of this half-finished login. */
@@ -65,12 +101,9 @@ export function TwoFactorChallenge({ onCancel, onRecovered, onVerified }: TwoFac
     }
   };
 
-  // Six digits submit by themselves, same as the emailed sign-in code.
-  const handleCodeChange = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, CODE_LENGTH);
+  const handleCodeChange = (digits: string) => {
     setCode(digits);
     setError(null);
-    if (digits.length === CODE_LENGTH) verify(digits);
   };
 
   const handleRecovery = async (event: React.FormEvent) => {
@@ -99,31 +132,66 @@ export function TwoFactorChallenge({ onCancel, onRecovered, onVerified }: TwoFac
 
   let heading = t('Enter your code');
   let subtitle = t('Open your authenticator app and enter the 6-digit code for Normal.');
+  let icon: SvgIconComponent = PhonelinkLockOutlined;
   if (useRecoveryCode) {
     heading = t('Use a recovery code');
     subtitle = t('This turns off two-factor authentication. You can set it up again in Settings.');
+    icon = KeyOutlined;
   } else if (confirmingAction) {
     heading = t('Confirm with your code');
     subtitle = t('Enter the 6-digit code from your authenticator app to continue.');
+    icon = VerifiedUserOutlined;
   }
+
+  const renderStatus = () => {
+    if (busy) {
+      return (
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}>
+          <CircularProgress size={14} color="inherit" />
+          <Typography sx={{ fontSize: 13 }}>{t('Checking your code…')}</Typography>
+        </Stack>
+      );
+    }
+    if (error) {
+      return (
+        <Alert severity="error" sx={{ borderRadius: 'var(--radius-md)', alignItems: 'center' }}>
+          {t(error)}
+        </Alert>
+      );
+    }
+    return (
+      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ color: 'text.disabled' }}>
+        <AccessTimeOutlined sx={{ fontSize: 15 }} />
+        <Typography sx={{ fontSize: 13 }}>{t('The code changes every 30 seconds.')}</Typography>
+      </Stack>
+    );
+  };
 
   return (
     <Stack spacing={3}>
-      <Stack spacing={0.75}>
-        <Typography
-          component="h1"
-          sx={{
-            fontSize: confirmingAction ? 18 : 30,
-            fontWeight: 500,
-            lineHeight: 1.15,
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {heading}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ fontSize: 15 }}>
-          {subtitle}
-        </Typography>
+      <Stack spacing={2}>
+        <IconTile icon={icon} small={confirmingAction} />
+        <Stack spacing={0.75}>
+          <Typography
+            component="h1"
+            sx={{
+              fontSize: confirmingAction ? 20 : 30,
+              fontWeight: 500,
+              lineHeight: 1.15,
+              letterSpacing: '-0.02em',
+              color: 'var(--auth-ink, #0A0A0F)',
+            }}
+          >
+            {heading}
+          </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ fontSize: confirmingAction ? 14 : 15 }}
+          >
+            {subtitle}
+          </Typography>
+        </Stack>
       </Stack>
 
       {useRecoveryCode ? (
@@ -142,11 +210,16 @@ export function TwoFactorChallenge({ onCancel, onRecovered, onVerified }: TwoFac
               htmlInput: {
                 autoComplete: 'one-time-code',
                 spellCheck: false,
-                style: { fontFamily: '"Geist Mono", ui-monospace, monospace' },
+                style: { fontFamily: MONO_FONT },
               },
             }}
             sx={fieldSx}
           />
+          {error && (
+            <Alert severity="error" sx={{ borderRadius: 'var(--radius-md)', alignItems: 'center' }}>
+              {t(error)}
+            </Alert>
+          )}
           <Button
             type="submit"
             fullWidth
@@ -158,43 +231,28 @@ export function TwoFactorChallenge({ onCancel, onRecovered, onVerified }: TwoFac
           </Button>
         </Stack>
       ) : (
-        <TextField
-          label={t('6-digit code')}
-          value={code}
-          onChange={(event) => handleCodeChange(event.target.value)}
-          fullWidth
-          autoFocus
-          disabled={busy}
-          slotProps={{
-            htmlInput: {
-              maxLength: CODE_LENGTH,
-              inputMode: 'numeric',
-              autoComplete: 'one-time-code',
-              style: {
-                textAlign: 'center',
-                letterSpacing: '0.6em',
-                fontSize: '1.5rem',
-                fontWeight: 500,
-              },
-            },
-          }}
-          sx={fieldSx}
-        />
-      )}
-
-      {busy && !useRecoveryCode && (
-        <Stack alignItems="center">
-          <CircularProgress size={24} />
+        <Stack spacing={2}>
+          <CodeInput
+            value={code}
+            onChange={handleCodeChange}
+            onComplete={verify}
+            length={CODE_LENGTH}
+            disabled={busy}
+            error={!!error}
+            size={confirmingAction ? 'small' : 'medium'}
+            autoFocus
+          />
+          {renderStatus()}
         </Stack>
       )}
 
-      {error && (
-        <Alert severity="error" sx={{ borderRadius: 'var(--radius-md)', alignItems: 'center' }}>
-          {t(error)}
-        </Alert>
-      )}
-
-      <Stack alignItems="center" spacing={0.5}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="center"
+        spacing={0.5}
+        sx={{ pt: 2, borderTop: HAIRLINE }}
+      >
         <Button
           variant="text"
           size="small"
@@ -204,6 +262,9 @@ export function TwoFactorChallenge({ onCancel, onRecovered, onVerified }: TwoFac
         >
           {useRecoveryCode ? t('Use your authenticator app') : t('Lost your phone?')}
         </Button>
+        <Typography aria-hidden="true" sx={{ color: 'text.disabled', fontSize: 13 }}>
+          ·
+        </Typography>
         <Button variant="text" size="small" disabled={busy} onClick={onCancel} sx={linkButtonSx}>
           {confirmingAction ? t('Cancel') : t('Cancel and log out')}
         </Button>
