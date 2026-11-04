@@ -41,7 +41,7 @@ export function GetStartedPicker({ onBringOwnWallet }: GetStartedPickerProps) {
 
   const tileSx = {
     p: 1.75,
-    borderRadius: 2,
+    borderRadius: 'var(--radius-lg)',
     cursor: 'pointer',
     border: `1.5px solid ${theme.palette.divider}`,
     transition: 'all 0.15s',
@@ -62,7 +62,7 @@ export function GetStartedPicker({ onBringOwnWallet }: GetStartedPickerProps) {
                 src={assetDisplay(asset.symbol).icon}
                 sx={{ width: 28, height: 28, borderRadius: '50%' }}
               />
-              <Typography variant="h4" fontWeight={700}>
+              <Typography variant="h4" fontWeight={500}>
                 {t('Add {{symbol}}', { symbol: asset.symbol })}
               </Typography>
             </Stack>
@@ -92,7 +92,7 @@ export function GetStartedPicker({ onBringOwnWallet }: GetStartedPickerProps) {
                     sx={{
                       width: 40,
                       height: 40,
-                      borderRadius: '10px',
+                      borderRadius: 'var(--radius-md)',
                       bgcolor: alpha(theme.palette.text.primary, 0.06),
                       display: 'flex',
                       alignItems: 'center',
@@ -103,7 +103,7 @@ export function GetStartedPicker({ onBringOwnWallet }: GetStartedPickerProps) {
                     <Iconify icon={o.icon} width={20} sx={{ color: 'text.primary' }} />
                   </Box>
                   <Box flex={1} minWidth={0}>
-                    <Typography variant="subtitle2" fontWeight={700}>
+                    <Typography variant="subtitle2" fontWeight={500}>
                       {o.title}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
@@ -132,7 +132,7 @@ export function GetStartedPicker({ onBringOwnWallet }: GetStartedPickerProps) {
       ) : (
         <Stack spacing={2.5}>
           <Box>
-            <Typography variant="h4" fontWeight={700} gutterBottom>
+            <Typography variant="h4" fontWeight={500} gutterBottom>
               {t('What do you want to start with?')}
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -152,7 +152,7 @@ export function GetStartedPicker({ onBringOwnWallet }: GetStartedPickerProps) {
                     sx={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0 }}
                   />
                   <Box flex={1} minWidth={0}>
-                    <Typography variant="subtitle2" fontWeight={700}>
+                    <Typography variant="subtitle2" fontWeight={500}>
                       {a.symbol}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">

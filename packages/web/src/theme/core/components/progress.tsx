@@ -40,7 +40,7 @@ const MuiLinearProgress: Components<Theme>['MuiLinearProgress'] = {
         },
       };
       return {
-        borderRadius: 4,
+        borderRadius: 'var(--radius-xs)',
         ...(ownerState.variant !== 'buffer' && { ...styled.inheritColor, ...styled.colors }),
       };
     },

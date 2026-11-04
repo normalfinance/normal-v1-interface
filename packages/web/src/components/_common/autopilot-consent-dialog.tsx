@@ -54,19 +54,17 @@ export default function AutopilotConsentDialog({
     <Dialog
       open={open}
       onClose={busy ? undefined : () => onChoose(false)}
-      PaperProps={{ sx: { borderRadius: '20px', maxWidth: 420, p: '24px' } }}
+      PaperProps={{ sx: { borderRadius: 'var(--radius-lg)', maxWidth: 420, p: '24px' } }}
     >
-      <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', mb: '10px' }}>
+      <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', mb: '10px' }}>
         {t('Finish future swaps automatically?')}
       </Typography>
-      <Typography sx={{ fontSize: '13.5px', color: 'rgba(10,10,15,0.6)', lineHeight: 1.6 }}>
+      <Typography sx={{ fontSize: '13.5px', color: '#6B6B76', lineHeight: 1.6 }}>
         {t(
           'Cross-chain swaps normally need one more signature after the bridge wait. Enable this and Normal finishes that step for you — including a swap that is running right now. You sign once at the start and walk away.'
         )}
       </Typography>
-      <Typography
-        sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', lineHeight: 1.6, mt: '10px' }}
-      >
+      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', lineHeight: 1.6, mt: '10px' }}>
         {t(
           'Your wallet itself enforces the limits: only swaps you started, only to your own addresses, only the allowlisted bridge contracts. Turn it off anytime in Settings. Enabling takes up to two quick passkey confirmations.'
         )}
@@ -79,10 +77,10 @@ export default function AutopilotConsentDialog({
             flex: 1,
             textTransform: 'none',
             fontSize: '13.5px',
-            fontWeight: 600,
+            fontWeight: 500,
             color: '#0A0A0F',
             border: '1px solid rgba(10,10,15,0.14)',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-md)',
             py: '9px',
           }}
         >
@@ -95,10 +93,10 @@ export default function AutopilotConsentDialog({
             flex: 1.4,
             textTransform: 'none',
             fontSize: '13.5px',
-            fontWeight: 600,
+            fontWeight: 500,
             color: '#fff',
             bgcolor: '#0A0A0F',
-            borderRadius: '12px',
+            borderRadius: 'var(--radius-md)',
             py: '9px',
             '&:hover': { bgcolor: '#0A0A0F', opacity: 0.85 },
           }}

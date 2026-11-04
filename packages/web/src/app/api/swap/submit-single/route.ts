@@ -2,10 +2,10 @@ import type { NextRequest } from 'next/server';
 
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { withAuth } from '@/lib/with-auth';
 import { rateLimiter } from '@/server/rateLimiter';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { networkFromCookie } from '@/server/network-cookie';
+import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 import { getFeesDepositAddress } from '@/lib/build-fee-payment';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
 import { settleRecord, createPendingRecord } from '@/server/tx-records';
@@ -21,7 +21,9 @@ export const dynamic = 'force-dynamic';
 // every other Stellar path honours — the embedded-fee leg and the fee-pair leg
 // could talk to different Horizons in one deployment. Use the shared config.
 
-export const POST = withAuth(async (request: NextRequest, { user }) => {
+export const POST = withAuth(async (request: NextRequest, { user, accessToken }) => {
+  const refusal = actionCodeRefusal(user, accessToken);
+  if (refusal) return refusal;
   // Doc 95 Wave 2: this route broadcasts a signed transaction and writes a
   // money row — it needs the same ceiling as its sibling execute-pair.
   const { success: withinLimit } = await rateLimiter.limit(user.id);

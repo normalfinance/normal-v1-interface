@@ -2,8 +2,8 @@ import type { NextRequest } from 'next/server';
 
 import { logger } from '@/utils/logger';
 import { NextResponse } from 'next/server';
-import { withAuth } from '@/lib/with-auth';
 import { Psbt, networks } from 'bitcoinjs-lib';
+import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 
 // ---------------------------------------------------------------------------
 // POST /api/turnkey/broadcast-btc
@@ -16,7 +16,9 @@ import { Psbt, networks } from 'bitcoinjs-lib';
 // Bitcoin relay — strangers proxying arbitrary transactions through our server
 // IP, whose abuse or rate-limit flags land on us, not them.
 // ---------------------------------------------------------------------------
-export const POST = withAuth(async (request: NextRequest) => {
+export const POST = withAuth(async (request: NextRequest, { user, accessToken }) => {
+  const refusal = actionCodeRefusal(user, accessToken);
+  if (refusal) return refusal;
   let body: { signedTxHex: string };
   try {
     body = await request.json();

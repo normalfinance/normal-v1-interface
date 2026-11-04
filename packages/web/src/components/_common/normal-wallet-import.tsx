@@ -317,7 +317,7 @@ export default function NormalWalletImport({
                   sx={{
                     width: 40,
                     height: 40,
-                    borderRadius: 1,
+                    borderRadius: 'var(--radius-md)',
                     bgcolor: 'primary.lighter',
                     display: 'flex',
                     alignItems: 'center',
@@ -453,7 +453,7 @@ export default function NormalWalletImport({
       slotProps={{
         paper: {
           sx: {
-            borderRadius: 2,
+            borderRadius: 'var(--radius-lg)',
           },
         },
       }}

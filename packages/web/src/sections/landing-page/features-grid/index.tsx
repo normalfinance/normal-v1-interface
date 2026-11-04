@@ -63,7 +63,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
     <Paper
       variant="outlined"
       sx={(theme) => ({
-        borderRadius: 3,
+        borderRadius: 'var(--radius-lg)',
         bgcolor: theme.palette.grey[100],
         ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
         cursor: isLink ? 'pointer' : 'default',
@@ -88,7 +88,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
               gap: 1.25,
               px: 2.5,
               py: 1,
-              borderRadius: 4,
+              borderRadius: 'var(--radius-lg)',
               border: '1px solid',
               borderColor: 'divider',
               bgcolor: 'background.paper',
@@ -111,7 +111,7 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                 })}
               </Box>
             )}
-            <Typography variant="subtitle2" fontWeight={600}>
+            <Typography variant="subtitle2" fontWeight={500}>
               {c.tagline}
             </Typography>
           </Box>
@@ -150,14 +150,10 @@ const SmallCardItem: React.FC<SmallCard> = (c) => {
                   tabIndex={tkn.icon ? 0 : undefined}
                   sx={(theme) => ({
                     cursor: tkn.icon ? 'pointer' : 'default',
-                    transition: 'transform 0.15s ease',
-                    '&:hover': {
-                      transform: tkn.icon ? 'scale(1.03)' : 'none',
-                    },
                     px: { xs: '12px', md: '16px' },
                     py: { xs: '6px', md: '12px' },
                     bgcolor: theme.palette.background.paper,
-                    borderRadius: 1.5,
+                    borderRadius: 'var(--radius-md)',
                     border: `1px solid ${theme.palette.divider}`,
                   })}
                 >
@@ -282,7 +278,7 @@ const TallCardItem: React.FC<TallCard> = (c) => {
     <Paper
       variant="outlined"
       sx={(theme) => ({
-        borderRadius: 3,
+        borderRadius: 'var(--radius-lg)',
         bgcolor: theme.palette.grey[100],
         ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
         cursor: isLink ? 'pointer' : 'default',
@@ -300,7 +296,7 @@ const TallCardItem: React.FC<TallCard> = (c) => {
               gap: '10px',
               px: '20px',
               py: '8px',
-              borderRadius: '32px',
+              borderRadius: 'var(--radius-lg)',
               border: '1px solid',
               borderColor: 'divider',
               bgcolor: 'background.paper',
@@ -316,7 +312,7 @@ const TallCardItem: React.FC<TallCard> = (c) => {
                 {c.icon}
               </Box>
             )}
-            <Typography variant="subtitle2" fontWeight={600}>
+            <Typography variant="subtitle2" fontWeight={500}>
               {c.tagline}
             </Typography>
           </Box>
@@ -358,7 +354,7 @@ const WideCardItem: React.FC<WideCard> = (c) => {
     <Paper
       variant="outlined"
       sx={(theme) => ({
-        borderRadius: 3,
+        borderRadius: 'var(--radius-lg)',
         bgcolor: theme.palette.grey[100],
         ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
         cursor: isLink ? 'pointer' : 'default',
@@ -374,7 +370,7 @@ const WideCardItem: React.FC<WideCard> = (c) => {
             gap: '10px',
             px: '20px',
             py: '8px',
-            borderRadius: '32px',
+            borderRadius: 'var(--radius-lg)',
             border: '1px solid',
             borderColor: 'divider',
             bgcolor: 'background.paper',
@@ -390,7 +386,7 @@ const WideCardItem: React.FC<WideCard> = (c) => {
               {c.icon}
             </Box>
           )}
-          <Typography variant="subtitle2" fontWeight={600}>
+          <Typography variant="subtitle2" fontWeight={500}>
             {c.tagline}
           </Typography>
         </Box>

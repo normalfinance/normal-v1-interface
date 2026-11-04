@@ -55,7 +55,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 
-const MONO = { fontFamily: '"Geist Mono", "Courier New", monospace' } as const;
+const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace' } as const;
 
 interface Props {
   open: boolean;
@@ -276,23 +276,21 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
       onClose={busy ? undefined : onClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: '22px', p: '22px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)', p: '22px' } } }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '6px' }}>
-        <Typography sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
           {t('Set up your Normal wallet')}
         </Typography>
         <Box
           component="button"
           onClick={busy ? undefined : onClose}
-          sx={{ all: 'unset', cursor: 'pointer', color: 'rgba(10,10,15,0.4)', display: 'flex' }}
+          sx={{ all: 'unset', cursor: 'pointer', color: '#9A9AA3', display: 'flex' }}
         >
           <Iconify icon="mingcute:close-line" width={20} />
         </Box>
       </Stack>
-      <Typography
-        sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', mb: '14px', lineHeight: 1.5 }}
-      >
+      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', mb: '14px', lineHeight: 1.5 }}>
         {t(
           'Cross-chain swaps run through your Normal wallet — a passkey-secured wallet that can hold BTC, ETH and SOL.'
         )}
@@ -345,11 +343,11 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                     )}
                   </Box>
                   <Box>
-                    <Typography sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F' }}>
+                    <Typography sx={{ fontSize: '13.5px', fontWeight: 500, color: '#0A0A0F' }}>
                       {stepMeta[s].label}
                     </Typography>
                     {active && (
-                      <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)' }}>
+                      <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>
                         {stepMeta[s].sub}
                       </Typography>
                     )}
@@ -367,8 +365,8 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                 sx={{
                   p: '14px',
                   mb: '12px',
-                  borderRadius: '14px',
-                  border: '1px solid rgba(10,10,15,0.1)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(10,10,15,0.08)',
                   bgcolor: '#FAFAFB',
                   textAlign: 'center',
                 }}
@@ -376,7 +374,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                 <Typography
                   sx={{
                     fontSize: '12.5px',
-                    color: 'rgba(10,10,15,0.6)',
+                    color: '#6B6B76',
                     mb: '10px',
                     lineHeight: 1.5,
                   }}
@@ -390,7 +388,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                     component="img"
                     src={qrUrl}
                     alt={t('Normal wallet address')}
-                    sx={{ width: 168, height: 168, borderRadius: '10px', mb: '8px' }}
+                    sx={{ width: 168, height: 168, borderRadius: 'var(--radius-md)', mb: '8px' }}
                   />
                 )}
                 <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
@@ -410,7 +408,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                   )}
                 </Stack>
                 {probing && (
-                  <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '6px' }}>
+                  <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', mt: '6px' }}>
                     {t('Watching for the payment…')}
                   </Typography>
                 )}
@@ -421,7 +419,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
               <Typography
                 sx={{
                   fontSize: '12px',
-                  color: 'rgba(10,10,15,0.5)',
+                  color: '#6B6B76',
                   mb: '6px',
                   textAlign: 'center',
                 }}
@@ -456,7 +454,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                 color: '#B91C1C',
                 bgcolor: 'rgba(185,28,28,0.06)',
                 border: '1px solid rgba(185,28,28,0.15)',
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 px: '12px',
                 py: '8px',
                 mb: '10px',
@@ -478,16 +476,16 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
               gap: '10px',
               width: '100%',
               py: '13px',
-              borderRadius: '14px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
               bgcolor: '#0A0A0F',
               color: '#fff',
               fontSize: '14px',
-              fontWeight: 600,
+              fontWeight: 500,
               fontFamily: 'inherit',
               cursor: busy || probing ? 'not-allowed' : 'pointer',
               opacity: busy || probing ? 0.7 : 1,
-              '&:hover:not(:disabled)': { bgcolor: '#1a1a25' },
+              '&:hover:not(:disabled)': { bgcolor: '#2A2A33' },
             }}
           >
             {busy ? (
@@ -502,7 +500,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
             <Typography
               sx={{
                 fontSize: '11.5px',
-                color: 'rgba(10,10,15,0.45)',
+                color: '#9A9AA3',
                 mt: '10px',
                 textAlign: 'center',
               }}

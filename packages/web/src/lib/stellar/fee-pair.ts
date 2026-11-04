@@ -62,7 +62,7 @@ async function probeOnChain(server: Horizon.Server, hash: string): Promise<OnCha
 }
 
 /** Poll Horizon until the tx appears (or we give up after ~40s). */
-async function awaitOnChain(server: Horizon.Server, hash: string): Promise<OnChainStatus> {
+export async function awaitOnChain(server: Horizon.Server, hash: string): Promise<OnChainStatus> {
   for (let i = 0; i < POLL_ATTEMPTS; i += 1) {
     try {
       const status = await probeOnChain(server, hash);

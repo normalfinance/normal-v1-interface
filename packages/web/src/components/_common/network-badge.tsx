@@ -40,7 +40,7 @@ export function NetworkBadge({ network }: { network: AssetNetwork }) {
         gap: '5px',
         px: '8px',
         py: '2px',
-        borderRadius: '999px',
+        borderRadius: 'var(--radius-sm)',
         bgcolor: s.bg,
         color: s.color,
         fontSize: '10.5px',

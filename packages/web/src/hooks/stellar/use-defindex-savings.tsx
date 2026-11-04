@@ -14,6 +14,7 @@ import { buildAuthHeaders } from '@/utils/http';
 // deposit/withdraw transaction engine.
 import { Asset, Horizon } from '@stellar/stellar-sdk';
 import { usePersistStore } from '@normalfinance/state';
+import { confirmAction } from '@/lib/auth/action-code';
 import { signStellarTxForMgi } from '@/lib/mgi/kit-signer';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { bumpSavingsReadEpoch } from '@/lib/savings-read-guard';
@@ -299,6 +300,8 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           );
         }
 
+        if (!(await confirmAction())) return '';
+
         // 1. Build the DeFindex deposit XDR for the NET amount. It carries
         // the account's next sequence number — the fee tx chains behind it.
         const depositResponse = await fetch('/api/savings/deposit', {
@@ -524,6 +527,8 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
           return signedXDR;
         };
+
+        if (!(await confirmAction())) return '';
 
         // 1. Build the DeFindex withdraw XDR. The commission (when owed)
         // chains one sequence number behind it, so the commission can only

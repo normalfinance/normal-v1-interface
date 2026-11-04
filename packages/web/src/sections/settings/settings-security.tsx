@@ -52,17 +52,17 @@ export function SettingsSecurity() {
   return (
     <Box
       sx={{
-        p: '22px',
-        borderRadius: '22px',
+        p: { xs: '20px', md: '24px' },
+        borderRadius: 'var(--radius-lg)',
         border: '1px solid rgba(10,10,15,0.08)',
         bgcolor: '#FFFFFF',
         maxWidth: 480,
       }}
     >
-      <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0A0A0F', mb: '4px' }}>
+      <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
         {t('Reset Password')}
       </Typography>
-      <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mb: '20px' }}>
+      <Typography sx={{ fontSize: '13px', color: '#6B6B76', mb: '20px' }}>
         {t('Click below to receive a password reset link at your email address.')}
       </Typography>
 
@@ -74,9 +74,9 @@ export function SettingsSecurity() {
               sx={{
                 fontSize: '11px',
                 fontWeight: 500,
-                color: 'rgba(10,10,15,0.45)',
+                color: '#9A9AA3',
                 textTransform: 'uppercase',
-                letterSpacing: '0.08em',
+                letterSpacing: '0.16em',
                 mb: '8px',
               }}
             >
@@ -86,7 +86,7 @@ export function SettingsSecurity() {
               sx={{
                 px: '14px',
                 py: '12px',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: '#FAFAFB',
                 border: '1px solid rgba(10,10,15,0.08)',
               }}
@@ -94,8 +94,8 @@ export function SettingsSecurity() {
               <Typography
                 sx={{
                   fontSize: '13px',
-                  color: 'rgba(10,10,15,0.5)',
-                  fontFamily: '"Geist Mono", "Courier New", monospace',
+                  color: '#6B6B76',
+                  fontFamily: '"Geist Mono", ui-monospace, monospace',
                 }}
               >
                 {user?.email || '—'}
@@ -116,15 +116,15 @@ export function SettingsSecurity() {
             disabled={isSubmitting || !captchaToken}
             startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : null}
             sx={{
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: '#0A0A0F',
-              fontWeight: 700,
+              fontWeight: 500,
               fontSize: '14px',
               py: '12px',
               textTransform: 'none',
               letterSpacing: '-0.01em',
-              '&:hover': { bgcolor: '#1a1a25' },
-              '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+              '&:hover': { bgcolor: '#2A2A33' },
+              '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
             }}
           >
             {isSubmitting ? t('Sending...') : t('Send Reset Link')}
@@ -136,7 +136,7 @@ export function SettingsSecurity() {
             display: 'flex',
             gap: '12px',
             p: '16px',
-            borderRadius: '14px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: 'rgba(16,185,129,0.05)',
             border: '1px solid rgba(16,185,129,0.2)',
           }}
@@ -150,7 +150,7 @@ export function SettingsSecurity() {
             <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
               {t("We've sent a password reset link to")} {user?.email}
             </Typography>
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: '12px', color: '#6B6B76', lineHeight: 1.5 }}>
               {t('Please check your inbox and spam folder. The link will expire in 1 hour.')}
             </Typography>
           </Box>

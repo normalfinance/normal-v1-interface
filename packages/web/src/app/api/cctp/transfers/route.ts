@@ -2,17 +2,17 @@ import { prisma } from '@/lib/prisma';
 // CCTP transfers — create (persist burn intent BEFORE broadcasting the burn)
 // and list the caller's in-flight transfers (drives the recovery banner).
 import { cookies } from 'next/headers';
-import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { CCTP_DOMAIN } from '@/lib/cctp/config';
 import { PENDING_STATUSES } from '@/lib/cctp/state';
 import { networkFromCookie } from '@/server/network-cookie';
+import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 
 export const dynamic = 'force-dynamic';
 
 const VALID_DOMAINS = new Set<number>(Object.values(CCTP_DOMAIN));
 
-export const POST = withAuth(async (req: Request, { user }) => {
+export const POST = withAuth(async (req: Request, { user, accessToken }) => {
   const body = await req.json();
   const {
     direction,
@@ -78,6 +78,10 @@ export const POST = withAuth(async (req: Request, { user }) => {
     }
   }
   if (!refundApproved) {
+    // Not for a refund: it brings money back, so a lost phone must never block it.
+    const refusal = actionCodeRefusal(user, accessToken);
+    if (refusal) return refusal;
+
     const MIN_WIRE = 10_000_000n; // $10
     if (amount < MIN_WIRE) {
       return NextResponse.json({ error: 'Minimum swap is $10' }, { status: 400 });

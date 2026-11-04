@@ -144,9 +144,9 @@ export function HeroCard({
       sx={{
         position: 'relative',
         overflow: 'hidden',
-        borderRadius: '22px',
+        borderRadius: 'var(--radius-lg)',
         bgcolor: '#0A0A0F',
-        p: { xs: '32px', md: '48px' },
+        p: { xs: '24px', md: '32px' },
         color: '#fff',
       }}
     >
@@ -213,7 +213,7 @@ export function HeroCard({
                 variant="text"
                 width={240}
                 height={72}
-                sx={{ bgcolor: 'rgba(255,255,255,0.08)', borderRadius: '8px' }}
+                sx={{ bgcolor: 'rgba(255,255,255,0.08)', borderRadius: 'var(--radius-md)' }}
               />
             ) : balancesError && totalBalance === 0 ? (
               <Box>
@@ -240,7 +240,7 @@ export function HeroCard({
                       border: '1px solid rgba(255,255,255,0.35)',
                       background: 'transparent',
                       color: '#fff',
-                      borderRadius: '8px',
+                      borderRadius: 'var(--radius-md)',
                       px: '10px',
                       py: '3px',
                       fontSize: '12.5px',
@@ -286,7 +286,7 @@ export function HeroCard({
                     variant="text"
                     width={80}
                     height={32}
-                    sx={{ bgcolor: 'rgba(255,255,255,0.08)', borderRadius: '4px' }}
+                    sx={{ bgcolor: 'rgba(255,255,255,0.08)', borderRadius: 'var(--radius-xs)' }}
                   />
                 ) : (
                   <>
@@ -361,7 +361,6 @@ export function HeroCard({
                         borderRadius: '50%',
                         bgcolor: getHoldingColor(h.token, i),
                         flexShrink: 0,
-                        boxShadow: `0 0 6px ${getHoldingColor(h.token, i)}88`,
                       }}
                     />
                     <Box sx={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', flex: 1 }}>

@@ -4,7 +4,9 @@ import React from 'react';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
 
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
+
+import { PageSection, GradientText, SectionHeader } from '@/components/_common/brand';
 
 type ImageProps = {
   url?: string;
@@ -25,8 +27,8 @@ export const MomentsDefaults: Props = {
   description:
     'From impromptu coffee runs to cross-team hackathons and Meridian conferences — these snapshots capture the energy, laughter, and collaboration that fuel our day-to-day.',
   images: [
-    { url: '#', src: cdn('about-page/t1.webp'), alt: 'Team image 1' },
     { url: '#', src: cdn('about-page/img2.webp'), alt: 'Team image 2' },
+    { url: '#', src: cdn('about-page/t1.webp'), alt: 'Team image 1' },
     { url: '#', src: cdn('about-page/t3.webp'), alt: 'Team image 3' },
     { url: '#', src: cdn('about-page/img3.webp'), alt: 'Team image 4' },
     { url: '#', src: cdn('about-page/t5.webp'), alt: 'Team image 5' },
@@ -35,7 +37,7 @@ export const MomentsDefaults: Props = {
 };
 
 export const Moments: React.FC<MomentsProps> = (props) => {
-  const { description, images, ...sectionProps } = {
+  const { description, images } = {
     ...MomentsDefaults,
     ...props,
   };
@@ -43,99 +45,64 @@ export const Moments: React.FC<MomentsProps> = (props) => {
   const { t } = useTranslate();
 
   return (
-    <Box
-      component="section"
-      {...sectionProps}
-      sx={{ bgcolor: '#FAFAFB', pt: { xs: '40px', md: '56px' }, pb: { xs: '80px', md: '110px' } }}
-    >
-      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
-        {/* Header */}
-        <Box mb={{ xs: '40px', md: '56px' }} sx={{ textAlign: 'center' }}>
-          <Typography
-            sx={{
-              fontSize: '11px',
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: '#6B6B76',
-              mb: 1.5,
-            }}
-          >
-            — Culture
-          </Typography>
-          <Typography
-            component="h2"
-            sx={{
-              fontWeight: 500,
-              fontSize: 'clamp(32px, 4vw, 52px)',
-              lineHeight: 1.15,
-              letterSpacing: '-0.03em',
-              color: '#0A0A0F',
-              mb: '16px',
-            }}
-          >
-            Moments That{' '}
-            <Box
-              component="span"
-              sx={{
-                background:
-                  'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              Matter
-            </Box>
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: '16px',
-              color: '#6B6B76',
-              lineHeight: 1.55,
-              maxWidth: '520px',
-              mx: 'auto',
-            }}
-          >
-            {t(description)}
-          </Typography>
-        </Box>
+    <PageSection>
+      <SectionHeader
+        eyebrow="Culture"
+        title={
+          <>
+            Moments That <GradientText>Matter</GradientText>
+          </>
+        }
+        subtitle={t(description)}
+      />
 
-        {/* Masonry gallery */}
-        <Box
-          sx={{
-            columnCount: { xs: 1, sm: 2, md: 3 },
-            columnGap: '16px',
-          }}
-        >
-          {images.map((image, index) => (
+      {/* Mosaic: the first photo leads, the last fills the phone grid's odd slot */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+          gap: { xs: 1.5, md: 2 },
+        }}
+      >
+        {images.map((image, index) => {
+          const lead = index === 0;
+          const last = index === images.length - 1;
+          return (
             <Box
-              key={index}
+              key={image.src}
               sx={{
-                breakInside: 'avoid',
-                mb: '16px',
-                borderRadius: '16px',
+                position: 'relative',
+                minWidth: 0,
                 overflow: 'hidden',
+                borderRadius: 'var(--radius-lg)',
+                gridColumn: { xs: lead || last ? 'span 2' : 'auto', md: lead ? 'span 2' : 'auto' },
+                gridRow: { md: lead ? 'span 2' : 'auto' },
+                aspectRatio: {
+                  xs: lead || last ? '3 / 2' : '1 / 1',
+                  md: lead ? 'auto' : '4 / 3',
+                },
               }}
             >
+              {/* Absolute, so a tall photo can't stretch the grid's rows */}
               <Box
                 component="img"
                 src={image.src}
                 alt={image.alt}
                 loading="lazy"
                 sx={{
+                  position: 'absolute',
+                  inset: 0,
                   width: '100%',
-                  aspectRatio: '1 / 1',
-                  display: 'block',
+                  height: '100%',
                   objectFit: 'cover',
-                  transition: 'transform 300ms ease',
-                  '&:hover': { transform: 'scale(1.02)' },
+                  objectPosition: lead ? 'center 70%' : 'center 30%',
                 }}
               />
             </Box>
-          ))}
-        </Box>
+          );
+        })}
       </Box>
-    </Box>
+    </PageSection>
   );
 };
 

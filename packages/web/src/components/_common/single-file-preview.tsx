@@ -40,7 +40,7 @@ const PreviewRoot = styled('div')(({ theme }) => ({
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-    borderRadius: theme.shape.borderRadius,
+    borderRadius: 'var(--radius-md)',
   },
 }));
 

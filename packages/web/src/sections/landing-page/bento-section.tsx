@@ -6,12 +6,12 @@ import { useVaultApy } from '@/hooks/use-vault-apy';
 import { useRef, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import ArrowForwardOutlinedIcon from '@mui/icons-material/ArrowForwardOutlined';
 
 import EarnAnimation from '@/components/ui/earn-animation';
+import { HAIRLINE, PageSection, SectionHeader } from '@/components/_common/brand';
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -24,9 +24,9 @@ const MONO = {
 
 const CARD_BASE = {
   background: '#fff',
-  border: '1px solid rgba(10,10,15,0.08)',
-  borderRadius: '22px',
-  padding: '36px',
+  border: HAIRLINE,
+  borderRadius: 'var(--radius-lg)',
+  padding: { xs: '20px', md: '24px' },
   overflow: 'hidden',
 } as const;
 
@@ -61,7 +61,7 @@ function SavingsBigCard({ liveApy }: { liveApy: number | null }) {
         padding: 0,
         overflow: 'hidden',
         background: '#0A0A0F',
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: '1px solid rgba(255,255,255,0.08)',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -146,8 +146,6 @@ function MockupCarouselCard() {
         minHeight: 320,
         cursor: 'pointer',
         overflow: 'hidden',
-        transition: 'box-shadow 200ms',
-        '&:hover': { boxShadow: '0 8px 32px rgba(10,10,15,0.18)' },
       }}
       onClick={() => router.push(current.href)}
       onTouchStart={(e) => {
@@ -236,7 +234,7 @@ function MockupCarouselCard() {
                 sx={{
                   width: i === slide ? 18 : 5,
                   height: 5,
-                  borderRadius: '999px',
+                  borderRadius: 'var(--radius-xs)',
                   bgcolor: i === slide ? '#fff' : 'rgba(255,255,255,0.4)',
                   cursor: 'pointer',
                   transition: 'all 220ms ease',
@@ -255,16 +253,15 @@ function MockupCarouselCard() {
                 sx={{
                   width: 30,
                   height: 30,
-                  borderRadius: '50%',
-                  bgcolor: 'rgba(255,255,255,0.15)',
-                  backdropFilter: 'blur(6px)',
+                  borderRadius: 'var(--radius-md)',
+                  bgcolor: 'rgba(10,10,15,0.4)',
                   border: '1px solid rgba(255,255,255,0.2)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  transition: 'background 150ms, transform 150ms',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.28)', transform: 'scale(1.08)' },
+                  transition: 'background 150ms',
+                  '&:hover': { bgcolor: 'rgba(10,10,15,0.6)' },
                 }}
               >
                 {dir === 'prev' ? (
@@ -388,16 +385,14 @@ function BackedByCard() {
               alignItems: 'center',
               gap: '14px',
               background: '#fff',
-              border: '1px solid rgba(10,10,15,0.07)',
-              borderRadius: '16px',
+              border: HAIRLINE,
+              borderRadius: 'var(--radius-md)',
               px: '16px',
               py: '14px',
-              boxShadow: '0 1px 4px rgba(10,10,15,0.05)',
-              transition: 'box-shadow 150ms, border-color 150ms',
+              transition: 'border-color 150ms',
               textDecoration: 'none',
               cursor: 'pointer',
               '&:hover': {
-                boxShadow: '0 4px 16px rgba(10,10,15,0.09)',
                 borderColor: 'rgba(10,10,15,0.13)',
               },
             }}
@@ -407,9 +402,8 @@ function BackedByCard() {
               sx={{
                 width: 56,
                 height: 56,
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 background: '#F4F4F7',
-                border: '1px solid rgba(10,10,15,0.06)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -433,7 +427,7 @@ function BackedByCard() {
 
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography
-                sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F', lineHeight: 1.2 }}
+                sx={{ fontSize: '13.5px', fontWeight: 500, color: '#0A0A0F', lineHeight: 1.2 }}
               >
                 {b.name}
               </Typography>
@@ -471,7 +465,6 @@ function BackedByCard() {
               borderRadius: '50%',
               bgcolor: '#1AB37D',
               flexShrink: 0,
-              boxShadow: '0 0 0 3px rgba(26,179,125,0.18)',
             }}
           />
           <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>
@@ -491,8 +484,8 @@ const KCHIP_SX = {
   alignItems: 'center',
   gap: '8px',
   background: '#F7F7F9',
-  border: '1px solid rgba(10,10,15,0.07)',
-  borderRadius: '14px',
+  border: '1px solid rgba(10,10,15,0.08)',
+  borderRadius: 'var(--radius-md)',
   px: '14px',
   py: '10px',
   overflow: 'hidden',
@@ -553,7 +546,6 @@ function NonCustodialCard() {
               borderRadius: '50%',
               background: '#1AB37D',
               flexShrink: 0,
-              boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
             }}
           />
           <Box component="span" sx={KCHIP_TEXT_SX}>
@@ -572,53 +564,23 @@ export function BentoSection() {
   const liveApy = useVaultApy();
 
   return (
-    <Box component="section" sx={{ py: { xs: '80px', md: '110px' }, background: '#FAFAFB' }}>
-      <Container maxWidth={false} sx={{ maxWidth: '1240px', px: { xs: 2, sm: 3 } }}>
-        {/* Eyebrow */}
-        <Box sx={{ textAlign: 'center', mb: 1 }}>
-          <Typography
-            sx={{
-              fontSize: '11px',
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: '#6B6B76',
-            }}
-          >
-            — Everything you need
-          </Typography>
-        </Box>
+    <PageSection>
+      <SectionHeader eyebrow="Everything you need" title="Simple, safe, and earning" />
 
-        {/* Headline */}
-        <Typography
-          sx={{
-            fontSize: 'clamp(32px, 4vw, 52px)',
-            fontWeight: 500,
-            letterSpacing: '-0.03em',
-            color: '#0A0A0F',
-            textAlign: 'center',
-            lineHeight: 1.15,
-            mb: '56px',
-          }}
-        >
-          Simple, safe, and earning
-        </Typography>
-
-        {/* Grid */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(6, 1fr)' },
-            gridAutoRows: { xs: 'auto', md: 'minmax(290px, auto)' },
-            gap: { xs: '10px', md: '14px' },
-          }}
-        >
-          <SavingsBigCard liveApy={liveApy} />
-          <NonCustodialCard />
-          <StellarSpeedCard />
-          <BackedByCard />
-          <MockupCarouselCard />
-        </Box>
-      </Container>
-    </Box>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(6, 1fr)' },
+          gridAutoRows: { xs: 'auto', md: 'minmax(290px, auto)' },
+          gap: { xs: 1.5, md: 2 },
+        }}
+      >
+        <SavingsBigCard liveApy={liveApy} />
+        <NonCustodialCard />
+        <StellarSpeedCard />
+        <BackedByCard />
+        <MockupCarouselCard />
+      </Box>
+    </PageSection>
   );
 }

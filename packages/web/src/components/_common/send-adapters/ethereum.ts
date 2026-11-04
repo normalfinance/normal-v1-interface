@@ -6,6 +6,7 @@ import type { ChainId } from '@/lib/chains/registry';
 import { BigNumber } from 'bignumber.js';
 import { getChain } from '@/lib/chains/registry';
 import { announceTransaction } from '@/lib/tx-events';
+import { confirmAction } from '@/lib/auth/action-code';
 import { ETH_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
@@ -134,6 +135,8 @@ export function createEthereumAdapter(
           maxFeePerGas: fees.maxFeePerGas,
           maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
         });
+
+        if (!(await confirmAction())) return '';
 
         // Sign with Turnkey via the user's passkey (WebAuthn prompt)
         const { TurnkeyClient } = await import('@turnkey/http');

@@ -38,7 +38,7 @@ export default function MoneyGramPendingBanner() {
               gap: '12px',
               px: '16px',
               py: '12px',
-              borderRadius: '12px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: 'rgba(245,158,11,0.08)',
               border: '1px solid rgba(245,158,11,0.25)',
             }}

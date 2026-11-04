@@ -1,10 +1,10 @@
 import type { NextRequest } from 'next/server';
 
 import { cookies } from 'next/headers';
-import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { networkFromCookie } from '@/server/network-cookie';
+import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import { inspectRateLimit, withRateLimitRetry } from '@/server/defindex';
@@ -21,7 +21,9 @@ const BUSY_MESSAGE = 'Savings is busy for a moment. Please wait a few seconds an
 // Unauthenticated until 2026-08-07 (finding #50): any anonymous caller could
 // drive this route — and with it, quota we pay for. Its only legitimate
 // callers are signed-in app flows, which send auth headers.
-export const POST = withAuth(async (request: NextRequest, { user }) => {
+export const POST = withAuth(async (request: NextRequest, { user, accessToken }) => {
+  const refusal = actionCodeRefusal(user, accessToken);
+  if (refusal) return refusal;
   const { success: withinLimit } = await rateLimiter.limit(user.id);
   if (!withinLimit) {
     return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });

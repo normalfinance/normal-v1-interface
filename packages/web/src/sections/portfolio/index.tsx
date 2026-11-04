@@ -17,6 +17,7 @@ import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import SavingsCard from '@/components/_common/savings-card';
+import { TwoFactorPrompt } from '@/components/_common/two-factor-prompt';
 import { GetStartedPicker } from '@/components/_common/get-started-picker';
 
 import { HeroCard } from './portfolio-hero-card';
@@ -29,12 +30,12 @@ import type { HoldingData } from './_shared';
 // card owns its own skeleton, so a slow source never blanks the whole page.
 function PortfolioSkeleton() {
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent>
       {/* Hero skeleton */}
       <Skeleton
         variant="rectangular"
         height={220}
-        sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }}
+        sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.08)' }}
       />
 
       {/* Holdings + Savings skeleton */}
@@ -42,19 +43,19 @@ function PortfolioSkeleton() {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
-          gap: '20px',
-          mt: '20px',
+          gap: 2,
+          mt: 2,
         }}
       >
         <Skeleton
           variant="rectangular"
           height={320}
-          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
         />
         <Skeleton
           variant="rectangular"
           height={320}
-          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
         />
       </Box>
 
@@ -62,7 +63,7 @@ function PortfolioSkeleton() {
       <Skeleton
         variant="rectangular"
         height={280}
-        sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)', mt: '20px' }}
+        sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)', mt: 2 }}
       />
     </DashboardContent>
   );
@@ -74,7 +75,7 @@ export default function PortfolioView() {
     setMounted(true);
   }, []);
 
-  const { user } = useSupabaseAuth();
+  const { user, isLoading: authLoading } = useSupabaseAuth();
   // Single source of truth for all balances + savings.
   const {
     getAsset,
@@ -221,26 +222,29 @@ export default function PortfolioView() {
     ];
   }, [holdingsData, walletBalances.companionStellar, wallet.walletType]);
 
-  if (!mounted || walletChecking) {
+  if (!mounted || authLoading || walletChecking) {
     return <PortfolioSkeleton />;
   }
 
-  if (!hasAnyWallet) {
+  // Signed out means the sign-in screen, whatever the browser remembers: the
+  // persisted wallet slot can still hold an address after a sign-out (or while
+  // a login waits for its 2FA code), and showing that wallet's savings to a
+  // signed-out visitor is the bug Niko hit on 2026-11-03.
+  if (!user || !hasAnyWallet) {
     // Signed in but no wallet yet (e.g. skipped the asset picker) → let them pick
     // an asset here instead of a dead-end "Sign in". Not signed in → sign in.
     if (user) {
       return (
-        <DashboardContent maxWidth="xl">
+        <DashboardContent>
           <Box sx={{ display: 'flex', justifyContent: 'center', pt: { xs: 4, md: 7 } }}>
             <Box
               sx={{
                 width: '100%',
                 maxWidth: 460,
-                p: { xs: '24px', md: '32px' },
-                borderRadius: '22px',
+                p: { xs: '20px', md: '24px' },
+                borderRadius: 'var(--radius-lg)',
                 border: '1px solid rgba(10,10,15,0.08)',
                 bgcolor: '#fff',
-                boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(10,10,15,0.04)',
               }}
             >
               <GetStartedPicker />
@@ -251,7 +255,7 @@ export default function PortfolioView() {
     }
 
     return (
-      <DashboardContent maxWidth="xl">
+      <DashboardContent>
         <Box
           sx={{
             display: 'flex',
@@ -267,12 +271,12 @@ export default function PortfolioView() {
             sx={{
               width: 56,
               height: 56,
-              borderRadius: '16px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: '#F4F4F7',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'rgba(10,10,15,0.4)',
+              color: '#9A9AA3',
             }}
           >
             <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 28 }} />
@@ -281,7 +285,7 @@ export default function PortfolioView() {
             <Box sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
               Connect your wallet
             </Box>
-            <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', maxWidth: 280 }}>
+            <Box sx={{ fontSize: '14px', color: '#6B6B76', maxWidth: 280 }}>
               Sign in to view your portfolio, holdings, and activity.
             </Box>
           </Box>
@@ -292,7 +296,7 @@ export default function PortfolioView() {
               mt: '4px',
               px: '24px',
               py: '10px',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
               bgcolor: '#0A0A0F',
               color: '#fff',
@@ -312,7 +316,9 @@ export default function PortfolioView() {
   }
 
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent>
+      <TwoFactorPrompt hasFunds={totalBalance > 0} />
+
       <HeroCard
         totalBalance={totalBalance}
         walletBalance={walletBalance}
@@ -334,8 +340,8 @@ export default function PortfolioView() {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
-          gap: '20px',
-          mt: '20px',
+          gap: 2,
+          mt: 2,
         }}
       >
         <HoldingsCard
@@ -354,7 +360,7 @@ export default function PortfolioView() {
         <SavingsCard sx={{ minWidth: 0, overflow: 'hidden' }} />
       </Box>
 
-      <Box sx={{ mt: '20px' }}>
+      <Box sx={{ mt: 2 }}>
         <ActivityCard
           walletAddress={wallet.address}
           bitcoinAddress={bitcoinAddress}

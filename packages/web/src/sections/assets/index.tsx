@@ -32,6 +32,7 @@ import {
   TableContainer,
 } from '@mui/material';
 
+import { AppPageHeader } from '@/components/_common/brand';
 import { AssetAvatar } from '@/components/_common/asset-avatar';
 
 export default function AssetsView() {
@@ -201,22 +202,9 @@ export default function AssetsView() {
   };
 
   return (
-    <Box
-      sx={(theme) => ({
-        minHeight: '100dvh',
-        bgcolor: theme.palette.grey[100],
-        ...theme.applyStyles('dark', { bgcolor: theme.palette.background.default }),
-      })}
-    >
-      <DashboardContent maxWidth="xl">
-        <Stack spacing={1} mb={3}>
-          <Typography variant="h4" color="text.primary">
-            {t('Assets')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('Your wallet tokens')}
-          </Typography>
-        </Stack>
+    <Box sx={{ minHeight: '100dvh' }}>
+      <DashboardContent>
+        <AppPageHeader title={t('Assets')} subtitle={t('Your wallet tokens')} />
 
         {/* Total Value Card */}
         <Card sx={{ mb: 3 }}>

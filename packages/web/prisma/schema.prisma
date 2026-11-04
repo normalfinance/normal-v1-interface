@@ -372,3 +372,14 @@ model normal_contract_events {
   ledger_closed_at            DateTime @db.Timestamp(6)
   ledger_signature            String?
 }
+
+model MfaRecoveryCode {
+  id          String    @id @default(cuid())
+  supabaseUid String
+  codeHash    String
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([supabaseUid])
+  @@map("mfa_recovery_codes")
+}

@@ -329,8 +329,10 @@ export function HeroPortfolioCard() {
         textAlign: 'left',
         bgcolor: '#fff',
         border: '1px solid rgba(10,10,15,0.08)',
-        borderRadius: '24px',
-        p: { xs: '18px', sm: '22px' },
+        borderRadius: 'var(--radius-lg)',
+        p: { xs: '20px', md: '24px' },
+        // The one shadow in the product: this block floats on the hero's moving
+        // background (DESIGN.md).
         boxShadow: '0 1px 2px rgba(10,10,15,0.04), 0 30px 60px -20px rgba(10,10,15,0.18)',
       }}
     >
@@ -340,9 +342,9 @@ export function HeroPortfolioCard() {
           <Typography
             sx={{
               fontSize: 11,
-              letterSpacing: '0.12em',
+              letterSpacing: '0.16em',
               textTransform: 'uppercase',
-              color: '#9A9AA3',
+              color: '#6B6B76',
               mb: 2,
             }}
           >
@@ -371,7 +373,7 @@ export function HeroPortfolioCard() {
             alignItems: 'center',
             px: '8px',
             py: '4px',
-            borderRadius: '999px',
+            borderRadius: 'var(--radius-sm)',
             bgcolor: overallChange >= 0 ? 'rgba(26,179,125,0.12)' : 'rgba(229,72,77,0.12)',
           }}
         >
@@ -400,7 +402,7 @@ export function HeroPortfolioCard() {
                 flex: 1,
                 px: '12px',
                 py: '10px',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 cursor: 'pointer',
                 userSelect: 'none',
                 bgcolor: on ? '#fff' : 'rgba(10,10,15,0.035)',
@@ -418,7 +420,7 @@ export function HeroPortfolioCard() {
                 className="tab-label"
                 sx={{
                   fontSize: 14,
-                  fontWeight: 600,
+                  fontWeight: 500,
                   color: on ? INK : '#6B6B76',
                   lineHeight: 1.25,
                   transition: 'color .15s ease',
@@ -455,7 +457,10 @@ export function HeroPortfolioCard() {
           overflowX: 'hidden',
           '&::-webkit-scrollbar': { width: '5px' },
           '&::-webkit-scrollbar-track': { background: 'transparent' },
-          '&::-webkit-scrollbar-thumb': { background: 'rgba(10,10,15,0.14)', borderRadius: '3px' },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'rgba(10,10,15,0.14)',
+            borderRadius: 'var(--radius-xs)',
+          },
           '&::-webkit-scrollbar-thumb:hover': { background: 'rgba(10,10,15,0.26)' },
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(10,10,15,0.14) transparent',
@@ -494,7 +499,7 @@ export function HeroPortfolioCard() {
                 py: '15px',
                 px: '8px',
                 mx: '-8px',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 cursor: 'pointer',
                 transition: 'background 150ms',
                 '&:hover': { bgcolor: 'rgba(10,10,15,0.035)' },
@@ -514,7 +519,7 @@ export function HeroPortfolioCard() {
                 }}
               />
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography sx={{ fontSize: 14.5, fontWeight: 600, color: INK, lineHeight: 1.2 }}>
+                <Typography sx={{ fontSize: 14.5, fontWeight: 500, color: INK, lineHeight: 1.2 }}>
                   {r.name}
                 </Typography>
                 <Typography
@@ -587,7 +592,7 @@ export function HeroPortfolioCard() {
               alignItems: 'center',
               gap: '6px',
               py: '12px',
-              borderRadius: '14px',
+              borderRadius: 'var(--radius-md)',
               cursor: 'pointer',
               color: '#6B6B76',
               border: '1px solid rgba(10,10,15,0.08)',
@@ -605,7 +610,7 @@ export function HeroPortfolioCard() {
               sx={{
                 width: 30,
                 height: 30,
-                borderRadius: '9px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: '#F4F4F7',
                 color: '#0A0A0F',
                 display: 'flex',

@@ -12,6 +12,7 @@ import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import Grid2 from '@mui/material/Grid2';
 import { Stack, Button, Typography, CircularProgress } from '@mui/material';
 
+import { BLOCK_SX } from '@/components/_common/brand';
 import { Iconify } from '@/components/template/iconify';
 
 export default function TransactionStatusView({ trxHash }: { trxHash: string }) {
@@ -71,21 +72,19 @@ export default function TransactionStatusView({ trxHash }: { trxHash: string }) 
   );
 
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent>
       <Grid2 container justifyContent="center" alignItems="center" sx={{ minHeight: '60vh' }}>
         <Stack
           spacing={2}
           alignItems="center"
           sx={{
-            bgcolor: 'common.white',
-            p: { xs: 3, md: 6 },
-            borderRadius: 2,
-            boxShadow: 3,
+            ...BLOCK_SX,
+            p: { xs: '24px', md: '40px' },
             maxWidth: 520,
             width: '100%',
           }}
         >
-          <Typography variant="h3">{t('Transaction Status')}</Typography>
+          <Typography variant="h4">{t('Transaction Status')}</Typography>
 
           {renderIcon()}
 

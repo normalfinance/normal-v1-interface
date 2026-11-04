@@ -249,7 +249,7 @@ export function CctpProgressModal({
       onClose={onClose}
       fullWidth
       maxWidth="xs"
-      PaperProps={{ sx: { borderRadius: '24px', p: '22px', maxWidth: 400 } }}
+      PaperProps={{ sx: { borderRadius: 'var(--radius-lg)', p: '22px', maxWidth: 400 } }}
     >
       <Stack
         direction="row"
@@ -258,13 +258,11 @@ export function CctpProgressModal({
         sx={{ mb: '14px' }}
       >
         <Box sx={{ pr: 1 }}>
-          <Typography sx={{ fontSize: '17px', fontWeight: 600, color: '#0A0A0F' }}>
+          <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
             {t('Swapping {{from}} → {{to}}', { from: fromSymbol, to: toSymbol })}
           </Typography>
           {stage && stage !== 'done' && (
-            <Typography
-              sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', mt: '3px', lineHeight: 1.4 }}
-            >
+            <Typography sx={{ fontSize: '12px', color: '#6B6B76', mt: '3px', lineHeight: 1.4 }}>
               {autopilot
                 ? t('One signing step — everything after the bridge completes automatically.')
                 : direction === 'out'
@@ -285,7 +283,7 @@ export function CctpProgressModal({
             all: 'unset',
             width: 28,
             height: 28,
-            borderRadius: '8px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: 'rgba(10,10,15,0.06)',
             cursor: 'pointer',
             color: '#0A0A0F',
@@ -308,7 +306,7 @@ export function CctpProgressModal({
               display: 'flex',
               gap: '8px',
               p: '10px 12px',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: 'rgba(37,99,235,0.07)',
               border: '1px solid rgba(37,99,235,0.18)',
               mb: '10px',
@@ -347,11 +345,7 @@ export function CctpProgressModal({
                 ) : isActive && calmEnding && !error ? (
                   // The journey stopped here and nothing is wrong with the
                   // user's funds — a quiet marker, not a red alarm.
-                  <Iconify
-                    icon="eva:minus-circle-outline"
-                    width={18}
-                    sx={{ color: 'rgba(10,10,15,0.35)' }}
-                  />
+                  <Iconify icon="eva:minus-circle-outline" width={18} sx={{ color: '#9A9AA3' }} />
                 ) : isActive && !error ? (
                   <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />
                 ) : isActive && error ? (
@@ -369,13 +363,11 @@ export function CctpProgressModal({
               </Box>
               <Box>
                 <Typography
-                  sx={{ fontSize: '13.5px', fontWeight: 600, color: '#0A0A0F', lineHeight: 1.35 }}
+                  sx={{ fontSize: '13.5px', fontWeight: 500, color: '#0A0A0F', lineHeight: 1.35 }}
                 >
                   {s.label}
                 </Typography>
-                <Typography
-                  sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', lineHeight: 1.4 }}
-                >
+                <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', lineHeight: 1.4 }}>
                   {s.sub}
                 </Typography>
               </Box>
@@ -403,12 +395,12 @@ export function CctpProgressModal({
               mt: '12px',
               px: '12px',
               py: '10px',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: 'rgba(10,10,15,0.03)',
               border: '1px solid rgba(10,10,15,0.08)',
             }}
           >
-            <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: '12.5px', color: '#2A2A33', lineHeight: 1.5 }}>
               {t(
                 "Don't want to wait around for the next signature? Enable automatic completion and this swap finishes by itself."
               )}
@@ -420,11 +412,11 @@ export function CctpProgressModal({
                 mt: '8px',
                 appearance: 'none',
                 border: '1px solid rgba(10,10,15,0.14)',
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 px: '14px',
                 py: '7px',
                 fontSize: '12.5px',
-                fontWeight: 600,
+                fontWeight: 500,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
                 bgcolor: '#fff',
@@ -443,7 +435,7 @@ export function CctpProgressModal({
             mt: '12px',
             px: '14px',
             py: '12px',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: 'rgba(10,10,15,0.03)',
             border: '1px solid rgba(10,10,15,0.08)',
           }}
@@ -452,9 +444,9 @@ export function CctpProgressModal({
             <Iconify
               icon="eva:info-outline"
               width={15}
-              sx={{ color: 'rgba(10,10,15,0.45)', mt: '2px', flexShrink: 0 }}
+              sx={{ color: '#9A9AA3', mt: '2px', flexShrink: 0 }}
             />
-            <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
+            <Typography sx={{ fontSize: '12.5px', color: '#2A2A33', lineHeight: 1.55 }}>
               {calmEnding}
             </Typography>
           </Stack>
@@ -465,12 +457,12 @@ export function CctpProgressModal({
               mt: '12px',
               appearance: 'none',
               border: '1px solid rgba(10,10,15,0.15)',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-md)',
               px: '16px',
               py: '9px',
               width: '100%',
               fontSize: '13px',
-              fontWeight: 600,
+              fontWeight: 500,
               fontFamily: 'inherit',
               cursor: 'pointer',
               bgcolor: '#fff',
@@ -488,30 +480,28 @@ export function CctpProgressModal({
             mt: '12px',
             px: '12px',
             py: '10px',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: 'rgba(220,38,38,0.05)',
             border: '1px solid rgba(220,38,38,0.15)',
           }}
         >
-          <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.5 }}>
+          <Typography sx={{ fontSize: '12.5px', color: '#2A2A33', lineHeight: 1.5 }}>
             {friendlyError(error, t)}
           </Typography>
           {extractTxHash(error) && (
             <Typography
               sx={{
                 fontSize: '10.5px',
-                color: 'rgba(10,10,15,0.4)',
+                color: '#9A9AA3',
                 mt: '3px',
-                fontFamily: '"Geist Mono", "Courier New", monospace',
+                fontFamily: '"Geist Mono", ui-monospace, monospace',
                 wordBreak: 'break-all',
               }}
             >
               {extractTxHash(error)}
             </Typography>
           )}
-          <Typography
-            sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', mt: '4px', lineHeight: 1.5 }}
-          >
+          <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', mt: '4px', lineHeight: 1.5 }}>
             {t(
               'Nothing is lost — your funds stay in your own account. Any transfer needing a nudge appears above the swap card with a one-tap recovery.'
             )}
@@ -524,12 +514,12 @@ export function CctpProgressModal({
                 mt: '10px',
                 appearance: 'none',
                 border: 'none',
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 px: '16px',
                 py: '9px',
                 width: '100%',
                 fontSize: '13px',
-                fontWeight: 600,
+                fontWeight: 500,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
                 bgcolor: '#0A0A0F',
@@ -547,12 +537,12 @@ export function CctpProgressModal({
               sx={{
                 mt: '8px',
                 appearance: 'none',
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 px: '16px',
                 py: '9px',
                 width: '100%',
                 fontSize: '13px',
-                fontWeight: 600,
+                fontWeight: 500,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
                 bgcolor: 'transparent',
@@ -571,7 +561,7 @@ export function CctpProgressModal({
         <Typography
           sx={{
             fontSize: '11.5px',
-            color: 'rgba(10,10,15,0.45)',
+            color: '#9A9AA3',
             mt: '10px',
             textAlign: 'center',
             lineHeight: 1.5,

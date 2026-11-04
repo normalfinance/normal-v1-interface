@@ -11,6 +11,7 @@ import MuiAccordionSummary from '@mui/material/AccordionSummary';
 import MuiAccordionDetails from '@mui/material/AccordionDetails';
 
 import { Iconify } from '@/components/template/iconify';
+import { HAIRLINE, PageSection, SectionHeader } from '@/components/_common/brand';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                               */
@@ -18,7 +19,7 @@ import { Iconify } from '@/components/template/iconify';
 
 export type Question = { title: string; answer: string };
 
-export interface FaqAccordionProps extends React.ComponentPropsWithoutRef<'section'> {
+export interface FaqAccordionProps {
   eyebrow?: string;
   heading?: string;
   subhead?: string;
@@ -79,8 +80,8 @@ const DEFAULT_QUESTIONS: Question[] = [
 const Accordion = styled(MuiAccordion)({
   background: '#fff',
   boxShadow: 'none !important',
-  border: '1px solid #e8e8ec',
-  borderRadius: '16px !important',
+  border: HAIRLINE,
+  borderRadius: 'var(--radius-lg) !important',
   overflow: 'hidden',
   '&::before': { display: 'none' },
   '&.Mui-expanded': { margin: 0, background: '#fff' },
@@ -108,11 +109,10 @@ const AccordionDetails = styled(MuiAccordionDetails)({
 /* ------------------------------------------------------------------ */
 
 export const FaqAccordion: React.FC<FaqAccordionProps> = ({
-  eyebrow = '— FAQ',
+  eyebrow = 'FAQ',
   heading = 'Frequently asked, plainly answered.',
   subhead,
   questions,
-  ...sectionProps
 }) => {
   const { t } = useTranslate();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -120,143 +120,93 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
   const list = questions?.length ? questions : DEFAULT_QUESTIONS;
 
   return (
-    <Box
-      component="section"
-      aria-labelledby="faq-heading"
-      sx={{ bgcolor: '#FAFAFB', pt: { xs: '40px', md: '56px' }, pb: { xs: '80px', md: '110px' } }}
-      {...sectionProps}
-    >
-      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
-        {/* Header */}
-        <Box sx={{ mb: '56px' }}>
-          <Box
-            component="p"
-            sx={{
-              m: 0,
-              mb: '14px',
-              fontSize: '11px',
-              fontWeight: 500,
-              textTransform: 'uppercase',
-              letterSpacing: '0.16em',
-              color: '#6b6b76',
-            }}
-          >
-            {t(eyebrow)}
-          </Box>
+    <PageSection aria-labelledby="faq-heading">
+      <SectionHeader
+        id="faq-heading"
+        eyebrow={t(eyebrow)}
+        title={t(heading)}
+        subtitle={subhead ? t(subhead) : undefined}
+      />
 
-          <Box
-            component="h2"
-            id="faq-heading"
-            sx={{
-              m: 0,
-              fontSize: 'clamp(34px, 4.4vw, 56px)',
-              fontWeight: 500,
-              letterSpacing: '-0.03em',
-              lineHeight: 1.04,
-              color: '#0a0a0b',
-              maxWidth: '22ch',
-            }}
-          >
-            {t(heading)}
-          </Box>
-
-          {subhead && (
-            <Box
-              component="p"
-              sx={{
-                m: 0,
-                mt: '14px',
-                fontSize: '15px',
-                color: '#6b6b76',
-                lineHeight: 1.6,
-                maxWidth: '60ch',
-              }}
-            >
-              {t(subhead)}
-            </Box>
-          )}
-        </Box>
-
-        {/* FAQ 2-column layout — each column is independent so expanding doesn't affect the other */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-            gap: '10px',
-            alignItems: 'start',
-          }}
-        >
-          {[list.slice(0, Math.ceil(list.length / 2)), list.slice(Math.ceil(list.length / 2))].map(
-            (col, colIdx) => (
-              <Box key={colIdx} sx={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {col.map((q, rowIdx) => {
-                  const i = colIdx === 0 ? rowIdx : Math.ceil(list.length / 2) + rowIdx;
-                  return (
-                    <Accordion
-                      key={i}
-                      disableGutters
-                      elevation={0}
-                      square={false}
-                      expanded={openIndex === i}
-                      onChange={(_, isOpen) => setOpenIndex(isOpen ? i : null)}
+      {/* FAQ 2-column layout — each column is independent so expanding doesn't affect the other */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+          gap: 1.5,
+          alignItems: 'start',
+        }}
+      >
+        {[list.slice(0, Math.ceil(list.length / 2)), list.slice(Math.ceil(list.length / 2))].map(
+          (col, colIdx) => (
+            <Box key={colIdx} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              {col.map((q, rowIdx) => {
+                const i = colIdx === 0 ? rowIdx : Math.ceil(list.length / 2) + rowIdx;
+                return (
+                  <Accordion
+                    key={i}
+                    disableGutters
+                    elevation={0}
+                    square={false}
+                    expanded={openIndex === i}
+                    onChange={(_, isOpen) => setOpenIndex(isOpen ? i : null)}
+                  >
+                    <AccordionSummary
+                      expandIcon={
+                        <Box
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 'var(--radius-md)',
+                            bgcolor: '#F4F4F7',
+                            color: '#0A0A0F',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Iconify
+                            icon={openIndex === i ? 'mingcute:close-line' : 'mingcute:add-line'}
+                            width={15}
+                          />
+                        </Box>
+                      }
                     >
-                      <AccordionSummary
-                        expandIcon={
-                          <Box
-                            sx={{
-                              width: 28,
-                              height: 28,
-                              borderRadius: '50%',
-                              bgcolor: '#0a0a0b',
-                              color: '#fff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                            }}
-                          >
-                            <Iconify
-                              icon={openIndex === i ? 'mingcute:close-line' : 'mingcute:add-line'}
-                              width={15}
-                            />
-                          </Box>
-                        }
+                      <Box
+                        sx={{
+                          fontSize: '15px',
+                          fontWeight: 500,
+                          letterSpacing: '-0.01em',
+                          color: '#0A0A0F',
+                          lineHeight: 1.4,
+                          pr: 1,
+                        }}
                       >
-                        <Box
-                          sx={{
-                            fontSize: '15px',
-                            fontWeight: 500,
-                            letterSpacing: '-0.01em',
-                            color: '#0a0a0b',
-                            lineHeight: 1.4,
-                            pr: 1,
-                          }}
-                        >
-                          {t(q.title)}
-                        </Box>
-                      </AccordionSummary>
+                        {t(q.title)}
+                      </Box>
+                    </AccordionSummary>
 
-                      <AccordionDetails>
-                        <Box
-                          sx={{
-                            fontSize: '14px',
-                            lineHeight: 1.65,
-                            color: '#6b6b76',
-                            whiteSpace: 'pre-line',
-                          }}
-                        >
-                          {q.answer}
-                        </Box>
-                      </AccordionDetails>
-                    </Accordion>
-                  );
-                })}
-              </Box>
-            )
-          )}
-        </Box>
+                    <AccordionDetails>
+                      <Box
+                        sx={{
+                          fontSize: '14px',
+                          lineHeight: 1.65,
+                          color: '#6B6B76',
+                          whiteSpace: 'pre-line',
+                        }}
+                      >
+                        {q.answer}
+                      </Box>
+                    </AccordionDetails>
+                  </Accordion>
+                );
+              })}
+            </Box>
+          )
+        )}
       </Box>
-    </Box>
+    </PageSection>
   );
 };
 

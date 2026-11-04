@@ -37,7 +37,7 @@ export default function PositionsTab({ positions = [] }: PoolsTabsProps) {
                 mb: 2,
                 width: '100%',
                 alignItems: 'center',
-                borderRadius: '16px',
+                borderRadius: 'var(--radius-lg)',
                 border: `1px solid ${theme.palette.divider}`,
               }}
             >

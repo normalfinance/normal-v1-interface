@@ -136,7 +136,7 @@ export default function MoneyGramDetailModal({
                   <Typography variant="body2" color="text.secondary">
                     {t('Reference number')}
                   </Typography>
-                  <Typography sx={{ ...MONO, fontWeight: 600 }}>
+                  <Typography sx={{ ...MONO, fontWeight: 500 }}>
                     {tx.externalTransactionId}
                   </Typography>
                 </Stack>

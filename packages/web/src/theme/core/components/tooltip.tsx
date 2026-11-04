@@ -10,13 +10,14 @@ const MuiTooltip: Components<Theme>['MuiTooltip'] = {
    *************************************** */
   styleOverrides: {
     tooltip: ({ theme }) => ({
-      backgroundColor: theme.vars.palette.grey[800],
+      borderRadius: 'var(--radius-sm)',
+      backgroundColor: theme.vars.palette.grey[900],
       ...theme.applyStyles('dark', {
         backgroundColor: theme.vars.palette.grey[700],
       }),
     }),
     arrow: ({ theme }) => ({
-      color: theme.vars.palette.grey[800],
+      color: theme.vars.palette.grey[900],
       ...theme.applyStyles('dark', {
         color: theme.vars.palette.grey[700],
       }),

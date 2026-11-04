@@ -255,7 +255,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
             height: '130px',
             padding: theme.spacing(2),
             alignItems: 'flex-start',
-            borderRadius: '20px 20px 0 0',
+            borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: alpha(theme.palette.grey[500], 0.08),
             overflow: 'hidden',
@@ -368,7 +368,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
             padding: theme.spacing(2),
             justifyContent: 'space-between',
             alignItems: 'center',
-            borderRadius: '0 0 20px 20px',
+            borderRadius: '0 0 var(--radius-lg) var(--radius-lg)',
             border: `1px solid ${theme.palette.divider}`,
             backgroundColor: alpha(theme.palette.grey[500], 0.08),
             overflow: 'hidden',
@@ -464,7 +464,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
           px: '16px',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
-          borderRadius: '20px',
+          borderRadius: 'var(--radius-md)',
           border: `1px solid ${theme.palette.divider}`,
           backgroundColor: alpha(theme.palette.grey[500], 0.08),
           overflow: 'hidden',
@@ -549,7 +549,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
               px: '16px',
               justifyContent: 'center',
               alignItems: 'flex-start',
-              borderRadius: '20px',
+              borderRadius: 'var(--radius-md)',
               border: `1px solid ${theme.palette.divider}`,
               backgroundColor: alpha(theme.palette.grey[500], 0.08),
               overflow: 'hidden',
@@ -600,7 +600,7 @@ const WithdrawCard: React.FC<WithdrawCardProps> = ({ tokens, queryParams, ...oth
             size="large"
             disabled={!isSendReady}
             onClick={handleMainButtonClick}
-            sx={{ borderRadius: 2.5, mt: 2 }}
+            sx={{ borderRadius: 'var(--radius-lg)', mt: 2 }}
           >
             {getButtonLabel()}
           </Button>

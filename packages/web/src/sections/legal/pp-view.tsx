@@ -21,7 +21,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>['components'] = {
       style={{
         padding: '10px 16px',
         textAlign: 'left',
-        fontWeight: 600,
+        fontWeight: 500,
         border: '1px solid rgba(0,0,0,0.12)',
         whiteSpace: 'nowrap',
       }}
@@ -41,11 +41,17 @@ const components: React.ComponentProps<typeof ReactMarkdown>['components'] = {
   ),
   li: ({ children }) => <li style={{ marginBottom: 6 }}>{children}</li>,
   h1: ({ children }) => (
-    <h1 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 8 }}>{children}</h1>
+    <h1 style={{ fontSize: '1.6rem', fontWeight: 500, marginBottom: 8 }}>{children}</h1>
   ),
   h2: ({ children }) => (
     <h2
-      style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: 32, marginBottom: 8, color: '#666' }}
+      style={{
+        fontSize: '1.1rem',
+        fontWeight: 500,
+        marginTop: 32,
+        marginBottom: 8,
+        color: '#6B6B76',
+      }}
     >
       {children}
     </h2>

@@ -10,7 +10,7 @@ import Stack from '@mui/material/Stack';
 import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 
-const MONO = '"Geist Mono", "Courier New", monospace';
+const MONO = '"Geist Mono", ui-monospace, monospace';
 const PAGE_SIZE = 10;
 
 type SavingsActivity = SavingsDepositActivity | SavingsWithdrawActivity;
@@ -39,7 +39,7 @@ function TypeBadge({ type }: { type: SavingsActivity['type'] }) {
         width: 'fit-content',
         px: '8px',
         py: '3px',
-        borderRadius: '6px',
+        borderRadius: 'var(--radius-sm)',
         bgcolor: isDeposit ? 'rgba(26,179,125,0.1)' : 'rgba(245,158,11,0.1)',
         border: `1px solid ${isDeposit ? 'rgba(26,179,125,0.2)' : 'rgba(245,158,11,0.2)'}`,
       }}
@@ -74,7 +74,7 @@ function EmptyState() {
         sx={{
           width: 44,
           height: 44,
-          borderRadius: '12px',
+          borderRadius: 'var(--radius-md)',
           bgcolor: '#F4F4F7',
           display: 'flex',
           alignItems: 'center',
@@ -94,9 +94,7 @@ function EmptyState() {
       <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F' }}>
         No transactions yet
       </Typography>
-      <Typography
-        sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.45)', textAlign: 'center', maxWidth: 240 }}
-      >
+      <Typography sx={{ fontSize: '13px', color: '#9A9AA3', textAlign: 'center', maxWidth: 240 }}>
         Your deposits and withdrawals will appear here.
       </Typography>
     </Box>
@@ -116,11 +114,16 @@ function SkeletonRows() {
             gap: '16px',
             px: '20px',
             py: '14px',
-            borderBottom: '1px solid rgba(10,10,15,0.05)',
+            borderBottom: '1px solid rgba(10,10,15,0.08)',
           }}
         >
           <Skeleton variant="text" width={80} height={16} />
-          <Skeleton variant="rounded" width={62} height={22} sx={{ borderRadius: '6px' }} />
+          <Skeleton
+            variant="rounded"
+            width={62}
+            height={22}
+            sx={{ borderRadius: 'var(--radius-sm)' }}
+          />
           <Skeleton variant="text" width={90} height={16} sx={{ ml: 'auto' }} />
           <Skeleton variant="text" width={36} height={16} sx={{ ml: 'auto' }} />
         </Box>
@@ -156,7 +159,7 @@ function PaginationBar({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '8px',
+    borderRadius: 'var(--radius-md)',
     fontSize: '13px',
     fontFamily: MONO,
     cursor: 'pointer',
@@ -172,7 +175,7 @@ function PaginationBar({
       alignItems="center"
       justifyContent="center"
       spacing={0.5}
-      sx={{ px: '20px', py: '14px', borderTop: '1px solid rgba(10,10,15,0.06)' }}
+      sx={{ px: '20px', py: '14px', borderTop: '1px solid rgba(10,10,15,0.08)' }}
     >
       {/* Prev */}
       <Box
@@ -181,7 +184,7 @@ function PaginationBar({
         disabled={page === 1}
         sx={{
           ...btnBase,
-          color: page === 1 ? 'rgba(10,10,15,0.25)' : 'rgba(10,10,15,0.6)',
+          color: page === 1 ? 'rgba(10,10,15,0.25)' : '#6B6B76',
           cursor: page === 1 ? 'default' : 'pointer',
           '&:hover': page === 1 ? {} : { bgcolor: '#F4F4F7' },
         }}
@@ -194,14 +197,12 @@ function PaginationBar({
           <Box
             component="button"
             onClick={() => onPage(1)}
-            sx={{ ...btnBase, color: 'rgba(10,10,15,0.6)', '&:hover': { bgcolor: '#F4F4F7' } }}
+            sx={{ ...btnBase, color: '#6B6B76', '&:hover': { bgcolor: '#F4F4F7' } }}
           >
             1
           </Box>
           {left > 2 && (
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.3)', px: '4px' }}>
-              …
-            </Typography>
+            <Typography sx={{ fontSize: '12px', color: '#9A9AA3', px: '4px' }}>…</Typography>
           )}
         </>
       )}
@@ -213,7 +214,7 @@ function PaginationBar({
           onClick={() => onPage(p)}
           sx={{
             ...btnBase,
-            color: p === page ? '#FFFFFF' : 'rgba(10,10,15,0.6)',
+            color: p === page ? '#FFFFFF' : '#6B6B76',
             bgcolor: p === page ? '#0A0A0F' : 'transparent',
             borderColor: p === page ? '#0A0A0F' : 'transparent',
             '&:hover': p === page ? {} : { bgcolor: '#F4F4F7' },
@@ -226,14 +227,12 @@ function PaginationBar({
       {right < totalPages && (
         <>
           {right < totalPages - 1 && (
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.3)', px: '4px' }}>
-              …
-            </Typography>
+            <Typography sx={{ fontSize: '12px', color: '#9A9AA3', px: '4px' }}>…</Typography>
           )}
           <Box
             component="button"
             onClick={() => onPage(totalPages)}
-            sx={{ ...btnBase, color: 'rgba(10,10,15,0.6)', '&:hover': { bgcolor: '#F4F4F7' } }}
+            sx={{ ...btnBase, color: '#6B6B76', '&:hover': { bgcolor: '#F4F4F7' } }}
           >
             {totalPages}
           </Box>
@@ -247,7 +246,7 @@ function PaginationBar({
         disabled={page === totalPages}
         sx={{
           ...btnBase,
-          color: page === totalPages ? 'rgba(10,10,15,0.25)' : 'rgba(10,10,15,0.6)',
+          color: page === totalPages ? 'rgba(10,10,15,0.25)' : '#6B6B76',
           cursor: page === totalPages ? 'default' : 'pointer',
           '&:hover': page === totalPages ? {} : { bgcolor: '#F4F4F7' },
         }}
@@ -283,12 +282,10 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
   return (
     <Box
       sx={{
-        borderRadius: '22px',
+        borderRadius: 'var(--radius-lg)',
         border: '1px solid rgba(10,10,15,0.08)',
         bgcolor: '#FFFFFF',
         overflow: 'clip',
-        boxShadow:
-          '0 1px 0 rgba(255,255,255,0.6) inset, 0 24px 60px rgba(10,10,15,0.08), 0 2px 8px rgba(10,10,15,0.04)',
       }}
     >
       {/* Header */}
@@ -296,9 +293,9 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
         direction="row"
         alignItems="center"
         justifyContent="space-between"
-        sx={{ px: '20px', py: '16px', borderBottom: '1px solid rgba(10,10,15,0.06)' }}
+        sx={{ px: '20px', py: '16px', borderBottom: '1px solid rgba(10,10,15,0.08)' }}
       >
-        <Typography sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F' }}>
           Transaction History
         </Typography>
         {historyFailed && (
@@ -307,12 +304,12 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
           </Typography>
         )}
         {savingsActivity.length > 0 && (
-          <Box sx={{ px: '8px', py: '2px', borderRadius: '20px', bgcolor: '#F4F4F7' }}>
+          <Box sx={{ px: '8px', py: '2px', borderRadius: 'var(--radius-sm)', bgcolor: '#F4F4F7' }}>
             <Typography
               sx={{
                 fontSize: '11px',
                 fontWeight: 500,
-                color: 'rgba(10,10,15,0.5)',
+                color: '#6B6B76',
                 fontFamily: MONO,
               }}
             >
@@ -335,7 +332,7 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
               px: '20px',
               py: '10px',
               bgcolor: '#FAFAFB',
-              borderBottom: '1px solid rgba(10,10,15,0.06)',
+              borderBottom: '1px solid rgba(10,10,15,0.08)',
             }}
           >
             {['Date', 'Type', 'Amount', 'Tx'].map((h, i) => (
@@ -343,9 +340,9 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
                 key={h}
                 sx={{
                   fontSize: '11px',
-                  fontWeight: 600,
-                  color: 'rgba(10,10,15,0.4)',
-                  letterSpacing: '0.06em',
+                  fontWeight: 500,
+                  color: '#9A9AA3',
+                  letterSpacing: '0.16em',
                   textTransform: 'uppercase',
                   textAlign: i >= 2 ? 'right' : 'left',
                 }}
@@ -377,13 +374,13 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
                       gap: '16px',
                       px: '20px',
                       py: '14px',
-                      borderBottom: '1px solid rgba(10,10,15,0.05)',
+                      borderBottom: '1px solid rgba(10,10,15,0.08)',
                       cursor: url ? 'pointer' : 'default',
                       '&:hover': url ? { bgcolor: '#FAFAFB' } : {},
                       '&:last-child': { borderBottom: 'none' },
                     }}
                   >
-                    <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.6)' }}>
+                    <Typography sx={{ fontSize: '13px', color: '#6B6B76' }}>
                       {formatDate(a.timestamp)}
                     </Typography>
 
@@ -411,7 +408,7 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
                             gap: '4px',
                             fontSize: '12px',
                             fontWeight: 400,
-                            color: 'rgba(10,10,15,0.35)',
+                            color: '#9A9AA3',
                             fontFamily: MONO,
                           }}
                         >

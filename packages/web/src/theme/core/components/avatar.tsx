@@ -61,7 +61,7 @@ const MuiAvatar: Components<Theme>['MuiAvatar'] = {
    *************************************** */
   styleOverrides: {
     root: { variants: [avatarColors.defaultColor, avatarColors.colors].flat() },
-    rounded: ({ theme }) => ({ borderRadius: theme.shape.borderRadius * 1.5 }),
+    rounded: { borderRadius: 'var(--radius-md)' },
     colorDefault: ({ ownerState, theme }) => {
       const color = colorByName(ownerState.alt);
 

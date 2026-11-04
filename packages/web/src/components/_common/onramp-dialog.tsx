@@ -538,7 +538,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
             '&::-webkit-scrollbar': { width: 2 },
             '&::-webkit-scrollbar-thumb': {
               backgroundColor: theme.palette.divider,
-              borderRadius: 4,
+              borderRadius: 'var(--radius-lg)',
             },
           }}
         >
@@ -702,7 +702,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
                         }
                       }}
                       sx={{
-                        borderRadius: 1,
+                        borderRadius: 'var(--radius-md)',
                         mb: 1,
                         border: `1px solid ${alpha(theme.palette.grey[500], 0.14)}`,
                       }}

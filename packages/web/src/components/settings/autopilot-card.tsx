@@ -78,24 +78,24 @@ export default function AutopilotCard() {
   return (
     <Box
       sx={{
-        p: '18px',
-        borderRadius: '16px',
+        p: { xs: '20px', md: '24px' },
+        borderRadius: 'var(--radius-lg)',
         border: '1px solid rgba(10,10,15,0.08)',
         bgcolor: '#FAFAFB',
         mb: '16px',
       }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '6px' }}>
-        <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F' }}>
           {t('Automatic swap completion')}
         </Typography>
         <Typography
           sx={{
             fontSize: '11px',
-            fontWeight: 700,
+            fontWeight: 500,
             px: '9px',
             py: '3px',
-            borderRadius: '999px',
+            borderRadius: 'var(--radius-sm)',
             bgcolor: data?.active ? 'rgba(26,179,125,0.12)' : 'rgba(10,10,15,0.06)',
             color: data?.active ? '#0A6649' : '#6B6B76',
           }}
@@ -103,7 +103,7 @@ export default function AutopilotCard() {
           {data?.active ? t('On') : error ? t('Unknown') : t('Off')}
         </Typography>
       </Stack>
-      <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.55)', lineHeight: 1.55 }}>
+      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', lineHeight: 1.55 }}>
         {data?.active
           ? t(
               'Normal finishes the swaps you start — only to your own addresses, only the allowlisted bridge contracts. Revoking takes one passkey confirmation.'
@@ -120,10 +120,10 @@ export default function AutopilotCard() {
             mt: '12px',
             textTransform: 'none',
             fontSize: '13px',
-            fontWeight: 600,
+            fontWeight: 500,
             color: '#B42318',
             border: '1px solid rgba(180,35,24,0.3)',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius-md)',
             px: '14px',
             '&:hover': { bgcolor: 'rgba(180,35,24,0.05)' },
           }}
@@ -139,10 +139,10 @@ export default function AutopilotCard() {
             mt: '12px',
             textTransform: 'none',
             fontSize: '13px',
-            fontWeight: 600,
+            fontWeight: 500,
             color: '#0A0A0F',
             border: '1px solid rgba(10,10,15,0.14)',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius-md)',
             px: '14px',
             '&:hover': { bgcolor: 'rgba(10,10,15,0.04)' },
           }}

@@ -30,9 +30,9 @@ const HOLDINGS_COLS = 'minmax(0,1.8fr) 1fr 1fr 1fr 1fr';
 const COL_HEADER_SX = {
   fontSize: '11px',
   fontWeight: 500,
-  color: 'rgba(10,10,15,0.35)',
+  color: '#9A9AA3',
   textTransform: 'uppercase' as const,
-  letterSpacing: '0.07em',
+  letterSpacing: '0.16em',
 };
 
 // Same Buy / Sell / Send / Receive flows as the home hero card, via the shared
@@ -125,7 +125,7 @@ export function HoldingsCard({
               sx={{
                 appearance: 'none',
                 border: '1px solid rgba(10,10,15,0.08)',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 padding: '10px 6px',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
@@ -151,7 +151,7 @@ export function HoldingsCard({
                 sx={{
                   width: 28,
                   height: 28,
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#F4F4F7',
                   display: 'flex',
                   alignItems: 'center',
@@ -186,12 +186,12 @@ export function HoldingsCard({
                   appearance: 'none',
                   border: selected
                     ? '1px solid rgba(10,10,15,0.9)'
-                    : '1px solid rgba(10,10,15,0.1)',
-                  borderRadius: '999px',
+                    : '1px solid rgba(10,10,15,0.08)',
+                  borderRadius: 'var(--radius-sm)',
                   px: '12px',
                   py: '6px',
                   fontSize: '12px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
                   bgcolor: selected ? '#0A0A0F' : 'transparent',
@@ -220,7 +220,7 @@ export function HoldingsCard({
               flexWrap: 'wrap',
             }}
           >
-            <Box sx={{ color: 'rgba(10,10,15,0.55)', fontSize: '14px' }}>
+            <Box sx={{ color: '#6B6B76', fontSize: '14px' }}>
               {t("Couldn't load your holdings — your balances are safe.")}
             </Box>
             <Box
@@ -230,7 +230,7 @@ export function HoldingsCard({
               sx={{
                 border: '1px solid rgba(10,10,15,0.25)',
                 background: 'transparent',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
                 px: '10px',
                 py: '3px',
                 fontSize: '12.5px',
@@ -243,13 +243,11 @@ export function HoldingsCard({
             </Box>
           </Box>
         ) : (
-          <Box sx={{ color: 'rgba(10,10,15,0.4)', fontSize: '14px', py: '24px' }}>
-            {t('No holdings yet')}
-          </Box>
+          <Box sx={{ color: '#9A9AA3', fontSize: '14px', py: '24px' }}>{t('No holdings yet')}</Box>
         )
       ) : (
         <Box sx={{ overflowX: 'auto' }}>
-          <Box sx={{ minWidth: 520 }}>
+          <Box sx={{ minWidth: 560 }}>
             {/* Column headers */}
             <Box
               sx={{
@@ -258,7 +256,7 @@ export function HoldingsCard({
                 px: '8px',
                 pb: '10px',
                 mb: '2px',
-                borderBottom: '1px solid rgba(10,10,15,0.06)',
+                borderBottom: '1px solid rgba(10,10,15,0.08)',
                 gap: '12px',
               }}
             >
@@ -294,10 +292,10 @@ export function HoldingsCard({
                     gap: '12px',
                     px: '8px',
                     py: '13px',
-                    borderBottom: '1px solid rgba(10,10,15,0.05)',
+                    borderBottom: '1px solid rgba(10,10,15,0.08)',
                     cursor: 'pointer',
                     '&:last-child': { borderBottom: 'none' },
-                    '&:hover': { bgcolor: 'rgba(10,10,15,0.02)', borderRadius: '10px' },
+                    '&:hover': { bgcolor: 'rgba(10,10,15,0.02)', borderRadius: 'var(--radius-md)' },
                   }}
                 >
                   {/* Asset */}
@@ -321,7 +319,7 @@ export function HoldingsCard({
                         </Box>
                         {!isSavings && <NetworkBadge network={getAssetNetwork(h.token)} />}
                       </Box>
-                      <Box sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)', lineHeight: 1.3 }}>
+                      <Box sx={{ fontSize: '12px', color: '#9A9AA3', lineHeight: 1.3 }}>
                         {h.token.name}
                       </Box>
                     </Box>
@@ -346,7 +344,7 @@ export function HoldingsCard({
                       ...MONO,
                       fontSize: '13px',
                       fontWeight: 400,
-                      color: 'rgba(10,10,15,0.6)',
+                      color: '#6B6B76',
                       textAlign: 'right',
                     }}
                   >
@@ -380,7 +378,7 @@ export function HoldingsCard({
                         ...MONO,
                         fontSize: '13px',
                         fontWeight: 400,
-                        color: 'rgba(10,10,15,0.6)',
+                        color: '#6B6B76',
                       }}
                     >
                       {pct}%
@@ -391,7 +389,7 @@ export function HoldingsCard({
                         maxWidth: '72px',
                         height: '3px',
                         bgcolor: 'rgba(10,10,15,0.07)',
-                        borderRadius: '99px',
+                        borderRadius: 'var(--radius-xs)',
                         overflow: 'hidden',
                       }}
                     >
@@ -400,7 +398,7 @@ export function HoldingsCard({
                           width: `${pct}%`,
                           height: '100%',
                           bgcolor: color,
-                          borderRadius: '99px',
+                          borderRadius: 'var(--radius-xs)',
                         }}
                       />
                     </Box>

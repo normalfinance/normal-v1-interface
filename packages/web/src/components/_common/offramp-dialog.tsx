@@ -747,7 +747,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
             '&::-webkit-scrollbar': { width: 2 },
             '&::-webkit-scrollbar-thumb': {
               backgroundColor: theme.palette.divider,
-              borderRadius: 4,
+              borderRadius: 'var(--radius-lg)',
             },
           }}
         >
@@ -824,7 +824,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                 <Typography
                   variant="caption"
                   sx={{
-                    color: mgiWithdraw.failures >= 3 ? '#B91C1C' : 'rgba(10,10,15,0.45)',
+                    color: mgiWithdraw.failures >= 3 ? '#B91C1C' : '#9A9AA3',
                     fontFamily: '"Geist Mono", monospace',
                     fontSize: '11px',
                   }}
@@ -849,7 +849,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                   sx={{
                     px: '12px',
                     py: '10px',
-                    borderRadius: '10px',
+                    borderRadius: 'var(--radius-md)',
                     bgcolor: 'rgba(220,38,38,0.05)',
                     border: '1px solid rgba(220,38,38,0.15)',
                     color: '#B91C1C',
@@ -902,7 +902,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
               <Box
                 sx={{
                   p: '14px',
-                  borderRadius: '14px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#FAFAFB',
                   border: '1px solid rgba(10,10,15,0.08)',
                 }}
@@ -917,21 +917,21 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                 >
                   <Typography
                     sx={{
-                      fontSize: '12px',
+                      fontSize: '11px',
                       fontWeight: 500,
-                      color: 'rgba(10,10,15,0.45)',
+                      color: '#9A9AA3',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
+                      letterSpacing: '0.16em',
                     }}
                   >
                     {t('Amount')}
                   </Typography>
                   {assetBalance != null && (
-                    <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)' }}>
+                    <Typography sx={{ fontSize: '12px', color: '#9A9AA3' }}>
                       {/* FULL balance (Niko's UX): the fee math lives in the
                           breakdown below, not hidden inside this number. */}
                       {t('Balance:')}{' '}
-                      <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 600 }}>
+                      <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 500 }}>
                         {fmtUnit(assetBalance)}
                       </Box>
                     </Typography>
@@ -946,8 +946,8 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                     <Typography
                       sx={{
                         fontSize: '24px',
-                        fontWeight: 600,
-                        color: 'rgba(10,10,15,0.35)',
+                        fontWeight: 500,
+                        color: '#9A9AA3',
                         letterSpacing: '-0.02em',
                         lineHeight: 1,
                       }}
@@ -972,10 +972,10 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                       outline: 'none',
                       bgcolor: 'transparent',
                       fontSize: '24px',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       color: '#0A0A0F',
                       letterSpacing: '-0.02em',
-                      fontFamily: '"Geist Mono", "Courier New", monospace',
+                      fontFamily: '"Geist Mono", ui-monospace, monospace',
                       width: '100%',
                       minWidth: 0,
                       '&::placeholder': { color: 'rgba(10,10,15,0.2)' },
@@ -988,8 +988,8 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                     <Typography
                       sx={{
                         fontSize: '14px',
-                        fontWeight: 600,
-                        color: 'rgba(10,10,15,0.45)',
+                        fontWeight: 500,
+                        color: '#9A9AA3',
                         flexShrink: 0,
                       }}
                     >
@@ -1011,7 +1011,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                         border: 'none',
                         bgcolor: 'rgba(10,10,15,0.06)',
                         color: '#0A0A0F',
-                        borderRadius: '8px',
+                        borderRadius: 'var(--radius-md)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1035,10 +1035,10 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                     sx={{
                       minWidth: 0,
                       px: '10px',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(10,10,15,0.12)',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid rgba(10,10,15,0.14)',
                       color: '#0A0A0F',
-                      fontWeight: 700,
+                      fontWeight: 500,
                       fontSize: '11px',
                       textTransform: 'uppercase',
                     }}
@@ -1047,7 +1047,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                   </Button>
                 </Box>
                 {price != null && cbAmountCrypto != null && (
-                  <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
+                  <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', mt: '4px' }}>
                     {cbFiatMode
                       ? `≈ ${cbAmountCrypto.toFixed(6)} ${asset.symbol}`
                       : `≈ $${(cbAmountCrypto * price).toFixed(2)}`}
@@ -1062,41 +1062,39 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                 <Box
                   sx={{
                     p: '12px 14px',
-                    borderRadius: '12px',
+                    borderRadius: 'var(--radius-md)',
                     bgcolor: 'rgba(10,10,15,0.03)',
-                    border: '1px solid rgba(10,10,15,0.06)',
+                    border: '1px solid rgba(10,10,15,0.08)',
                   }}
                 >
                   <Stack spacing={0.75}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.55)' }}>
+                      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76' }}>
                         {t('Your balance')}
                       </Typography>
-                      <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: '#0A0A0F' }}>
+                      <Typography sx={{ fontSize: '12.5px', fontWeight: 500, color: '#0A0A0F' }}>
                         {fmtUnit(assetBalance)}
                       </Typography>
                     </Box>
                     {reserve > 0 && (
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.55)' }}>
+                        <Typography sx={{ fontSize: '12.5px', color: '#6B6B76' }}>
                           {t('Kept for the network fee')}
                         </Typography>
-                        <Typography sx={{ fontSize: '12.5px', fontWeight: 600, color: '#0A0A0F' }}>
+                        <Typography sx={{ fontSize: '12.5px', fontWeight: 500, color: '#0A0A0F' }}>
                           {reserveReady ? `− ${fmtUnit(reserve)}` : t('calculating…')}
                         </Typography>
                       </Box>
                     )}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.55)' }}>
+                      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76' }}>
                         {t('Max you can sell')}
                       </Typography>
-                      <Typography sx={{ fontSize: '12.5px', fontWeight: 700, color: '#0A0A0F' }}>
+                      <Typography sx={{ fontSize: '12.5px', fontWeight: 500, color: '#0A0A0F' }}>
                         {reserveReady && sellMax != null ? fmtUnit(sellMax) : t('calculating…')}
                       </Typography>
                     </Box>
-                    <Typography
-                      sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.45)', pt: '2px' }}
-                    >
+                    <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', pt: '2px' }}>
                       {t('Coinbase then shows the cash you’ll receive after its own fees.')}
                     </Typography>
                   </Stack>
@@ -1110,17 +1108,17 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                 disabled={cbLoading || !reserveReady || cbAmountCrypto == null}
                 startIcon={
                   !reserveReady ? (
-                    <CircularProgress size={14} sx={{ color: 'rgba(10,10,15,0.3)' }} />
+                    <CircularProgress size={14} sx={{ color: '#9A9AA3' }} />
                   ) : undefined
                 }
                 sx={{
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: '#0A0A0F',
                   py: '12px',
-                  fontWeight: 700,
+                  fontWeight: 500,
                   textTransform: 'none',
-                  '&:hover': { bgcolor: '#1a1a25' },
-                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+                  '&:hover': { bgcolor: '#2A2A33' },
+                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
                 }}
               >
                 {!reserveReady
@@ -1132,7 +1130,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
               <Button
                 onClick={() => setCbStep(false)}
                 disabled={cbLoading}
-                sx={{ textTransform: 'none', color: 'rgba(10,10,15,0.6)', fontWeight: 600 }}
+                sx={{ textTransform: 'none', color: '#6B6B76', fontWeight: 500 }}
               >
                 {t('Back')}
               </Button>
@@ -1161,7 +1159,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                     }
                   }}
                   sx={{
-                    borderRadius: 1,
+                    borderRadius: 'var(--radius-md)',
                     mb: 1,
                     border: `1px solid ${alpha(theme.palette.grey[500], 0.14)}`,
                   }}
@@ -1239,15 +1237,15 @@ function MgiPanel({
     <Box
       sx={{
         p: '14px',
-        borderRadius: '14px',
+        borderRadius: 'var(--radius-md)',
         bgcolor: colors.bg,
         border: `1px solid ${colors.border}`,
       }}
     >
-      <Typography sx={{ fontSize: '13px', fontWeight: 700, color: colors.fg, mb: '6px' }}>
+      <Typography sx={{ fontSize: '13px', fontWeight: 500, color: colors.fg, mb: '6px' }}>
         {title}
       </Typography>
-      <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.5 }}>
+      <Typography sx={{ fontSize: '13px', color: '#2A2A33', lineHeight: 1.5 }}>
         {children}
       </Typography>
     </Box>

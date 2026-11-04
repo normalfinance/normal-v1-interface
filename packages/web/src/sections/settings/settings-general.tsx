@@ -22,8 +22,8 @@ import { useSnackbar } from '@/components/template/snackbar';
 const CardBox = ({ children }: { children: React.ReactNode }) => (
   <Box
     sx={{
-      p: '22px',
-      borderRadius: '22px',
+      p: { xs: '20px', md: '24px' },
+      borderRadius: 'var(--radius-lg)',
       border: '1px solid rgba(10,10,15,0.08)',
       bgcolor: '#FFFFFF',
     }}
@@ -108,11 +108,11 @@ export function SettingsGeneral() {
           <Avatar src={userAvatar} alt={displayName} sx={{ width: 64, height: 64 }} />
           <Box>
             <Typography
-              sx={{ fontSize: '16px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+              sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.01em' }}
             >
               {displayName}
             </Typography>
-            <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '2px' }}>
+            <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '2px' }}>
               {userEmail}
             </Typography>
           </Box>
@@ -135,7 +135,7 @@ export function SettingsGeneral() {
 
       {/* Notifications card */}
       <CardBox>
-        <Typography sx={{ fontSize: '14px', fontWeight: 600, color: '#0A0A0F', mb: '16px' }}>
+        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '16px' }}>
           {t('Notifications')}
         </Typography>
 
@@ -145,7 +145,7 @@ export function SettingsGeneral() {
             alignItems: 'center',
             justifyContent: 'space-between',
             p: '14px 16px',
-            borderRadius: '14px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: '#FAFAFB',
             border: '1px solid rgba(10,10,15,0.08)',
             gap: '12px',
@@ -156,7 +156,7 @@ export function SettingsGeneral() {
               sx={{
                 width: 38,
                 height: 38,
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -169,7 +169,7 @@ export function SettingsGeneral() {
                 icon="solar:mailbox-bold"
                 width={20}
                 sx={{
-                  color: marketingOptIn ? '#0A0A0F' : 'rgba(10,10,15,0.35)',
+                  color: marketingOptIn ? '#0A0A0F' : '#9A9AA3',
                   transition: 'color 200ms ease',
                 }}
               />
@@ -179,9 +179,7 @@ export function SettingsGeneral() {
               <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>
                 {t('Product updates')}
               </Typography>
-              <Typography
-                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)', mt: '2px', lineHeight: 1.4 }}
-              >
+              <Typography sx={{ fontSize: '12px', color: '#6B6B76', mt: '2px', lineHeight: 1.4 }}>
                 {t('New features and announcements sent to')}{' '}
                 <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 500 }}>
                   {userEmail}
@@ -195,7 +193,7 @@ export function SettingsGeneral() {
               variant="rounded"
               width={44}
               height={24}
-              sx={{ borderRadius: '12px', flexShrink: 0 }}
+              sx={{ borderRadius: 'var(--radius-md)', flexShrink: 0 }}
             />
           ) : (
             <Switch
@@ -225,10 +223,10 @@ function InfoRow({ label, value, last }: { label: string; value: string; last?: 
         justifyContent: 'space-between',
         alignItems: 'center',
         py: '12px',
-        borderBottom: last ? 'none' : '1px solid rgba(10,10,15,0.06)',
+        borderBottom: last ? 'none' : '1px solid rgba(10,10,15,0.08)',
       }}
     >
-      <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)' }}>{label}</Typography>
+      <Typography sx={{ fontSize: '13px', color: '#6B6B76' }}>{label}</Typography>
       <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>{value}</Typography>
     </Box>
   );

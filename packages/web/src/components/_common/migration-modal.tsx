@@ -20,7 +20,7 @@ export default function MigrationModal({ open, onClose }: MigrationModalProps) {
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 2,
+          borderRadius: 'var(--radius-lg)',
           p: 1,
         },
       }}

@@ -5,10 +5,10 @@ import type { SendChain } from '@/server/send-records';
 
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
-import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
 import { networkFromCookie } from '@/server/network-cookie';
+import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 import { SOL_RENT_DUST_MESSAGE } from '@/lib/send/native-dust';
 import {
   settleSend,
@@ -154,7 +154,9 @@ async function broadcastSol(signedTxB64: string): Promise<BroadcastOutcome> {
   }
 }
 
-export const POST = withAuth(async (request: NextRequest, { user }) => {
+export const POST = withAuth(async (request: NextRequest, { user, accessToken }) => {
+  const refusal = actionCodeRefusal(user, accessToken);
+  if (refusal) return refusal;
   const { success: withinLimit } = await rateLimiter.limit(user.id);
   if (!withinLimit) {
     return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });

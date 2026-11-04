@@ -1,12 +1,19 @@
 'use client';
 
+import { paths } from '@/routes/paths';
 import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { updatePassword } from '@/services/auth';
-import { clearLoginIntent } from '@/lib/loginIntent';
-import { createSupabaseClientWithUrlDetection } from '@/lib/createSupabaseClient';
+import { needsSecondFactor } from '@/lib/auth/two-factor';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { clearLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
+import { TwoFactorChallenge } from '@/sections/auth/two-factor-challenge';
+import {
+  supabase as supabaseApp,
+  createSupabaseClientWithUrlDetection,
+} from '@/lib/createSupabaseClient';
 
 import { Box, Stack, Button, TextField, Typography, CircularProgress } from '@mui/material';
 
@@ -17,10 +24,36 @@ type Status = 'pending' | 'ready' | 'loading' | 'success' | 'error';
 const ResetPasswordPage = () => {
   const { t } = useTranslate();
   const router = useRouter();
+  const { signOut } = useSupabaseAuth();
   const [status, setStatus] = useState<Status>('pending');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // null until the session is read: the form must not flash before the code.
+  const [needsCode, setNeedsCode] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (status !== 'ready' || needsCode !== null) return;
+    const readSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setNeedsCode(!!session && needsSecondFactor(session.user, session.access_token));
+    };
+    void readSession();
+  }, [status, needsCode]);
+
+  // Leaves once the code upgrades the session. This page's client isn't the one
+  // that verified it, so it hears about the change through this subscription.
+  useEffect(() => {
+    if (!needsCode) return undefined;
+    const {
+      data: { subscription },
+    } = supabaseApp.auth.onAuthStateChange((event) => {
+      if (event === 'MFA_CHALLENGE_VERIFIED') setNeedsCode(false);
+    });
+    return () => subscription.unsubscribe();
+  }, [needsCode]);
 
   useEffect(() => {
     clearLoginIntent();
@@ -113,6 +146,12 @@ const ResetPasswordPage = () => {
     };
   }, [t]);
 
+  // Without signing out, /login would find this session and ask for the code again.
+  const leaveToLogin = async () => {
+    await signOut();
+    router.replace(paths.auth.login);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -139,13 +178,16 @@ const ResetPasswordPage = () => {
       const {
         data: { session: currentSession },
       } = await supabase.auth.getSession();
-      const userEmail = currentSession?.user?.email || '';
       setStatus('success');
       setTimeout(() => {
-        const redirectUrl = userEmail
-          ? `/?passwordResetSuccess=true&email=${encodeURIComponent(userEmail)}`
-          : '/?passwordResetSuccess=true';
-        router.replace(redirectUrl);
+        // The reset link signs the user in, so they normally go straight to
+        // the app, through the same wallet step as any other login.
+        if (currentSession) {
+          rememberLoginIntent();
+          router.replace(paths.portfolio);
+        } else {
+          router.replace(`${paths.auth.login}?passwordReset=1`);
+        }
       }, 2000);
     } catch (err) {
       setStatus('error');
@@ -167,9 +209,11 @@ const ResetPasswordPage = () => {
     >
       <Box sx={{ maxWidth: 400, width: '100%' }}>
         <Stack spacing={3}>
-          <Typography variant="h4" align="center">
-            {t('Reset Password')}
-          </Typography>
+          {!(status === 'ready' && needsCode) && (
+            <Typography variant="h4" align="center">
+              {t('Reset Password')}
+            </Typography>
+          )}
 
           {status === 'pending' && (
             <Stack spacing={2} alignItems="center">
@@ -191,7 +235,17 @@ const ResetPasswordPage = () => {
             </Stack>
           )}
 
-          {status === 'ready' && (
+          {status === 'ready' && needsCode === null && (
+            <Stack alignItems="center">
+              <CircularProgress />
+            </Stack>
+          )}
+
+          {status === 'ready' && needsCode && (
+            <TwoFactorChallenge onCancel={leaveToLogin} onRecovered={leaveToLogin} />
+          )}
+
+          {status === 'ready' && needsCode === false && (
             <form onSubmit={handleSubmit}>
               <Stack spacing={2}>
                 <Typography variant="body2" color="text.secondary">
@@ -231,7 +285,7 @@ const ResetPasswordPage = () => {
                     sx={{
                       backgroundColor: 'error.light',
                       color: 'error.dark',
-                      borderRadius: 1,
+                      borderRadius: 'var(--radius-md)',
                       px: 2,
                       py: 1,
                     }}
@@ -259,7 +313,7 @@ const ResetPasswordPage = () => {
                 sx={{
                   backgroundColor: 'error.light',
                   color: 'error.dark',
-                  borderRadius: 1,
+                  borderRadius: 'var(--radius-md)',
                   px: 2,
                   py: 1,
                 }}

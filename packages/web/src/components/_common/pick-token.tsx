@@ -109,7 +109,7 @@ const PickToken: React.FC<PickTokenProps> = ({
           },
           '&::-webkit-scrollbar-thumb': {
             backgroundColor: theme.palette.divider,
-            borderRadius: '4px',
+            borderRadius: 'var(--radius-xs)',
           },
           scrollbarWidth: 'thin',
           scrollbarColor: `${theme.palette.divider} transparent`,
@@ -269,7 +269,7 @@ const PickToken: React.FC<PickTokenProps> = ({
                       justifyContent: 'center',
                       gap: '4px',
                       alignSelf: 'stretch',
-                      borderRadius: '16px',
+                      borderRadius: 'var(--radius-md)',
                       border: `1px solid ${theme.palette.divider}`,
                       backgroundColor: alpha(theme.palette.grey[500], 0.08),
                     }}

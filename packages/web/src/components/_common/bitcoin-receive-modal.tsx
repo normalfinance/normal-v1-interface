@@ -93,7 +93,7 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
       onClose={onClose}
       fullWidth
       maxWidth="xs"
-      slotProps={{ paper: { sx: { borderRadius: '20px', p: 0, overflow: 'hidden' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)', p: 0, overflow: 'hidden' } } }}
     >
       <DialogTitle sx={{ p: '20px 20px 0' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -105,12 +105,16 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
               sx={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
             />
             <Typography
-              sx={{ fontSize: '15px', fontWeight: 600, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+              sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.01em' }}
             >
               Receive Bitcoin
             </Typography>
           </Box>
-          <IconButton onClick={onClose} size="small" sx={{ color: '#6B6B76', borderRadius: '8px' }}>
+          <IconButton
+            onClick={onClose}
+            size="small"
+            sx={{ color: '#6B6B76', borderRadius: 'var(--radius-md)' }}
+          >
             <CloseOutlined sx={{ fontSize: 18 }} />
           </IconButton>
         </Box>
@@ -129,7 +133,7 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
         <Box
           sx={{
             p: '16px',
-            borderRadius: '16px',
+            borderRadius: 'var(--radius-lg)',
             border: '1px solid rgba(10,10,15,0.08)',
             bgcolor: '#fff',
             display: 'inline-flex',
@@ -145,7 +149,12 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
             />
           ) : (
             <Box
-              sx={{ width: 188, height: 188, bgcolor: 'rgba(10,10,15,0.04)', borderRadius: '8px' }}
+              sx={{
+                width: 188,
+                height: 188,
+                bgcolor: 'rgba(10,10,15,0.04)',
+                borderRadius: 'var(--radius-md)',
+              }}
             />
           )}
         </Box>
@@ -163,9 +172,9 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
           <Typography
             sx={{
               fontSize: '11px',
-              color: 'rgba(10,10,15,0.4)',
+              color: '#9A9AA3',
               textTransform: 'uppercase',
-              letterSpacing: '0.07em',
+              letterSpacing: '0.16em',
             }}
           >
             Your Bitcoin address
@@ -182,7 +191,7 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
                 width: '100%',
                 px: '14px',
                 py: '10px',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 border: '1px solid rgba(10,10,15,0.08)',
                 bgcolor: '#F4F4F7',
                 cursor: 'pointer',
@@ -207,9 +216,7 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
               {copied ? (
                 <CheckOutlinedIcon sx={{ fontSize: 15, color: '#1AB37D', flexShrink: 0 }} />
               ) : (
-                <ContentCopyOutlinedIcon
-                  sx={{ fontSize: 15, color: 'rgba(10,10,15,0.4)', flexShrink: 0 }}
-                />
+                <ContentCopyOutlinedIcon sx={{ fontSize: 15, color: '#9A9AA3', flexShrink: 0 }} />
               )}
             </Box>
           </Tooltip>
@@ -220,11 +227,11 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
           sx={{
             width: '100%',
             p: '10px 14px',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: 'rgba(247,147,26,0.05)',
             border: '1px solid rgba(247,147,26,0.15)',
             fontSize: '12px',
-            color: 'rgba(10,10,15,0.55)',
+            color: '#6B6B76',
             lineHeight: 1.55,
             textAlign: 'center',
           }}
@@ -240,7 +247,7 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
             <Box
               sx={{
                 p: '14px 16px',
-                borderRadius: '14px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: 'rgba(26,179,125,0.07)',
                 border: '1px solid rgba(26,179,125,0.22)',
                 display: 'flex',
@@ -266,7 +273,7 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
                 </Box>
                 <Box>
                   <Typography
-                    sx={{ fontSize: '13px', fontWeight: 600, color: '#0A6649', lineHeight: 1.3 }}
+                    sx={{ fontSize: '13px', fontWeight: 500, color: '#0A6649', lineHeight: 1.3 }}
                   >
                     {BigNumber(incomingAmountBtc).toFixed(8)} BTC incoming
                     {incomingTxs.length > 1 && (
@@ -276,11 +283,11 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
                           ml: '6px',
                           px: '6px',
                           py: '1px',
-                          borderRadius: '999px',
+                          borderRadius: 'var(--radius-sm)',
                           bgcolor: 'rgba(26,179,125,0.15)',
                           color: '#0A6649',
                           fontSize: '11px',
-                          fontWeight: 700,
+                          fontWeight: 500,
                         }}
                       >
                         +{incomingTxs.length - 1} more
@@ -288,7 +295,7 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
                     )}
                   </Typography>
                   {incomingFiat && (
-                    <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.5)' }}>
+                    <Typography sx={{ fontSize: '11px', color: '#6B6B76' }}>
                       ≈ {fCurrency(incomingFiat)} · Confirming on Bitcoin network (~10 min)
                     </Typography>
                   )}
@@ -304,11 +311,11 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
                   gap: '8px',
                   px: '10px',
                   py: '8px',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--radius-md)',
                   bgcolor: 'rgba(10,10,15,0.04)',
                 }}
               >
-                <Typography sx={{ ...MONO, fontSize: '11px', color: 'rgba(10,10,15,0.6)' }}>
+                <Typography sx={{ ...MONO, fontSize: '11px', color: '#6B6B76' }}>
                   {truncateTxid(latestIncoming.txid)}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -321,12 +328,12 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
                         height: 24,
                         border: 'none',
                         bgcolor: 'transparent',
-                        borderRadius: '6px',
+                        borderRadius: 'var(--radius-sm)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        color: copiedTxid ? '#1AB37D' : 'rgba(10,10,15,0.4)',
+                        color: copiedTxid ? '#1AB37D' : '#9A9AA3',
                         fontFamily: 'inherit',
                         '&:hover': { bgcolor: 'rgba(10,10,15,0.06)' },
                       }}
@@ -345,11 +352,11 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
                     sx={{
                       width: 24,
                       height: 24,
-                      borderRadius: '6px',
+                      borderRadius: 'var(--radius-sm)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: 'rgba(10,10,15,0.4)',
+                      color: '#9A9AA3',
                       textDecoration: 'none',
                       '&:hover': { bgcolor: 'rgba(10,10,15,0.06)', color: '#0A0A0F' },
                     }}
@@ -364,9 +371,9 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
             <Box
               sx={{
                 p: '12px 16px',
-                borderRadius: '14px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: '#FAFAFB',
-                border: '1px solid rgba(10,10,15,0.07)',
+                border: '1px solid rgba(10,10,15,0.08)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px',
@@ -385,7 +392,7 @@ export function BitcoinReceiveModal({ open, address, onClose }: BitcoinReceiveMo
                   sx={{ color: 'rgba(10,10,15,0.25)', flexShrink: 0 }}
                 />
               )}
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
+              <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
                 {isConnected ? 'Watching for incoming payment…' : 'Connecting to Bitcoin network…'}
               </Typography>
             </Box>

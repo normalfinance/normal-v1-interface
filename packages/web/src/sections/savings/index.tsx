@@ -12,10 +12,11 @@ import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Skeleton from '@mui/material/Skeleton';
-import Typography from '@mui/material/Typography';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
+import { AppPageHeader } from '@/components/_common/brand';
 import SavingsCard from '@/components/_common/savings-card';
+import { TwoFactorPrompt } from '@/components/_common/two-factor-prompt';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 
 import { SavingsHeroCard } from './savings-hero-card';
@@ -29,7 +30,7 @@ export default function SavingsView() {
     setMounted(true);
   }, []);
 
-  const { user } = useSupabaseAuth();
+  const { user, isLoading: authLoading } = useSupabaseAuth();
   const [walletSetupOpen, setWalletSetupOpen] = useState(false);
   const { setGlobalIsLoading } = useAppStore();
   const { wallet } = usePersistStore();
@@ -98,40 +99,42 @@ export default function SavingsView() {
     return () => clearTimeout(timer);
   }, [wallet.address, setGlobalIsLoading]);
 
-  if (!mounted || (!firstPaintDone && heroLoading)) {
+  if (!mounted || authLoading || (!firstPaintDone && heroLoading)) {
     return (
-      <DashboardContent maxWidth="xl">
+      <DashboardContent>
         <Skeleton
           variant="rectangular"
           height={220}
-          sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.08)' }}
+          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.08)' }}
         />
         <Box
           sx={{
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
-            gap: '20px',
-            mt: '20px',
+            gap: 2,
+            mt: 2,
           }}
         >
           <Skeleton
             variant="rectangular"
             height={320}
-            sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
           />
           <Skeleton
             variant="rectangular"
             height={200}
-            sx={{ borderRadius: '22px', bgcolor: 'rgba(10,10,15,0.06)' }}
+            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
           />
         </Box>
       </DashboardContent>
     );
   }
 
-  if (!wallet.address) {
+  // A remembered wallet address is not a login (see the portfolio view): signed
+  // out always gets the sign-in screen.
+  if (!user || !wallet.address) {
     return (
-      <DashboardContent maxWidth="xl">
+      <DashboardContent>
         <Box
           sx={{
             display: 'flex',
@@ -147,12 +150,12 @@ export default function SavingsView() {
             sx={{
               width: 56,
               height: 56,
-              borderRadius: '16px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: '#F4F4F7',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'rgba(10,10,15,0.4)',
+              color: '#9A9AA3',
             }}
           >
             <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 28 }} />
@@ -161,7 +164,7 @@ export default function SavingsView() {
             <Box sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
               {user ? 'Set up your savings wallet' : 'Connect your wallet'}
             </Box>
-            <Box sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)', maxWidth: 300 }}>
+            <Box sx={{ fontSize: '14px', color: '#6B6B76', maxWidth: 300 }}>
               {user
                 ? 'Savings runs on Stellar. Create your Stellar wallet in one tap to start earning yield on USDC.'
                 : 'Sign in to view your savings and start earning yield.'}
@@ -178,7 +181,7 @@ export default function SavingsView() {
               mt: '4px',
               px: '24px',
               py: '10px',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
               bgcolor: '#0A0A0F',
               color: '#fff',
@@ -212,18 +215,13 @@ export default function SavingsView() {
   }
 
   return (
-    <DashboardContent maxWidth="xl">
-      {/* Page title */}
-      <Stack spacing={0.5} sx={{ mb: '24px' }}>
-        <Typography
-          sx={{ fontSize: '22px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
-        >
-          Savings
-        </Typography>
-        <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)' }}>
-          Earn yield on your USDC by depositing into Normal Savings.
-        </Typography>
-      </Stack>
+    <DashboardContent>
+      <AppPageHeader
+        title="Savings"
+        subtitle="Earn yield on your USDC by depositing into Normal Savings."
+      />
+
+      <TwoFactorPrompt hasFunds={currentValue > 0} />
 
       {/* Hero stats */}
       <SavingsHeroCard
@@ -240,14 +238,14 @@ export default function SavingsView() {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '3fr 2fr' },
-          gap: '20px',
-          mt: '20px',
+          gap: 2,
+          mt: 2,
         }}
       >
         <SavingsCard />
         {/* #67: fee explainer above the onramp card — same order as the user's
             mental model: "can I transact?" before "how do I add money?". */}
-        <Stack spacing="20px">
+        <Stack spacing={2}>
           <SavingsXlmFeesCard />
           <SavingsOnrampCard />
         </Stack>
@@ -255,7 +253,7 @@ export default function SavingsView() {
 
       {/* Transaction history — same wallet as the chart (#75 round 2B). */}
       {savingsHistoryAddress && (
-        <Box sx={{ mt: '20px' }}>
+        <Box sx={{ mt: 2 }}>
           <SavingsHistoryCard walletAddress={savingsHistoryAddress} />
         </Box>
       )}

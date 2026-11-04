@@ -122,11 +122,11 @@ export default function LoadingCoinsMouse({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: 1,
+                borderRadius: 'var(--radius-md)',
                 position: 'relative',
               }}
             >
-              <Typography sx={{ fontWeight: 600, lineHeight: 1 }}>{t('Buy all')}</Typography>
+              <Typography sx={{ fontWeight: 500, lineHeight: 1 }}>{t('Buy all')}</Typography>
 
               {/* animate mouse only when inView */}
               <m.img
@@ -176,7 +176,7 @@ export default function LoadingCoinsMouse({
                   px: { xs: 1.5, md: 2 },
                   py: { xs: 1, md: 1.5 },
                   bgcolor: 'white',
-                  borderRadius: 1.5,
+                  borderRadius: 'var(--radius-md)',
                   border: '1px solid rgba(87,146,255,0.15)',
                 }}
               >

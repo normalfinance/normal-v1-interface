@@ -45,7 +45,7 @@ const FlagRoot = styled('span')(({ theme }) => ({
   height: 20,
   flexShrink: 0,
   overflow: 'hidden',
-  borderRadius: '5px',
+  borderRadius: 'var(--radius-xs)',
   alignItems: 'center',
   display: 'inline-flex',
   justifyContent: 'center',

@@ -23,6 +23,7 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 
 import { ProgressBar } from '@/components/template/progress-bar';
 import { SnackbarProvider } from '@/components/template/snackbar';
+import ActionCodeGate from '@/components/_common/action-code-gate';
 import WalletBackupGate from '@/components/_common/wallet-backup-gate';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
@@ -155,6 +156,8 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                                   <DashboardLayout>{children}</DashboardLayout>
                                   {/* doc 79: one global mandatory-backup gate */}
                                   <WalletBackupGate />
+                                  {/* The 6-digit code before every money action */}
+                                  <ActionCodeGate />
                                   {/* Re-attach the external wallet after login */}
                                   <ExternalWalletReattach />
                                 </AssetActionsProvider>

@@ -74,7 +74,7 @@ export default function RampPendingBanner({ symbol }: Props) {
             gap: '12px',
             px: '16px',
             py: '12px',
-            borderRadius: '14px',
+            borderRadius: 'var(--radius-md)',
             border: '1px solid',
             borderColor: r.failed ? 'rgba(185,28,28,0.25)' : 'rgba(10,10,15,0.08)',
             bgcolor: r.failed ? 'rgba(185,28,28,0.04)' : '#FAFAFB',
@@ -83,15 +83,13 @@ export default function RampPendingBanner({ symbol }: Props) {
           <Iconify
             icon={r.failed ? 'mingcute:warning-line' : 'eos-icons:three-dots-loading'}
             width={20}
-            sx={{ color: r.failed ? '#B91C1C' : 'rgba(10,10,15,0.45)', flexShrink: 0 }}
+            sx={{ color: r.failed ? '#B91C1C' : '#9A9AA3', flexShrink: 0 }}
           />
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F' }}>
+            <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>
               {r.message}
             </Typography>
-            <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.5)' }}>
-              {r.detail}
-            </Typography>
+            <Typography sx={{ fontSize: '11.5px', color: '#6B6B76' }}>{r.detail}</Typography>
           </Box>
           {r.failed && (
             <Box
@@ -103,7 +101,7 @@ export default function RampPendingBanner({ symbol }: Props) {
                 border: 'none',
                 background: 'none',
                 cursor: 'pointer',
-                color: 'rgba(10,10,15,0.4)',
+                color: '#9A9AA3',
                 p: '4px',
                 '&:hover': { color: '#0A0A0F' },
               }}
@@ -141,7 +139,7 @@ export function RampInflightInline({ symbol }: Props) {
             gap: '8px',
             px: '10px',
             py: '7px',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius-md)',
             bgcolor: 'rgba(37,99,235,0.07)',
             border: '1px solid rgba(37,99,235,0.18)',
             width: 'fit-content',
@@ -155,7 +153,7 @@ export function RampInflightInline({ symbol }: Props) {
           />
           <Box sx={{ minWidth: 0 }}>
             <Typography
-              sx={{ fontSize: '12.5px', fontWeight: 600, color: '#1E3A8A', lineHeight: 1.35 }}
+              sx={{ fontSize: '12.5px', fontWeight: 500, color: '#1E3A8A', lineHeight: 1.35 }}
             >
               {r.message}
             </Typography>

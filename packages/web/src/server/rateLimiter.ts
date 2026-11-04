@@ -136,6 +136,14 @@ export const enrollRateLimiter = new Ratelimit({
   prefix: 'enroll',
 });
 
+// Spending a recovery code removes 2FA, and this route is reachable before the
+// 6-digit step. The codes can't be guessed; this keeps it that way in the logs.
+export const twoFactorRecoverRateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '10 m'),
+  prefix: 'two-factor-recover',
+});
+
 export const rateLimiter = {
   limit: async (walletAddress: string, ip?: string) => {
     // Rate limit by wallet address

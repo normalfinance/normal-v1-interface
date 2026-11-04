@@ -9,7 +9,7 @@ import { Box, Grid, Stack } from '@mui/material';
 
 export default function Loading() {
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent>
       {/* Header */}
       <Stack spacing={1}>
         <Skeleton height={40} width="25%" />

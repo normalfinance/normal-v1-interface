@@ -17,7 +17,7 @@ export interface ContentSkeletonProps {
 const VARIANTS: Record<ContentSkeletonVariant, () => React.ReactNode> = {
   card: () => (
     <Stack spacing={2}>
-      <Skeleton variant="rectangular" height={160} sx={{ borderRadius: 2 }} />
+      <Skeleton variant="rectangular" height={160} sx={{ borderRadius: 'var(--radius-lg)' }} />
       <Skeleton variant="text" width="60%" />
       <Skeleton variant="text" width="40%" />
     </Stack>
@@ -42,10 +42,14 @@ const VARIANTS: Record<ContentSkeletonVariant, () => React.ReactNode> = {
   form: () => (
     <Stack spacing={2} sx={{ p: 2 }}>
       <Skeleton variant="text" width="30%" height={20} />
-      <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1 }} />
+      <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 'var(--radius-md)' }} />
       <Skeleton variant="text" width="30%" height={20} />
-      <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1 }} />
-      <Skeleton variant="rectangular" height={48} sx={{ borderRadius: 1, mt: 2 }} />
+      <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 'var(--radius-md)' }} />
+      <Skeleton
+        variant="rectangular"
+        height={48}
+        sx={{ borderRadius: 'var(--radius-md)', mt: 2 }}
+      />
     </Stack>
   ),
   'list-item': () => (

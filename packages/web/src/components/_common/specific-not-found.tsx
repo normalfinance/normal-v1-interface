@@ -40,7 +40,7 @@ export function SpecificNotFound({ type, title, description }: SpecificNotFoundP
   const config = notFoundConfig[type];
 
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent>
       <Box
         sx={{
           display: 'flex',
@@ -66,7 +66,7 @@ export function SpecificNotFound({ type, title, description }: SpecificNotFoundP
           sx={{
             mb: 1,
             color: 'text.primary',
-            fontWeight: 600,
+            fontWeight: 500,
           }}
         >
           {title ? t(title) : t(config.defaultTitle)}

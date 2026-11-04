@@ -490,7 +490,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       sx={{
         mb: '12px',
         p: '12px 16px',
-        borderRadius: '14px',
+        borderRadius: 'var(--radius-md)',
         bgcolor: 'rgba(110,139,255,0.07)',
         border: '1px solid rgba(110,139,255,0.25)',
       }}
@@ -515,14 +515,14 @@ export function CctpRecoveryBanner({ addresses }: Props) {
               <CircularProgress size={14} sx={{ color: '#3E51B1', flexShrink: 0 }} />
             )}
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F' }}>
+              <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>
                 {t('{{amount}} USDC · {{from}} → {{to}}', {
                   amount: usd,
                   from: tr.srcAsset,
                   to: tr.dstAsset,
                 })}
               </Typography>
-              <Typography sx={{ fontSize: '11.5px', color: 'rgba(10,10,15,0.5)' }}>
+              <Typography sx={{ fontSize: '11.5px', color: '#6B6B76' }}>
                 {phase === 'halt-receive'
                   ? verifiedIds.has(tr.id)
                     ? t(
@@ -551,12 +551,12 @@ export function CctpRecoveryBanner({ addresses }: Props) {
                     bgcolor: '#0A0A0F',
                     color: '#fff',
                     fontSize: '12px',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     textTransform: 'none',
-                    borderRadius: '10px',
+                    borderRadius: 'var(--radius-md)',
                     px: '12px',
-                    '&:hover': { bgcolor: '#1A1A28' },
-                    '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.3)', color: '#fff' },
+                    '&:hover': { bgcolor: '#2A2A33' },
+                    '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
                   }}
                 >
                   {busyId === tr.id
@@ -574,14 +574,14 @@ export function CctpRecoveryBanner({ addresses }: Props) {
                       bgcolor: 'transparent',
                       color: '#0A0A0F',
                       fontSize: '12px',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       textTransform: 'none',
-                      borderRadius: '10px',
+                      borderRadius: 'var(--radius-md)',
                       px: '10px',
                       border: '1px solid rgba(10,10,15,0.2)',
                       '&:hover': { bgcolor: 'rgba(10,10,15,0.04)' },
                       '&.Mui-disabled': {
-                        color: 'rgba(10,10,15,0.3)',
+                        color: '#9A9AA3',
                         borderColor: 'rgba(10,10,15,0.1)',
                       },
                     }}

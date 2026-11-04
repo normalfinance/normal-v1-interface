@@ -34,7 +34,7 @@ export function ResultItem({ title, path, labels, href, sx, ...other }: Props) {
           borderColor: 'transparent',
           borderBottomColor: theme.vars.palette.divider,
           '&:hover': {
-            borderRadius: 1,
+            borderRadius: 'var(--radius-md)',
             borderColor: theme.vars.palette.primary.main,
             backgroundColor: varAlpha(
               theme.vars.palette.primary.mainChannel,

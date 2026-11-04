@@ -62,7 +62,7 @@ export function CustomDateRangePicker({
   };
 
   const blockStyles: SxProps<Theme> = {
-    borderRadius: 2,
+    borderRadius: 'var(--radius-lg)',
     border: `dashed 1px ${theme.vars.palette.divider}`,
   };
 

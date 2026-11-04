@@ -89,7 +89,13 @@ export function ExploreAssetsTable({ assets, loading }: ExplorePoolsTableProps) 
     <div data-testid="explore-asset-table">
       <ExplorePoolsTableToolbar filters={filters} onResetPage={table.onResetPage} />
 
-      <Card sx={{ borderRadius: 3, border: 1, borderColor: alpha(theme.palette.grey[500], 0.32) }}>
+      <Card
+        sx={{
+          borderRadius: 'var(--radius-lg)',
+          border: 1,
+          borderColor: alpha(theme.palette.grey[500], 0.32),
+        }}
+      >
         {/* — search bar — */}
 
         {/* — scrollable table — */}

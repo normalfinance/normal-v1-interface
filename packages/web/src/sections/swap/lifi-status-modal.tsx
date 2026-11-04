@@ -66,13 +66,13 @@ export function LifiStatusModal({
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
     >
       <DialogContent sx={{ px: '22px', py: '26px' }}>
         <Stack spacing={2.5}>
           <Box sx={{ textAlign: 'center' }}>
             <Typography
-              sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+              sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.02em' }}
             >
               {isDone
                 ? t('Swap complete')
@@ -82,7 +82,7 @@ export function LifiStatusModal({
                     ? t('Swap failed')
                     : t('Swapping {{from}} → {{to}}', { from: fromSymbol, to: toSymbol })}
             </Typography>
-            <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
+            <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '4px' }}>
               {isRefunded
                 ? t(
                     'The bridge couldn’t complete it and returned your {{from}}. No funds were lost — small swaps are sometimes refunded.',
@@ -168,7 +168,7 @@ export function LifiStatusModal({
             sx={{
               px: '12px',
               py: '8px',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: '#FAFAFB',
               border: '1px solid rgba(10,10,15,0.08)',
             }}
@@ -176,7 +176,7 @@ export function LifiStatusModal({
             <Typography
               sx={{
                 fontSize: '11px',
-                color: 'rgba(10,10,15,0.5)',
+                color: '#6B6B76',
                 fontFamily: '"Geist Mono", monospace',
                 textOverflow: 'ellipsis',
                 overflow: 'hidden',
@@ -193,8 +193,8 @@ export function LifiStatusModal({
             sx={{
               px: '24px',
               py: '10px',
-              borderRadius: '10px',
-              border: '1px solid rgba(10,10,15,0.12)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(10,10,15,0.14)',
               bgcolor: '#FFFFFF',
               color: '#0A0A0F',
               fontSize: '14px',

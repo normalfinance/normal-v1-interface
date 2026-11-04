@@ -49,20 +49,24 @@ export function ReceiveAssetPicker({
       onClose={onClose}
       fullWidth
       maxWidth="xs"
-      slotProps={{ paper: { sx: { borderRadius: '20px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
     >
       <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography
-            sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+            sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.02em' }}
           >
             Receive
           </Typography>
-          <IconButton onClick={onClose} size="small" sx={{ color: '#6B6B76', borderRadius: '8px' }}>
+          <IconButton
+            onClick={onClose}
+            size="small"
+            sx={{ color: '#6B6B76', borderRadius: 'var(--radius-md)' }}
+          >
             <CloseOutlined sx={{ fontSize: 18 }} />
           </IconButton>
         </Box>
-        <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '4px' }}>
+        <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '4px' }}>
           Select the network you want to receive on
         </Typography>
       </DialogTitle>
@@ -80,8 +84,8 @@ export function ReceiveAssetPicker({
               gap: '14px',
               px: '14px',
               py: '14px',
-              borderRadius: '14px',
-              border: '1px solid rgba(10,10,15,0.07)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(10,10,15,0.08)',
               bgcolor: 'transparent',
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -102,7 +106,7 @@ export function ReceiveAssetPicker({
               <Box
                 sx={{
                   fontSize: '14px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   color: '#0A0A0F',
                   letterSpacing: '-0.01em',
                   lineHeight: 1.3,
@@ -110,9 +114,7 @@ export function ReceiveAssetPicker({
               >
                 {opt.label}
               </Box>
-              <Box
-                sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', mt: '2px', lineHeight: 1.4 }}
-              >
+              <Box sx={{ fontSize: '12px', color: '#9A9AA3', mt: '2px', lineHeight: 1.4 }}>
                 {opt.subtitle}
               </Box>
             </Box>
@@ -125,9 +127,7 @@ export function ReceiveAssetPicker({
                 flexShrink: 0,
               }}
             />
-            <ChevronRightOutlined
-              sx={{ fontSize: 18, color: 'rgba(10,10,15,0.3)', flexShrink: 0 }}
-            />
+            <ChevronRightOutlined sx={{ fontSize: 18, color: '#9A9AA3', flexShrink: 0 }} />
           </Box>
         ))}
       </DialogContent>

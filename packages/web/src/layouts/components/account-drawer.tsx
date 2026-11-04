@@ -12,16 +12,17 @@ import { useBoolean } from 'minimal-shared/hooks';
 import { cdn, logger } from '@normalfinance/utils';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { usePersistStore } from '@normalfinance/state';
+import { useGoToLogin } from '@/hooks/use-go-to-login';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getLinkedWallets } from '@/services/linked-wallets';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { clearLoginIntent, consumeLoginIntent } from '@/lib/loginIntent';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import { CHAINS, CHAIN_IDS, getChainAddress, availableChains } from '@/lib/chains/registry';
-import { clearLoginIntent, consumeLoginIntent, rememberLoginIntent } from '@/lib/loginIntent';
 
 import AddOutlined from '@mui/icons-material/AddOutlined';
 import CloseOutlined from '@mui/icons-material/CloseOutlined';
@@ -318,6 +319,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const persist = usePersistStore();
   const { t } = useTranslate();
   const router = useRouter();
+  const goToLogin = useGoToLogin();
   const searchParams = useSearchParams();
   const { connectWallet, publicKey, isConnected, disconnectWallet } = useStellarWalletsKit();
   const {
@@ -400,12 +402,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [wizardInitialStep, setWizardInitialStep] = useState<WizardStep | undefined>(undefined);
-  const [passwordResetSuccess, setPasswordResetSuccess] = useState(false);
   const [showWalletSelection, setShowWalletSelection] = useState(false);
   const [showCreateNormalWallet, setShowCreateNormalWallet] = useState(false);
   const [showImportNormalWallet, setShowImportNormalWallet] = useState(false);
   const [showImportOptionInSelection, setShowImportOptionInSelection] = useState(false);
-  const [resetEmail, setResetEmail] = useState<string | null>(null);
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
 
   const handleDisconnect = async () => {
@@ -433,7 +433,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
       enqueueSnackbar('Logged out successfully', { variant: 'success' });
 
-      window.location.reload();
+      // Land on the home page, not the page you logged out from: a dashboard
+      // page has nothing to show a signed-out visitor. A full navigation (not
+      // router.push) also drops every in-memory wallet and balance.
+      window.location.assign(paths.root);
     } catch (error) {
       logger.error('Error disconnecting wallet:', error);
 
@@ -507,8 +510,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   const handleConnectClick = async () => {
     if (!session) {
-      rememberLoginIntent();
-      setShowLoginModal(true);
+      goToLogin();
       return;
     }
 
@@ -524,19 +526,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
   }, [showLoginModal]);
 
   useEffect(() => {
-    const passwordResetParam = searchParams.get('passwordResetSuccess');
-    const emailParam = searchParams.get('email');
-    if (passwordResetParam === 'true') {
-      setPasswordResetSuccess(true);
-      if (emailParam) {
-        setResetEmail(decodeURIComponent(emailParam));
-      }
-      setShowLoginModal(true);
-      router.replace('/', { scroll: false });
-    }
-  }, [searchParams, router]);
-
-  useEffect(() => {
     if (searchParams.get('setup') !== 'continue') return;
     // Legacy onramp return: savings setup (activation + trustline) now completes
     // on /savings itself, so just land the user there — the savings card guides
@@ -546,14 +535,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
 
   useEffect(() => {
     const handler = () => {
-      if (!session) {
-        rememberLoginIntent();
-        setShowLoginModal(true);
-      }
+      if (!session) goToLogin();
     };
     window.addEventListener('nf:open-login', handler);
     return () => window.removeEventListener('nf:open-login', handler);
-  }, [session]);
+  }, [session, goToLogin]);
 
   // Opens the wizard regardless of session — used when a logged-in user
   // starts an action that needs a wallet they don't have yet (lazy setup).
@@ -572,10 +558,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
         hasHandledAuthRef.current = false;
       }
       setIsAutoConnecting(false);
-      // Don't close the wizard if it's currently open handling its own flow
-      if (!passwordResetSuccess && !showLoginModalRef.current) {
-        setShowLoginModal(false);
-      }
       return;
     }
 
@@ -596,7 +578,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
       setIsAutoConnecting(false);
       return;
     }
-  }, [authLoading, session, passwordResetSuccess, isWalletConnected]);
+  }, [authLoading, session, isWalletConnected]);
 
   return (
     <>
@@ -619,7 +601,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
           sx={{
             bgcolor: '#0A0A0F',
             color: '#fff',
-            borderRadius: '999px',
+            borderRadius: 'var(--radius-md)',
             textTransform: 'none',
             fontWeight: 500,
             px: '12px',
@@ -627,7 +609,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
             fontSize: '14px',
             minWidth: 'unset',
             boxShadow: 'none',
-            '&:hover': { bgcolor: '#1a1a2e', boxShadow: 'none' },
+            '&:hover': { bgcolor: '#2A2A33', boxShadow: 'none' },
           }}
         >
           {t('Login')}
@@ -667,7 +649,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
               data-testid="close-drawer-button"
               sx={{
                 color: '#6B6B76',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
                 '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
               }}
             >
@@ -690,7 +672,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     }}
                     sx={{
                       color: '#6B6B76',
-                      borderRadius: '8px',
+                      borderRadius: 'var(--radius-md)',
                       '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
                     }}
                   >
@@ -725,7 +707,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   }}
                   sx={{
                     color: '#6B6B76',
-                    borderRadius: '8px',
+                    borderRadius: 'var(--radius-md)',
                     '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
                   }}
                 >
@@ -751,7 +733,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 sx={{
                   bgcolor: '#0A0A0F',
                   color: '#fff',
-                  borderRadius: '999px',
+                  borderRadius: 'var(--radius-md)',
                   textTransform: 'none',
                   fontWeight: 500,
                   fontSize: '13px',
@@ -759,10 +741,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   py: '7px',
                   minWidth: 'unset',
                   boxShadow: 'none',
-                  '&:hover': { bgcolor: '#1a1a22', boxShadow: 'none' },
+                  '&:hover': { bgcolor: '#2A2A33', boxShadow: 'none' },
                   '&.Mui-disabled': {
-                    bgcolor: 'rgba(10,10,15,0.4)',
-                    color: 'rgba(255,255,255,0.6)',
+                    bgcolor: 'rgba(10,10,15,0.08)',
+                    color: '#9A9AA3',
                   },
                 }}
               >
@@ -785,7 +767,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     <Typography
                       sx={{
                         fontSize: '15px',
-                        fontWeight: 600,
+                        fontWeight: 500,
                         letterSpacing: '-0.01em',
                         color: '#0A0A0F',
                       }}
@@ -927,10 +909,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         } catch {
                           /* stale session — nothing to clear */
                         }
-                        setWizardInitialStep(undefined);
-                        setShowLoginModal(true);
+                        goToLogin();
                       }}
-                      sx={{ borderRadius: 1.5, px: 3 }}
+                      sx={{ borderRadius: 'var(--radius-md)', px: 3 }}
                     >
                       {t('Sign in again')}
                     </Button>
@@ -983,9 +964,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                           sx={{
                             bgcolor: '#0A0A0F',
                             color: '#fff',
-                            borderRadius: 1.5,
+                            borderRadius: 'var(--radius-md)',
                             px: 3,
-                            '&:hover': { bgcolor: '#1a1a25' },
+                            '&:hover': { bgcolor: '#2A2A33' },
                           }}
                         >
                           {t('Pick an asset')}
@@ -999,7 +980,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         <Button
                           variant="contained"
                           onClick={handleConnectClick}
-                          sx={{ borderRadius: 1.5, px: 3 }}
+                          sx={{ borderRadius: 'var(--radius-md)', px: 3 }}
                         >
                           {t('Sign in')}
                         </Button>
@@ -1046,7 +1027,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
               await handleDisconnect();
               setShowLogoutConfirm(false);
             }}
-            sx={{ textTransform: 'none', borderRadius: '999px' }}
+            sx={{ textTransform: 'none', borderRadius: 'var(--radius-md)' }}
           >
             {isDisconnecting ? t('Logging out…') : t('Log out')}
           </Button>
@@ -1059,11 +1040,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
         onClose={() => {
           setShowLoginModal(false);
           setWizardInitialStep(undefined);
-          setPasswordResetSuccess(false);
-          setResetEmail(null);
         }}
-        passwordResetSuccess={passwordResetSuccess}
-        resetEmail={resetEmail}
       />
       <WalletSelectionModal
         open={showWalletSelection}

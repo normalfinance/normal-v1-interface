@@ -90,14 +90,14 @@ export const grey = createPaletteChannel(themeConfig.palette.grey);
 
 // Text color
 export const text = {
-  light: createPaletteChannel({ primary: grey[800], secondary: grey[600], disabled: grey[500] }),
+  light: createPaletteChannel({ primary: grey[900], secondary: grey[600], disabled: grey[500] }),
   dark: createPaletteChannel({ primary: '#FFFFFF', secondary: grey[500], disabled: grey[600] }),
 };
 
 // Background color
 export const background = {
-  light: createPaletteChannel({ paper: '#FFFFFF', default: '#FFFFFF', neutral: grey[200] }),
-  dark: createPaletteChannel({ paper: grey[800], default: grey[900], neutral: '#28323D' }),
+  light: createPaletteChannel({ paper: '#FFFFFF', default: grey[50], neutral: grey[100] }),
+  dark: createPaletteChannel({ paper: '#1C252E', default: '#141A21', neutral: '#28323D' }),
 };
 
 // Base action color
@@ -113,7 +113,12 @@ export const baseAction = {
 
 // Action color
 export const action = {
-  light: { ...baseAction, active: grey[600] },
+  light: {
+    ...baseAction,
+    active: grey[600],
+    disabled: grey[500],
+    disabledBackground: varAlpha(grey['900Channel'], 0.08),
+  },
   dark: { ...baseAction, active: grey[500] },
 };
 
@@ -129,18 +134,22 @@ export const basePalette = {
   error,
   common,
   grey,
-  divider: varAlpha(grey['500Channel'], 0.2),
 };
+
+// The one hairline. Every border on every surface uses it.
+export const hairline = { light: 'rgba(10,10,15,0.08)', dark: 'rgba(255,255,255,0.08)' };
 
 export const palette: Record<ThemeColorScheme, ColorSystemOptions['palette']> = {
   light: {
     ...basePalette,
+    divider: hairline.light,
     text: text.light,
     background: background.light,
     action: action.light,
   },
   dark: {
     ...basePalette,
+    divider: hairline.dark,
     text: text.dark,
     background: background.dark,
     action: action.dark,

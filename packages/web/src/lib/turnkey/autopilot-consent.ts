@@ -15,6 +15,7 @@
 // ---------------------------------------------------------------------------
 
 import { EVM_USDC, EVM_CCTP } from '@/lib/cctp/config';
+import { confirmAction } from '@/lib/auth/action-code';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 
 import { getTurnkeyWalletInfo } from './wallet-info';
@@ -71,6 +72,8 @@ export interface ConsentResult {
  * it — retries and repairs converge instead of erroring.
  */
 export async function grantAutopilotConsent(serverPublicKey: string): Promise<ConsentResult> {
+  if (!(await confirmAction())) throw new Error('Autopilot stays off: the code was cancelled.');
+
   const info = await getTurnkeyWalletInfo();
   if (!info?.subOrgId) throw new Error('No Normal wallet to grant autopilot on');
 

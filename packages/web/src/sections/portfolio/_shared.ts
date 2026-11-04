@@ -1,19 +1,14 @@
 import type { Token } from '@normalfinance/types';
 
+import { BLOCK_SX } from '@/components/_common/brand';
+
 export const MONO = {
   fontFamily: '"Geist Mono", ui-monospace, monospace',
   fontFeatureSettings: '"ss01","ss02","zero"',
   fontVariantNumeric: 'tabular-nums',
 } as const;
 
-export const CARD_SX = {
-  background: '#ffffff',
-  border: '1px solid rgba(10,10,15,0.08)',
-  borderRadius: '22px',
-  p: '28px',
-  boxShadow:
-    '0 1px 0 rgba(255,255,255,0.6) inset, 0 24px 60px rgba(10,10,15,0.08), 0 2px 8px rgba(10,10,15,0.04)',
-} as const;
+export const CARD_SX = BLOCK_SX;
 
 export const DONUT_COLORS = [
   '#5BCFFF',

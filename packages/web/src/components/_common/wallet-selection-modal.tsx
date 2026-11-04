@@ -88,7 +88,7 @@ export default function WalletSelectionModal({
       slotProps={{
         paper: {
           sx: {
-            borderRadius: 2,
+            borderRadius: 'var(--radius-lg)',
           },
         },
       }}
@@ -121,7 +121,7 @@ export default function WalletSelectionModal({
             sx={{
               border: 1,
               borderColor: 'success.main',
-              borderRadius: 2,
+              borderRadius: 'var(--radius-lg)',
               p: 2,
               bgcolor: 'background.neutral',
             }}
@@ -147,7 +147,7 @@ export default function WalletSelectionModal({
                 startIcon={<Iconify icon="solar:check-circle-bold" width={24} />}
               >
                 <Box sx={{ textAlign: 'left', flex: 1 }}>
-                  <Typography variant="subtitle1" fontWeight={600}>
+                  <Typography variant="subtitle1" fontWeight={500}>
                     {t('Create a Normal account')}
                   </Typography>
                 </Box>
@@ -167,7 +167,7 @@ export default function WalletSelectionModal({
                   startIcon={<Iconify icon="solar:import-bold" width={24} />}
                 >
                   <Box sx={{ textAlign: 'left', flex: 1 }}>
-                    <Typography variant="subtitle1" fontWeight={600}>
+                    <Typography variant="subtitle1" fontWeight={500}>
                       {t('Import an existing account')}
                     </Typography>
                   </Box>
@@ -186,7 +186,7 @@ export default function WalletSelectionModal({
             sx={{
               border: 1,
               borderColor: 'warning.light',
-              borderRadius: 2,
+              borderRadius: 'var(--radius-lg)',
               p: 2,
               bgcolor: 'background.neutral',
             }}
@@ -212,7 +212,7 @@ export default function WalletSelectionModal({
                 startIcon={<Iconify icon="solar:wallet-bold" width={24} />}
               >
                 <Box sx={{ textAlign: 'left', flex: 1 }}>
-                  <Typography variant="subtitle1" fontWeight={600}>
+                  <Typography variant="subtitle1" fontWeight={500}>
                     {t('Connect a crypto wallet')}
                   </Typography>
                 </Box>

@@ -42,6 +42,31 @@ const PUBLIC_ROUTES: Record<string, string> = {
     'Stripe → us; authenticated by the Stripe-Signature HMAC (STRIPE_WEBHOOK_SECRET), not a user session; 503 when unconfigured',
 };
 
+/**
+ * Routes reachable by a login that hasn't entered its 6-digit code. Every entry
+ * here is a way past two-factor sign-in, so this list should stay this short.
+ */
+const PARTIAL_LOGIN_ROUTES: Record<string, string> = {
+  'auth/two-factor/recover': 'a lost authenticator leaves a recovery code as the only proof',
+};
+
+/**
+ * Routes an action must pass on its way to the chain. An account with 2FA enters
+ * its code before each one, so these refuse a token whose code is old. A new
+ * route that builds or broadcasts a user's transaction belongs here.
+ */
+const ACTION_CODE_ROUTES = [
+  'cctp/transfers',
+  'fees/execute-pair',
+  'savings/deposit',
+  'savings/withdraw',
+  'send/execute',
+  'send/stellar',
+  'swap/submit-single',
+  'turnkey/broadcast-btc',
+  'turnkey/build-btc-tx',
+];
+
 const API_DIR = path.join(__dirname);
 
 function findRouteFiles(dir: string): string[] {
@@ -88,6 +113,26 @@ describe('route auth conformance', () => {
       expect(wrapped || allowlisted).toBe(true);
     }
   );
+
+  it.each(routeFiles.map((f) => [routeKey(f), f]))(
+    '%s only skips the 6-digit code if it is on the short list',
+    (key, file) => {
+      const skips = fs.readFileSync(file as string, 'utf-8').includes('allowPartialLogin');
+      expect(skips).toBe(key in PARTIAL_LOGIN_ROUTES);
+    }
+  );
+
+  it.each(ACTION_CODE_ROUTES)('%s refuses an old 6-digit code', (key) => {
+    const source = fs.readFileSync(path.join(API_DIR, key, 'route.ts'), 'utf-8');
+    expect(source).toContain('actionCodeRefusal(user, accessToken)');
+  });
+
+  it('no other route asks for the code by accident', () => {
+    const asking = routeFiles
+      .filter((file) => fs.readFileSync(file, 'utf-8').includes('actionCodeRefusal('))
+      .map(routeKey);
+    expect(asking.sort()).toEqual([...ACTION_CODE_ROUTES].sort());
+  });
 
   it('every allowlist entry corresponds to an existing route', () => {
     const existing = new Set(routeFiles.map(routeKey));
