@@ -8,7 +8,11 @@ import { withRateLimitRetry } from '@/server/defindex';
 import { networkFromCookie } from '@/server/network-cookie';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
-import { eventTxId, reconcileTotalDeposited } from '@/server/savings-deposits';
+import {
+  eventTxId,
+  reconcileTotalDeposited,
+  totalDepositedWithoutHistory,
+} from '@/server/savings-deposits';
 
 export const dynamic = 'force-dynamic';
 
@@ -215,7 +219,17 @@ export async function GET(request: NextRequest) {
         prisma.vaultDeposit.findMany({
           // #27: rows exist before broadcast — a pending/failed transaction
           // must not count into "Your Deposits" until it actually confirmed.
-          where: { walletAddress: userAddress, vaultAddress: VAULT_ADDRESS, status: 'confirmed' },
+          // Only rows our server recorded from signed transactions count, and
+          // those always carry their network. Rows from the removed
+          // log-transaction route have none: their amount came from the request
+          // body, so anyone who had linked an address could write any figure
+          // against it (security report, 2026-11-04).
+          where: {
+            walletAddress: userAddress,
+            vaultAddress: VAULT_ADDRESS,
+            status: 'confirmed',
+            network,
+          },
           select: { type: true, amount: true, txHash: true, createdAt: true, status: true },
         }),
         withTimeout(
@@ -331,20 +345,9 @@ export async function GET(request: NextRequest) {
         );
       }
     } else {
-      // Fall back to DB when events API returns nothing
-      if (records.length === 0) {
-        totalDeposited = underlyingValue;
-      } else {
-        totalDeposited = records.reduce(
-          (sum: number, r: { type: string; amount: string }) =>
-            r.type === 'deposit'
-              ? sum + (parseFloat(r.amount) || 0)
-              : sum - (parseFloat(r.amount) || 0),
-          0
-        );
-        if (totalDeposited < 0) totalDeposited = 0;
-      }
-      console.log('[user-position] totalDeposited from DB fallback:', totalDeposited);
+      // No history to go on: never more earnings than the vault can prove.
+      totalDeposited = totalDepositedWithoutHistory(records, underlyingValue);
+      console.log('[user-position] totalDeposited without history:', totalDeposited);
     }
 
     // If getVaultBalance failed (rejected), return null so the client preserves its cached

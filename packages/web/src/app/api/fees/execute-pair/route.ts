@@ -5,6 +5,7 @@ import type { TxRecordInput, SwapRecordInput, SavingsRecordInput } from '@/serve
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
+import { isSignedBy } from '@/lib/stellar/wallet-proof';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { networkFromCookie } from '@/server/network-cookie';
 import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
@@ -233,9 +234,13 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
     const serviceExpiresAtMs = serviceMaxTime > 0 ? serviceMaxTime * 1000 : feeExpiresAtMs;
 
     // The address inside the signed txs is what gets ownership-checked — the
-    // body carries no separate wallet field an attacker could vary.
+    // body carries no separate wallet field an attacker could vary. A valid
+    // signature from that address proves control of it, which a link row alone
+    // didn't until links needed proof (security report, 2026-11-04), so a
+    // connected wallet can transact without one.
     const walletAddress = serviceTx.source;
-    const owns = await userOwnsWallet(user.id, walletAddress);
+    const owns =
+      isSignedBy(serviceTx, walletAddress) || (await userOwnsWallet(user.id, walletAddress));
     if (!owns) {
       return NextResponse.json(
         { success: false, error: 'Wallet is not linked to your account' },

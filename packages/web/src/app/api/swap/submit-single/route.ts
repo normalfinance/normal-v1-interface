@@ -3,13 +3,14 @@ import type { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
+import { isSignedBy } from '@/lib/stellar/wallet-proof';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { networkFromCookie } from '@/server/network-cookie';
 import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 import { getFeesDepositAddress } from '@/lib/build-fee-payment';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
 import { settleRecord, createPendingRecord } from '@/server/tx-records';
-import { StrKey, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
+import { StrKey, Horizon, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 
 // #33 Stage 1 — the single-transaction swap submit (embedded Soroswap fee).
 // The #27 property is preserved: the SwapLog row is written 'pending' BEFORE
@@ -50,7 +51,10 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
     // against the caller — an authenticated user could have us broadcast a
     // transaction signed by someone else's account and write a swap_logs row
     // against their wallet. execute-pair:236 has always done this check.
-    if (!walletAddress || !(await userOwnsWallet(user.id, walletAddress))) {
+    // A valid signature from the source proves control of it, as in
+    // execute-pair (security report, 2026-11-04).
+    const signedBySource = tx instanceof Transaction && isSignedBy(tx, walletAddress);
+    if (!walletAddress || !(signedBySource || (await userOwnsWallet(user.id, walletAddress)))) {
       return NextResponse.json(
         { success: false, error: 'Wallet is not linked to your account' },
         { status: 403 }

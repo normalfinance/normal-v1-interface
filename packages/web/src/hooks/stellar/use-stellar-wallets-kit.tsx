@@ -12,6 +12,7 @@ import {
   updateLastUsed,
   getLinkedWallets,
   updateWalletName,
+  type LinkChallengeSigner,
 } from '@/services/linked-wallets';
 
 // Wallets that use WalletConnect sessions — sessions do not survive page reloads.
@@ -41,13 +42,22 @@ export function forgetWalletLink(address: string | null | undefined): void {
  * their swaps never reached the database — finding #41 in
  * docs/audit/46-external-wallets.md.
  *
+ * Linking needs the wallet to sign a one-time challenge (security report,
+ * 2026-11-04), so it only happens when `signChallenge` is given: when the user
+ * connects the wallet themselves. A wallet restored on page load must never
+ * open a signing prompt nobody asked for. Unlinked, it can still transact: the
+ * money routes accept its own signature as proof.
+ *
  * Never throws: a failure here must not break a working wallet connection.
+ * Resolves true when the wallet is linked.
  */
 async function ensureWalletLinked(
   address: string | null | undefined,
-  walletName?: string
-): Promise<void> {
-  if (!address || linkEnsured.has(address)) return;
+  walletName?: string,
+  signChallenge?: LinkChallengeSigner
+): Promise<boolean> {
+  if (!address) return false;
+  if (linkEnsured.has(address)) return true;
   linkEnsured.add(address);
 
   try {
@@ -63,15 +73,22 @@ async function ensureWalletLinked(
       // the user typed in Settings is never overwritten by a reconnect
       // (Niko 2026-08-21: rows showed "Unnamed Account" for known wallets).
       if (walletName && !existing.walletName) updateWalletName(address, walletName).catch(() => {});
-      return;
+      return true;
     }
-    await linkWallet(address, walletName);
+    if (!signChallenge) {
+      // Leave the guard open so connecting it by hand later can still link.
+      linkEnsured.delete(address);
+      return false;
+    }
+    await linkWallet(address, walletName, signChallenge);
+    return true;
   } catch (error) {
     // Clear the guard so a later mount can retry — otherwise one failed
-    // lookup (expired session, rate limit) would strand the user unlinked for
-    // the whole page session.
+    // lookup (expired session, rate limit, a declined signature) would strand
+    // the user unlinked for the whole page session.
     linkEnsured.delete(address);
     logger.warn('[WALLET KIT] Could not link the connected wallet:', error);
+    return false;
   }
 }
 
@@ -255,10 +272,24 @@ export const useStellarWalletsKit = () => {
     // NB: the reconnect memo is NOT written here — it is derived from the
     // wallet slot in components/_common/external-wallet-reattach.tsx, so it
     // cannot race with a disconnect.
-    await ensureWalletLinked(
+    const linked = await ensureWalletLinked(
       connectedAddress,
-      connectedWalletLabel(usePersistStore.getState().wallet.walletType)
+      connectedWalletLabel(usePersistStore.getState().wallet.walletType),
+      // Called only for a wallet that isn't linked yet, so the note shows
+      // right before the wallet asks for the signature it explains.
+      async (challengeXdr, networkPassphrase) => {
+        enqueueSnackbar('Confirm in your wallet that this address is yours. Nothing is sent.', {
+          variant: 'info',
+        });
+        return useStellarWalletKitStore.getState().signTransaction(challengeXdr, networkPassphrase);
+      }
     );
+    if (!linked) {
+      enqueueSnackbar(
+        "Your wallet is connected, but it isn't linked to your account yet. Connect it again to confirm it's yours.",
+        { variant: 'warning' }
+      );
+    }
   }, [walletKitStore, persistStore, enqueueSnackbar]);
 
   const signTransaction = useCallback(

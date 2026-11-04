@@ -78,6 +78,27 @@ export function reconcileTotalDeposited(params: {
   return { total: Math.max(eventsTotal + delta, 0), pendingCount };
 }
 
+/**
+ * "Your Deposits" when there's no event history to reconcile against: the
+ * events API returned nothing or couldn't be read. Our recorded rows may miss
+ * deposits made before #27 or outside the app, and earnings are what's in the
+ * vault minus this figure, so a partial sum would invent earnings and overcharge
+ * the yield commission on the next withdrawal. Never less than the vault value,
+ * then: no earnings until the history is readable (security report, 2026-11-04).
+ */
+export function totalDepositedWithoutHistory(
+  rows: Pick<PendingLedgerRow, 'type' | 'amount'>[],
+  vaultValue: number
+): number {
+  const recorded = rows.reduce((sum, row) => {
+    const amount = parseFloat(row.amount) || 0;
+    if (row.type === 'deposit') return sum + amount;
+    if (row.type === 'withdraw') return sum - amount;
+    return sum;
+  }, 0);
+  return Math.max(recorded, vaultValue, 0);
+}
+
 /** Tx hash of a DeFindex event, tolerant to the shapes the API has used. */
 export function eventTxId(event: unknown): string | null {
   const e = event as { transactionId?: string; txHash?: string; transaction_hash?: string };
