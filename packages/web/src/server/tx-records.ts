@@ -63,7 +63,6 @@ export type TxRecordInput =
 
 // ---------------------------------------------------------------------------
 // #55 cache invalidation — the record IS the signal the caches are stale.
-// Shared with savings/log-transaction (legacy route) so there is one rule.
 // ---------------------------------------------------------------------------
 
 export async function invalidateSavingsPositionCache(

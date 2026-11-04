@@ -77,20 +77,50 @@ export interface GetLinkedWalletsResponse {
   wallets: LinkedWallet[];
 }
 
+/** Signs the link challenge with the wallet being linked; returns the signed XDR. */
+export type LinkChallengeSigner = (
+  challengeXdr: string,
+  networkPassphrase: string
+) => Promise<string>;
+
 /**
- * Link a wallet to the current user's account
+ * Link a wallet to the current user's account.
+ *
+ * Any wallet other than the user's own Normal wallet must prove it's theirs by
+ * signing a one-time challenge, so pass `signChallenge` for external and
+ * in-browser wallets. The challenge can never be submitted to the network.
  */
 export async function linkWallet(
   walletAddress: string,
-  walletName?: string
+  walletName?: string,
+  signChallenge?: LinkChallengeSigner
 ): Promise<LinkWalletResponse> {
   try {
     const headers = await buildAuthHeaders();
+
+    let signedChallengeXdr: string | undefined;
+    if (signChallenge) {
+      const challengeResponse = await fetch('/api/wallets/link/challenge', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ walletAddress }),
+      });
+      const challenge = await safeJson(challengeResponse);
+      if (!challengeResponse.ok) throw new Error(challenge.error || 'Failed to link wallet');
+      if (challenge.required) {
+        signedChallengeXdr = await signChallenge(
+          challenge.challengeXdr,
+          challenge.networkPassphrase
+        );
+      }
+    }
+
     const response = await fetch('/api/wallets/link', {
       method: 'POST',
       headers,
       credentials: 'include',
-      body: JSON.stringify({ walletAddress, walletName }),
+      body: JSON.stringify({ walletAddress, walletName, signedChallengeXdr }),
     });
 
     if (!response.ok) {

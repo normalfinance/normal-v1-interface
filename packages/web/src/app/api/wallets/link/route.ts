@@ -2,11 +2,16 @@ import type { NextRequest } from 'next/server';
 
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { cookies } from 'next/headers';
 import { logger } from '@/utils/logger';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
+import { redis } from '@/server/rateLimiter';
+import { networkFromCookie } from '@/server/network-cookie';
 import { faucetRateLimiter } from '@/server/faucet-rate-limiter';
+import { getStellarConfigForNetwork } from '@normalfinance/utils';
 import { LinkedWalletService } from '@/lib/linked-wallet-service';
+import { verifyLinkProof, linkChallengeKey } from '@/lib/stellar/wallet-proof';
 
 const LinkWalletSchema = z.object({
   walletAddress: z
@@ -14,7 +19,76 @@ const LinkWalletSchema = z.object({
     .min(1, 'Wallet address is required')
     .regex(/^G[A-Z0-9]{55}$/, 'Invalid Stellar wallet address'),
   walletName: z.string().max(50, 'Wallet name must be 50 characters or less').optional(),
+  // The challenge from POST /api/wallets/link/challenge, signed by this wallet.
+  signedChallengeXdr: z.string().max(4096).optional(),
 });
+
+/**
+ * Null when the caller has shown the address is theirs; otherwise the refusal.
+ *
+ * A linked address is what every "is this your wallet?" check trusts (savings
+ * and swap records, ramps, Stripe onramp, activity). It used to need nothing but
+ * the address, so anyone could claim anyone's wallet (security report,
+ * 2026-11-04). Now the wallet signs a one-time challenge. The user's own Normal
+ * wallet needs no proof: the server created it for them.
+ */
+async function refuseWithoutProof(
+  userId: string,
+  walletAddress: string,
+  signedChallengeXdr: string | undefined
+): Promise<Response | null> {
+  const turnkey = await prisma.turnkeyWallet.findUnique({
+    where: { supabaseUid: userId },
+    select: { stellarAddress: true },
+  });
+  if (turnkey?.stellarAddress === walletAddress) return null;
+
+  if (!signedChallengeXdr) {
+    return NextResponse.json(
+      {
+        error: 'Confirm this wallet in your wallet app to link it.',
+        code: 'ownership_proof_required',
+      },
+      { status: 403 }
+    );
+  }
+
+  // getdel: a challenge works once, whatever the outcome.
+  let stored: { hash?: unknown } | null;
+  try {
+    stored = await redis.getdel<{ hash?: unknown }>(linkChallengeKey(userId, walletAddress));
+  } catch {
+    return NextResponse.json(
+      { error: 'Linking is unavailable right now. Please try again.' },
+      { status: 503 }
+    );
+  }
+  if (typeof stored?.hash !== 'string') {
+    return NextResponse.json(
+      {
+        error: 'That confirmation expired. Please link the wallet again.',
+        code: 'ownership_proof_expired',
+      },
+      { status: 403 }
+    );
+  }
+
+  const cookieStore = await cookies();
+  const { NETWORK_PASSPHRASE } = getStellarConfigForNetwork(networkFromCookie(cookieStore));
+  const proven = verifyLinkProof({
+    signedXdr: signedChallengeXdr,
+    walletAddress,
+    expectedHash: stored.hash,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  });
+  if (!proven) {
+    return NextResponse.json(
+      { error: "That signature doesn't match this wallet.", code: 'ownership_proof_invalid' },
+      { status: 403 }
+    );
+  }
+  return null;
+}
 
 const UpdateWalletSchema = z.object({
   walletAddress: z
@@ -50,8 +124,12 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
       );
     }
 
-    const { walletAddress, walletName } = validation.data;
+    const { walletAddress, walletName, signedChallengeXdr } = validation.data;
     const userId = user.id;
+
+    // Before the rate limit, so a failed proof doesn't use up one of the 3 daily links.
+    const refusal = await refuseWithoutProof(userId, walletAddress, signedChallengeXdr);
+    if (refusal) return refusal;
 
     // Rate limit (skipped on dev/testnet unless FORCE_RATE_LIMIT=true)
     if ((!isDev && !isTestnet) || forceRateLimit) {

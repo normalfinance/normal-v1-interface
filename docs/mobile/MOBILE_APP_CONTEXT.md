@@ -63,12 +63,21 @@ Routes the app needs (path under `/api/`):
   (errors: `no_wallet` / `no_email` / `email_mismatch` / `too_many_authenticators` 409,
   `invalid_code` / `login_failed` / `bad_request` 400, `not_found` 404, `turnkey_error` 502), `turnkey/btc-pubkey`, `turnkey/build-btc-tx`,
   `turnkey/broadcast-btc`, `turnkey/import`, `turnkey/import-init`, `wallets/check-limit`,
-  `wallets/link`, `wallets/linked`.
+  `wallets/link`, `wallets/linked`. Since 2026-11-04 linking any address other than the user's own
+  Normal wallet needs proof: `POST wallets/link/challenge { walletAddress }` returns
+  `{ required, challengeXdr, networkPassphrase }`; the wallet signs `challengeXdr` (sequence 0, never
+  submittable) and `POST wallets/link` sends `{ walletAddress, walletName?, signedChallengeXdr }`.
+  Without it: 403 `ownership_proof_required` / `_expired` / `_invalid`. The challenge lasts 5 minutes
+  and works once.
 - **Portfolio / activity**: `wallet/portfolio`, `wallet/activity`, `portfolio/activity`,
   `activity/{bitcoin|ethereum|solana|stellar}`, `prices/history`.
 - **Savings**: `savings/vault-info`, `savings/user-position`, `savings/deposit`,
-  `savings/withdraw`, `savings/log-transaction`, `savings/earnings-history`.
-- **Swap**: `swap/quote` (Soroswap), `swap/submit-single`, `swap/log-transaction`,
+  `savings/withdraw`, `savings/earnings-history`. (`savings/log-transaction` and
+  `swap/log-transaction` were removed 2026-11-04: they wrote amounts from the request body. The
+  server records both from the signed transactions in `fees/execute-pair` and
+  `swap/submit-single`, which accept the transaction's own valid signature as proof of the wallet,
+  so a connected wallet needs no link.)
+- **Swap**: `swap/quote` (Soroswap), `swap/submit-single`,
   `lifi/quote`, `lifi/status`, `lifi/statuses`, `lifi/record`,
   `cctp/quote`, `cctp/transfers` (POST create / GET list, `?history=1`),
   `cctp/transfers/[id]` (GET advances the state machine; `?noAdvance=1` for a fast read;
