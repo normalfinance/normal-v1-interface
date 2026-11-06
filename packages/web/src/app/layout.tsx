@@ -3,31 +3,22 @@ import '@/global.css';
 import type { Metadata, Viewport } from 'next';
 
 import { CONFIG } from '@/global-config';
-import { primary } from '@/theme/core/palette';
 import { LocalizationProvider } from '@/locales';
 import { detectLanguage } from '@/locales/server';
 import { Analytics } from '@vercel/analytics/next';
 import { themeConfig, ThemeProvider } from '@/theme';
-import { DashboardLayout } from '@/layouts/dashboard';
 import { I18nProvider } from '@/locales/i18n-provider';
-import { ModalProvider } from '@/providers/ModalProvider';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import { ReferralProvider } from '@/providers/ReferralProvider';
-import { AssetActionsProvider } from '@/providers/AssetActionsProvider';
+import { SITE_THEME_CSS, SITE_THEME_INIT } from '@/theme/site-theme';
 import { AnnouncementProvider } from '@/providers/AnnouncementProvider';
-import { SupabaseAuthProvider } from '@/providers/SupabaseAuthProvider';
-import { WalletPasswordProvider } from '@/providers/WalletPasswordProvider';
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 
 import { ProgressBar } from '@/components/template/progress-bar';
 import { SnackbarProvider } from '@/components/template/snackbar';
-import ActionCodeGate from '@/components/_common/action-code-gate';
-import WalletBackupGate from '@/components/_common/wallet-backup-gate';
 import { MotionLazy } from '@/components/template/animate/motion-lazy';
 import { detectSettings } from '@/components/template/settings/server';
-import ExternalWalletReattach from '@/components/_common/external-wallet-reattach';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/template/settings';
 
 // ----------------------------------------------------------------------
@@ -35,7 +26,8 @@ import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: primary.main,
+  // The browser bar matches the white headers of both sites.
+  themeColor: '#FFFFFF',
 };
 
 export const metadata: Metadata = {
@@ -120,6 +112,10 @@ export default async function RootLayout({ children }: RootLayoutProps) {
           rel="stylesheet"
           href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap"
         />
+        {/* The colour tokens for both modes, and the marketing site's light/dark
+            choice applied before the first paint (theme/site-theme.ts). */}
+        <style id="nf-theme" dangerouslySetInnerHTML={{ __html: SITE_THEME_CSS }} />
+        <script dangerouslySetInnerHTML={{ __html: SITE_THEME_INIT }} />
       </head>
       <body>
         <InitColorSchemeScript
@@ -139,35 +135,23 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   defaultMode={themeConfig.defaultMode}
                   modeStorageKey={themeConfig.modeStorageKey}
                 >
-                  <SupabaseAuthProvider>
-                    <ReferralProvider>
-                      <MotionLazy>
-                        <SnackbarProvider>
-                          <Analytics />
-                          {/* Collect-only real-user performance vitals (Phase 0
-                                  baseline — approved 2026-07-24). */}
-                          <SpeedInsights />
-                          <ProgressBar />
-                          <SettingsDrawer defaultSettings={defaultSettings} />
-                          <AnnouncementProvider>
-                            <WalletPasswordProvider>
-                              <ModalProvider>
-                                <AssetActionsProvider>
-                                  <DashboardLayout>{children}</DashboardLayout>
-                                  {/* doc 79: one global mandatory-backup gate */}
-                                  <WalletBackupGate />
-                                  {/* The 6-digit code before every money action */}
-                                  <ActionCodeGate />
-                                  {/* Re-attach the external wallet after login */}
-                                  <ExternalWalletReattach />
-                                </AssetActionsProvider>
-                              </ModalProvider>
-                            </WalletPasswordProvider>
-                          </AnnouncementProvider>
-                        </SnackbarProvider>
-                      </MotionLazy>
-                    </ReferralProvider>
-                  </SupabaseAuthProvider>
+                  {/* Everything both sites share. The marketing site (app/(site))
+                      and the app (app/(wallet)) each bring their own frame; the
+                      auth and wallet providers live in the app's, so a visitor
+                      reading the home page never downloads the wallet. Referral
+                      links are captured by the site frame (ReferralCapture) and
+                      tracked by the app (ReferralProvider). */}
+                  <MotionLazy>
+                    <SnackbarProvider>
+                      <Analytics />
+                      {/* Collect-only real-user performance vitals (Phase 0
+                                baseline — approved 2026-07-24). */}
+                      <SpeedInsights />
+                      <ProgressBar />
+                      <SettingsDrawer defaultSettings={defaultSettings} />
+                      <AnnouncementProvider>{children}</AnnouncementProvider>
+                    </SnackbarProvider>
+                  </MotionLazy>
                 </ThemeProvider>
               </AppRouterCacheProvider>
             </LocalizationProvider>

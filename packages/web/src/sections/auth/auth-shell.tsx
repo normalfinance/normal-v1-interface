@@ -89,16 +89,6 @@ function AuthVisual() {
           isolation: 'isolate',
         }}
       >
-        {/* Brand-coloured light behind the laptop. The photo's black backdrop
-            blends into it through `lighten`, so there's no visible image edge. */}
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(52% 38% at 38% 66%, rgba(110,139,255,0.30), transparent 72%), radial-gradient(44% 34% at 70% 62%, rgba(255,123,197,0.20), transparent 72%)',
-          }}
-        />
         <Box
           component="img"
           src={PORTFOLIO_MOCKUP}

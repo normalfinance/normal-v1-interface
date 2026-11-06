@@ -2,6 +2,7 @@ import type { ButtonProps } from '@mui/material/Button';
 import type { Theme, CSSObject, Components, ComponentsVariants } from '@mui/material/styles';
 
 import { varAlpha } from 'minimal-shared/utils';
+import { RouterLink } from '@/routes/components';
 
 import { buttonClasses } from '@mui/material/Button';
 import { loadingButtonClasses } from '@mui/lab/LoadingButton';
@@ -40,9 +41,24 @@ function styleColors(ownerState: ButtonProps, styles: (val: PaletteColor) => CSS
 
 const MuiButtonBase: Components<Theme>['MuiButtonBase'] = {
   /** **************************************
+   * DEFAULT PROPS
+   *************************************** */
+  // A button with an href navigates through Next's router. Nothing ripples: a
+  // press changes colour, it never grows a circle (DESIGN.md: nothing moves).
+  defaultProps: { LinkComponent: RouterLink, disableRipple: true },
+  /** **************************************
    * STYLE
    *************************************** */
-  styleOverrides: { root: ({ theme }) => ({ fontFamily: theme.typography.fontFamily }) },
+  styleOverrides: {
+    root: ({ theme }) => ({
+      fontFamily: theme.typography.fontFamily,
+      // The ripple also marked keyboard focus; this outline does that job now.
+      '&.Mui-focusVisible': {
+        outline: `2px solid ${theme.vars.palette.text.primary}`,
+        outlineOffset: 2,
+      },
+    }),
+  },
 };
 
 // ----------------------------------------------------------------------

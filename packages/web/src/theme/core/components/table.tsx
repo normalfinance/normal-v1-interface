@@ -63,8 +63,7 @@ const MuiTableCell: Components<Theme>['MuiTableCell'] = {
       backgroundColor: theme.vars.palette.background.neutral,
     }),
     stickyHeader: ({ theme }) => ({
-      backgroundColor: theme.vars.palette.background.paper,
-      backgroundImage: `linear-gradient(to bottom, ${theme.vars.palette.background.neutral}, ${theme.vars.palette.background.neutral})`,
+      backgroundColor: theme.vars.palette.background.neutral,
     }),
     paddingCheckbox: ({ theme }) => ({ paddingLeft: theme.spacing(1) }),
   },

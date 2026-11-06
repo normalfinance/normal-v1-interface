@@ -49,26 +49,12 @@ export function SavingsHeroCard({
     <Box
       sx={{
         borderRadius: 'var(--radius-lg)',
-        background: 'linear-gradient(135deg, #0A0A0F 0%, #2A2A33 100%)',
+        bgcolor: '#0A0A0F',
         p: { xs: '24px', md: '32px' },
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* subtle gradient orb */}
-      <Box
-        sx={{
-          position: 'absolute',
-          width: 340,
-          height: 340,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)',
-          top: -80,
-          right: -60,
-          pointerEvents: 'none',
-        }}
-      />
-
       {/* Stats row — 4 columns, earnings and est projections each stack two rows */}
       <Box
         sx={{

@@ -230,12 +230,6 @@ export function AuthForm() {
     const card = consentRef.current;
     if (!card) return;
     card.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      card.animate(
-        [0, -6, 6, -4, 4, 0].map((x) => ({ transform: `translateX(${x}px)` })),
-        { duration: 380, easing: 'ease-in-out' }
-      );
-    }
   };
 
   // Everything a successful sign-in needs later, when this page is already gone.

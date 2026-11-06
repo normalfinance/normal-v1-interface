@@ -1,88 +1,9 @@
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import ReactMarkdown from 'react-markdown';
-import { SimpleLayout } from '@/layouts/simple';
+import { LegalDocument } from './legal-document';
 
-const components: React.ComponentProps<typeof ReactMarkdown>['components'] = {
-  table: ({ children }) => (
-    <div style={{ overflowX: 'auto', margin: '24px 0' }}>
-      <table
-        style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', lineHeight: 1.6 }}
-      >
-        {children}
-      </table>
-    </div>
-  ),
-  thead: ({ children }) => (
-    <thead style={{ backgroundColor: 'rgba(0,0,0,0.04)' }}>{children}</thead>
-  ),
-  th: ({ children }) => (
-    <th
-      style={{
-        padding: '10px 16px',
-        textAlign: 'left',
-        fontWeight: 500,
-        border: '1px solid rgba(0,0,0,0.12)',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {children}
-    </th>
-  ),
-  td: ({ children }) => (
-    <td
-      style={{ padding: '12px 16px', border: '1px solid rgba(0,0,0,0.12)', verticalAlign: 'top' }}
-    >
-      {children}
-    </td>
-  ),
-  ul: ({ children }) => (
-    <ul style={{ margin: 0, paddingLeft: 20, listStyleType: 'disc' }}>{children}</ul>
-  ),
-  li: ({ children }) => <li style={{ marginBottom: 6 }}>{children}</li>,
-  h1: ({ children }) => (
-    <h1 style={{ fontSize: '1.6rem', fontWeight: 500, marginBottom: 8 }}>{children}</h1>
-  ),
-  h2: ({ children }) => (
-    <h2
-      style={{
-        fontSize: '1.1rem',
-        fontWeight: 500,
-        marginTop: 32,
-        marginBottom: 8,
-        color: '#6B6B76',
-      }}
-    >
-      {children}
-    </h2>
-  ),
-  p: ({ children }) => <p style={{ marginBottom: 12, lineHeight: 1.7 }}>{children}</p>,
-};
+// ----------------------------------------------------------------------
 
 export default function PrivacyPolicyView() {
-  return (
-    <SimpleLayout
-      slotProps={{
-        content: {
-          compact: true,
-          sx: {
-            textAlign: 'left',
-            maxWidth: 900,
-            alignItems: 'flex-start',
-            justifyContent: 'flex-start',
-          },
-        },
-      }}
-    >
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
-        components={components}
-      >
-        {MESSAGE}
-      </ReactMarkdown>
-    </SimpleLayout>
-  );
+  return <LegalDocument page="pp" markdown={MESSAGE} />;
 }
 
 const MESSAGE = `# NORMAL PRIVACY POLICY

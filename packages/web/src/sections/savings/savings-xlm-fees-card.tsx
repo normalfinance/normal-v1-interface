@@ -13,6 +13,7 @@
 // portfolio aggregate — the one display source (doc 75 rule), refreshed on
 // every activity event.
 
+import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
@@ -172,7 +173,7 @@ export function SavingsXlmFeesCard() {
 
       {worst.status !== 'ok' && (
         <Button
-          onClick={() => router.push('/swap?from=USDC')}
+          onClick={() => router.push(`${paths.swap}?from=USDC`)}
           fullWidth
           sx={{
             mt: '12px',

@@ -12,6 +12,7 @@
 
 import type { Activity } from '@/types/activity';
 
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
 import { abortTimeout } from '@/utils/abort-timeout';
@@ -448,7 +449,7 @@ export function SwapDetailModal({
                 component="button"
                 onClick={() => {
                   onClose();
-                  if (window.location.pathname.startsWith('/swap')) {
+                  if (window.location.pathname.startsWith(paths.swap)) {
                     window.dispatchEvent(
                       new CustomEvent('nf:cctp-resume', { detail: { id: transferId } })
                     );
@@ -456,7 +457,7 @@ export function SwapDetailModal({
                     // A dispatched event dies with the old document on a full
                     // navigation (live 2026-08-26: "clicking does nothing" from
                     // any page but /swap) — the id rides the URL instead.
-                    window.location.assign(`/swap?cctpResume=${transferId}`);
+                    window.location.assign(`${paths.swap}?cctpResume=${transferId}`);
                   }
                 }}
                 sx={{

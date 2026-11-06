@@ -94,14 +94,14 @@ export function CodeInput({
           fontSize: small ? 20 : 24,
           fontWeight: 500,
           color: INK,
-          transition: 'border-color 150ms, box-shadow 150ms',
+          transition: 'border-color 150ms',
           ...(active && {
             borderColor: INK,
-            boxShadow: '0 0 0 3px rgba(10,10,15,0.06)',
+            outline: '3px solid rgba(10,10,15,0.06)',
           }),
           ...(error && {
             borderColor: ERROR,
-            boxShadow: '0 0 0 3px rgba(185,28,28,0.08)',
+            outline: '3px solid rgba(185,28,28,0.08)',
           }),
           ...theme.applyStyles('dark', {
             bgcolor: 'rgba(255,255,255,0.04)',
@@ -135,14 +135,6 @@ export function CodeInput({
         maxWidth: small ? 360 : 400,
         opacity: disabled ? 0.55 : 1,
         transition: 'opacity 150ms',
-        ...(error && {
-          animation: 'code-input-shake 320ms ease-in-out',
-          '@keyframes code-input-shake': {
-            '0%, 100%': { transform: 'translateX(0)' },
-            '25%': { transform: 'translateX(-5px)' },
-            '75%': { transform: 'translateX(5px)' },
-          },
-        }),
       }}
     >
       <Box

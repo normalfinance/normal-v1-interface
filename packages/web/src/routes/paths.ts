@@ -22,25 +22,37 @@ export const paths = {
   },
   blog: 'https://normalfi.substack.com/',
   docs: 'https://normalfi.gitbook.io/normal',
-  // main
-  swap: '/swap',
-  /** Same destination as the /invest → /swap permanent redirect */
-  invest: '/swap',
-  savings: '/savings',
-  portfolio: '/portfolio',
-  assets: {
-    root: '/assets',
-    details: (symbol: string) => `/assets/${symbol}`,
+  // The marketing site's sections, until each has a page of its own.
+  site: {
+    wallet: '/#wallet',
+    savings: '/#savings',
+    swap: '/#swap',
+    buy: '/#buy',
+    security: '/#security',
+    how: '/#how',
   },
-  settings: '/settings',
+  // The app. It lives under /app (the marketing site owns the root); the old
+  // URLs redirect in next.config.mjs.
+  /** Home: the signed-in overview */
+  portfolio: '/app',
+  swap: '/app/swap',
+  /** Same destination as the /invest → /app/swap permanent redirect */
+  invest: '/app/swap',
+  savings: '/app/savings',
+  activity: '/app/activity',
+  assets: {
+    root: '/app/assets',
+    details: (symbol: string) => `/app/assets/${symbol}`,
+  },
+  settings: '/app/settings',
   auth: {
     login: '/login',
     signup: '/signup',
     callback: '/auth/callback',
   },
   transaction: {
-    root: '/trx',
-    details: (hash: string) => `/trx/${hash}`,
+    root: '/app/activity',
+    details: (hash: string) => `/app/activity/${hash}`,
   },
   legal: {
     root: '/legal',

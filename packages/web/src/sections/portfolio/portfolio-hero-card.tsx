@@ -150,35 +150,6 @@ export function HeroCard({
         color: '#fff',
       }}
     >
-      {/* Dot grid */}
-      <Box
-        aria-hidden="true"
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
-          backgroundSize: '20px 20px',
-          WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-          maskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Ambient glow */}
-      <Box
-        aria-hidden="true"
-        sx={{
-          position: 'absolute',
-          inset: '-20%',
-          background: `
-            radial-gradient(closest-side at 20% 60%, rgba(91,207,255,0.15), transparent 60%),
-            radial-gradient(closest-side at 80% 40%, rgba(177,123,255,0.15), transparent 60%)
-          `,
-          filter: 'blur(40px)',
-          pointerEvents: 'none',
-        }}
-      />
-
       <Box
         sx={{
           position: 'relative',

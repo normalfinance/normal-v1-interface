@@ -58,10 +58,8 @@ export function AssetPriceChart({ symbol }: { symbol: string }) {
     colors: [color],
     stroke: { width: 2.5, curve: 'smooth' },
     dataLabels: { enabled: false },
-    fill: {
-      type: 'gradient',
-      gradient: { opacityFrom: 0.22, opacityTo: 0, shadeIntensity: 0 },
-    },
+    // Flat, like everything else: a faint solid area under the line.
+    fill: { type: 'solid', opacity: 0.08 },
     grid: {
       strokeDashArray: 3,
       borderColor: 'rgba(10,10,15,0.06)',

@@ -56,6 +56,7 @@ import WalletReadinessNotice, {
 } from '@/components/_common/wallet-readiness-notice';
 
 import { AccountButton } from './account-button';
+import { REQUEST_LOGOUT_EVENT } from '../app/app-events';
 
 function WalletConnected({
   address,
@@ -541,6 +542,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
     return () => window.removeEventListener('nf:open-login', handler);
   }, [session, goToLogin]);
 
+  // The app sidebar's "Log out" opens this same confirm, so logging out (and
+  // dropping the wallet with it) stays in one place.
+  useEffect(() => {
+    const handler = () => setShowLogoutConfirm(true);
+    window.addEventListener(REQUEST_LOGOUT_EVENT, handler);
+    return () => window.removeEventListener(REQUEST_LOGOUT_EVENT, handler);
+  }, []);
+
   // Opens the wizard regardless of session — used when a logged-in user
   // starts an action that needs a wallet they don't have yet (lazy setup).
   useEffect(() => {
@@ -812,7 +821,6 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         component="span"
                         sx={{
                           display: 'inline-flex',
-                          transition: 'transform 150ms ease',
                           transform: addressesOpen ? 'rotate(90deg)' : 'none',
                         }}
                       >

@@ -2,6 +2,7 @@
 
 import type { BoxProps } from '@mui/material';
 
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useRouter } from 'next/navigation';
@@ -622,7 +623,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             top: '4px',
             left: '4px',
             transform: mode === 'withdraw' ? 'translateX(calc(100% + 4px))' : 'translateX(0)',
-            transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
             pointerEvents: 'none',
             ...theme.applyStyles('dark', { background: '#FFFFFF' }),
           })}
@@ -953,7 +953,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             </Typography>
             <Stack direction="row" spacing={1} sx={{ mt: '10px', flexWrap: 'wrap', rowGap: 1 }}>
               <Button
-                onClick={() => router.push('/swap?from=USDC')}
+                onClick={() => router.push(`${paths.swap}?from=USDC`)}
                 sx={{
                   bgcolor: '#0A0A0F',
                   color: '#fff',

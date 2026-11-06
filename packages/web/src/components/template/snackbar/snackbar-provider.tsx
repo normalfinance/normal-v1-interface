@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { closeSnackbar, SnackbarProvider as NotistackProvider } from 'notistack';
 
 // @mui
+import Fade from '@mui/material/Fade';
 import Collapse from '@mui/material/Collapse';
 import IconButton from '@mui/material/IconButton';
 
@@ -33,7 +34,8 @@ export default function SnackbarProvider({ children }: Props) {
       maxSnack={5}
       preventDuplicate
       autoHideDuration={3000}
-      TransitionComponent={isRTL ? Collapse : undefined}
+      // Toasts fade in place; notistack's default slides them in (DESIGN.md: nothing moves).
+      TransitionComponent={isRTL ? Collapse : Fade}
       variant="success" // Set default variant
       anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       iconVariant={{

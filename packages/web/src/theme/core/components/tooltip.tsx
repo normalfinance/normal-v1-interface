@@ -1,10 +1,16 @@
 import type { Theme, Components } from '@mui/material/styles';
 
+import Fade from '@mui/material/Fade';
 import { tooltipClasses } from '@mui/material/Tooltip';
 
 // ----------------------------------------------------------------------
 
 const MuiTooltip: Components<Theme>['MuiTooltip'] = {
+  /** **************************************
+   * DEFAULT PROPS
+   *************************************** */
+  // Fade in place; MUI's default Grow scales the tooltip open.
+  defaultProps: { TransitionComponent: Fade },
   /** **************************************
    * STYLE
    *************************************** */

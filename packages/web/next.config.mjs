@@ -106,9 +106,22 @@ const nextConfig = {
         destination: 'https://www.normalfinance.io/:path',
         permanent: false,
       },
+      // 2026-11: the app moved under /app and the marketing site owns the root.
+      // Bookmarks, emails and partner return links still carry the old URLs;
+      // redirects keep their query (`?from=`, `?cctpResume=`, `?setup=`).
+      { source: '/portfolio', destination: '/app', permanent: true },
+      { source: '/swap', destination: '/app/swap', permanent: true },
+      { source: '/settings', destination: '/app/settings', permanent: true },
+      { source: '/trx/:hash', destination: '/app/activity/:hash', permanent: true },
+      { source: '/assets', destination: '/app/assets', permanent: true },
+      // One segment without a dot, so files in public/assets/ are never caught.
+      { source: '/assets/:symbol([^/.]+)', destination: '/app/assets/:symbol', permanent: true },
+      // Temporary: /savings becomes the marketing page for Savings, so browsers
+      // must not cache this one.
+      { source: '/savings', destination: '/app/savings', permanent: false },
       {
         source: '/invest',
-        destination: '/swap',
+        destination: '/app/swap',
         permanent: true,
       },
       {

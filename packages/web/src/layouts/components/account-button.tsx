@@ -1,14 +1,10 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import { m } from 'framer-motion';
-
 import Box from '@mui/material/Box';
 import NoSsr from '@mui/material/NoSsr';
 import Avatar from '@mui/material/Avatar';
 import SvgIcon from '@mui/material/SvgIcon';
 import IconButton from '@mui/material/IconButton';
-
-import { varTap, transitionTap } from '@/components/template/animate';
 
 // ----------------------------------------------------------------------
 
@@ -41,9 +37,6 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
 
   return (
     <IconButton
-      component={m.button}
-      whileTap={varTap(0.96)}
-      transition={transitionTap()}
       aria-label="Account button"
       sx={[{ p: 0 }, ...(Array.isArray(sx) ? sx : [sx])]}
       {...other}

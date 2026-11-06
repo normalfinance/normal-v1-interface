@@ -7,6 +7,7 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { supabase } from '@/lib/createSupabaseClient';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
@@ -1428,7 +1429,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           width: 80,
           height: 80,
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%)',
+          bgcolor: BRAND_COLORS.violet.fill,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1518,7 +1519,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                 width: 72,
                 height: 72,
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%)',
+                bgcolor: BRAND_COLORS.violet.fill,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

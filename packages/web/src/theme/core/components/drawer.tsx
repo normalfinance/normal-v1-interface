@@ -4,6 +4,11 @@ import type { Theme, Components } from '@mui/material/styles';
 
 const MuiDrawer: Components<Theme>['MuiDrawer'] = {
   /** **************************************
+   * DEFAULT PROPS
+   *************************************** */
+  // A drawer appears in place: MUI's default slides it in (DESIGN.md: nothing moves).
+  defaultProps: { transitionDuration: 0 },
+  /** **************************************
    * STYLE
    *************************************** */
   styleOverrides: {
