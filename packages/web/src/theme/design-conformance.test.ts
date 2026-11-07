@@ -18,7 +18,9 @@ import {
   INK_SOFT,
   FOOTER_BG,
   HUE_PALETTE,
+  BLOCK_COLORS,
   BRAND_COLORS,
+  BLOCK_PALETTE,
   SOCIAL_COLORS,
   SOCIAL_PALETTE,
   HAIRLINE_COLOR,
@@ -36,7 +38,7 @@ import {
 /** Files allowed a non-token radius, each with its reason. */
 const RADIUS_EXCEPTIONS: Record<string, string> = {
   'components/_common/stat-card.tsx': 'ApexCharts bar option: a number of pixels, not CSS',
-  'theme/create-theme.ts': 'MUI needs a number here; it equals --radius-md',
+  'theme/create-theme.ts': 'MUI needs a number here; it equals --radius-md (0: everything is square)',
   'sections/home/hero-phone.tsx':
     'the screen of the phone in the hero photo: its corners are measured from the photo',
   'sections/home/cta-phones.tsx':
@@ -264,6 +266,7 @@ describe('the marketing site follows dark mode', () => {
       ...Object.values(BRAND_COLORS).flatMap((hue) => [hue.tint, hue.deep]),
       ...STATEMENT_COLORS,
       ...Object.values(SOCIAL_COLORS).flatMap((social) => [social.tint, social.deep]),
+      ...Object.values(BLOCK_COLORS).flatMap((block) => [block.surface, block.words]),
     ];
     tokens.forEach((token) => {
       const name = token.match(/--nf-[a-z0-9-]+/)?.[0];
@@ -325,6 +328,10 @@ describe.each(MODES)('%s mode stays readable (WCAG AA)', (mode) => {
       expect(contrast(social[mode].deep, social[mode].tint)).toBeGreaterThanOrEqual(4.5);
     }
   );
+
+  it.each(Object.entries(BLOCK_PALETTE))('%s: the words on its block of colour', (_, block) => {
+    expect(contrast(block[mode].words, block[mode].surface)).toBeGreaterThanOrEqual(4.5);
+  });
 
   it('the statement colours as display words on the page', () => {
     // The logo's gradient in customer.io's tones; the light gold is 2.2:1 on

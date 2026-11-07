@@ -11,9 +11,9 @@ import { useStellarConfig } from '@/hooks';
 import { fCurrency } from '@/utils/format-number';
 import { usePendingOutflow } from '@/lib/spendable';
 import { usePersistStore } from '@normalfinance/state';
+import { CARD_SX } from '@/sections/portfolio/_shared';
 import { probeCompanion } from '@/lib/normal-wallet-setup';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
-import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { spendableXlmForOutflow } from '@/utils/stellar-reserve';
@@ -800,11 +800,9 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           >
             <Typography
               sx={{
-                fontSize: '11px',
+                fontSize: '13.5px',
                 fontWeight: 500,
-                color: '#9A9AA3',
-                textTransform: 'uppercase',
-                letterSpacing: '0.16em',
+                color: 'text.secondary',
               }}
             >
               {t('You pay')}
@@ -936,7 +934,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                   color: insufficient ? '#DC2626' : '#9A9AA3',
                   letterSpacing: '-0.02em',
                   lineHeight: 1,
-                  ...MONO,
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 $
@@ -960,7 +958,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                 fontWeight: 500,
                 color: insufficient ? '#DC2626' : '#0A0A0F',
                 letterSpacing: '-0.02em',
-                ...MONO,
+                fontVariantNumeric: 'tabular-nums',
                 width: '100%',
                 minWidth: 0,
                 '&::placeholder': { color: 'rgba(10,10,15,0.2)' },
@@ -1064,11 +1062,9 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         >
           <Typography
             sx={{
-              fontSize: '11px',
+              fontSize: '13.5px',
               fontWeight: 500,
-              color: '#9A9AA3',
-              textTransform: 'uppercase',
-              letterSpacing: '0.16em',
+              color: 'text.secondary',
               mb: '12px',
             }}
           >
@@ -1163,7 +1159,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
                   fontWeight: 500,
                   color: toAmount ? '#0A0A0F' : 'rgba(10,10,15,0.25)',
                   letterSpacing: '-0.02em',
-                  ...MONO,
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 {toAmount ? toAmount.toFixed(6, BigNumber.ROUND_DOWN) : '0'}

@@ -1,7 +1,7 @@
 'use client';
 
 import { paths } from '@/routes/paths';
-import { PAPER, CANVAS } from '@/theme/brand-colors';
+import { PAPER } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 
@@ -15,8 +15,9 @@ import { NetworkToggle, NETWORK_SWITCH_ENABLED } from '../components/network-tog
 // ----------------------------------------------------------------------
 
 /**
- * Desktop: the primary action and the account, on the page's own grey.
- * Phones: the logo and the account; Move lives in the bottom tabs.
+ * White, over the white page, with a hairline under it. Desktop: the primary
+ * action and the account. Phones: the logo and the account; Move lives in the
+ * bottom tabs.
  */
 export function AppTopBar() {
   return (
@@ -26,7 +27,7 @@ export function AppTopBar() {
         position: 'sticky',
         top: 0,
         zIndex: (theme) => theme.zIndex.appBar,
-        bgcolor: { xs: PAPER, md: CANVAS },
+        bgcolor: PAPER,
         borderBottom: HAIRLINE,
       }}
     >
@@ -35,7 +36,7 @@ export function AppTopBar() {
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
-          height: { xs: 64, md: 72 },
+          height: 64,
           px: { xs: 2, sm: 3 },
         }}
       >

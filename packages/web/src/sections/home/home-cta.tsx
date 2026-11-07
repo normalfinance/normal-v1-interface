@@ -7,7 +7,7 @@ import { paths } from '@/routes/paths';
 import { TYPE } from '@/theme/type-scale';
 import { useRef, useState, useEffect } from 'react';
 import { GUTTER_SX, COLUMN_SX } from '@/theme/site-grid';
-import { INK, MUTED, CANVAS, HUE_PALETTE, HAIRLINE_COLOR } from '@/theme/brand-colors';
+import { INK, MUTED, CANVAS, BLOCK_COLORS, HAIRLINE_COLOR } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -100,23 +100,15 @@ const SLIDES: Slide[] = [
   },
 ];
 
-/**
- * A block's colours, the same in both modes: the dark mode's pair, the hue's
- * bright shade as the surface and its darkest for every word (tested at 4.5:1
- * both ways). The light mode's deep shades read heavy as whole blocks.
- */
-const blockColors = (hue: BrandHue) => {
-  const { deep, tint } = HUE_PALETTE[hue].dark;
-  return { surface: deep, words: tint };
-};
-
 // The track's side padding: from the screen's edge to the column's, so each
 // slide snaps to the column and its neighbours show past the frame lines.
 const EDGE = 'calc((100% - min(var(--page-max), 100% - 2 * var(--frame-inset, 0px))) / 2)';
 
 /** One slide: the ask on the left at display size, the app on the right. */
 function SlideBlock({ slide, index }: { slide: Slide; index: number }) {
-  const { surface, words } = blockColors(slide.hue);
+  // Bright on the white page, the deep shade for the words; the dark mode's
+  // own tones on the dark page (BLOCK_COLORS).
+  const { surface, words } = BLOCK_COLORS[slide.hue];
 
   return (
     <Box

@@ -32,6 +32,8 @@ import {
 import { keyframes } from '@mui/system';
 import { Box, Stack, Button, Skeleton, Typography, CircularProgress } from '@mui/material';
 
+import { formatUsd } from '@/components/_common/app-ui';
+
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
 import { useSnackbar } from '../template/snackbar';
@@ -45,11 +47,14 @@ const txDotsAnim = keyframes`
   100% { width: 1.2em; }
 `;
 
-interface SavingsCardProps extends BoxProps {}
+interface SavingsCardProps extends BoxProps {
+  /** The page titles the card and shows the rate itself: no header of its own. */
+  hideHeader?: boolean;
+}
 
 // ----------------------------------------------------------------------
 
-const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
+const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = false, ...other }) => {
   const { t } = useTranslate();
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
@@ -410,73 +415,80 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       {...other}
     >
       {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '18px' }}>
-        <Typography
-          sx={(theme) => ({
-            fontSize: '15px',
-            fontWeight: 500,
-            color: '#0A0A0F',
-            ...theme.applyStyles('dark', { color: '#FFFFFF' }),
-          })}
+      {!hideHeader && (
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ mb: '18px' }}
         >
-          {t('Normal Savings')}
-        </Typography>
-
-        {/* APY chip */}
-        {vaultInfo ? (
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '7px',
-              background: '#F7F7F9',
-              border: '1px solid rgba(10,10,15,0.08)',
-              borderRadius: 'var(--radius-sm)',
-              px: '10px',
-              py: '5px',
-            }}
+          <Typography
+            sx={(theme) => ({
+              fontSize: '15px',
+              fontWeight: 500,
+              color: '#0A0A0F',
+              ...theme.applyStyles('dark', { color: '#FFFFFF' }),
+            })}
           >
+            {t('Normal Savings')}
+          </Typography>
+
+          {/* APY chip */}
+          {vaultInfo ? (
             <Box
               sx={{
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                bgcolor: '#1AB37D',
-                flexShrink: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '7px',
+                background: '#F7F7F9',
+                border: '1px solid rgba(10,10,15,0.08)',
+                borderRadius: 'var(--radius-sm)',
+                px: '10px',
+                py: '5px',
               }}
+            >
+              <Box
+                sx={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  bgcolor: '#1AB37D',
+                  flexShrink: 0,
+                }}
+              />
+              <Typography
+                sx={{
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  lineHeight: 1,
+                  fontVariantNumeric: 'tabular-nums',
+                  color: '#0A0A0F',
+                }}
+              >
+                {Number(vaultInfo.apy).toFixed(2)}%
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  color: '#9A9AA3',
+                  lineHeight: 1,
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {t('a year')}
+              </Typography>
+            </Box>
+          ) : (
+            <Skeleton
+              variant="rounded"
+              width={80}
+              height={26}
+              sx={{ borderRadius: 'var(--radius-lg)' }}
             />
-            <Typography
-              sx={{
-                fontSize: '12px',
-                fontWeight: 500,
-                lineHeight: 1,
-                fontFamily: '"Geist Mono", ui-monospace, monospace',
-                color: '#0A0A0F',
-              }}
-            >
-              {Number(vaultInfo.apy).toFixed(2)}%
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '11px',
-                fontWeight: 500,
-                color: '#9A9AA3',
-                lineHeight: 1,
-                fontFamily: '"Geist Mono", ui-monospace, monospace',
-              }}
-            >
-              APY
-            </Typography>
-          </Box>
-        ) : (
-          <Skeleton
-            variant="rounded"
-            width={80}
-            height={26}
-            sx={{ borderRadius: 'var(--radius-lg)' }}
-          />
-        )}
-      </Stack>
+          )}
+        </Stack>
+      )}
 
       {/* #32: hybrid accounts pick the wallet this card operates on — the
           position, balances, fee light and the deposit/withdraw signing all
@@ -533,7 +545,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       >
         {fetching ? (
           <Box sx={{ display: 'grid', gap: '8px' }}>
-            {[t('Your Deposits'), t('Current Value'), t('Current Earnings')].map((label) => (
+            {[t('You put in'), t('Worth now'), t('Earned')].map((label) => (
               <Box
                 key={label}
                 sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
@@ -542,7 +554,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   sx={{
                     fontSize: '13.5px',
                     fontWeight: 400,
-                    fontFamily: '"Geist Mono", ui-monospace, monospace',
+                    fontVariantNumeric: 'tabular-nums',
                     color: '#6B6B76',
                   }}
                 >
@@ -555,9 +567,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         ) : (
           <Box sx={{ display: 'grid', gap: '8px' }}>
             {[
-              { label: t('Your Deposits'), value: userPosition?.totalDeposited, prefix: '' },
-              { label: t('Current Value'), value: userPosition?.currentValue, prefix: '' },
-              { label: t('Current Earnings'), value: userPosition?.earnings, prefix: '+' },
+              { label: t('You put in'), value: userPosition?.totalDeposited, prefix: '' },
+              { label: t('Worth now'), value: userPosition?.currentValue, prefix: '' },
+              { label: t('Earned'), value: userPosition?.earnings, prefix: '+' },
             ].map(({ label, value, prefix }) => (
               <Box
                 key={label}
@@ -567,7 +579,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   sx={{
                     fontSize: '13.5px',
                     fontWeight: 400,
-                    fontFamily: '"Geist Mono", ui-monospace, monospace',
+                    fontVariantNumeric: 'tabular-nums',
                     color: '#6B6B76',
                   }}
                 >
@@ -575,7 +587,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 </Typography>
                 {positionError && !userPosition ? (
                   <Typography sx={{ fontSize: '12px', color: '#B45309' }}>
-                    {t('Unavailable — retrying…')}
+                    {t('Unavailable. Retrying…')}
                   </Typography>
                 ) : !userPosition ? (
                   <Skeleton variant="text" width={80} height={18} />
@@ -584,14 +596,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                     sx={{
                       fontSize: '13.5px',
                       fontWeight: 400,
-                      fontFamily: '"Geist Mono", ui-monospace, monospace',
-                      fontFeatureSettings: '"ss01","ss02","zero"',
                       fontVariantNumeric: 'tabular-nums',
                       letterSpacing: '-0.02em',
                       color: prefix === '+' ? '#1AB37D' : 'text.primary',
                     }}
                   >
-                    {`${prefix}${parseFloat(value || '0').toLocaleString('en-US', { minimumFractionDigits: 7, maximumFractionDigits: 7 })} USDC`}
+                    {`${prefix}${formatUsd(parseFloat(value || '0'))}`}
                   </Typography>
                 )}
               </Box>
@@ -685,7 +695,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           </Typography>
           <Stack direction="row" alignItems="center" spacing={0.75}>
             <Typography sx={{ fontSize: '12px', color: '#9A9AA3' }}>
-              {`Wallet: ${parseFloat(availableBalance).toFixed(7)} USDC`}
+              {`${mode === 'deposit' ? t('In your wallet') : t('In savings')}: ${formatUsd(parseFloat(availableBalance))}`}
             </Typography>
             <Box
               component="button"
@@ -753,7 +763,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             type="number"
             value={amount}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value)}
-            placeholder="0.0000000"
+            placeholder="0.00"
             sx={(theme) => ({
               flex: 1,
               minWidth: 0,
@@ -763,7 +773,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               fontSize: '26px',
               fontWeight: 500,
               color: '#0A0A0F',
-              fontFamily: '"Geist Mono", ui-monospace, monospace',
+              fontVariantNumeric: 'tabular-nums',
               textAlign: 'right',
               p: 0,
               appearance: 'textfield',
@@ -809,7 +819,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   fontSize: '12px',
                   fontWeight: 500,
                   color: 'text.primary',
-                  fontFamily: '"Geist Mono", ui-monospace, monospace',
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 -{depositFee.toFixed(2)} USDC
@@ -824,7 +834,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   fontSize: '12px',
                   fontWeight: 500,
                   color: 'text.primary',
-                  fontFamily: '"Geist Mono", ui-monospace, monospace',
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 {netDepositAmount.toFixed(2)} USDC
@@ -860,7 +870,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 fontSize: '12px',
                 fontWeight: 500,
                 color: 'text.primary',
-                fontFamily: '"Geist Mono", ui-monospace, monospace',
+                fontVariantNumeric: 'tabular-nums',
               }}
             >
               -{yieldCommission.toFixed(2)} USDC
@@ -885,7 +895,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#1AB37D', flexShrink: 0 }}
           />
           <Typography sx={{ fontSize: '12px', color: '#6B6B76', lineHeight: 1.4 }}>
-            {t('XLM fee reserve healthy — deposits & withdrawals covered.')}
+            {t('XLM fee reserve healthy: deposits and withdrawals are covered.')}
           </Typography>
         </Stack>
       )}
@@ -947,7 +957,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                     'Savings network fees are paid in XLM. Deposits and withdrawals are paused until you add a little XLM.'
                   )
                 : t(
-                    'About {{n}} XLM left for fees — roughly one more deposit or withdrawal. Top up a little to stay safe.',
+                    'About {{n}} XLM left for fees: roughly one more deposit or withdrawal. Top up a little to stay safe.',
                     { n: feeXlmAvailable.toFixed(2) }
                   )}
             </Typography>
@@ -1033,7 +1043,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               }}
             >
               {accountExists
-                ? t('One quick step left — add a USDC trustline to start earning.')
+                ? t('One quick step left: add a USDC trustline to start earning.')
                 : t('Activate your account and add USDC to start earning yield.')}
             </Typography>
             <Button
@@ -1214,7 +1224,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                     sx={{
                       fontSize: '11px',
                       color: 'text.disabled',
-                      fontFamily: '"Geist Mono", ui-monospace, monospace',
+                      fontVariantNumeric: 'tabular-nums',
                       letterSpacing: '-0.01em',
                       mt: '1px',
                       display: 'block',

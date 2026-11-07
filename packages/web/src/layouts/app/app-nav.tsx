@@ -36,6 +36,22 @@ export const APP_NAV_SECONDARY: AppNavItem[] = [
   { title: 'Help', href: paths.docs, icon: <HelpOutlineOutlined />, external: true },
 ];
 
+export type AppNavGroup = {
+  /** A small grey label over the group; the first group has none. */
+  title?: string;
+  items: AppNavItem[];
+};
+
+const [HOME, ASSETS, ACTIVITY, SAVINGS, SWAP] = APP_NAV_MAIN;
+const [SETTINGS, HELP] = APP_NAV_SECONDARY;
+
+/** The desktop sidebar, in groups: your money, what Normal does with it, your account. */
+export const APP_NAV_GROUPS: AppNavGroup[] = [
+  { items: [HOME, ASSETS, ACTIVITY] },
+  { title: 'Products', items: [SAVINGS, SWAP] },
+  { title: 'Account', items: [SETTINGS, HELP] },
+];
+
 export function isNavItemActive(item: AppNavItem, pathname: string): boolean {
   if (item.external) return false;
   if (item.exact) return pathname === item.href;

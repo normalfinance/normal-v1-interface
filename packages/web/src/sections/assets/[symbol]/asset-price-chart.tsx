@@ -4,7 +4,7 @@ import type { PriceRange } from '@/hooks/use-price-history';
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
-import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
+import { PALETTE } from '@/theme/brand-colors';
 import { usePriceHistory, PRICE_HISTORY_SYMBOLS } from '@/hooks/use-price-history';
 
 import Box from '@mui/material/Box';
@@ -12,6 +12,7 @@ import Skeleton from '@mui/material/Skeleton';
 
 import { Chart, useChart } from '@/components/template/chart';
 import { SegmentedControl } from '@/components/_common/brand';
+import { Change, FIGURES, AppBlock } from '@/components/_common/app-ui';
 
 // ---------------------------------------------------------------------------
 
@@ -24,8 +25,9 @@ const RANGES: { value: PriceRange; label: string }[] = [
   { value: 'all', label: 'All' },
 ];
 
-const UP_COLOR = '#1AB37D';
-const DOWN_COLOR = '#DC2626';
+// The line is ink, in plain hex (the chart's SVG can't read CSS variables):
+// up or down is said once, by the change beside the price, in Change's colours.
+const LINE_COLOR = PALETTE.light.ink;
 
 function formatPrice(value: number): string {
   return `$${value.toLocaleString('en-US', {
@@ -51,15 +53,12 @@ export function AssetPriceChart({ symbol }: { symbol: string }) {
   const lastPrice = prices.length ? prices[prices.length - 1][1] : 0;
   const change = lastPrice - firstPrice;
   const changePct = firstPrice > 0 ? (change / firstPrice) * 100 : 0;
-  const isUp = change >= 0;
-  const color = isUp ? UP_COLOR : DOWN_COLOR;
-
   const chartOptions = useChart({
-    colors: [color],
-    stroke: { width: 2.5, curve: 'smooth' },
+    colors: [LINE_COLOR],
+    stroke: { width: 2, curve: 'smooth' },
     dataLabels: { enabled: false },
     // Flat, like everything else: a faint solid area under the line.
-    fill: { type: 'solid', opacity: 0.08 },
+    fill: { type: 'solid', opacity: 0.04 },
     grid: {
       strokeDashArray: 3,
       borderColor: 'rgba(10,10,15,0.06)',
@@ -92,55 +91,40 @@ export function AssetPriceChart({ symbol }: { symbol: string }) {
   if (!supported) return null;
 
   return (
-    <Box sx={{ ...CARD_SX, mt: 2, minWidth: 0 }}>
-      {/* Header */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          mb: '18px',
-        }}
-      >
+    <AppBlock
+      title={t('Price')}
+      action={<SegmentedControl value={range} onChange={setRange} options={RANGES} />}
+    >
+      <Box sx={{ mb: '18px' }}>
         <Box>
-          <Box sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', mb: '8px' }}>
-            {t('Price')}
-          </Box>
           {isLoading ? (
             <Skeleton variant="text" width={160} sx={{ fontSize: '24px' }} />
           ) : prices.length > 0 ? (
             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
               <Box
                 sx={{
-                  ...MONO,
-                  fontSize: '24px',
+                  ...FIGURES,
+                  fontSize: 28,
                   fontWeight: 500,
-                  color: '#0A0A0F',
-                  letterSpacing: '-0.02em',
+                  color: 'text.primary',
+                  letterSpacing: '-0.03em',
                 }}
               >
                 {formatPrice(lastPrice)}
               </Box>
-              <Box sx={{ ...MONO, fontSize: '13px', fontWeight: 500, color }}>
-                {isUp ? '+' : ''}
-                {changePct.toFixed(2)}%
-              </Box>
+              <Change pct={changePct} sx={{ fontSize: 14, fontWeight: 500 }} />
             </Box>
           ) : null}
         </Box>
-
-        <SegmentedControl value={range} onChange={setRange} options={RANGES} />
       </Box>
 
       {/* Chart */}
       {failed ? (
-        <Box sx={{ color: '#9A9AA3', fontSize: '14px', py: '48px', textAlign: 'center' }}>
+        <Box sx={{ color: 'text.secondary', fontSize: 14, py: 6, textAlign: 'center' }}>
           {t('Price data is unavailable right now. Please try again later.')}
         </Box>
       ) : stillLoading && prices.length === 0 ? (
-        <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 'var(--radius-md)' }} />
+        <Skeleton variant="rectangular" height={280} />
       ) : (
         <Chart
           type="area"
@@ -149,6 +133,6 @@ export function AssetPriceChart({ symbol }: { symbol: string }) {
           sx={{ height: 280 }}
         />
       )}
-    </Box>
+    </AppBlock>
   );
 }

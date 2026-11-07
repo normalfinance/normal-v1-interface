@@ -7,7 +7,7 @@ import { paths } from '@/routes/paths';
 import { isTestnet } from '@normalfinance/utils';
 import { loginHrefFrom } from '@/lib/auth/auth-routes';
 import { useRouter, usePathname } from '@/routes/hooks';
-import { CANVAS, roleColor } from '@/theme/brand-colors';
+import { PAPER, roleColor } from '@/theme/brand-colors';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import Box from '@mui/material/Box';
@@ -43,8 +43,9 @@ function TestnetNotice() {
 }
 
 /**
- * The app's frame, like a bank's online banking: a white sidebar, the page on a
- * grey canvas so its white blocks read without shadows, and tabs on phones.
+ * The app's frame, like a bank's online banking: the pages listed on a light
+ * grey sidebar, the page itself white with its boxes drawn in hairlines, and
+ * tabs on phones.
  *
  * Signed-out visitors go to sign-in and come back here after. The session lives
  * in localStorage, so the server can't see it and this check runs in the
@@ -63,7 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [isLoading, user, pathname, router]);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: CANVAS }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: PAPER }}>
       <AppLoadingProgress />
       <AppSidebar />
 

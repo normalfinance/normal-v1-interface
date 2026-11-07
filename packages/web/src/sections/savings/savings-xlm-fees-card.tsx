@@ -28,7 +28,8 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
-const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace' } as const;
+// Figures in the UI face with even digits (it was Geist Mono).
+const MONO = { fontVariantNumeric: 'tabular-nums' } as const;
 
 const STATUS_STYLE = {
   ok: { dot: '#1AB37D', label: 'Healthy', color: '#0A6649', bg: 'rgba(26,179,125,0.12)' },
@@ -120,7 +121,7 @@ export function SavingsXlmFeesCard() {
       {hasActiveSavings && (
         <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.55, mt: '8px' }}>
           {t(
-            'While you have savings, {{buffer}} XLM is kept aside so a withdrawal can always pay its fee — that is why Send and Swap show slightly less than your full XLM balance.',
+            'While you have savings, {{buffer}} XLM is kept aside so a withdrawal can always pay its fee. That is why Send and Swap show slightly less than your full XLM balance.',
             { buffer: SAVINGS_XLM_BUFFER }
           )}
         </Typography>
@@ -187,7 +188,7 @@ export function SavingsXlmFeesCard() {
             '&:hover': { bgcolor: '#2A2A33' },
           }}
         >
-          {t('Get XLM — swap a little USDC')}
+          {t('Get XLM: swap a little USDC')}
         </Button>
       )}
     </Box>

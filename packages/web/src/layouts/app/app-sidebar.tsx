@@ -5,53 +5,42 @@ import type { ReactNode } from 'react';
 import { paths } from '@/routes/paths';
 import { usePathname } from '@/routes/hooks';
 import { RouterLink } from '@/routes/components';
-import { INK, MUTED, PAPER, CANVAS, INK_SOFT } from '@/theme/brand-colors';
+import { INK, HOVER, MUTED, PAPER, CANVAS, INK_SOFT, HAIRLINE_STRONG } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
+import Typography from '@mui/material/Typography';
 import LogoutOutlined from '@mui/icons-material/LogoutOutlined';
 
 import { Logo } from '@/components/template/logo';
 import { HAIRLINE } from '@/components/_common/brand';
 
 import { REQUEST_LOGOUT_EVENT } from './app-events';
-import { APP_NAV_MAIN, isNavItemActive, APP_NAV_SECONDARY } from './app-nav';
+import { APP_NAV_GROUPS, isNavItemActive } from './app-nav';
 
 import type { AppNavItem } from './app-nav';
 
 // ----------------------------------------------------------------------
 
-export const SIDEBAR_WIDTH = 240;
+export const SIDEBAR_WIDTH = 248;
 
+// The current page sits on a white tile with a hairline, lifted off the grey;
+// the rest are plain words. Nothing moves.
 const rowSx = (active: boolean) => ({
-  position: 'relative',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'flex-start',
-  gap: 1.5,
+  gap: 1.25,
   width: '100%',
-  height: 44,
-  px: 1.5,
-  fontSize: 15,
+  height: 36,
+  px: 1.25,
+  fontSize: 14,
   fontWeight: 500,
-  borderRadius: 'var(--radius-md)',
+  border: '1px solid transparent',
   color: active ? INK : INK_SOFT,
-  bgcolor: active ? CANVAS : 'transparent',
-  '& svg': { fontSize: 20, color: active ? INK : MUTED },
-  '&:hover': { bgcolor: CANVAS, color: INK, '& svg': { color: INK } },
-  // The current page: a soft fill and an ink bar on the leading edge. Nothing moves.
-  ...(active && {
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      left: 0,
-      top: 10,
-      bottom: 10,
-      width: 2,
-      borderRadius: 'var(--radius-xs)',
-      bgcolor: INK,
-    },
-  }),
+  ...(active && { bgcolor: PAPER, borderColor: HAIRLINE_STRONG }),
+  '& svg': { fontSize: 18, color: active ? INK : MUTED },
+  '&:hover': { color: INK, ...(!active && { bgcolor: HOVER }), '& svg': { color: INK } },
 });
 
 function NavRow({ item, pathname }: { item: AppNavItem; pathname: string }) {
@@ -68,60 +57,75 @@ function NavRow({ item, pathname }: { item: AppNavItem; pathname: string }) {
   );
 }
 
-function NavGroup({ items, pathname }: { items: AppNavItem[]; pathname: string }) {
-  return (
-    <Box component="ul" sx={{ display: 'grid', gap: 0.5 }}>
-      {items.map((item) => (
-        <li key={item.title}>
-          <NavRow item={item} pathname={pathname} />
-        </li>
-      ))}
-    </Box>
-  );
-}
-
-/** The desktop sidebar: the app's pages, then settings and help, then log out. */
+/**
+ * The desktop sidebar on the light grey, like a bank's online banking: the
+ * pages in groups, each group under a small grey label, then log out.
+ */
 export function AppSidebar({ footer }: { footer?: ReactNode }) {
   const pathname = usePathname();
 
   return (
+    // The grey runs the page's full length; the links inside stay in view.
     <Box
-      component="nav"
-      aria-label="App"
       sx={{
-        display: { xs: 'none', md: 'flex' },
-        flexDirection: 'column',
+        display: { xs: 'none', md: 'block' },
         flexShrink: 0,
-        position: 'sticky',
-        top: 0,
         width: SIDEBAR_WIDTH,
-        height: '100vh',
-        px: 2,
-        py: 3,
-        overflowY: 'auto',
-        bgcolor: PAPER,
+        bgcolor: CANVAS,
         borderRight: HAIRLINE,
       }}
     >
-      <Box sx={{ px: 1.5, mb: 4 }}>
-        <Logo href={paths.portfolio} sx={{ width: 32, height: 32 }} />
-      </Box>
-
-      <NavGroup items={APP_NAV_MAIN} pathname={pathname} />
-      <Box sx={{ my: 2, borderTop: HAIRLINE }} />
-      <NavGroup items={APP_NAV_SECONDARY} pathname={pathname} />
-
-      <Box sx={{ flexGrow: 1 }} />
-
-      {footer}
-
-      <ButtonBase
-        onClick={() => window.dispatchEvent(new CustomEvent(REQUEST_LOGOUT_EVENT))}
-        sx={rowSx(false)}
+      <Box
+        component="nav"
+        aria-label="App"
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          px: 1.5,
+          pb: 2,
+          overflowY: 'auto',
+        }}
       >
-        <LogoutOutlined />
-        Log out
-      </ButtonBase>
+        {/* As tall as the top bar, so the logo lines up with its contents. */}
+        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, height: 64, px: 1.25 }}>
+          <Logo href={paths.portfolio} sx={{ width: 28, height: 28 }} />
+        </Box>
+
+        {APP_NAV_GROUPS.map((group) => (
+          <Box key={group.title ?? 'main'} sx={{ mt: group.title ? 3 : 1.5 }}>
+            {group.title && (
+              <Typography
+                component="h2"
+                sx={{ px: 1.25, mb: 0.75, fontSize: 12.5, fontWeight: 500, color: MUTED }}
+              >
+                {group.title}
+              </Typography>
+            )}
+            <Box component="ul" sx={{ display: 'grid', gap: '2px' }}>
+              {group.items.map((item) => (
+                <li key={item.title}>
+                  <NavRow item={item} pathname={pathname} />
+                </li>
+              ))}
+            </Box>
+          </Box>
+        ))}
+
+        <Box sx={{ flexGrow: 1 }} />
+
+        {footer}
+
+        <ButtonBase
+          onClick={() => window.dispatchEvent(new CustomEvent(REQUEST_LOGOUT_EVENT))}
+          sx={rowSx(false)}
+        >
+          <LogoutOutlined />
+          Log out
+        </ButtonBase>
+      </Box>
     </Box>
   );
 }

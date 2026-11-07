@@ -21,9 +21,10 @@ export default function ActivityView() {
     <DashboardContent>
       <AppPageHeader
         title="Activity"
-        subtitle="Payments, swaps and savings across all your wallets, newest first."
+        subtitle="Every payment, swap and savings move, newest first."
       />
       <ActivityCard
+        title={null}
         walletAddress={wallet.address}
         bitcoinAddress={getAsset('BTC')?.address ?? null}
         ethereumAddress={getAsset('ETH')?.address ?? null}

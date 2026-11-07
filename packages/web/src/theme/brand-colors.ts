@@ -161,6 +161,36 @@ export const SOCIAL_PALETTE: Record<Social, { mark: string } & Record<Mode, Tone
   },
 };
 
+/** A whole block of colour: its surface and every word on it. */
+type Block = { surface: string; words: string };
+
+/** A colour mixed with white, `share` of the way: 0.5 is half and half. */
+const mixWithWhite = (hex: string, share: number) =>
+  `#${[1, 3, 5]
+    .map((i) => {
+      const value = parseInt(hex.slice(i, i + 2), 16);
+      return Math.round(value + (255 - value) * share)
+        .toString(16)
+        .padStart(2, '0');
+    })
+    .join('')
+    .toUpperCase()}`;
+
+/**
+ * A block of colour as big as a slide (the closing carousel), made from the
+ * hue's own colours, the same in both modes: the logo colour half and half
+ * with white, bright and clean, every word in the hue's light-mode deep shade.
+ * The deep shades read heavy as a whole block and the dark mode's tones dusty
+ * on white; on the dark page these glow. Tested at 4.5:1.
+ */
+export const BLOCK_PALETTE = Object.fromEntries(
+  (Object.keys(HUE_PALETTE) as BrandHue[]).map((hue) => {
+    const { fill, light } = HUE_PALETTE[hue];
+    const block = { surface: mixWithWhite(fill, 0.5), words: light.deep };
+    return [hue, { light: block, dark: block }];
+  })
+) as Record<BrandHue, Record<Mode, Block>>;
+
 // ----------------------------------------------------------------------
 
 /** The CSS variable for a palette entry: `--nf-<name>`. */
@@ -220,6 +250,14 @@ export const SOCIAL_COLORS = Object.fromEntries(
     },
   ])
 ) as Record<Social, Tones & { mark: string }>;
+
+/** A block of colour as tokens (BLOCK_PALETTE): its surface and its words. */
+export const BLOCK_COLORS = Object.fromEntries(
+  (Object.keys(BLOCK_PALETTE) as BrandHue[]).map((hue) => [
+    hue,
+    { surface: cssVar(`block-${hue}-surface`), words: cssVar(`block-${hue}-words`) },
+  ])
+) as Record<BrandHue, Block>;
 
 /** Each colour's one job. Pick by role, never by hue, so the meaning stays fixed. */
 export const COLOR_ROLES = {

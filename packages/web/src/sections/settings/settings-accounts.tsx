@@ -25,6 +25,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { appLocale } from '@/components/_common/app-ui';
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { useSnackbar } from '@/components/template/snackbar';
@@ -555,7 +556,10 @@ export function SettingsAccounts() {
                   {t('Last Used')}
                 </Typography>
                 <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F' }}>
-                  {new Date(wallet.lastUsedAt).toLocaleString()}
+                  {new Date(wallet.lastUsedAt).toLocaleString(appLocale(), {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
                 </Typography>
               </Box>
             )}
@@ -593,7 +597,9 @@ export function SettingsAccounts() {
                   {t('Export recovery phrase')}
                 </Typography>
                 <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
-                  {t('One phrase backs up all four addresses above — restores in any wallet app')}
+                  {t(
+                    'One phrase backs up all four addresses above. It restores them in any wallet app.'
+                  )}
                 </Typography>
               </Box>
               <Iconify icon="eva:chevron-right-fill" width={18} sx={{ color: '#9A9AA3' }} />
@@ -630,7 +636,7 @@ export function SettingsAccounts() {
               (the server refuses the unlink as well). */}
           {wallet.walletAddress === turnkeyStellar ? (
             <Typography sx={{ fontSize: '12px', color: '#9A9AA3', lineHeight: 1.5 }}>
-              {t('This is your Normal wallet — it stays linked to your account.')}
+              {t('This is your Normal wallet. It stays linked to your account.')}
             </Typography>
           ) : (
             <Box

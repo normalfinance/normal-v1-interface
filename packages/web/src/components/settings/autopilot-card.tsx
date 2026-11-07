@@ -46,7 +46,7 @@ export default function AutopilotCard() {
       enqueueSnackbar(t('Automatic swap completion turned off.'), { variant: 'success' });
       await mutate();
     } catch (e: any) {
-      enqueueSnackbar(e?.message ?? t('Could not revoke — try again.'), { variant: 'error' });
+      enqueueSnackbar(e?.message ?? t('Could not revoke. Try again.'), { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -69,7 +69,7 @@ export default function AutopilotCard() {
       enqueueSnackbar(t('Automatic swap completion is on.'), { variant: 'success' });
       await mutate();
     } catch (e: any) {
-      enqueueSnackbar(e?.message ?? t('Could not enable — try again.'), { variant: 'error' });
+      enqueueSnackbar(e?.message ?? t('Could not enable. Try again.'), { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -106,7 +106,7 @@ export default function AutopilotCard() {
       <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', lineHeight: 1.55 }}>
         {data?.active
           ? t(
-              'Normal finishes the swaps you start — only to your own addresses, only the allowlisted bridge contracts. Revoking takes one passkey confirmation.'
+              'Normal finishes the swaps you start: only to your own addresses, only through the allowlisted bridge contracts. Revoking takes one passkey confirmation.'
             )
           : t(
               'When enabled (during a cross-chain swap), Normal completes the later swap steps automatically so you never sign twice around a bridge wait.'

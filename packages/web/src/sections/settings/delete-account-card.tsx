@@ -197,7 +197,7 @@ export function DeleteAccountCard() {
             )}
 
             {gate?.code === 'EXPORT_REQUIRED' && (
-              <GateBox tone="warn" title={t('Step 1 — save your recovery phrase')}>
+              <GateBox tone="warn" title={t('Step 1: save your recovery phrase')}>
                 <Typography sx={{ fontSize: '13px', lineHeight: 1.5 }}>
                   {t(
                     'After deletion, the recovery phrase is the only way to reach your funds. Export it now; one passkey confirmation per wallet.'

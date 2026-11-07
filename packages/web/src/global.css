@@ -31,13 +31,14 @@
 * Design tokens (rules: packages/web/DESIGN.md)
 *************************************** */
 :root {
-  /* Corners. Change a value here and every page follows. */
-  --radius-xs: 4px; /* tracks, tiny tags */
-  --radius-sm: 6px; /* badges, chips, tooltips, menu items */
-  --radius-md: 8px; /* buttons, inputs, tabs, nested tiles */
-  --radius-lg: 12px; /* every block: cards, panels, dialogs, popovers */
-  /* The marketing site is set on a square grid: every tile, card, photo and
-     panel there uses this one token, so sharp corners are one decision. */
+  /* Corners. Change a value here and every page follows. Everything is square,
+     the site and the app alike (2026-11-06, owner's call): the roles stay, so
+     a corner can come back in one place, but every value is 0. */
+  --radius-xs: 0px; /* tracks, tiny tags */
+  --radius-sm: 0px; /* badges, chips, tooltips, menu items */
+  --radius-md: 0px; /* buttons, inputs, tabs, nested tiles */
+  --radius-lg: 0px; /* every block: cards, panels, dialogs, popovers */
+  /* The marketing site's own token, from when only the site was square. */
   --radius-site: 0px;
   --radius-full: 999px; /* true circles only: avatars, dots, switches */
 

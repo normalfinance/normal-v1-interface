@@ -2,15 +2,22 @@
 
 import { useState } from 'react';
 import { TYPE } from '@/theme/type-scale';
-import { INK, MUTED, CANVAS, BRAND_COLORS, HAIRLINE_STRONG } from '@/theme/brand-colors';
+import {
+  INK,
+  MUTED,
+  PAPER,
+  BLOCK_COLORS,
+  BRAND_COLORS,
+  HAIRLINE_COLOR,
+} from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import CheckRounded from '@mui/icons-material/CheckRounded';
 import ArrowOutwardRounded from '@mui/icons-material/ArrowOutwardRounded';
 
+import { HATCH_SX } from '@/components/_common/hatch';
 import {
-  HAIRLINE,
-  FRAME_MQ,
   GUTTER_SX,
   MONO_FONT,
   PageSection,
@@ -22,7 +29,7 @@ import {
 
 import { MILESTONES, STATUS_LABEL, STATUS_ORDER } from './milestones';
 
-import type { MilestoneStatus } from './milestones';
+import type { Milestone, MilestoneStatus } from './milestones';
 
 // ----------------------------------------------------------------------
 
@@ -33,47 +40,191 @@ const FILTERS: { value: Filter; label: string }[] = [
   ...STATUS_ORDER.map((status) => ({ value: status, label: STATUS_LABEL[status] })),
 ];
 
-// The one colour in the list is the status: shipped in the savings green (done),
-// in progress in the wallet blue, planned left neutral.
-const TAG_TONE: Record<MilestoneStatus, { bgcolor: string; color: string }> = {
-  shipped: { bgcolor: BRAND_COLORS.mint.tint, color: BRAND_COLORS.mint.deep },
-  'in-progress': { bgcolor: BRAND_COLORS.sky.tint, color: BRAND_COLORS.sky.deep },
-  planned: { bgcolor: CANVAS, color: MUTED },
+/** The cards per row at each width. */
+const COLUMNS = { xs: 1, sm: 2, md: 3 } as const;
+
+// The road in three chapters, oldest first. Each has its own fill: what
+// shipped on the savings green's wash (done), what is being built now as solid
+// blocks of the wallet's blue (the section's one focal point, as bright as the
+// closing carousel's), what is planned left white.
+const CHAPTERS: Record<
+  MilestoneStatus,
+  { title: string; count: (n: number) => string; colors: { bg: string; color: string } }
+> = {
+  shipped: {
+    title: 'The road behind',
+    count: (n) => `${n} shipped`,
+    colors: { bg: BRAND_COLORS.mint.tint, color: BRAND_COLORS.mint.deep },
+  },
+  'in-progress': {
+    title: 'Building now',
+    count: (n) => `${n} in progress`,
+    colors: { bg: BLOCK_COLORS.sky.surface, color: BLOCK_COLORS.sky.words },
+  },
+  planned: {
+    title: 'The road ahead',
+    count: (n) => `${n} planned`,
+    colors: { bg: PAPER, color: INK },
+  },
 };
 
-/** The height of a title's first line, so the date and the tag sit level with it. */
-const FIRST_LINE = { xs: 24, md: 30 };
+const range = (items: Milestone[]) => {
+  const first = items[0]?.date;
+  const last = items[items.length - 1]?.date;
+  return first === last ? first : `${first} to ${last}`;
+};
 
-function StatusTag({ status }: { status: MilestoneStatus }) {
+/** A chapter's header: a row across the board. */
+function ChapterHeader({ status, items }: { status: MilestoneStatus; items: Milestone[] }) {
+  const chapter = CHAPTERS[status];
+
   return (
     <Box
-      component="span"
       sx={{
-        ...TYPE.caption,
-        display: 'inline-flex',
-        alignItems: 'center',
-        height: 24,
-        px: 1,
-        fontWeight: 500,
-        whiteSpace: 'nowrap',
-        borderRadius: 'var(--radius-xs)',
-        ...TAG_TONE[status],
+        gridColumn: '1 / -1',
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'baseline',
+        columnGap: 2,
+        rowGap: 0.5,
+        ...GUTTER_SX,
+        py: { xs: 2.5, md: 3 },
+        bgcolor: PAPER,
       }}
     >
-      {STATUS_LABEL[status]}
+      <Typography component="h3" sx={{ ...TYPE.h3, color: INK }}>
+        {chapter.title}
+      </Typography>
+      <Typography sx={{ ...TYPE.small, color: MUTED }}>{chapter.count(items.length)}</Typography>
+      <Typography sx={{ ...TYPE.small, ml: { sm: 'auto' }, fontFamily: MONO_FONT, color: MUTED }}>
+        {range(items)}
+      </Typography>
+    </Box>
+  );
+}
+
+/** One milestone: its date, what it is, and the announcement if there is one. */
+function MilestoneCard({ item }: { item: Milestone }) {
+  const { colors } = CHAPTERS[item.status];
+  const now = item.status === 'in-progress';
+  const shipped = item.status === 'shipped';
+
+  return (
+    <Box
+      component="article"
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minWidth: 0,
+        ...GUTTER_SX,
+        pt: 3,
+        pb: { xs: 3.5, md: 4 },
+        color: colors.color,
+        bgcolor: colors.bg,
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography
+          component="time"
+          sx={{
+            ...TYPE.small,
+            fontFamily: MONO_FONT,
+            whiteSpace: 'nowrap',
+            color: item.status === 'planned' ? MUTED : 'inherit',
+          }}
+        >
+          {item.date}
+        </Typography>
+        {shipped && <CheckRounded aria-label="Shipped" sx={{ fontSize: 20 }} />}
+      </Box>
+      <Typography
+        component="h4"
+        sx={{ ...(now ? TYPE.h3 : TYPE.h4), mt: { xs: 3, md: now ? 6 : 4 }, color: 'inherit' }}
+      >
+        {item.title}
+      </Typography>
+      <Typography
+        sx={{
+          ...TYPE.small,
+          mt: 1,
+          maxWidth: 520,
+          color: item.status === 'planned' ? MUTED : 'inherit',
+        }}
+      >
+        {item.description}
+      </Typography>
+      {item.link && (
+        <Box
+          component="a"
+          href={item.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          sx={{
+            ...TYPE.small,
+            display: 'inline-flex',
+            alignItems: 'center',
+            alignSelf: 'flex-start',
+            gap: 0.5,
+            mt: 2,
+            fontWeight: 500,
+            color: 'inherit',
+            textDecoration: 'underline',
+            textUnderlineOffset: '4px',
+            '& svg': { fontSize: 16 },
+          }}
+        >
+          View announcement
+          <ArrowOutwardRounded aria-hidden="true" />
+        </Box>
+      )}
     </Box>
   );
 }
 
 /**
- * Every milestone as a full-width row of the grid: the date, the status, then
- * what it is. The three columns run straight down the list, whatever the
- * filter shows. On phones the date and the status share a line above the words.
+ * Hatched cells that finish a chapter's last row, at each width, so the board
+ * has no holes: hatching is the grid's empty space (DESIGN.md).
+ */
+function Fillers({ count }: { count: number }) {
+  const per = (columns: number) => (columns - (count % columns)) % columns;
+  const sm = per(COLUMNS.sm);
+  const md = per(COLUMNS.md);
+
+  return (
+    <>
+      {Array.from({ length: Math.max(sm, md) }, (_, i) => (
+        <Box
+          key={i}
+          aria-hidden="true"
+          sx={{
+            display: { xs: 'none', sm: i < sm ? 'block' : 'none', md: i < md ? 'block' : 'none' },
+            bgcolor: PAPER,
+            ...HATCH_SX,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+/**
+ * The milestones as a board in three chapters, behind, now and ahead, on the
+ * hairline grid: three cards to a row, two on tablets, one on phones. The grid
+ * draws its lines as 1px gaps over the hairline colour, so every line runs
+ * straight across the chapters and their headers.
  */
 export function RoadmapMilestones() {
   const [filter, setFilter] = useState<Filter>('all');
-  const shown =
-    filter === 'all' ? MILESTONES : MILESTONES.filter((milestone) => milestone.status === filter);
+  const chapters = STATUS_ORDER.filter((status) => filter === 'all' || filter === status).map(
+    (status) => ({ status, items: MILESTONES.filter((item) => item.status === status) })
+  );
+  const shown = chapters.reduce((sum, chapter) => sum + chapter.items.length, 0);
+
+  const board = chapters.flatMap(({ status, items }) => [
+    <ChapterHeader key={`${status}-header`} status={status} items={items} />,
+    ...items.map((item) => <MilestoneCard key={item.title} item={item} />),
+    <Fillers key={`${status}-fill`} count={items.length} />,
+  ]);
 
   return (
     <PageSection divider hatchFoot aria-labelledby="milestones-title">
@@ -86,101 +237,23 @@ export function RoadmapMilestones() {
       />
 
       <Box role="status" sx={VISUALLY_HIDDEN_SX}>
-        {`${shown.length} milestones shown`}
+        {`${shown} milestones shown`}
       </Box>
 
-      <Box component="ol" sx={{ m: 0, p: 0, listStyle: 'none', ...GRID_FRAME_SX }}>
-        {shown.map((item, index) => (
-          <Box
-            component="li"
-            key={item.title}
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: 'auto 1fr', md: '1fr 1fr 4fr' },
-              borderTop: index > 0 ? HAIRLINE : 'none',
-            }}
-          >
-            <Box
-              sx={{
-                pt: 3,
-                pb: { md: 3 },
-                pl: { xs: 2, sm: 3 },
-                pr: { xs: 1.5, md: 3 },
-                [FRAME_MQ]: { px: 4 },
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', minHeight: FIRST_LINE }}>
-                <Typography
-                  component="time"
-                  sx={{ ...TYPE.small, fontFamily: MONO_FONT, whiteSpace: 'nowrap', color: MUTED }}
-                >
-                  {item.date}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box
-              sx={{
-                pt: 3,
-                pb: { md: 3 },
-                pl: { xs: 0, md: 3 },
-                pr: { xs: 2, sm: 3 },
-                [FRAME_MQ]: { px: 4 },
-                borderLeft: { md: HAIRLINE },
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', minHeight: FIRST_LINE }}>
-                <StatusTag status={item.status} />
-              </Box>
-            </Box>
-
-            <Box
-              sx={{
-                gridColumn: { xs: '1 / -1', md: 'auto' },
-                ...GUTTER_SX,
-                pt: { xs: 1.5, md: 3 },
-                pb: 3,
-                borderLeft: { md: HAIRLINE },
-              }}
-            >
-              <Typography
-                component="h3"
-                sx={{ ...TYPE.h4, lineHeight: { xs: 1.25, md: '30px' }, color: INK }}
-              >
-                {item.title}
-              </Typography>
-              <Typography sx={{ ...TYPE.small, mt: 0.75, maxWidth: 640, color: MUTED }}>
-                {item.description}
-              </Typography>
-              {item.link && (
-                <Box
-                  component="a"
-                  href={item.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{
-                    ...TYPE.small,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    mt: 1.5,
-                    fontWeight: 500,
-                    color: INK,
-                    textDecoration: 'underline',
-                    textUnderlineOffset: '4px',
-                    textDecorationColor: HAIRLINE_STRONG,
-                    transition: 'text-decoration-color 150ms ease',
-                    '&:hover': { textDecorationColor: INK },
-                    '& svg': { fontSize: 16 },
-                  }}
-                >
-                  View announcement
-                  <ArrowOutwardRounded aria-hidden="true" />
-                </Box>
-              )}
-            </Box>
-          </Box>
-        ))}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: `repeat(${COLUMNS.xs}, minmax(0, 1fr))`,
+            sm: `repeat(${COLUMNS.sm}, minmax(0, 1fr))`,
+            md: `repeat(${COLUMNS.md}, minmax(0, 1fr))`,
+          },
+          gap: '1px',
+          bgcolor: HAIRLINE_COLOR,
+          ...GRID_FRAME_SX,
+        }}
+      >
+        {board}
       </Box>
     </PageSection>
   );

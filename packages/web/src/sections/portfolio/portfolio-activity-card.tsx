@@ -1,11 +1,13 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import type { Activity } from '@/types/activity';
 import type { ChainId } from '@/lib/chains/registry';
 
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
-import { fCurrency } from '@/utils/format-number';
 import { usePersistStore } from '@normalfinance/state';
+import { INK, HOVER, MUTED } from '@/theme/brand-colors';
 import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
@@ -13,38 +15,43 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useUserActivity } from '@/hooks/stellar/use-user-activity';
 
 import Box from '@mui/material/Box';
-import Skeleton from '@mui/material/Skeleton';
+import ButtonBase from '@mui/material/ButtonBase';
+import Typography from '@mui/material/Typography';
+import AddRounded from '@mui/icons-material/AddRounded';
+import LayersOutlined from '@mui/icons-material/LayersOutlined';
+import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
+import NorthEastRounded from '@mui/icons-material/NorthEastRounded';
+import SouthWestRounded from '@mui/icons-material/SouthWestRounded';
+import SwapHorizRounded from '@mui/icons-material/SwapHorizRounded';
+import ChevronLeftRounded from '@mui/icons-material/ChevronLeftRounded';
+import ChevronRightRounded from '@mui/icons-material/ChevronRightRounded';
+import AccountBalanceOutlined from '@mui/icons-material/AccountBalanceOutlined';
 
-import { SegmentedControl } from '@/components/_common/brand';
+import { HAIRLINE, SegmentedControl } from '@/components/_common/brand';
 import MoneyGramDetailModal from '@/components/_common/moneygram-detail-modal';
 import { SwapDetailModal, cctpTransferIdOf } from '@/components/_common/swap-detail-modal';
+import {
+  BOX_PX,
+  SeeAll,
+  ListRow,
+  RowIcon,
+  RowList,
+  AppBlock,
+  appLocale,
+  assetNoun,
+  formatUsd,
+  formatCoin,
+  StatusBadge,
+  RowsSkeleton,
+} from '@/components/_common/app-ui';
 
-import { MONO, CARD_SX, PAGE_SIZE, TAG_STYLES } from './_shared';
+import { PAGE_SIZE } from './_shared';
 
 import type { ActivityTab } from './_shared';
-
-const ACTIVITY_COLS = '130px minmax(0,1.4fr) 1fr 1fr 1fr minmax(0,1.2fr)';
-
-const COL_HEADER_SX = {
-  fontSize: '11px',
-  fontWeight: 500,
-  color: '#9A9AA3',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.16em',
-};
 
 // -------------------------------------------------------------------
 // Helpers
 // -------------------------------------------------------------------
-function formatRelative(ts: number): string {
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 function getExplorerUrl(a: Activity): string | null {
   // Pending sends carry their chain inside the id
@@ -95,37 +102,6 @@ function getExplorerUrl(a: Activity): string | null {
   }
 }
 
-type TagKey = keyof typeof TAG_STYLES;
-
-function activityTagKey(a: Activity): TagKey {
-  switch (a.type) {
-    case 'Savings Deposit':
-      return 'deposit';
-    case 'Savings Withdraw':
-      return 'withdraw';
-    case 'Swap':
-      return 'swap';
-    case 'Sent':
-      return a.offramp ? 'sell' : 'send';
-    case 'Receive':
-      return 'receive';
-    case 'Buy':
-      return 'buy';
-    case 'Sell':
-      return 'sell';
-    case 'Mint':
-      return 'mint';
-    case 'Redeem':
-      return 'redeem';
-    case 'Add Liquidity':
-      return 'add_liq';
-    case 'Remove Liquidity':
-      return 'remove_liq';
-    default:
-      return 'withdraw';
-  }
-}
-
 // Whether an activity involves the given asset symbol (used by the
 // per-asset view on /assets/[symbol]). Savings flows are USDC by definition.
 function matchesAsset(a: Activity, symbol: string): boolean {
@@ -150,227 +126,219 @@ function matchesAsset(a: Activity, symbol: string): boolean {
   }
 }
 
-interface RowData {
-  asset: string;
-  amount: string;
-  value: string;
-  txHash: string | null;
-}
+/** An address short enough for a line: GASJ…XVYV. */
+const shortAddress = (address: string) =>
+  address.length > 12 ? `${address.slice(0, 4)}…${address.slice(-4)}` : address;
 
-function activityToRow(a: Activity): RowData {
+/** A coin amount, or dollars when the coin is dollars. */
+const amountOf = (amount: number, symbol: string) =>
+  symbol === 'USDC' ? formatUsd(amount) : formatCoin(amount, symbol);
+
+type Described = {
+  icon: ReactNode;
+  title: string;
+  subtitle?: string;
+  value: string;
+  /** Under the value: what was paid in a swap, or the time. */
+  detail?: string;
+  status?: { tone: 'pending' | 'failed'; label: string };
+};
+
+/**
+ * Each row in words, for people who don't know crypto: what happened, with
+ * whom, and how much. Money in is +, money out is −; moves inside the
+ * account (savings, swaps) carry no sign. The icon says the kind, in grey:
+ * colour is kept for pending and failed.
+ */
+function describe(a: Activity): Described {
   switch (a.type) {
-    case 'Swap': {
-      // Only USDC legs are ~$1; other tokens' amounts aren't dollars, so show
-      // the received amount in its own token rather than mis-labeling it USD.
-      const value =
-        a.tokenOut.symbol === 'USDC'
-          ? fCurrency(a.tokenOut.amount)
-          : a.tokenIn.symbol === 'USDC'
-            ? fCurrency(a.tokenIn.amount)
-            : `${a.tokenOut.amount.toFixed(7)} ${a.tokenOut.symbol}`;
-      // A PENDING swap whose delivered amount is still unknown must not show
-      // a confident $0 (Niko live test 2026-08-19: in-flight BTC→USDC row).
-      if (a.pending && a.tokenOut.symbol === 'USDC' && !(a.tokenOut.amount > 0)) {
+    case 'Receive':
+      return {
+        icon: <SouthWestRounded />,
+        title: `Received ${assetNoun(a.token.symbol)}`,
+        subtitle: `From ${shortAddress(a.address)}`,
+        value: `+${amountOf(a.token.amount, a.token.symbol)}`,
+        status: a.confirmed === false ? { tone: 'pending', label: 'Pending' } : undefined,
+      };
+    case 'Sent': {
+      if (a.offramp) {
         return {
-          asset: `${a.tokenIn.symbol} → ${a.tokenOut.symbol}`,
-          amount: a.tokenIn.amount.toFixed(7),
-          value: '—',
-          txHash: a.txHash,
+          icon: <AccountBalanceOutlined />,
+          title: 'Cashed out',
+          subtitle: a.offrampProvider ? `To your bank, via ${a.offrampProvider}` : 'To your bank',
+          value: `−${amountOf(a.token.amount, a.token.symbol)}`,
+          status:
+            a.offrampStatus === 'pending'
+              ? { tone: 'pending', label: 'Pending' }
+              : a.offrampStatus === 'failed'
+                ? { tone: 'failed', label: 'Failed' }
+                : undefined,
         };
       }
       return {
-        asset: `${a.tokenIn.symbol} → ${a.tokenOut.symbol}`,
-        amount: a.tokenIn.amount.toFixed(7),
-        value,
-        txHash: a.txHash,
+        icon: <NorthEastRounded />,
+        title: `Sent ${assetNoun(a.token.symbol)}`,
+        subtitle: `To ${shortAddress(a.address)}`,
+        value: `−${amountOf(a.token.amount, a.token.symbol)}`,
+        status: a.confirmed === false ? { tone: 'pending', label: 'Pending' } : undefined,
+      };
+    }
+    case 'Swap': {
+      // A pending swap whose delivered amount is still unknown must not show a
+      // confident zero (live test 2026-08-19: an in-flight BTC to USDC row).
+      const outKnown = !(a.pending && !(a.tokenOut.amount > 0));
+      return {
+        icon: <SwapHorizRounded />,
+        title: `Swapped to ${assetNoun(a.tokenOut.symbol)}`,
+        value: outKnown ? `+${amountOf(a.tokenOut.amount, a.tokenOut.symbol)}` : '…',
+        detail: `−${amountOf(a.tokenIn.amount, a.tokenIn.symbol)}`,
+        status: a.failed
+          ? { tone: 'failed', label: 'Failed' }
+          : a.refunded
+            ? { tone: 'pending', label: 'Refunded' }
+            : a.pending
+              ? { tone: 'pending', label: 'Pending' }
+              : undefined,
       };
     }
     case 'Savings Deposit':
-    case 'Savings Withdraw': {
-      const n = parseFloat(a.amount);
-      return { asset: 'USDC', amount: n.toFixed(7), value: fCurrency(n), txHash: a.txHash };
-    }
-    case 'Sent':
-    case 'Receive': {
-      const isUsdc = a.token.symbol === 'USDC';
       return {
-        asset: a.token.symbol,
-        amount: a.token.amount.toFixed(7),
-        value: isUsdc
-          ? fCurrency(a.token.amount)
-          : `${a.token.amount.toFixed(7)} ${a.token.symbol}`,
-        txHash: a.txHash,
+        icon: <SavingsOutlined />,
+        title: 'Moved to Savings',
+        subtitle: 'From your wallet',
+        value: formatUsd(parseFloat(a.amount)),
       };
-    }
+    case 'Savings Withdraw':
+      return {
+        icon: <SavingsOutlined />,
+        title: 'Moved out of Savings',
+        subtitle: 'To your wallet',
+        value: formatUsd(parseFloat(a.amount)),
+      };
     case 'Buy':
+      return {
+        icon: <AddRounded />,
+        title: 'Added money',
+        subtitle: a.provider ? `Via ${a.provider}` : undefined,
+        value: `+${amountOf(a.amount, a.symbol)}`,
+        status: a.failed
+          ? { tone: 'failed', label: 'Failed' }
+          : a.pending
+            ? { tone: 'pending', label: 'Pending' }
+            : undefined,
+      };
     case 'Sell':
       return {
-        asset: a.symbol,
-        amount: a.amount.toFixed(7),
-        value: fCurrency(a.amount),
-        txHash: null,
+        icon: <AccountBalanceOutlined />,
+        title: 'Cashed out',
+        subtitle: a.provider ? `Via ${a.provider}` : undefined,
+        value: `−${amountOf(a.amount, a.symbol)}`,
+        status: a.failed
+          ? { tone: 'failed', label: 'Failed' }
+          : a.pending
+            ? { tone: 'pending', label: 'Pending' }
+            : undefined,
       };
     case 'Mint':
     case 'Redeem':
     case 'Add Liquidity':
     case 'Remove Liquidity':
-      return { asset: a.symbol, amount: a.amount.toFixed(7), value: '—', txHash: null };
+      return {
+        icon: <LayersOutlined />,
+        title: a.type,
+        value: formatCoin(a.amount, a.symbol),
+      };
     default:
-      return { asset: '—', amount: '—', value: '—', txHash: null };
+      return { icon: <LayersOutlined />, title: 'Activity', value: '' };
   }
 }
 
+const dayKey = (ts: number) => new Date(ts).toDateString();
+
+/** Today, Yesterday, or the date: Wed, Nov 5 (with the year when it isn't this one). */
+function dayLabel(ts: number): string {
+  const date = new Date(ts);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString(appLocale(), {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    ...(date.getFullYear() !== today.getFullYear() && { year: 'numeric' }),
+  });
+}
+
+const timeOf = (ts: number) =>
+  new Date(ts).toLocaleTimeString(appLocale(), { hour: 'numeric', minute: '2-digit' });
+
+/** Newest first, one group per day. */
+function groupByDay(items: Activity[]) {
+  const groups: { key: string; label: string; items: Activity[] }[] = [];
+  items.forEach((item) => {
+    const ts = Number(item.timestamp) || 0;
+    const key = dayKey(ts);
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) last.items.push(item);
+    else groups.push({ key, label: dayLabel(ts), items: [item] });
+  });
+  return groups;
+}
+
 // -------------------------------------------------------------------
-// PaginationBar
+// Pager
 // -------------------------------------------------------------------
-function PaginationBar({
+
+function Pager({
   page,
   totalPages,
-  onPrev,
-  onNext,
   onPage,
 }: {
   page: number;
   totalPages: number;
-  onPrev: () => void;
-  onNext: () => void;
-  onPage: (p: number) => void;
+  onPage: (page: number) => void;
 }) {
-  const range: number[] = [];
-  const delta = 2;
-  const left = Math.max(1, page - delta);
-  const right = Math.min(totalPages, page + delta);
-  for (let i = left; i <= right; i++) range.push(i);
-
-  const btnBase = {
-    height: 32,
-    minWidth: 32,
-    px: '8px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 'var(--radius-md)',
-    fontSize: '13px',
-    ...MONO,
-    fontWeight: 400,
-    cursor: 'pointer',
-    border: '1px solid transparent',
-    bgcolor: 'transparent',
-    transition: 'all 0.15s',
-  };
+  const arrow = (disabled: boolean) => ({
+    width: 36,
+    height: 36,
+    color: disabled ? MUTED : INK,
+    opacity: disabled ? 0.4 : 1,
+    '&:hover': disabled ? {} : { bgcolor: HOVER },
+  });
 
   return (
     <Box
       sx={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: '4px',
-        px: '20px',
-        py: '14px',
-        borderTop: '1px solid rgba(10,10,15,0.08)',
+        justifyContent: 'flex-end',
+        gap: 1,
+        px: BOX_PX,
+        py: 1.25,
+        borderTop: HAIRLINE,
       }}
     >
-      <Box
-        component="button"
-        onClick={onPrev}
+      <Typography sx={{ mr: 1, fontSize: 13, color: MUTED }}>
+        Page {page} of {totalPages}
+      </Typography>
+      <ButtonBase
+        aria-label="Newer"
         disabled={page === 1}
-        sx={{
-          ...btnBase,
-          color: page === 1 ? 'rgba(10,10,15,0.25)' : '#6B6B76',
-          cursor: page === 1 ? 'default' : 'pointer',
-          '&:hover': page === 1 ? {} : { bgcolor: '#F4F4F7' },
-        }}
+        onClick={() => onPage(page - 1)}
+        sx={arrow(page === 1)}
       >
-        ←
-      </Box>
-
-      {left > 1 && (
-        <>
-          <Box
-            component="button"
-            onClick={() => onPage(1)}
-            sx={{ ...btnBase, color: '#6B6B76', '&:hover': { bgcolor: '#F4F4F7' } }}
-          >
-            1
-          </Box>
-          {left > 2 && <Box sx={{ fontSize: '12px', color: '#9A9AA3', px: '4px' }}>…</Box>}
-        </>
-      )}
-
-      {range.map((p) => (
-        <Box
-          key={p}
-          component="button"
-          onClick={() => onPage(p)}
-          sx={{
-            ...btnBase,
-            color: p === page ? '#FFFFFF' : '#6B6B76',
-            bgcolor: p === page ? '#0A0A0F' : 'transparent',
-            borderColor: p === page ? '#0A0A0F' : 'transparent',
-            '&:hover': p === page ? {} : { bgcolor: '#F4F4F7' },
-          }}
-        >
-          {p}
-        </Box>
-      ))}
-
-      {right < totalPages && (
-        <>
-          {right < totalPages - 1 && (
-            <Box sx={{ fontSize: '12px', color: '#9A9AA3', px: '4px' }}>…</Box>
-          )}
-          <Box
-            component="button"
-            onClick={() => onPage(totalPages)}
-            sx={{ ...btnBase, color: '#6B6B76', '&:hover': { bgcolor: '#F4F4F7' } }}
-          >
-            {totalPages}
-          </Box>
-        </>
-      )}
-
-      <Box
-        component="button"
-        onClick={onNext}
+        <ChevronLeftRounded />
+      </ButtonBase>
+      <ButtonBase
+        aria-label="Older"
         disabled={page === totalPages}
-        sx={{
-          ...btnBase,
-          color: page === totalPages ? 'rgba(10,10,15,0.25)' : '#6B6B76',
-          cursor: page === totalPages ? 'default' : 'pointer',
-          '&:hover': page === totalPages ? {} : { bgcolor: '#F4F4F7' },
-        }}
+        onClick={() => onPage(page + 1)}
+        sx={arrow(page === totalPages)}
       >
-        →
-      </Box>
-    </Box>
-  );
-}
-
-// -------------------------------------------------------------------
-// TypeTag
-// -------------------------------------------------------------------
-function TypeTag({ tagKey }: { tagKey: TagKey }) {
-  const s = TAG_STYLES[tagKey];
-  return (
-    <Box
-      component="span"
-      sx={{
-        display: 'inline-block',
-        px: '10px',
-        py: '4px',
-        borderRadius: 'var(--radius-sm)',
-        bgcolor: s.bg,
-        color: s.color,
-        fontSize: '11px',
-        fontWeight: 500,
-        letterSpacing: '0.02em',
-        whiteSpace: 'nowrap',
-        justifySelf: 'start',
-        alignSelf: 'center',
-      }}
-    >
-      {s.label}
+        <ChevronRightRounded />
+      </ButtonBase>
     </Box>
   );
 }
@@ -378,6 +346,7 @@ function TypeTag({ tagKey }: { tagKey: TagKey }) {
 // -------------------------------------------------------------------
 // ActivityCard
 // -------------------------------------------------------------------
+
 interface ActivityCardProps {
   walletAddress: string | null | undefined;
   bitcoinAddress?: string | null;
@@ -387,8 +356,20 @@ interface ActivityCardProps {
   assetSymbol?: string;
   /** Initial filter tab (defaults to "all"). */
   defaultTab?: ActivityTab;
+  /**
+   * The most recent rows only, without filters or pages, with "See all" to
+   * the Activity page: Home's recent activity.
+   */
+  limit?: number;
+  /** The block's title (defaults to "Activity"); null when the page already says it. */
+  title?: string | null;
 }
 
+/**
+ * The account's activity as a feed: one row per payment, swap or savings move,
+ * in words, grouped by day, newest first. A row opens its details (a swap or
+ * MoneyGram dialog) or the transaction on its chain's explorer.
+ */
 export function ActivityCard({
   walletAddress,
   bitcoinAddress,
@@ -396,6 +377,8 @@ export function ActivityCard({
   solanaAddress,
   assetSymbol,
   defaultTab = 'all',
+  limit,
+  title,
 }: ActivityCardProps) {
   const { t } = useTranslate();
   const [tab, setTab] = useState<ActivityTab>(defaultTab);
@@ -524,285 +507,81 @@ export function ActivityCard({
     { value: 'transfers', label: t('Transfers') },
   ];
 
+  const shown = limit ? filtered.slice(0, limit) : items;
+
+  const clickFor = (activity: Activity) => {
+    const explorerUrl = getExplorerUrl(activity);
+    const cctpId = cctpTransferIdOf(activity);
+    const mgiId = activity.id.startsWith('mgi:') ? activity.id.slice(4) : null;
+    if (cctpId) return () => setDetailId(cctpId);
+    if (mgiId) return () => setMgiDetailId(mgiId);
+    if (explorerUrl) return () => window.open(explorerUrl, '_blank', 'noopener,noreferrer');
+    return undefined;
+  };
+
   return (
-    <Box sx={{ ...CARD_SX, p: 0, minWidth: 0 }}>
-      {/* Header */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          p: { xs: '20px 20px 16px', md: '24px 24px 16px' },
-        }}
-      >
-        <Box sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F' }}>{t('Activity')}</Box>
-
-        <SegmentedControl value={tab} onChange={handleTabChange} options={TABS} />
-      </Box>
-
+    <AppBlock
+      flush
+      title={title === null ? undefined : (title ?? t('Activity'))}
+      action={
+        limit ? (
+          <SeeAll href={paths.activity} />
+        ) : (
+          <SegmentedControl value={tab} onChange={handleTabChange} options={TABS} />
+        )
+      }
+    >
       {isLoading ? (
-        <Box sx={{ p: '0 12px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton
-              key={i}
-              variant="rectangular"
-              height={48}
-              sx={{ borderRadius: 'var(--radius-md)' }}
-            />
-          ))}
-        </Box>
-      ) : items.length === 0 ? (
-        <Box sx={{ color: '#9A9AA3', fontSize: '14px', py: '48px', textAlign: 'center' }}>
+        <RowsSkeleton rows={limit ?? 5} />
+      ) : shown.length === 0 ? (
+        <Typography sx={{ py: 6, fontSize: 14, textAlign: 'center', color: MUTED }}>
           {t('No activity yet')}
-        </Box>
+        </Typography>
       ) : (
-        <Box sx={{ overflowX: 'auto' }}>
-          <Box sx={{ minWidth: 680 }}>
-            {/* Column headers */}
-            <Box
+        <RowList>
+          {groupByDay(shown).map((group) => (
+          <Box key={group.key}>
+            <Typography
               sx={{
-                display: 'grid',
-                gridTemplateColumns: ACTIVITY_COLS,
-                gap: '16px',
-                px: '14px',
-                py: '10px',
-                borderTop: '1px solid rgba(10,10,15,0.08)',
-                borderBottom: '1px solid rgba(10,10,15,0.08)',
+                px: BOX_PX,
+                pt: 1.75,
+                pb: 0.25,
+                fontSize: 12.5,
+                fontWeight: 500,
+                color: MUTED,
               }}
             >
-              {[t('Type'), t('Asset'), t('Amount'), t('Value'), t('Date'), t('Tx')].map((h, i) => (
-                <Box key={h} sx={{ ...COL_HEADER_SX, textAlign: i === 5 ? 'right' : 'left' }}>
-                  {h}
-                </Box>
-              ))}
-            </Box>
-
-            {/* Rows */}
-            <Box sx={{ p: '6px 6px' }}>
-              {items.map((activity) => {
-                const tagKey = activityTagKey(activity);
-                const row = activityToRow(activity);
-                const expertUrl = getExplorerUrl(activity);
-                const cctpId = cctpTransferIdOf(activity);
-                const mgiId = activity.id.startsWith('mgi:') ? activity.id.slice(4) : null;
-                const handleRowClick = cctpId
-                  ? () => setDetailId(cctpId)
-                  : mgiId
-                    ? () => setMgiDetailId(mgiId)
-                    : expertUrl
-                      ? () => window.open(expertUrl, '_blank', 'noopener,noreferrer')
-                      : undefined;
+              {group.label}
+            </Typography>
+            <RowList>
+              {group.items.map((activity) => {
+                const row = describe(activity);
+                const walletTag = (activity as Activity & { walletTag?: string }).walletTag;
+                const subtitle = [row.subtitle, walletTag].filter(Boolean).join(' · ');
                 return (
-                  <Box
+                  <ListRow
                     key={activity.id}
-                    onClick={handleRowClick}
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: ACTIVITY_COLS,
-                      alignItems: 'center',
-                      gap: '16px',
-                      px: '8px',
-                      py: '12px',
-                      borderRadius: 'var(--radius-md)',
-                      cursor: handleRowClick ? 'pointer' : 'default',
-                      '&:hover': { bgcolor: 'rgba(10,10,15,0.025)' },
-                    }}
-                  >
-                    <Box
-                      sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}
-                    >
-                      <TypeTag tagKey={tagKey} />
-                      {(activity as Activity & { walletTag?: string }).walletTag && (
-                        <Box component="span" sx={{ fontSize: '10.5px', color: '#9A9AA3' }}>
-                          {(activity as Activity & { walletTag?: string }).walletTag}
-                        </Box>
-                      )}
-                      {(((activity.type === 'Sent' || activity.type === 'Receive') &&
-                        activity.confirmed === false) ||
-                        (activity.type === 'Swap' && activity.pending) ||
-                        ((activity.type === 'Buy' || activity.type === 'Sell') &&
-                          activity.pending) ||
-                        (activity.type === 'Sent' &&
-                          activity.offramp &&
-                          activity.offrampStatus === 'pending')) && (
-                        <Box
-                          component="span"
-                          sx={{
-                            display: 'inline-block',
-                            px: '8px',
-                            py: '3px',
-                            borderRadius: 'var(--radius-sm)',
-                            bgcolor: 'rgba(245,158,11,0.1)',
-                            color: '#B45309',
-                            fontSize: '10px',
-                            fontWeight: 500,
-                            letterSpacing: '0.02em',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          Pending
-                        </Box>
-                      )}
-                      {((activity.type === 'Swap' && activity.failed) ||
-                        ((activity.type === 'Buy' || activity.type === 'Sell') &&
-                          activity.failed) ||
-                        (activity.type === 'Sent' &&
-                          activity.offramp &&
-                          activity.offrampStatus === 'failed')) && (
-                        <Box
-                          component="span"
-                          sx={{
-                            display: 'inline-block',
-                            px: '8px',
-                            py: '3px',
-                            borderRadius: 'var(--radius-sm)',
-                            bgcolor: 'rgba(220,38,38,0.1)',
-                            color: '#B91C1C',
-                            fontSize: '10px',
-                            fontWeight: 500,
-                            letterSpacing: '0.02em',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          Failed
-                        </Box>
-                      )}
-                      {activity.type === 'Swap' && activity.refunded && (
-                        <Box
-                          component="span"
-                          sx={{
-                            display: 'inline-block',
-                            px: '8px',
-                            py: '3px',
-                            borderRadius: 'var(--radius-sm)',
-                            bgcolor: 'rgba(245,158,11,0.1)',
-                            color: '#B45309',
-                            fontSize: '10px',
-                            fontWeight: 500,
-                            letterSpacing: '0.02em',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          Refunded
-                        </Box>
-                      )}
-                    </Box>
-
-                    <Box
-                      sx={{
-                        fontSize: '13.5px',
-                        fontWeight: 400,
-                        color: '#0A0A0F',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {row.asset}
-                    </Box>
-
-                    <Box sx={{ ...MONO, fontSize: '13.5px', fontWeight: 400, color: '#0A0A0F' }}>
-                      {row.amount}
-                    </Box>
-
-                    <Box sx={{ ...MONO, fontSize: '13.5px', fontWeight: 400, color: '#0A0A0F' }}>
-                      {row.value}
-                    </Box>
-
-                    <Box sx={{ fontSize: '12px', fontWeight: 400, color: '#6B6B76' }}>
-                      {formatRelative(activity.timestamp)}
-                    </Box>
-
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      {cctpId ? (
-                        <Box
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '12px',
-                            fontWeight: 400,
-                            color: '#9A9AA3',
-                            ...MONO,
-                          }}
-                        >
-                          {t('Details')}
-                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                            <path
-                              d="M4.5 2.5L8 6L4.5 9.5"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </Box>
-                      ) : expertUrl ? (
-                        <Box
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '12px',
-                            fontWeight: 400,
-                            color: '#9A9AA3',
-                            ...MONO,
-                          }}
-                        >
-                          View
-                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                            <path
-                              d="M2.5 9.5L9.5 2.5M9.5 2.5H5M9.5 2.5V7"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </Box>
-                      ) : mgiId ? (
-                        <Box
-                          sx={{
-                            fontSize: '12px',
-                            fontWeight: 400,
-                            color: '#9A9AA3',
-                            ...MONO,
-                          }}
-                        >
-                          Details
-                        </Box>
-                      ) : (
-                        <Box
-                          sx={{
-                            fontSize: '12px',
-                            fontWeight: 400,
-                            color: 'rgba(10,10,15,0.2)',
-                            ...MONO,
-                          }}
-                        >
-                          —
-                        </Box>
-                      )}
-                    </Box>
-                  </Box>
+                    onClick={clickFor(activity)}
+                    icon={<RowIcon>{row.icon}</RowIcon>}
+                    title={row.title}
+                    badge={
+                      row.status && (
+                        <StatusBadge tone={row.status.tone}>{row.status.label}</StatusBadge>
+                      )
+                    }
+                    subtitle={subtitle || undefined}
+                    value={row.value}
+                    detail={row.detail ?? timeOf(Number(activity.timestamp) || 0)}
+                  />
                 );
               })}
-            </Box>
+            </RowList>
           </Box>
-        </Box>
+          ))}
+        </RowList>
       )}
 
-      {totalPages > 1 && (
-        <PaginationBar
-          page={page}
-          totalPages={totalPages}
-          onPrev={() => setPage((p) => Math.max(1, p - 1))}
-          onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
-          onPage={setPage}
-        />
-      )}
+      {!limit && totalPages > 1 && <Pager page={page} totalPages={totalPages} onPage={setPage} />}
 
       <SwapDetailModal transferId={detailId} onClose={() => setDetailId(null)} />
 
@@ -811,6 +590,6 @@ export function ActivityCard({
         txId={mgiDetailId}
         onClose={() => setMgiDetailId(null)}
       />
-    </Box>
+    </AppBlock>
   );
 }

@@ -1,4 +1,10 @@
-import { PALETTE, HUE_PALETTE, SOCIAL_PALETTE, STATEMENT_PALETTE } from './brand-colors';
+import {
+  PALETTE,
+  HUE_PALETTE,
+  BLOCK_PALETTE,
+  SOCIAL_PALETTE,
+  STATEMENT_PALETTE,
+} from './brand-colors';
 
 import type { Mode } from './brand-colors';
 
@@ -41,7 +47,10 @@ function declarations(mode: Mode): string {
   const socials = Object.entries(SOCIAL_PALETTE).flatMap(([social, tones]) =>
     Object.entries(tones[mode]).map(([tone, value]) => `--nf-social-${social}-${tone}:${value};`)
   );
-  return [...neutrals, ...hues, ...statement, ...socials].join('');
+  const blocks = Object.entries(BLOCK_PALETTE).flatMap(([hue, tones]) =>
+    Object.entries(tones[mode]).map(([tone, value]) => `--nf-block-${hue}-${tone}:${value};`)
+  );
+  return [...neutrals, ...hues, ...statement, ...socials, ...blocks].join('');
 }
 
 // In dark mode MUI's own colours follow too, so typography, menus, dialogs and

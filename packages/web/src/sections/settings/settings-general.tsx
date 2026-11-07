@@ -16,21 +16,7 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
-
-// ----------------------------------------------------------------------
-
-const CardBox = ({ children }: { children: React.ReactNode }) => (
-  <Box
-    sx={{
-      p: { xs: '20px', md: '24px' },
-      borderRadius: 'var(--radius-lg)',
-      border: '1px solid rgba(10,10,15,0.08)',
-      bgcolor: '#FFFFFF',
-    }}
-  >
-    {children}
-  </Box>
-);
+import { RowList, AppBlock, appLocale } from '@/components/_common/app-ui';
 
 // ----------------------------------------------------------------------
 
@@ -73,7 +59,13 @@ export function SettingsGeneral() {
   const userAvatar =
     userMetadata?.picture || userMetadata?.avatar_url || cdn('logo/logo-single.svg');
   const displayName = userMetadata?.name || userEmail || 'User';
-  const createdAt = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A';
+  const createdAt = user.created_at
+    ? new Date(user.created_at).toLocaleDateString(appLocale(), {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'N/A';
   const authProvider = user.app_metadata?.provider || 'email';
 
   const handleMarketingToggle = async (checked: boolean) => {
@@ -101,8 +93,8 @@ export function SettingsGeneral() {
 
   return (
     <Stack spacing={2}>
-      {/* Profile card */}
-      <CardBox>
+      {/* Profile */}
+      <AppBlock title={t('Profile')}>
         {/* Avatar + name */}
         <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: '20px' }}>
           <Avatar src={userAvatar} alt={displayName} sx={{ width: 64, height: 64 }} />
@@ -118,36 +110,31 @@ export function SettingsGeneral() {
           </Box>
         </Stack>
 
-        <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mb: '20px' }} />
-
         {/* Details rows */}
-        <Stack spacing={0}>
+        <RowList
+          sx={{
+            mx: { xs: '-20px', md: '-24px' },
+            mb: { xs: '-20px', md: '-24px' },
+            borderTop: '1px solid rgba(10,10,15,0.08)',
+          }}
+        >
           <InfoRow label={t('Display name')} value={displayName} />
           <InfoRow label={t('Email')} value={userEmail} />
           <InfoRow label={t('Account created')} value={createdAt} />
           <InfoRow
             label={t('Auth provider')}
             value={authProvider.charAt(0).toUpperCase() + authProvider.slice(1)}
-            last
           />
-        </Stack>
-      </CardBox>
+        </RowList>
+      </AppBlock>
 
-      {/* Notifications card */}
-      <CardBox>
-        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '16px' }}>
-          {t('Notifications')}
-        </Typography>
-
+      {/* Emails */}
+      <AppBlock title={t('Emails')}>
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            p: '14px 16px',
-            borderRadius: 'var(--radius-md)',
-            bgcolor: '#FAFAFB',
-            border: '1px solid rgba(10,10,15,0.08)',
             gap: '12px',
           }}
         >
@@ -210,24 +197,28 @@ export function SettingsGeneral() {
             />
           )}
         </Box>
-      </CardBox>
+      </AppBlock>
     </Stack>
   );
 }
 
-function InfoRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <Box
       sx={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        py: '12px',
-        borderBottom: last ? 'none' : '1px solid rgba(10,10,15,0.08)',
+        gap: 2,
+        minHeight: 52,
+        px: { xs: '20px', md: '24px' },
+        py: 1,
       }}
     >
-      <Typography sx={{ fontSize: '13px', color: '#6B6B76' }}>{label}</Typography>
-      <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>{value}</Typography>
+      <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>{label}</Typography>
+      <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'text.primary', textAlign: 'right' }}>
+        {value}
+      </Typography>
     </Box>
   );
 }

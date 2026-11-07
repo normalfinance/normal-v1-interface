@@ -14,15 +14,16 @@ import Stack from '@mui/material/Stack';
 import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
+import { AppBlock } from '@/components/_common/app-ui';
 import { AppPageHeader } from '@/components/_common/brand';
 import SavingsCard from '@/components/_common/savings-card';
 import { TwoFactorPrompt } from '@/components/_common/two-factor-prompt';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 
-import { SavingsHeroCard } from './savings-hero-card';
 import { SavingsOnrampCard } from './savings-onramp-card';
 import { SavingsHistoryCard } from './savings-history-card';
 import { SavingsXlmFeesCard } from './savings-xlm-fees-card';
+import { SavingsHeroCard, SavingsEarningsCard } from './savings-hero-card';
 
 export default function SavingsView() {
   const [mounted, setMounted] = useState(false);
@@ -216,47 +217,48 @@ export default function SavingsView() {
 
   return (
     <DashboardContent>
-      <AppPageHeader
-        title="Savings"
-        subtitle="Earn yield on your USDC by depositing into Normal Savings."
-      />
+      <AppPageHeader title="Savings" subtitle="Your digital dollars, earning every day." />
 
       <TwoFactorPrompt hasFunds={currentValue > 0} />
 
-      {/* Hero stats */}
       <SavingsHeroCard
         currentValue={currentValue}
         totalDeposited={totalDeposited}
         earnings={earnings}
         apy={apy}
         loading={heroLoading}
-        walletAddress={savingsHistoryAddress || undefined}
       />
 
-      {/* Action + Onramp */}
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '3fr 2fr' },
-          gap: 2,
-          mt: 2,
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 7fr) minmax(0, 5fr)' },
+          alignItems: 'start',
+          gap: { xs: 4, lg: 3 },
+          mt: { xs: 4, md: 5 },
         }}
       >
-        <SavingsCard />
-        {/* #67: fee explainer above the onramp card — same order as the user's
-            mental model: "can I transact?" before "how do I add money?". */}
-        <Stack spacing={2}>
+        <Stack spacing={4} sx={{ minWidth: 0, order: { xs: 2, lg: 1 } }}>
+          <SavingsEarningsCard
+            walletAddress={savingsHistoryAddress || undefined}
+            earnings={earnings}
+            currentValue={currentValue}
+          />
+          {/* Transaction history: same wallet as the chart (#75 round 2B). */}
+          {savingsHistoryAddress && <SavingsHistoryCard walletAddress={savingsHistoryAddress} />}
+        </Stack>
+
+        {/* Putting money in and taking it out first on phones. #67: the fee
+            explainer above the onramp card, the user's own order: "can I
+            transact?" before "how do I add money?". */}
+        <Stack spacing={2} sx={{ minWidth: 0, order: { xs: 1, lg: 2 } }}>
+          <AppBlock title="Deposit or withdraw">
+            <SavingsCard hideHeader sx={{ p: { xs: 0, md: 0 }, border: 'none' }} />
+          </AppBlock>
           <SavingsXlmFeesCard />
           <SavingsOnrampCard />
         </Stack>
       </Box>
-
-      {/* Transaction history — same wallet as the chart (#75 round 2B). */}
-      {savingsHistoryAddress && (
-        <Box sx={{ mt: 2 }}>
-          <SavingsHistoryCard walletAddress={savingsHistoryAddress} />
-        </Box>
-      )}
     </DashboardContent>
   );
 }

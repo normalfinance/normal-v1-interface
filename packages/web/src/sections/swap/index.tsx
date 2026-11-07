@@ -187,7 +187,7 @@ export default function SwapView() {
     <DashboardContent>
       <AppPageHeader
         title="Swap"
-        subtitle="Exchange XLM, USDC, BTC, ETH and SOL — delivered to your own wallet."
+        subtitle="Swap between digital dollars, Bitcoin, Ethereum, Solana and Stellar. It all lands in your own wallet."
       />
 
       {/* #74: USDC-readiness notices, one per wallet, right wallet's signer.
