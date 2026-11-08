@@ -138,7 +138,7 @@ Corners are CSS variables in `src/global.css`. Change a value there and every pa
 | `--radius-full` | 999px  | Switches                                                               |
 | `'50%'`         | circle | True circles only: avatars, token icons, status dots, step numbers     |
 
-**Everything is square**, the marketing site and the app alike (the owner's call, 2026-11-06): every token is 0, and MUI's own `shape.borderRadius` is 0 to match. The roles stay, so a corner could come back in one place. Circles stay circles (avatars, coins, dots) and switches stay pills. The measured exceptions are drawings of a phone: the hero phone's screen and notch, which match the phone in the photo, and the closing carousel's phones. The mobile app still has rounded corners: it follows only when the owner says so.
+**Everything is square**, the marketing site and the app alike (the owner's call, 2026-11-06): every token is 0, and MUI's own `shape.borderRadius` is 0 to match. The roles stay, so a corner could come back in one place. Circles stay circles (avatars, coins, dots) and switches stay pills. The measured exceptions are drawings of a phone: the hero phone's screen and notch, which match the phone in the photo, and the closing carousel's phones. The mobile app follows too (the owner's call, 2026-11-08): square, with the same exceptions.
 
 ## Type
 
