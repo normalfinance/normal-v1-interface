@@ -17,6 +17,9 @@
 // a closed tab never loses funds; pre-burn/pivot legs live at the user's own
 // addresses at every step.
 
+import type { BridgeProgress } from '@/lib/flow/lifi-status';
+import type { FlowPlan, FlowSummary } from '@/lib/flow/types';
+
 import { logger } from '@/utils/logger';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
@@ -25,6 +28,7 @@ import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { fCurrency } from '@/utils/format-number';
 import { runCctpRefund } from '@/lib/cctp/refund';
+import { useFlowRun } from '@/hooks/use-flow-run';
 import { useDebounce } from '@/hooks/use-debounce';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executeLifiSwap } from '@/lib/lifi/execute';
@@ -36,15 +40,18 @@ import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
+import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { parseDeliveredAmount } from '@/lib/cctp/delivered-amount';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
+import { bridgeName, readBridgeStatus } from '@/lib/flow/lifi-status';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { cctpRefundPlan, cctpInboundPlan, cctpOutboundPlan } from '@/lib/flow/plans';
 import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
 import { setActiveCctpTransfer, getActiveCctpTransfer } from '@/lib/cctp/active-transfer';
 
@@ -52,16 +59,39 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { useSnackbar } from '@/components/template/snackbar';
+import { formatUsd, formatCoin } from '@/components/_common/app-ui';
 import GasShortfallDialog from '@/components/_common/gas-shortfall-dialog';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
+import { FlowNotice, shareOfSwap, readableRate } from '@/components/_common/flow';
 import AutopilotConsentDialog from '@/components/_common/autopilot-consent-dialog';
+import {
+  baseTxLink,
+  chainTxLink,
+  lifiTrackLink,
+  stellarTxLink,
+  baseAddressHref,
+  chainAddressHref,
+  stellarAccountHref,
+} from '@/components/_common/flow/flow-links';
 
 import { groupOf } from './types';
 import { createAutopilotGate } from './autopilot-gate';
 import { isInsufficientGasError } from './gas-reserve';
-import { type CctpStage, CctpProgressModal } from '../cctp-progress-modal';
 
-import type { SwapSymbol, SwapEngineResult, CrosschainSymbol } from './types';
+import type { SwapFlow, SwapSymbol, SwapEngineResult, CrosschainSymbol } from './types';
+
+/** Where the run is, for this engine's own rules (bring-back, the button). */
+type CctpStage =
+  | 'funding'
+  | 'burn-prepare'
+  | 'lifi'
+  | 'arriving'
+  | 'topup'
+  | 'burn'
+  | 'bridging'
+  | 'pivot-swap'
+  | 'delivering'
+  | 'done';
 
 const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace' } as const;
 
@@ -122,7 +152,9 @@ async function pollPivotDelivery(
   cancelledRef: React.MutableRefObject<boolean>,
   // BTC payouts are mined Bitcoin txs — allow up to ~60 min (Niko 2026-08-19:
   // the modal now tracks BTC to true delivery like SOL/ETH).
-  maxPolls = 60
+  maxPolls = 60,
+  /** Every reading, for the review page: where the exchange has the money. */
+  onProgress?: (progress: BridgeProgress) => void
 ): Promise<{ verdict: 'DONE' | 'REFUNDED' | 'FAILED' | null; deliveredAmount: string | null }> {
   for (let i = 0; i < maxPolls; i++) {
     if (cancelledRef.current) throw new Error('cancelled');
@@ -133,6 +165,7 @@ async function pollPivotDelivery(
       );
       if (res.ok) {
         const data = await res.json();
+        onProgress?.(readBridgeStatus(data?.status));
         const s = data?.status?.status as string | undefined;
         const sub = String(data?.status?.substatus ?? '').toUpperCase();
         // Doc 95 Wave 5: LI.FI reports what the destination ACTUALLY received.
@@ -229,22 +262,40 @@ export function useCctpEngine({
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [stage, setStage] = useState<CctpStage | null>(null);
-  const [stageError, setStageError] = useState<string | null>(null);
+  // The review page and live journey (components/_common/flow): nothing runs
+  // until the person confirms there; then every leg reports in.
+  const {
+    run: flowState,
+    plan: frozenPlan,
+    begin: beginRun,
+    replan,
+    start: startStep,
+    update: updateStep,
+    done: doneStep,
+    fail: failRun,
+    finish: finishRun,
+    stop: stopRun,
+    handOff,
+    reset: resetRun,
+  } = useFlowRun();
+  const [frozen, setFrozen] = useState<{ summary: FlowSummary; lede: string; tool: string } | null>(
+    null
+  );
+  const [confirming, setConfirming] = useState(false);
+  // Money has left the source (a transaction reached a chain) in this run.
+  const movedRef = useRef(false);
+  // Which plan the run follows: the swap, or bringing the USDC back.
+  const [refundPlanActive, setRefundPlanActive] = useState(false);
+  // Read by callbacks created before the review section below.
+  const flowStateRef = useRef(flowState);
+  flowStateRef.current = flowState;
+  const handleConfirmRef = useRef<() => void>(() => {});
   // Niko 2026-08-28: a swap whose SOURCE leg ended without moving anything
-  // (on-chain revert / bridge refund) is not an error the user must act on.
-  // It renders as a quiet grey panel with a Close button — no red, no Try
-  // again — while stageError keeps owning the genuinely actionable failures.
-  const [calmEnding, setCalmEnding] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  // Bring-back-in-modal (Niko 2026-08-27): the refund runs INSIDE the popup
-  // with its own checklist instead of closing it and delegating invisibly.
-  const [refundStage, setRefundStage] = useState<'topup' | 'burn' | 'done' | null>(null);
-  const [refundError, setRefundError] = useState<string | null>(null);
-  // Doc 93 0b: WHY a refund started by itself — shown above the steps.
+  // (on-chain revert / bridge refund) is not an error to act on: the page
+  // ends calmly (stopRun), never in red. Bring-back (Niko 2026-08-27) runs
+  // on the same page as its own journey (runRefund).
+  // Doc 93 0b: WHY a refund started by itself, shown above the steps.
   const [refundNotice, setRefundNotice] = useState<string | null>(null);
-  // #32 chunk 4b: whether THIS run started with the external→Normal funding
-  // move (drives the extra step in the progress modal).
-  const [usedFunding, setUsedFunding] = useState(false);
   const cancelled = useRef(false);
   // The transfer id of the last FAILED run: the failure popup's buttons need
   // it, but the catch clears the active-transfer marker before they render —
@@ -278,6 +329,12 @@ export function useCctpEngine({
   const debouncedAmount = useDebounce(enabled ? amount.toFixed() : '', 600);
 
   useEffect(() => () => setActiveCctpTransfer(null), []); // tab/modal gone → banner owns recovery
+  useEffect(
+    () => () => {
+      cancelled.current = true;
+    },
+    []
+  );
 
   useEffect(() => {
     const value = BigNumber(debouncedAmount || 0);
@@ -446,7 +503,11 @@ export function useCctpEngine({
         logger.error('[cctp] PATCH permanently failed:', Object.keys(body).join(','));
         return undefined;
       },
-      pollStatus: async (target: string, intervalMs: number) => {
+      pollStatus: async (
+        target: string,
+        intervalMs: number,
+        onRead?: (transfer: { status?: string; mintTxHash?: string | null }) => void
+      ) => {
         let misses = 0;
         for (;;) {
           if (cancelled.current) throw new Error('cancelled');
@@ -464,6 +525,7 @@ export function useCctpEngine({
               status = data?.transfer?.status;
               detail = data?.transfer?.errorDetail;
               sawTransfer = typeof status === 'string';
+              if (sawTransfer) onRead?.(data.transfer);
             }
           } catch {
             /* transient (timeout / hung server) — the cron keeps advancing it; just retry */
@@ -478,7 +540,7 @@ export function useCctpEngine({
           if (misses >= 10)
             throw new Error(
               t(
-                'Lost connection while tracking this swap — it continues on our servers. Check Activity in a few minutes.'
+                'Lost connection while following this swap. It carries on on our servers: check Activity in a few minutes.'
               )
             );
           await new Promise((r) => setTimeout(r, intervalMs));
@@ -505,7 +567,8 @@ export function useCctpEngine({
           }
           if (!ok) await new Promise((r) => setTimeout(r, 2_000 * (attempt + 1)));
         }
-        if (!ok) throw new Error(t('Gas top-up failed — try again in a moment.'));
+        if (!ok)
+          throw new Error(t('The network fee top-up did not go through. Try again in a moment.'));
         try {
           const { createPublicClient } = await import('viem');
           const { base } = await import('viem/chains');
@@ -557,24 +620,42 @@ export function useCctpEngine({
 
   const runRefund = useCallback(
     async (transferId: string) => {
-      setRefundError(null);
+      setRefundPlanActive(true);
+      beginRun(
+        cctpRefundPlan({
+          t,
+          baseWallet: { address: evmAddress, href: baseAddressHref(evmAddress) },
+          stellarWallet: { address: stellarAddress, href: stellarAccountHref(stellarAddress) },
+        })
+      );
       try {
-        await runCctpRefund({
+        const { burnTxHash } = await runCctpRefund({
           transferId,
           network,
           baseAddress: evmAddress!,
           stellarAddress: stellarAddress!,
           tryAutopilotFirst: true,
-          onStage: (s) => setRefundStage(s),
+          onStage: (s) => {
+            if (s === 'topup') startStep('refund-gas');
+            else startStep('refund-sign', { waiting: true });
+          },
         });
-        setRefundStage('done');
+        doneStep('refund-burn', { links: [baseTxLink(t, burnTxHash)] });
+        startStep('refund-attest');
+        // Circle's wait on Base finality and the mint run on our servers.
+        handOff(
+          t(
+            'Your USDC is on its way back to your Stellar wallet. It arrives in about 20 minutes, and Normal finishes it on its own.'
+          )
+        );
         window.dispatchEvent(new Event('nf:activity-updated'));
       } catch (e: any) {
         logger.error('[cctp refund] failed:', e);
-        setRefundError(friendlyAppError(e));
+        const message = friendlyAppError(e);
+        failRun(message);
       }
     },
-    [network, evmAddress, stellarAddress]
+    [network, evmAddress, stellarAddress, beginRun, startStep, doneStep, handOff, failRun, t]
   );
 
   // The consent offer itself — at swap start (Niko's final call 2026-08-21;
@@ -672,6 +753,7 @@ export function useCctpEngine({
   //     drawer/swap displays read the aggregate, so gating only the legacy
   //     store let "Done" show against stale visible numbers.
   const finish = useCallback(async () => {
+    startStep('balance');
     const cap = new Promise<void>((resolve) => {
       setTimeout(resolve, ARRIVAL_CAP_MS);
     });
@@ -693,6 +775,7 @@ export function useCctpEngine({
     if (refreshAggregate) waits.push(refreshAggregate().catch(() => {}));
     await Promise.race([Promise.all(waits), cap]);
     setStage('done');
+    finishRun();
     setActiveCctpTransfer(null); // settled — nothing left to recover
     resetInput();
     window.dispatchEvent(new Event('nf:activity-updated'));
@@ -709,6 +792,8 @@ export function useCctpEngine({
     refetchChain,
     refreshAggregate,
     maybeOfferConsent,
+    startStep,
+    finishRun,
   ]);
 
   // ---- INBOUND orchestration -----------------------------------------------------
@@ -724,18 +809,32 @@ export function useCctpEngine({
       // activity feed, so we mark it FAILED instead.
       let broadcastStarted = false;
 
+      const srcChain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+        fromSymbol as CrosschainSymbol
+      ];
       try {
         setStage('lifi');
-        const srcTx = await executeLifiSwap(lifiQuote, {
-          bitcoinAddress: addresses.BTC,
-          ethereumAddress: addresses.ETH,
-          solanaAddress: addresses.SOL,
-        });
+        const srcTx = await executeLifiSwap(
+          lifiQuote,
+          {
+            bitcoinAddress: addresses.BTC,
+            ethereumAddress: addresses.ETH,
+            solanaAddress: addresses.SOL,
+          },
+          {
+            onStage: (st) =>
+              st === 'sign' ? startStep('sign', { waiting: true }) : startStep('send'),
+          }
+        );
         broadcastStarted = true;
+        movedRef.current = true;
+        updateStep('send', {
+          links: [chainTxLink(t, srcChain, srcTx), lifiTrackLink(t, srcTx)],
+        });
         if (!(await patch({ srcSwapTxHash: srcTx }))) {
           enqueueSnackbar(
             t(
-              'We could not record this step — your funds are safe. Keep this tab open until the swap completes.'
+              'We could not record this step. Your money is safe: keep this page open until the swap completes.'
             ),
             { variant: 'warning' }
           );
@@ -759,6 +858,12 @@ export function useCctpEngine({
             // whole-balance read swept siblings. scopedAmountWire does both
             // correctly: own share + slippage headroom, never more.
             arrivedWire = scopedAmountWire(bal - baseline, target);
+            doneStep('bridge-send');
+            doneStep('arrived-base', {
+              note: t('{{amount}} at your Base address.', {
+                amount: formatCoin(Number(wireToUsdc(arrivedWire)), 'USDC'),
+              }),
+            });
             break;
           }
           // Refund honesty (live 2026-08-20: a refunded bridge leg polled a
@@ -768,7 +873,9 @@ export function useCctpEngine({
           // its own calm ending, marked on the row, with the returned funds
           // refetched before we say a word.
           arrivalPoll += 1;
-          if (arrivalPoll % 3 === 0) {
+          // The first reading comes early, so the steps move as soon as the
+          // exchange picks the payment up; then every third poll (~30s).
+          if (arrivalPoll === 1 || arrivalPoll % 3 === 0) {
             let verdict: 'REFUNDED' | 'FAILED' | null = null;
             try {
               const r = await fetch(
@@ -782,6 +889,11 @@ export function useCctpEngine({
                 if (st === 'DONE' && (sub === 'REFUNDED' || sub === 'PARTIAL'))
                   verdict = 'REFUNDED';
                 else if (st === 'FAILED' || st === 'INVALID') verdict = 'FAILED';
+                // Where the exchange has the money now, for the steps.
+                const progress = readBridgeStatus(d?.status);
+                if (progress.phase === 'source') startStep('source-confirm');
+                else if (progress.phase === 'sending' || progress.phase === 'delivered')
+                  startStep('bridge-send');
               }
             } catch {
               /* transient — next interval */
@@ -810,11 +922,11 @@ export function useCctpEngine({
               const calm: Error & { __calmEnd?: boolean } = new Error(
                 verdict === 'REFUNDED'
                   ? t(
-                      'The bridge could not complete and returned your {{sym}} — it is back in your wallet. Nothing was lost; you can simply start a new swap.',
+                      'The exchange could not complete and returned your {{sym}}: it is back in your wallet. Nothing was lost, and you can simply start a new swap.',
                       { sym: fromSymbol }
                     )
                   : t(
-                      'The exchange rejected this swap on-chain — the transaction reverted, which usually means the price moved past its protection while it was being processed. Your {{sym}} never left your wallet; only the small network fee was spent. Get a fresh quote and swap again whenever you like.',
+                      'The exchange turned this swap down on-chain. That usually means the price moved past its protection while it was being processed. Your {{sym}} never left your wallet; only the small network fee was spent. Get a fresh quote and swap again whenever you like.',
                       { sym: fromSymbol }
                     )
               );
@@ -825,7 +937,7 @@ export function useCctpEngine({
           if (Date.now() - started > 45 * 60_000)
             throw new Error(
               t(
-                'The bridge is taking unusually long — your funds are safe at your own addresses. Finish or track this transfer from the bar above the swap card.'
+                'This is taking unusually long. Your money is safe at your own addresses: finish or follow it from the bar above the swap card.'
               )
             );
           await new Promise((res) => setTimeout(res, 10_000));
@@ -837,20 +949,28 @@ export function useCctpEngine({
         // rejection, timeout) falls through to the interactive path below;
         // autopilot never blocks a swap, it only removes prompts.
         setStage('topup');
+        startStep('gas');
         const burnGateOn = await autopilotGate.current.isActive();
         const autoBurn = burnGateOn ? await tryAutopilot('burn', transferId) : null;
         if (autoBurn) {
           setStage('burn'); // server patched burnTxHash + BURN_SUBMITTED already
+          // Auto-finish covered the fee, the permission and the signature.
+          doneStep('burn-approve', { note: t('Handled by auto-finish.') });
+          doneStep('burn-sign', { note: t('Done by auto-finish.') });
+          doneStep('burn', {
+            links: autoBurn.burnTxHash ? [baseTxLink(t, autoBurn.burnTxHash)] : undefined,
+          });
         } else {
           if (burnGateOn) {
             // Doc 90 W4: the silent downgrade broke the "no signature needed"
             // promise without a word — say it before the passkey appears.
             enqueueSnackbar(
-              t('Autopilot could not finish this step — confirming with your passkey instead.'),
+              t('Auto-finish could not do this step, so your passkey confirms it instead.'),
               { variant: 'info' }
             );
           }
           await topUp();
+          doneStep('gas');
 
           setStage('burn');
           const { burnTxHash } = await burnUsdcOnEvm({
@@ -859,11 +979,25 @@ export function useCctpEngine({
             evmAddress: evmAddress!,
             amountWire: arrivedWire,
             stellarRecipient: stellarAddress!,
+            onStep: (st) =>
+              st === 'approve'
+                ? startStep('burn-approve', { waiting: true })
+                : startStep('burn-sign', { waiting: true }),
+            onSent: (st, hash) => {
+              if (st === 'approve')
+                updateStep('burn-approve', {
+                  waiting: false,
+                  links: [baseTxLink(t, hash)],
+                  note: t('Sent. Waiting for Base to confirm it.'),
+                });
+              else startStep('burn', { links: [baseTxLink(t, hash)] });
+            },
           });
+          doneStep('burn', { links: [baseTxLink(t, burnTxHash)] });
           if (!(await patch({ burnTxHash }))) {
             enqueueSnackbar(
               t(
-                'We could not record this step — your funds are safe. Keep this tab open until the swap completes.'
+                'We could not record this step. Your money is safe: keep this page open until the swap completes.'
               ),
               { variant: 'warning' }
             );
@@ -871,7 +1005,22 @@ export function useCctpEngine({
         }
 
         setStage('bridging');
-        await pollStatus('COMPLETED', 15_000);
+        startStep('attest');
+        await pollStatus('COMPLETED', 15_000, (tr) => {
+          if (tr.status === 'ATTESTED') {
+            doneStep('attest');
+            startStep('mint');
+          } else if (tr.status === 'MINT_SUBMITTED') {
+            startStep('mint', tr.mintTxHash ? { links: [stellarTxLink(t, tr.mintTxHash)] } : {});
+          } else if (tr.status === 'COMPLETED' && tr.mintTxHash) {
+            doneStep('mint', { links: [stellarTxLink(t, tr.mintTxHash)] });
+          }
+        });
+        doneStep('arrived', {
+          note: t('{{amount}} arrived.', {
+            amount: formatCoin(Number(wireToUsdc(arrivedWire)), 'USDC'),
+          }),
+        });
 
         // Delivered amount for the activity feed — the USDC that landed on Stellar.
         const dstAmount = wireToUsdc(arrivedWire);
@@ -880,13 +1029,25 @@ export function useCctpEngine({
       } catch (e: any) {
         const { GasShortfallError, maxAffordableEth } = await import('@/lib/lifi/gas-shortfall');
         if (e instanceof GasShortfallError && !broadcastStarted) {
-          // Pre-sign shortfall: close the progress modal, close the row
-          // honestly (nothing moved), and offer the affordable amount.
-          setModalOpen(false);
+          // Pre-sign shortfall: back to the review, close the row honestly
+          // (nothing moved), and offer the affordable amount.
+          resetRun();
+          setFrozen(null);
           setStage(null);
           setActiveCctpTransfer(null);
           setShortfall({ tried: amount.toFixed(), affordable: maxAffordableEth(e) });
           await patch({ markFailed: true }).catch(() => {});
+          window.dispatchEvent(new Event('nf:activity-updated'));
+          return;
+        }
+        if (e?.__calmEnd) {
+          // Quiet truth, not alarm (Niko 2026-08-28): the source leg ended
+          // without moving anything onward (refunded or reverted) and the
+          // row is retired server-side. This used to fall into the error
+          // path below and show in red; the calm ending was unreachable.
+          const ending = String(e?.message ?? '');
+          stopRun(ending);
+          setActiveCctpTransfer(null);
           window.dispatchEvent(new Event('nf:activity-updated'));
           return;
         }
@@ -911,11 +1072,10 @@ export function useCctpEngine({
               pivotRevertExchanges: Array.isArray(e.exchanges) ? e.exchanges.join('+') : '',
             }).catch(() => {});
           }
-          setStageError(
-            isInsufficientGasError(e)
-              ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
-              : friendlyAppError(e)
-          );
+          const message = isInsufficientGasError(e)
+            ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
+            : friendlyAppError(e);
+          failRun(message);
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
           if (e?.__optionsExhausted) {
             // Doc 93 0b: no dead-end errors — options are exhausted, so the
@@ -924,9 +1084,10 @@ export function useCctpEngine({
             const exhaustedId = lastFailedRunIdRef.current;
             if (exhaustedId) {
               setRefundNotice(
-                t('The exchange route kept failing — bringing your USDC back automatically.')
+                t(
+                  'The exchange kept failing, so your USDC is coming back to your Stellar wallet by itself.'
+                )
               );
-              setRefundStage('topup');
               void runRefund(exhaustedId);
             }
           }
@@ -957,6 +1118,12 @@ export function useCctpEngine({
       t,
       fromSymbol,
       refetchChain,
+      startStep,
+      updateStep,
+      doneStep,
+      failRun,
+      stopRun,
+      resetRun,
     ]
   );
 
@@ -972,26 +1139,54 @@ export function useCctpEngine({
         // Doc 93 0a: 'burn-prepare' covers the silent prepare/simulate window;
         // onSigning flips to 'burn' the moment the prompt actually appears.
         setStage('burn-prepare');
-        const { burnTxHash } = await burnUsdcOnStellar({
+        startStep('prepare');
+        const { approveTxHash, burnTxHash } = await burnUsdcOnStellar({
           network,
           stellarAddress: stellarAddress!,
           amountWire,
           destinationDomain: CCTP_DOMAIN.base,
           mintRecipient: evmAddressToBytes(evmAddress!),
-          onSigning: () => setStage('burn'),
+          onStep: (st) => startStep(st === 'approve' ? 'approve' : 'burn-sign'),
+          onSigning: () => {
+            setStage('burn');
+            updateStep(flowStateRef.current.activeId ?? 'burn-sign', { waiting: true });
+          },
+          onSubmitted: (st, hash) => {
+            if (st === 'approve')
+              updateStep('approve', {
+                waiting: false,
+                links: [stellarTxLink(t, hash, t('View the permission'))],
+                note: t('Sent. Waiting for Stellar to confirm it.'),
+              });
+            else startStep('burn', { links: [stellarTxLink(t, hash)] });
+          },
         });
         broadcastStarted = true;
+        movedRef.current = true;
+        if (approveTxHash && approveTxHash !== 'skipped')
+          doneStep('approve', { note: t('Done. Later swaps skip this.') });
+        doneStep('burn', { links: [stellarTxLink(t, burnTxHash)] });
         if (!(await patch({ burnTxHash }))) {
           enqueueSnackbar(
             t(
-              'We could not record this step — your funds are safe. Keep this tab open until the swap completes.'
+              'We could not record this step. Your money is safe: keep this page open until the swap completes.'
             ),
             { variant: 'warning' }
           );
         }
 
         setStage('bridging');
-        await pollStatus('COMPLETED', 5_000); // Stellar-source attestation ≈ seconds
+        startStep('attest');
+        await pollStatus('COMPLETED', 5_000, (tr) => {
+          if (tr.status === 'ATTESTED') {
+            doneStep('attest');
+            startStep('mint');
+          } else if (tr.status === 'MINT_SUBMITTED') {
+            startStep('mint', tr.mintTxHash ? { links: [baseTxLink(t, tr.mintTxHash)] } : {});
+          } else if (tr.status === 'COMPLETED') {
+            doneStep('mint', tr.mintTxHash ? { links: [baseTxLink(t, tr.mintTxHash)] } : {});
+          }
+        }); // Stellar-source attestation ≈ seconds
 
         // #33 Stage 3: same server-side hand-off as the inbound burn — the
         // pivot is THE prompt Niko banned ("sign, wait 20–50 min, sign again").
@@ -999,6 +1194,7 @@ export function useCctpEngine({
         // row and patches dstSwapTxHash itself; any failure falls back to the
         // interactive top-up + passkey pivot below.
         setStage('topup');
+        startStep('gas');
         let result: {
           txHash: `0x${string}`;
           toAmountMin: string;
@@ -1054,14 +1250,22 @@ export function useCctpEngine({
         if (autoPivot) {
           setStage('pivot-swap');
           result = autoPivot;
+          // Auto-finish covered the fee, the permission and the signature,
+          // and the exchange transaction is out.
+          doneStep('pivot-approve', { note: t('Handled by auto-finish.') });
+          doneStep('pivot-sign', { note: t('Done by auto-finish.') });
+          doneStep('pivot-send', {
+            links: [baseTxLink(t, autoPivot.txHash), lifiTrackLink(t, autoPivot.txHash)],
+          });
         } else {
           if (pivotGateOn) {
             enqueueSnackbar(
-              t('Autopilot could not finish this step — confirming with your passkey instead.'),
+              t('Auto-finish could not do this step, so your passkey confirms it instead.'),
               { variant: 'info' }
             );
           }
           await topUp();
+          doneStep('gas');
 
           setStage('pivot-swap');
           result = await executePivotSwap({
@@ -1069,7 +1273,22 @@ export function useCctpEngine({
             toSymbol: toSymbol as CrosschainSymbol,
             toAddress: nativeAddress!,
             amountWire,
+            onStep: (st) => {
+              if (st === 'approve') startStep('pivot-approve', { waiting: true });
+              else if (st === 'swap') startStep('pivot-sign', { waiting: true });
+            },
+            onSent: (st, hash) => {
+              if (st === 'approve')
+                updateStep('pivot-approve', {
+                  waiting: false,
+                  links: [baseTxLink(t, hash)],
+                  note: t('Sent. Waiting for Base to confirm it.'),
+                });
+              else
+                startStep('pivot-send', { links: [baseTxLink(t, hash), lifiTrackLink(t, hash)] });
+            },
           });
+          doneStep('pivot-send');
           await patch({ dstSwapTxHash: result.txHash });
         }
         // human delivered amount for the activity feed
@@ -1090,6 +1309,10 @@ export function useCctpEngine({
         }
 
         setStage('delivering');
+        startStep('bridge-receive');
+        const destChain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+          toSymbol as CrosschainSymbol
+        ];
         const delivery = await pollPivotDelivery(
           result.txHash,
           result.fromChainId,
@@ -1106,12 +1329,33 @@ export function useCctpEngine({
               60 *
               1.5) /
               10
-          )
+          ),
+          (progress) => {
+            if (progress.phase === 'source') startStep('bridge-receive');
+            else if (progress.phase === 'sending') startStep('bridge-send');
+            else if (progress.phase === 'refunding')
+              updateStep(flowStateRef.current.activeId ?? 'bridge-send', {
+                note: t('The exchange is sending it back to your Base address.'),
+              });
+            else if (progress.phase === 'delivered') {
+              doneStep('bridge-send');
+              doneStep('arrived', {
+                note: progress.deliveredAmount
+                  ? t('{{amount}} arrived.', {
+                      amount: formatCoin(Number(progress.deliveredAmount), toSymbol),
+                    })
+                  : undefined,
+                links: progress.receivingTxHash
+                  ? [chainTxLink(t, destChain, progress.receivingTxHash)]
+                  : undefined,
+              });
+            }
+          }
         );
         if (delivery.verdict === 'FAILED' || delivery.verdict === 'REFUNDED') {
           throw new Error(
             t(
-              'The final swap leg did not deliver — your USDC is at your own Base address, untouched by anyone else. Contact support to recover it.'
+              'The last leg did not deliver, so your USDC is back at your own Base address, where nobody else can touch it. Bring it back as USDC, or contact support.'
             )
           );
         }
@@ -1129,12 +1373,23 @@ export function useCctpEngine({
           // #62 rule — a successful swap must never look stuck): close out
           // with an honest heads-up instead of an error.
           enqueueSnackbar(
-            t('{{sym}} is on its way — delivery is taking longer than usual.', { sym: toSymbol }),
+            t('{{sym}} is on its way. Delivery is taking longer than usual.', { sym: toSymbol }),
             { variant: 'info' }
           );
         }
         await finish();
       } catch (e: any) {
+        if (e?.__calmEnd) {
+          // Quiet truth, not alarm (Niko 2026-08-28): the source leg ended
+          // without moving anything onward (refunded or reverted) and the
+          // row is retired server-side. This used to fall into the error
+          // path below and show in red; the calm ending was unreachable.
+          const ending = String(e?.message ?? '');
+          stopRun(ending);
+          setActiveCctpTransfer(null);
+          window.dispatchEvent(new Event('nf:activity-updated'));
+          return;
+        }
         if (String(e?.message) !== 'cancelled') {
           logger.error('[cctp engine] stage failed:', e); // surface stack
           // Stash the run's transfer id BEFORE the active marker is cleared —
@@ -1156,11 +1411,10 @@ export function useCctpEngine({
               pivotRevertExchanges: Array.isArray(e.exchanges) ? e.exchanges.join('+') : '',
             }).catch(() => {});
           }
-          setStageError(
-            isInsufficientGasError(e)
-              ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
-              : friendlyAppError(e)
-          );
+          const message = isInsufficientGasError(e)
+            ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
+            : friendlyAppError(e);
+          failRun(message);
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
           if (e?.__optionsExhausted) {
             // Doc 93 0b: no dead-end errors — options are exhausted, so the
@@ -1169,9 +1423,10 @@ export function useCctpEngine({
             const exhaustedId = lastFailedRunIdRef.current;
             if (exhaustedId) {
               setRefundNotice(
-                t('The exchange route kept failing — bringing your USDC back automatically.')
+                t(
+                  'The exchange kept failing, so your USDC is coming back to your Stellar wallet by itself.'
+                )
               );
-              setRefundStage('topup');
               void runRefund(exhaustedId);
             }
           }
@@ -1183,21 +1438,26 @@ export function useCctpEngine({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [evmAddress, stellarAddress, nativeAddress, network, toSymbol, makePatcher, finish, t]
+    [
+      evmAddress,
+      stellarAddress,
+      nativeAddress,
+      network,
+      toSymbol,
+      makePatcher,
+      finish,
+      t,
+      startStep,
+      updateStep,
+      doneStep,
+      failRun,
+      stopRun,
+    ]
   );
 
   const handleExecute = useCallback(async () => {
     if (!quote || !evmAddress || !stellarAddress || !nativeAddress) return;
-    // #33 consent moment AT SWAP START (Niko 2026-08-21: "it should pop up
-    // for user to enable one signature when swapping"). Safe now that the
-    // ceremony is idempotent; "Not now" is remembered and never re-asks.
-    await maybeOfferConsent();
-    if (!(await confirmAction())) return;
-    setStageError(null);
-    setRefundStage(null);
-    setRefundError(null);
     setRefundNotice(null);
-    setModalOpen(true);
     // Display-truth refresh for the modal (copy + in-wait Enable offer);
     // never blocks the run — the signing branch re-checks live.
     void autopilotActive()
@@ -1213,8 +1473,8 @@ export function useCctpEngine({
       // BEFORE the transfer row is created: it is a plain send, recorded by
       // the send funnel, not a CCTP leg.
       if (direction === 'out' && fundFromExternal) {
-        setUsedFunding(true);
         setStage('funding');
+        startStep('funding', { waiting: true });
         // Doc 95 Wave 5: move exactly what the burn will spend. The move used
         // to send 7 decimals (Stellar precision) while the burn takes 6 (CCTP
         // wire units), so the 7th decimal was carried to the Normal wallet and
@@ -1222,7 +1482,7 @@ export function useCctpEngine({
         const funded = await fundFromExternal.execute(amount.toFixed(6, BigNumber.ROUND_DOWN));
         if (!funded) {
           throw new Error(
-            t('The USDC transfer from {{wallet}} was not completed — nothing was swapped.', {
+            t('The USDC transfer from {{wallet}} did not complete, so nothing was swapped.', {
               wallet: fundFromExternal.label,
             })
           );
@@ -1234,9 +1494,9 @@ export function useCctpEngine({
         // wallet failed while their USDC had, in fact, moved. Advance the
         // moment it is done, so the marker lands where the failure is.
         setStage('burn-prepare');
-      } else {
-        setUsedFunding(false);
+        doneStep('funding');
       }
+      startStep('record');
 
       const headers = await buildAuthHeaders();
       const amountWire =
@@ -1272,6 +1532,7 @@ export function useCctpEngine({
       });
       const data = await res.json();
       if (!res.ok || !data.id) throw new Error(data.error ?? t('Could not start the swap'));
+      doneStep('record');
       // #27's row exists NOW — tell the activity feed so it appears the
       // moment the swap starts, not at Done (Niko live test 2026-08-19).
       window.dispatchEvent(new Event('nf:activity-updated'));
@@ -1286,16 +1547,15 @@ export function useCctpEngine({
         // Quiet truth, not alarm: funds are where they were and the row is
         // retired server-side — tell the banner and the feed to re-read so
         // the dead entry disappears without any user action.
-        setCalmEnding(String(e?.message ?? ''));
+        stopRun(String(e?.message ?? ''));
         setActiveCctpTransfer(null);
         window.dispatchEvent(new Event('nf:activity-updated'));
         return;
       }
-      setStageError(
-        isInsufficientGasError(e)
-          ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
-          : friendlyAppError(e)
-      );
+      const message = isInsufficientGasError(e)
+        ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
+        : friendlyAppError(e);
+      failRun(message);
       setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
   }, [
@@ -1310,9 +1570,12 @@ export function useCctpEngine({
     feePercent,
     fundFromExternal,
     autopilotActive,
-    maybeOfferConsent,
     runInbound,
     runOutbound,
+    startStep,
+    doneStep,
+    failRun,
+    stopRun,
     t,
   ]);
 
@@ -1388,7 +1651,7 @@ export function useCctpEngine({
         loading: false,
         helper: (
           <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
-            {t('One passkey adds Stellar to your wallet — the swap continues right after.')}
+            {t('One passkey adds Stellar to your wallet. The swap continues right after.')}
           </Typography>
         ),
       };
@@ -1418,7 +1681,7 @@ export function useCctpEngine({
             helper: (
               <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
                 {t(
-                  'Your Stellar account needs a USDC trustline to receive the bridged funds — add it from the swap tab (USDC) or savings page.'
+                  'Your Stellar account needs a USDC trustline to receive the money. Add it from the swap tab (USDC) or the savings page.'
                 )}
               </Typography>
             ),
@@ -1433,7 +1696,7 @@ export function useCctpEngine({
         helper: (
           <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t(
-              'The swap pays its Stellar network fee in XLM from {{which}} — a little XLM is needed there.',
+              'The swap pays its Stellar network fee in XLM from {{which}}, so a little XLM is needed there.',
               { which: onNeedsSetup ? t('your Normal wallet') : t('your wallet') }
             )}
           </Typography>
@@ -1448,7 +1711,7 @@ export function useCctpEngine({
         loading: false,
         helper: (
           <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
-            {t('One passkey creates your {{sym}} address — the swap continues right after.', {
+            {t('One passkey creates your {{sym}} address. The swap continues right after.', {
               sym,
             })}
           </Typography>
@@ -1463,7 +1726,7 @@ export function useCctpEngine({
         helper: (
           <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t(
-              'The route travels via your own Base address — one passkey creates it, then the swap continues.'
+              'The route travels through your own Base address. One passkey creates it, then the swap continues.'
             )}
           </Typography>
         ),
@@ -1489,7 +1752,7 @@ export function useCctpEngine({
         helper: (
           <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t(
-              'Each cross-ecosystem swap has fixed bridge costs — under $10 they outweigh the swap.'
+              'Each swap between networks has fixed bridge costs. Under $10 they outweigh the swap.'
             )}
           </Typography>
         ),
@@ -1498,7 +1761,7 @@ export function useCctpEngine({
     // carries its own gasCosts — block when gas eats >half the swap.
     if (gasShare > 0.5)
       return {
-        label: t('Network fees exceed half this swap — try a larger amount'),
+        label: t('Network fees exceed half this swap: try a larger amount'),
         action: null,
         loading: false,
         helper: (
@@ -1513,12 +1776,10 @@ export function useCctpEngine({
     // move before any signature, never a silent transfer.
     if (direction === 'out' && fundFromExternal)
       return {
-        label: t('Move {{amt}} USDC from {{wallet}} & swap', {
-          amt: amount.toFixed(2, BigNumber.ROUND_DOWN),
-          wallet: fundFromExternal.label,
-        }),
-        action: handleExecute,
+        label: t('Review swap'),
+        action: () => handleConfirmRef.current(),
         loading: false,
+        review: true,
         helper: (
           <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
             {t(
@@ -1528,7 +1789,13 @@ export function useCctpEngine({
           </Typography>
         ),
       };
-    return { label: t('Swap'), action: handleExecute, loading: false };
+    // Opens the review page; only its confirm button runs the swap.
+    return {
+      label: t('Review swap'),
+      action: () => handleConfirmRef.current(),
+      loading: false,
+      review: true,
+    };
   }, [
     gasShare,
     gasUsd,
@@ -1556,7 +1823,6 @@ export function useCctpEngine({
     quoteError,
     quoteLoading,
     quote,
-    handleExecute,
     t,
     direction,
     fromSymbol,
@@ -1604,7 +1870,7 @@ export function useCctpEngine({
       )}
       {gasShare > 0.2 && gasShare <= 0.5 && (
         <Typography sx={{ fontSize: '11px', color: '#B45309', lineHeight: 1.5 }}>
-          {t('Network fees eat {{pct}}% of this swap — a larger amount gets a better deal.', {
+          {t('Network fees take {{pct}}% of this swap. A larger amount gets a better deal.', {
             pct: Math.round(gasShare * 100),
           })}
         </Typography>
@@ -1636,6 +1902,231 @@ export function useCctpEngine({
     </Stack>
   ) : null;
 
+  // ---- the review page ---------------------------------------------------------
+  const toolName = quote ? bridgeName(quote) : 'LI.FI';
+  const nativeChain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+    (direction === 'in' ? fromSymbol : toSymbol) as CrosschainSymbol
+  ];
+  const stellarLabel =
+    stellarAddressOverride === undefined
+      ? undefined
+      : stellarAddress && stellarAddress === wallet.address
+        ? t('Your {{wallet}} wallet', { wallet: connectedWalletLabel(wallet.walletType) })
+        : t('Your Normal wallet');
+  const stellarRef = {
+    address: stellarAddress,
+    href: stellarAccountHref(stellarAddress),
+    label: stellarLabel,
+  };
+  const baseRef = { address: evmAddress, href: baseAddressHref(evmAddress) };
+  const nativeRef = { address: nativeAddress, href: chainAddressHref(nativeChain, nativeAddress) };
+  // What the person can expect: the quote's estimate; the minimum is shown
+  // as "at least" beside it.
+  const outDecimals = direction === 'in' ? 6 : NATIVE_DECIMALS[toSymbol as CrosschainSymbol];
+  const expectedOut = quote
+    ? BigNumber(quote.estimate.toAmount).dividedBy(BigNumber(10).pow(outDecimals))
+    : null;
+  const minimumOut = quote
+    ? BigNumber(quote.estimate.toAmountMin).dividedBy(BigNumber(10).pow(outDecimals))
+    : null;
+  const outSymbol = direction === 'in' ? 'USDC' : toSymbol;
+
+  const buildPlan = (autopilot: boolean): FlowPlan | null => {
+    if (!quote || !expectedOut) return null;
+    return direction === 'out'
+      ? cctpOutboundPlan({
+          t,
+          to: toSymbol as CrosschainSymbol,
+          amountUsdc: formatCoin(amount.toNumber(), 'USDC'),
+          amountOut: `≈ ${formatCoin(expectedOut.toNumber(), toSymbol)}`,
+          tool: toolName,
+          stellarWallet: stellarRef,
+          baseWallet: baseRef,
+          destWallet: nativeRef,
+          autopilot,
+          funding: fundFromExternal
+            ? {
+                walletName: fundFromExternal.label,
+                wallet: { address: wallet.address, href: stellarAccountHref(wallet.address) },
+              }
+            : null,
+        })
+      : cctpInboundPlan({
+          t,
+          from: fromSymbol as CrosschainSymbol,
+          amountIn: formatCoin(amount.toNumber(), fromSymbol),
+          usdcOut: `≈ ${formatCoin(expectedOut.toNumber(), 'USDC')}`,
+          tool: toolName,
+          srcWallet: nativeRef,
+          baseWallet: baseRef,
+          stellarWallet: stellarRef,
+          autopilot,
+        });
+  };
+
+  // A rate people can read: "1 BTC ≈ 87,100 USDC", never "1 USDC ≈ 0.0000114 BTC".
+  const rateRow =
+    expectedOut && amount.gt(0)
+      ? readableRate(
+          direction === 'in' ? fromSymbol : 'USDC',
+          outSymbol,
+          expectedOut.dividedBy(amount).toNumber()
+        )
+      : null;
+
+  const buildSummary = (autopilot: boolean): FlowSummary | null => {
+    if (!quote || !expectedOut || !minimumOut) return null;
+    const payUsd = fromPrice.gt(0)
+      ? formatUsd(amount.multipliedBy(fromPrice).toNumber())
+      : undefined;
+    return {
+      rows: [
+        {
+          key: 'pay',
+          label: t('You pay'),
+          value: formatCoin(amount.toNumber(), fromSymbol),
+          detail: payUsd,
+        },
+        {
+          key: 'get',
+          label: t('You receive'),
+          value: `≈ ${formatCoin(expectedOut.toNumber(), outSymbol)}`,
+          detail: direction === 'in' ? t('In your Stellar wallet') : undefined,
+        },
+        {
+          key: 'min',
+          label: t('At least'),
+          value: formatCoin(minimumOut.toNumber(), outSymbol),
+          detail: t('The exchange’s price protection'),
+        },
+        ...(rateRow ? [{ key: 'rate', label: t('Rate'), value: rateRow }] : []),
+        ...(feePercent > 0 && amount.gt(0)
+          ? [
+              {
+                key: 'fee',
+                label: t('Normal fee ({{pct}}%)', { pct: +(feePercent * 100).toFixed(2) }),
+                value: formatCoin(amount.multipliedBy(feePercent).toNumber(), fromSymbol),
+                detail: fromPrice.gt(0)
+                  ? formatUsd(amount.multipliedBy(feePercent).multipliedBy(fromPrice).toNumber())
+                  : undefined,
+              },
+            ]
+          : []),
+        {
+          key: 'bridge',
+          label: t('Circle bridge'),
+          value: t('Free'),
+          detail: t('Normal pays its network fees'),
+        },
+        ...(gasUsd > 0
+          ? [
+              {
+                key: 'gas',
+                label: t('Exchange network fees'),
+                value: `≈ ${formatUsd(gasUsd)}`,
+                detail: shareOfSwap(t, gasShare),
+                caution: gasShare > 0.2,
+              },
+            ]
+          : []),
+        { key: 'route', label: t('Exchange'), value: toolName, detail: t('Picked by LI.FI') },
+        ...(etaMinutes
+          ? [{ key: 'time', label: t('Time'), value: t('About {{n}} min', { n: etaMinutes }) }]
+          : []),
+        direction === 'out'
+          ? {
+              key: 'signatures',
+              label: t('Signatures'),
+              value: autopilot ? t('One, sometimes two') : t('Two, sometimes four'),
+              detail: autopilot
+                ? t('On Stellar only. Auto-finish signs on Base.')
+                : t(
+                    'On Stellar now, then on Base after the bridge. A first swap adds a one-time permission on each.'
+                  ),
+            }
+          : {
+              key: 'signatures',
+              label: t('Signatures'),
+              value: autopilot ? t('One') : t('One now, one or two later'),
+              detail: autopilot
+                ? t('On {{chain}} only. Auto-finish signs on Base.', {
+                    chain: CHAINS[nativeChain].name,
+                  })
+                : t('On {{chain}} now, then on Base when the money gets there.', {
+                    chain: CHAINS[nativeChain].name,
+                  }),
+            },
+      ],
+      note: t(
+        'Your money is only ever at your own addresses, with Circle, or with the exchange while it works. Normal never holds it.'
+      ),
+    };
+  };
+
+  const liveLede =
+    quote && expectedOut
+      ? direction === 'out'
+        ? t('{{pay}} for about {{get}}, over Circle and {{tool}}.', {
+            pay: formatCoin(amount.toNumber(), 'USDC'),
+            get: formatCoin(expectedOut.toNumber(), toSymbol),
+            tool: toolName,
+          })
+        : t('{{pay}} for about {{get}} in your Stellar wallet, over {{tool}} and Circle.', {
+            pay: formatCoin(amount.toNumber(), fromSymbol),
+            get: formatCoin(expectedOut.toNumber(), 'USDC'),
+            tool: toolName,
+          })
+      : '';
+
+  const handleConfirm = async () => {
+    if (!quote || confirming || (stage && stage !== 'done')) return;
+    setConfirming(true);
+    let approved = false;
+    let auto = false;
+    try {
+      // #33 consent moment AT SWAP START (Niko 2026-08-21: "it should pop up
+      // for user to enable one signature when swapping"). Safe now that the
+      // ceremony is idempotent; "Not now" is remembered and never re-asks.
+      await maybeOfferConsent();
+      approved = await confirmAction();
+      // The plan's words follow the delegation this run will really use.
+      if (approved) auto = await autopilotGate.current.isActive().catch(() => false);
+    } finally {
+      setConfirming(false);
+    }
+    if (!approved) return;
+    const plan = buildPlan(auto);
+    const summary = buildSummary(auto);
+    if (!plan || !summary) return;
+    setAutopilotOn((prev) => (prev === true ? true : auto));
+    setFrozen({ summary, lede: liveLede, tool: toolName });
+    setRefundPlanActive(false);
+    movedRef.current = false;
+    beginRun(plan);
+    await handleExecute();
+  };
+  handleConfirmRef.current = () => {
+    void handleConfirm();
+  };
+
+  // Auto-finish switched on mid-run (the offer above the steps): the steps on
+  // Base now say they sign themselves. Same ids, new words.
+  useEffect(() => {
+    if (autopilotOn && flowState.phase === 'running' && !refundPlanActive) {
+      const next = buildPlan(true);
+      if (next) replan(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autopilotOn]);
+
+  const resetFlow = () => {
+    resetRun();
+    setFrozen(null);
+    setRefundPlanActive(false);
+    setStage(null);
+    movedRef.current = false;
+  };
+
   // Doc 95 Wave 7: two conditions, both required — the USDC must have reached
   // Base, AND a transfer row must exist for the refund to act on. Without the
   // second, the handler returned early and the button did nothing at all.
@@ -1644,7 +2135,178 @@ export function useCctpEngine({
     BRING_BACK_STAGES.includes(stage) &&
     !!(getActiveCctpTransfer() ?? lastFailedRunIdRef.current);
 
+  const livePlan = buildPlan(autopilotOn === true);
+  const liveSummary = buildSummary(autopilotOn === true);
+  // While a fresh price loads under an open review (a new amount after a gas
+  // spike), the review keeps the last numbers and holds its confirm button.
+  const lastLiveRef = useRef<{ plan: FlowPlan; summary: FlowSummary; lede: string } | null>(null);
+  if (livePlan && liveSummary)
+    lastLiveRef.current = { plan: livePlan, summary: liveSummary, lede: liveLede };
+  const reviewPlan = livePlan ?? (quoteLoading ? (lastLiveRef.current?.plan ?? null) : null);
+  const reviewSummary =
+    liveSummary ?? (quoteLoading ? (lastLiveRef.current?.summary ?? null) : null);
+  const shownPlan = flowState.phase === 'review' ? reviewPlan : (frozenPlan ?? reviewPlan);
+  const shownSummary =
+    flowState.phase === 'review' ? reviewSummary : (frozen?.summary ?? reviewSummary);
+  const shownLede =
+    flowState.phase === 'review'
+      ? livePlan
+        ? liveLede
+        : (lastLiveRef.current?.lede ?? liveLede)
+      : (frozen?.lede ?? liveLede);
+
+  // Can the person leave now? Before anything moved, yes (nothing happens).
+  // Once money is on its way to Base and the next leg needs this page (no
+  // auto-finish), leaving parks it there until they finish from Swap. Once
+  // the last leg is out, the bridge or Normal finishes it.
+  const active = flowState.activeId ?? '';
+  const legNeedsPage =
+    !autopilotOn &&
+    (direction === 'out'
+      ? ['burn', 'attest', 'mint', 'gas', 'pivot-approve', 'pivot-sign'].includes(active)
+      : [
+          'send',
+          'source-confirm',
+          'bridge-send',
+          'arrived-base',
+          'gas',
+          'burn-approve',
+          'burn-sign',
+        ].includes(active));
+  const signingNow = [
+    'funding',
+    'approve',
+    'burn-sign',
+    'sign',
+    'pivot-approve',
+    'pivot-sign',
+    'burn-approve',
+    'refund-sign',
+  ].includes(active);
+  const leave = refundPlanActive
+    ? signingNow
+      ? {
+          safe: false,
+          message: t('Approve the return first. After that Normal finishes it on its own.'),
+        }
+      : { safe: true, message: t('Normal finishes the return on its own.') }
+    : flowState.phase === 'running' && !movedRef.current
+      ? {
+          // Work already in flight carries on after the page closes, so a
+          // prompt could appear on another page: stay until it is sent.
+          safe: false,
+          message: t(
+            'Your swap is being prepared and signed. Stay until it is sent, so no prompt is left open.'
+          ),
+        }
+      : legNeedsPage
+        ? {
+            safe: false,
+            message:
+              direction === 'out'
+                ? t(
+                    'Your USDC is on its way to your Base address. If you leave now, the swap waits there, and you finish it from the Swap page when you come back.'
+                  )
+                : t(
+                    'Your money is on its way to your Base address. If you leave now, the swap waits there, and you finish it from the Swap page when you come back.'
+                  ),
+          }
+        : {
+            safe: true,
+            message: movedRef.current
+              ? t('This finishes on its own. You can close this page and follow it in Activity.')
+              : t('Nothing has moved yet. Leaving now simply cancels it.'),
+          };
+
+  const resumeFailed = () => {
+    // Hand the transfer to the recovery banner's ONE handler on the Swap
+    // page — a bare reset read as "nothing happened" when the failure was
+    // mid-flight (funds already on Base, live 2026-08-26).
+    const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
+    resetFlow();
+    if (failedId) {
+      setActiveCctpTransfer(null);
+      window.dispatchEvent(new CustomEvent('nf:cctp-resume', { detail: { id: failedId } }));
+    }
+  };
+  const bringBack = () => {
+    // Niko 2026-08-27: the refund runs IN this page, its own steps in place.
+    const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
+    if (!failedId) return;
+    setActiveCctpTransfer(null);
+    setRefundNotice(null); // chosen by the person: no explanation needed
+    void runRefund(failedId);
+  };
+
+  const failActions = refundPlanActive
+    ? [
+        {
+          label: t('Try again'),
+          primary: true,
+          onClick: () => {
+            const failedId = lastFailedRunIdRef.current;
+            if (failedId) void runRefund(failedId);
+          },
+        },
+      ]
+    : !movedRef.current
+      ? [{ label: t('Try again'), primary: true, onClick: resetFlow }]
+      : [
+          { label: t('Finish the swap'), primary: true, onClick: resumeFailed, leave: true },
+          ...(direction === 'out' && canBringBack
+            ? [{ label: t('Bring back as USDC'), onClick: bringBack }]
+            : []),
+        ];
+
+  // Above the steps: why a refund started by itself, or the offer to finish
+  // without the next signature (shown only while it can still help this run).
+  const baseSignStep = direction === 'in' ? 'burn-sign' : 'pivot-sign';
+  const beforeBaseSign =
+    !!shownPlan &&
+    flowState.phase === 'running' &&
+    !['done', 'skipped', 'failed', 'active'].includes(flowState.steps[baseSignStep]?.status ?? '');
+  const notice = refundNotice ? (
+    <FlowNotice>{refundNotice}</FlowNotice>
+  ) : !refundPlanActive &&
+    autopilotOn === false &&
+    beforeBaseSign &&
+    !!process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY ? (
+    <FlowNotice action={{ label: t('Turn on auto-finish'), onClick: () => setConsentOpen(true) }}>
+      {t(
+        'The next signature comes when the money reaches Base, which can take a while. Turn on auto-finish and this swap completes by itself.'
+      )}
+    </FlowNotice>
+  ) : undefined;
+
+  const flow: SwapFlow | null =
+    enabled && shownPlan && shownSummary
+      ? {
+          plan: shownPlan,
+          summary: shownSummary,
+          run: flowState,
+          lede: shownLede,
+          confirm: () => {
+            void handleConfirm();
+          },
+          blocked:
+            quoteLoading || !quote ? t('Getting a fresh price…') : quoteError ? quoteError : null,
+          busy: confirming,
+          leave,
+          failActions,
+          notice,
+          doneNote:
+            direction === 'out'
+              ? t('Your {{coin}} is in your {{chain}} wallet.', {
+                  coin: toSymbol,
+                  chain: CHAINS[nativeChain].name,
+                })
+              : t('Your digital dollars are in your Stellar wallet.'),
+          reset: resetFlow,
+        }
+      : null;
+
   return {
+    flow,
     toAmount,
     quoteLoading: enabled ? quoteLoading : false,
     quoteError: enabled ? quoteError : null,
@@ -1686,88 +2348,13 @@ export function useCctpEngine({
             onUseAffordable={() => {
               onAmountAdjusted?.(shortfall.affordable);
               setShortfall(null);
-              enqueueSnackbar(t('Amount updated — review the fresh quote and press Swap.'), {
+              enqueueSnackbar(t('Amount updated. Look over the new quote, then confirm.'), {
                 variant: 'info',
               });
             }}
             onCancel={() => setShortfall(null)}
           />
         )}
-        <CctpProgressModal
-          open={modalOpen}
-          direction={direction}
-          stage={stage}
-          error={refundStage ? refundError : stageError}
-          fromSymbol={fromSymbol}
-          toSymbol={toSymbol}
-          includeFunding={usedFunding}
-          fundingWalletLabel={fundFromExternal?.label}
-          autopilot={autopilotOn}
-          onEnableAutopilot={
-            process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY ? () => setConsentOpen(true) : undefined
-          }
-          calmEnding={calmEnding}
-          refundStage={refundStage}
-          refundNotice={refundNotice}
-          onTryAgain={
-            refundStage
-              ? refundError
-                ? () => {
-                    const failedId = lastFailedRunIdRef.current;
-                    setRefundError(null);
-                    if (failedId) void runRefund(failedId);
-                  }
-                : undefined
-              : stageError
-                ? () => {
-                    // Clear the failed RUN, then hand the transfer to the
-                    // recovery banner's ONE handler — a bare reset read as
-                    // "nothing happened" when the failure was mid-flight
-                    // (funds already on Base, live 2026-08-26).
-                    const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
-                    setStageError(null);
-                    setStage(null);
-                    setModalOpen(false);
-                    if (failedId) {
-                      setActiveCctpTransfer(null);
-                      window.dispatchEvent(
-                        new CustomEvent('nf:cctp-resume', { detail: { id: failedId } })
-                      );
-                    }
-                  }
-                : undefined
-          }
-          onBringBack={
-            // Doc 95 Wave 7: this was offered on ANY outbound failure. But
-            // "bring back as USDC" returns USDC that is sitting at the user's
-            // own Base address — and before the bridge delivers there, there
-            // is nothing to return. Offered on a funding or burn failure it
-            // could only fail, and when no transfer row existed yet the
-            // handler hit `if (!failedId) return` and the button did
-            // NOTHING AT ALL: a dead control on a failure screen, which is
-            // the worst place to put one. Shown now only once the USDC has
-            // actually arrived on Base.
-            stageError && direction === 'out' && !refundStage && canBringBack
-              ? () => {
-                  // Niko 2026-08-27: the refund runs IN this popup — the
-                  // steps update in place instead of the modal closing and
-                  // delegating to the banner invisibly.
-                  const failedId = getActiveCctpTransfer() ?? lastFailedRunIdRef.current;
-                  if (!failedId) return;
-                  setActiveCctpTransfer(null);
-                  setRefundNotice(null); // user-chosen: no explanation needed
-                  setRefundStage('topup');
-                  void runRefund(failedId);
-                }
-              : undefined
-          }
-          onClose={() => {
-            cancelled.current = true;
-            setModalOpen(false);
-            if (stage === 'done') setStage(null);
-            setCalmEnding(null);
-          }}
-        />
       </>
     ),
     getMaxToken,

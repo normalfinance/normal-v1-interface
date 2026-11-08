@@ -52,11 +52,21 @@ export type SoroswapStage =
   | 'sign-swap'
   | 'sign-fee'
   | 'submit'
+  // The network has it: carries the hashes and whether the fee landed too.
+  | 'submitted'
   | 'refetch'
   | 'done'
   // Not a step: fired the moment the embedded build DEGRADES to the fee-pair
   // (sweep 2026-08-21: the first prompt used to still claim "one signature").
   | 'degraded';
+
+/** What 'submitted' knows: the swap's hash, and the fee's (null when it rode inside the swap). */
+export interface SoroswapStageInfo {
+  hash: string;
+  feeHash: string | null;
+  /** false: the fee is held by Normal and collected within minutes (sweeper). */
+  feeSubmitted: boolean;
+}
 
 /**
  * #32 chunk 4f: `targetAddress` retargets the whole swap — build, both
@@ -72,7 +82,7 @@ export type SoroswapStage =
  */
 export function useSwap(
   targetAddress?: string,
-  opts?: { onStage?: (stage: SoroswapStage) => void }
+  opts?: { onStage?: (stage: SoroswapStage, info?: SoroswapStageInfo) => void }
 ): UseSwapReturn {
   const onStage = opts?.onStage;
   const { t } = useTranslate();
@@ -191,7 +201,9 @@ export function useSwap(
   const executeSwap = useCallback(
     async (swapQuote: SwapQuote, display?: SwapDisplayMeta): Promise<string> => {
       if (!wallet.address) {
-        enqueueSnackbar(t('Please connect your wallet first'), { variant: 'error' });
+        // With a progress page listening, the error ends the run there.
+        if (onStage) setError(t('Please connect your wallet first'));
+        else enqueueSnackbar(t('Please connect your wallet first'), { variant: 'error' });
         return '';
       }
 
@@ -227,7 +239,7 @@ export function useSwap(
               ).signStellarTxForMgi(xdr, config.NETWORK_PASSPHRASE, walletAddress)
             : await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signed = normalizeSignedXDR(signResult);
-          if (!signed) throw new Error('Transaction signing failed — no signed XDR returned');
+          if (!signed) throw new Error('Signing did not complete: no signed transaction came back');
           return signed;
         };
 
@@ -280,6 +292,7 @@ export function useSwap(
             const submitData = await submitRes.json();
             if (!submitData.success || !submitData.hash)
               throw new Error(submitData.error || 'Swap submission failed');
+            onStage?.('submitted', { hash: submitData.hash, feeHash: null, feeSubmitted: true });
             if (!onStage) {
               const url1 = createStellarExpertUrl('tx', submitData.hash);
               enqueueSnackbar(
@@ -330,7 +343,7 @@ export function useSwap(
         // Doc 95 Wave 5: `NaN <= 0` is FALSE, so a non-numeric fee sailed
         // straight through this guard and became `amount: "NaN"` on the wire.
         if (!Number.isFinite(feeAmount) || feeAmount <= 0) {
-          throw new Error('Swap fee was not computed — please refresh the quote');
+          throw new Error('The swap fee could not be worked out. Please refresh the quote');
         }
 
         // 1. Build the Soroswap swap tx with sender and NET amount — it
@@ -356,7 +369,7 @@ export function useSwap(
         }
 
         if (!quoteData.xdr) {
-          throw new Error('The exchange route is unavailable right now — try again in a moment.');
+          throw new Error('The exchange route is unavailable right now. Try again in a moment.');
         }
 
         // 2. Build the Normal fee payment directly behind the swap (#26:
@@ -409,6 +422,11 @@ export function useSwap(
           },
           config,
         });
+        onStage?.('submitted', {
+          hash: pair.serviceHash,
+          feeHash: pair.feeHash,
+          feeSubmitted: pair.feeSubmitted,
+        });
 
         if (!onStage) {
           const stellarExpertUrl = createStellarExpertUrl('tx', pair.serviceHash);
@@ -452,7 +470,9 @@ export function useSwap(
         logger.error('Error executing swap:', err);
         const errorMessage = friendlyAppError(err);
         setError(errorMessage);
-        enqueueSnackbar(errorMessage, { variant: 'error' });
+        // With a progress surface (onStage) the page shows the error where the
+        // swap stopped; a toast on top would say it twice.
+        if (!onStage) enqueueSnackbar(errorMessage, { variant: 'error' });
         return '';
       } finally {
         setLoading(false);

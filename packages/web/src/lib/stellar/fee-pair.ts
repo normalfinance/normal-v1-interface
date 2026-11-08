@@ -123,7 +123,7 @@ export async function submitFeePair(params: {
       throw new Error('Transaction failed on-chain. No fee was charged.');
     }
     throw new Error(
-      'Could not confirm submission. Check your activity in a minute — if nothing appears, it is safe to try again.'
+      'Could not confirm it was sent. Check your activity in a minute: if nothing appears, it is safe to try again.'
     );
   }
 

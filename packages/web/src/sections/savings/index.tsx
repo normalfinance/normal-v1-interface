@@ -14,6 +14,7 @@ import Stack from '@mui/material/Stack';
 import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
+import { FlowHost } from '@/components/_common/flow';
 import { AppBlock } from '@/components/_common/app-ui';
 import { AppPageHeader } from '@/components/_common/brand';
 import SavingsCard from '@/components/_common/savings-card';
@@ -217,48 +218,52 @@ export default function SavingsView() {
 
   return (
     <DashboardContent>
-      <AppPageHeader title="Savings" subtitle="Your digital dollars, earning every day." />
+      {/* A deposit or withdrawal opens its review here, in place of the page,
+          with the sidebar beside it (components/_common/flow). */}
+      <FlowHost>
+        <AppPageHeader title="Savings" subtitle="Your digital dollars, earning every day." />
 
-      <TwoFactorPrompt hasFunds={currentValue > 0} />
+        <TwoFactorPrompt hasFunds={currentValue > 0} />
 
-      <SavingsHeroCard
-        currentValue={currentValue}
-        totalDeposited={totalDeposited}
-        earnings={earnings}
-        apy={apy}
-        loading={heroLoading}
-      />
+        <SavingsHeroCard
+          currentValue={currentValue}
+          totalDeposited={totalDeposited}
+          earnings={earnings}
+          apy={apy}
+          loading={heroLoading}
+        />
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 7fr) minmax(0, 5fr)' },
-          alignItems: 'start',
-          gap: { xs: 4, lg: 3 },
-          mt: { xs: 4, md: 5 },
-        }}
-      >
-        <Stack spacing={4} sx={{ minWidth: 0, order: { xs: 2, lg: 1 } }}>
-          <SavingsEarningsCard
-            walletAddress={savingsHistoryAddress || undefined}
-            earnings={earnings}
-            currentValue={currentValue}
-          />
-          {/* Transaction history: same wallet as the chart (#75 round 2B). */}
-          {savingsHistoryAddress && <SavingsHistoryCard walletAddress={savingsHistoryAddress} />}
-        </Stack>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 7fr) minmax(0, 5fr)' },
+            alignItems: 'start',
+            gap: { xs: 4, lg: 3 },
+            mt: { xs: 4, md: 5 },
+          }}
+        >
+          <Stack spacing={4} sx={{ minWidth: 0, order: { xs: 2, lg: 1 } }}>
+            <SavingsEarningsCard
+              walletAddress={savingsHistoryAddress || undefined}
+              earnings={earnings}
+              currentValue={currentValue}
+            />
+            {/* Transaction history: same wallet as the chart (#75 round 2B). */}
+            {savingsHistoryAddress && <SavingsHistoryCard walletAddress={savingsHistoryAddress} />}
+          </Stack>
 
-        {/* Putting money in and taking it out first on phones. #67: the fee
+          {/* Putting money in and taking it out first on phones. #67: the fee
             explainer above the onramp card, the user's own order: "can I
             transact?" before "how do I add money?". */}
-        <Stack spacing={2} sx={{ minWidth: 0, order: { xs: 1, lg: 2 } }}>
-          <AppBlock title="Deposit or withdraw">
-            <SavingsCard hideHeader sx={{ p: { xs: 0, md: 0 }, border: 'none' }} />
-          </AppBlock>
-          <SavingsXlmFeesCard />
-          <SavingsOnrampCard />
-        </Stack>
-      </Box>
+          <Stack spacing={2} sx={{ minWidth: 0, order: { xs: 1, lg: 2 } }}>
+            <AppBlock title="Deposit or withdraw">
+              <SavingsCard hideHeader sx={{ p: { xs: 0, md: 0 }, border: 'none' }} />
+            </AppBlock>
+            <SavingsXlmFeesCard />
+            <SavingsOnrampCard />
+          </Stack>
+        </Box>
+      </FlowHost>
     </DashboardContent>
   );
 }

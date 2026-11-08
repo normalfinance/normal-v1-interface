@@ -10,7 +10,11 @@ import { useTranslate } from '@/locales';
 import { useMemo, useState } from 'react';
 import { cdn } from '@normalfinance/utils';
 import { useRouter } from 'next/navigation';
+import { CHAINS } from '@/lib/chains/registry';
+import { useMarkets } from '@/hooks/use-markets';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { MONO } from '@/sections/portfolio/_shared';
+import { usePortfolio } from '@/hooks/use-portfolio';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { useUsdPrice } from '@/hooks/use-price-history';
@@ -66,12 +70,14 @@ import {
   SummaryBlock,
 } from '@/components/_common/app-ui';
 
+import { AssetAbout } from './asset-about';
+import { AssetMarketCard } from './asset-market';
 import { AssetPriceChart } from './asset-price-chart';
 
 // ---------------------------------------------------------------------------
-// Per-asset capabilities. Swap is Soroswap (XLM↔USDC only), Save is the USDC
-// savings vault, Buy is the fiat on-ramp. BTC/ETH/SOL get Buy once LI.FI
-// lands.
+// Per-asset capabilities. Swap opens the Swap page with the coin picked
+// (Soroswap for XLM and USDC; LI.FI, and CCTP to digital dollars, for BTC, ETH
+// and SOL). Save is the USDC savings vault, Buy the fiat on-ramp.
 // ---------------------------------------------------------------------------
 
 type AssetActionKey = 'send' | 'receive' | 'swap' | 'save' | 'buy' | 'sell';
@@ -84,7 +90,7 @@ function getAssetActions(symbol: string): AssetActionKey[] {
     case 'BTC':
     case 'ETH':
     case 'SOL':
-      return ['send', 'receive', 'buy', 'sell'];
+      return ['send', 'receive', 'swap', 'buy', 'sell'];
     case 'USDC':
       return ['send', 'receive', 'swap', 'save', 'buy', 'sell'];
     case 'XLM':
@@ -94,8 +100,7 @@ function getAssetActions(symbol: string): AssetActionKey[] {
   }
 }
 
-// Native (non-Stellar) chain config for the synthesized display tokens and
-// the per-chain notes shown under the action row.
+// Native (non-Stellar) chain config for the synthesized display tokens.
 const NATIVE_CHAINS: Record<
   string,
   {
@@ -104,7 +109,6 @@ const NATIVE_CHAINS: Record<
     contract: string;
     icon: string;
     decimals: number;
-    note: string;
   }
 > = {
   BTC: {
@@ -113,7 +117,6 @@ const NATIVE_CHAINS: Record<
     contract: '__btc__',
     icon: cdn('tokens/bitcoin.webp'),
     decimals: 8,
-    note: 'Bitcoin lives on its own network. You can send and receive BTC here, but it can’t be swapped or used for savings yet.',
   },
   ETH: {
     chain: 'ethereum',
@@ -121,7 +124,6 @@ const NATIVE_CHAINS: Record<
     contract: '__eth__',
     icon: cdn('tokens/ethereum.webp'),
     decimals: 18,
-    note: 'Ethereum lives on its own network. You can send and receive ETH here, but it can’t be swapped or used for savings yet.',
   },
   SOL: {
     chain: 'solana',
@@ -129,7 +131,6 @@ const NATIVE_CHAINS: Record<
     contract: '__sol__',
     icon: cdn('tokens/solana.webp'),
     decimals: 9,
-    note: 'Solana lives on its own network. You can send and receive SOL here, but it can’t be swapped or used for savings yet.',
   },
 };
 
@@ -173,6 +174,10 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   // Live USD price for natives the user has no address for yet (the
   // synthesized token would otherwise show $0.00)
   const nativeUsdPrice = useUsdPrice(upperSymbol, !!native);
+
+  const { markets, isLoading: marketsLoading } = useMarkets();
+  const market = markets[upperSymbol];
+  const portfolio = usePortfolio(!!user);
 
   const nativeToken = isBtc ? btc.btcToken : isEth ? eth.ethToken : isSol ? sol.solToken : null;
   const nativeAddress = isBtc
@@ -223,16 +228,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   if (native && nativeLoading && !nativeToken) {
     return (
       <DashboardContent>
-        <Skeleton
-          variant="rectangular"
-          height={220}
-          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
-        />
-        <Skeleton
-          variant="rectangular"
-          height={280}
-          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)', mt: 2 }}
-        />
+        <Skeleton variant="text" sx={{ width: 220, fontSize: 28, mb: 4 }} />
+        <Skeleton variant="rectangular" height={180} />
+        <Skeleton variant="rectangular" height={360} sx={{ mt: 5 }} />
       </DashboardContent>
     );
   }
@@ -357,6 +355,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         { label: t('Decimals'), value: String(native.decimals) },
       ]
     : [
+        ...(wallet.address && !companionStellar
+          ? [{ label: t('Your address'), value: wallet.address, copyable: true }]
+          : []),
         { label: t('Network'), value: 'Stellar' },
         { label: t('Contract'), value: token.contract, copyable: true },
         ...(token.issuer ? [{ label: t('Issuer'), value: token.issuer, copyable: true }] : []),
@@ -366,6 +367,42 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   const network = getAssetNetwork(token);
   const displayName = ASSET_NAMES[token.symbol] ? assetName(token.symbol) : token.name;
   const amount = formatCoin(balance.toNumber(), token.symbol);
+
+  // How the holding moved today, from the coin's 24-hour change: value ×
+  // pct / (100 + pct) is what it was worth less a day ago.
+  const pct24h =
+    aggAssets.find((a) => a.symbol === upperSymbol)?.change24h ?? market?.change24h ?? null;
+  const today =
+    pct24h != null && Number.isFinite(pct24h) && value.gt(0)
+      ? (value.toNumber() * pct24h) / (100 + pct24h)
+      : null;
+  const moved = today !== null && Math.abs(today) >= 0.005;
+
+  // Its share of everything held, once the whole account has loaded.
+  const accountLoaded =
+    !portfolio.isLoading &&
+    !portfolio.savings.positionLoading &&
+    !portfolio.savings.companionPositionLoading;
+  const share =
+    accountLoaded && portfolio.totalUsd > 0 && value.gt(0)
+      ? Math.min(100, (value.toNumber() / portfolio.totalUsd) * 100)
+      : null;
+
+  // The holder's own address on the chain's explorer (one-wallet accounts:
+  // with two Stellar wallets there is no single address to show).
+  const explorerAddress = native
+    ? nativeAddress
+      ? CHAINS[native.chain as keyof typeof CHAINS].explorerAddress(nativeAddress)
+      : null
+    : wallet.address && !companionStellar
+      ? CHAINS.stellar.explorerAddress(wallet.address)
+      : null;
+  const explorer = explorerAddress
+    ? {
+        href: explorerAddress,
+        label: t('Your address on {{site}}', { site: new URL(explorerAddress).hostname }),
+      }
+    : null;
 
   return (
     <DashboardContent>
@@ -439,13 +476,29 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
             value={price.isZero() ? amount : formatUsd(value.toNumber())}
             note={
               <>
-                {!price.isZero() &&
-                  `${amount} · 1 ${token.symbol} = ${formatUsd(price.toNumber())}`}
+                {[
+                  price.isZero() ? null : amount,
+                  share !== null
+                    ? t('{{pct}}% of your money', {
+                        pct: share < 1 ? share.toFixed(1) : Math.round(share),
+                      })
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
                 {/* #75 2b: per-wallet split. The big number is the account
                     total; this line says who holds what. */}
                 {showWalletSplit && (
                   <Box sx={{ mt: 0.5 }}>
                     {`${t('Normal wallet')} ${formatCoin(companionBalance.toNumber(), token.symbol)} · ${connectedWalletLabel(wallet.walletType)} ${formatCoin(slotBalance.toNumber(), token.symbol)}`}
+                  </Box>
+                )}
+                {/* Today's move, in the shared Change colours */}
+                {moved && (
+                  <Box
+                    sx={{ mt: 0.5, color: today > 0 ? BRAND_COLORS.mint.deep : 'text.secondary' }}
+                  >
+                    {`${today > 0 ? '+' : '−'}${formatUsd(Math.abs(today))} ${t('today')}`}
                   </Box>
                 )}
               </>
@@ -457,27 +510,27 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         <RampInflightInline symbol={token.symbol} />
       </SummaryBlock>
 
-      {native && (
-        <Typography sx={{ mt: 1.5, fontSize: 13.5, lineHeight: 1.5, color: 'text.secondary' }}>
-          {t(native.note)}
-        </Typography>
-      )}
+      {/* The price, edge to edge in the coin's colour. A digital dollar's
+          line draws flat (it never spans less than 2% of its price), which
+          is the honest picture of a dollar. */}
+      <Box sx={{ mt: { xs: 4, md: 5 } }}>
+        <AssetPriceChart symbol={token.symbol} />
+      </Box>
+
+      <Box sx={{ mt: 4 }}>
+        <AssetMarketCard symbol={token.symbol} market={market} loading={marketsLoading} />
+      </Box>
 
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: {
-            xs: 'minmax(0, 1fr)',
-            lg: token.symbol === 'USDC' ? 'minmax(0, 1fr)' : 'minmax(0, 7fr) minmax(0, 5fr)',
-          },
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 7fr) minmax(0, 5fr)' },
           gap: { xs: 4, lg: 3 },
           alignItems: 'start',
-          mt: { xs: 4, md: 5 },
+          mt: 4,
         }}
       >
-        {/* A digital dollar is worth a dollar: its price chart only zooms
-            into tiny wobbles and makes the money look volatile. */}
-        {token.symbol !== 'USDC' && <AssetPriceChart symbol={token.symbol} />}
+        <AssetAbout symbol={token.symbol} explorer={explorer} />
 
         <AppBlock flush title={t('Details')}>
           <RowList>

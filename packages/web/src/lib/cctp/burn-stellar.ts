@@ -84,19 +84,24 @@ export interface StellarBurnParams {
    *  caller flips its step to "approve in your wallet" exactly then, never
    *  during the silent prepare/simulate window. */
   onSigning?: () => void;
+  /** Fires once a signed transaction is on the network, before its result is
+   *  known: the money is moving from that moment (the review page's step). */
+  onSubmitted?: (step: 'approve' | 'burn', hash: string) => void;
 }
 
 async function submitSigned(
   server: rpc.Server,
   signedXdr: string,
   passphrase: string,
-  label: string
+  label: string,
+  onSubmitted?: (hash: string) => void
 ) {
   const tx = TransactionBuilder.fromXDR(signedXdr, passphrase);
   const sent = await server.sendTransaction(tx);
   if (sent.status === 'ERROR') {
     throw new Error(`${label} submit failed: ${JSON.stringify(sent.errorResult ?? sent)}`);
   }
+  onSubmitted?.(sent.hash);
   for (let i = 0; i < 60; i++) {
     await new Promise((res) => setTimeout(res, 2000));
 
@@ -118,6 +123,7 @@ async function submitSigned(
 
 async function invokeAsUser(params: {
   onSigning?: () => void;
+  onSubmitted?: (hash: string) => void;
   server: rpc.Server;
   passphrase: string;
   source: string;
@@ -142,7 +148,7 @@ async function invokeAsUser(params: {
   // the silent prepare window (doc 93 0a).
   params.onSigning?.();
   const signed = await signStellarTxForMgi(tx.toXDR(), params.passphrase, params.source);
-  return submitSigned(params.server, signed, params.passphrase, params.label);
+  return submitSigned(params.server, signed, params.passphrase, params.label, params.onSubmitted);
 }
 
 /** Runs approve + deposit_for_burn. Returns both tx hashes. */
@@ -195,6 +201,7 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
         nativeToScVal(sequence + APPROVE_EXPIRY_LEDGERS, { type: 'u32' }),
       ],
       onSigning: params.onSigning,
+      onSubmitted: (hash) => params.onSubmitted?.('approve', hash),
       label: 'approve',
     });
   }
@@ -218,6 +225,7 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
       nativeToScVal(CCTP_MIN_FINALITY_THRESHOLD, { type: 'u32' }),
     ],
     onSigning: params.onSigning,
+    onSubmitted: (hash) => params.onSubmitted?.('burn', hash),
     label: 'deposit_for_burn',
   });
 

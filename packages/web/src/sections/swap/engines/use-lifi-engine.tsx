@@ -2,19 +2,23 @@
 
 import type { LifiQuote } from '@/lib/lifi/execute';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
+import type { FlowPlan, FlowSummary } from '@/lib/flow/types';
 
 import { logger } from '@/utils/logger';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
+import { useFlowRun } from '@/hooks/use-flow-run';
 import { useDebounce } from '@/hooks/use-debounce';
 import { MONO } from '@/sections/portfolio/_shared';
+import { bridgeName } from '@/lib/flow/lifi-status';
 import { executeLifiSwap } from '@/lib/lifi/execute';
+import { crossChainSwapPlan } from '@/lib/flow/plans';
 import { confirmAction } from '@/lib/auth/action-code';
-import React, { useMemo, useState, useEffect } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { driftVerdict, isQuoteStale } from '@/lib/lifi/quote-freshness';
+import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -22,15 +26,17 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import { formatUsd, formatCoin } from '@/components/_common/app-ui';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import GasShortfallDialog from '@/components/_common/gas-shortfall-dialog';
+import { FlowNotice, shareOfSwap, readableRate } from '@/components/_common/flow';
+import { chainTxLink, lifiTrackLink, chainAddressHref } from '@/components/_common/flow/flow-links';
 
-import { LifiStatusModal } from '../lifi-status-modal';
 import { isInsufficientGasError } from './gas-reserve';
-import { isTerminal, useLifiTracker, registryChainOf } from './lifi-tracker';
+import { useLifiTracker, registryChainOf } from './lifi-tracker';
 
 import type { LifiTrackedTx } from './lifi-tracker';
-import type { CrosschainSymbol, SwapEngineResult } from './types';
+import type { SwapFlow, CrosschainSymbol, SwapEngineResult } from './types';
 
 // ---------------------------------------------------------------------------
 // Cross-chain swaps between the user's own Turnkey addresses, routed by LI.FI
@@ -154,41 +160,93 @@ export function useLifiEngine({
   const [executing, setExecuting] = useState(false);
   const [setupChain, setSetupChain] = useState<TurnkeyChain | null>(null);
   const [statusTx, setStatusTx] = useState<LifiTrackedTx | null>(null);
-  const [statusOpen, setStatusOpen] = useState(false);
 
-  // Tracking runs here (not in the modal) so "Continue in background" actually
-  // keeps confirming, refreshing balances and notifying after the dialog closes.
-  const stage = useLifiTracker(statusTx, {
+  // The review page and live journey (components/_common/flow). Nothing runs
+  // until the person confirms there; then each step reports in, and the
+  // page follows the coin to the other wallet.
+  const {
+    run: flowState,
+    plan: frozenPlan,
+    begin: beginRun,
+    start: startStep,
+    update: updateStep,
+    done: doneStep,
+    fail: failRun,
+    finish: finishRun,
+    stop: stopRun,
+    reset: resetRun,
+  } = useFlowRun();
+  const [frozen, setFrozen] = useState<{ summary: FlowSummary; lede: string; tool: string } | null>(
+    null
+  );
+  const [confirming, setConfirming] = useState(false);
+  // The price moved materially while the review was open: the new numbers are
+  // on screen and the person confirms again (never executed silently).
+  const [priceNotice, setPriceNotice] = useState<string | null>(null);
+  // Once the transaction is out, "Try again" would start a second swap: the
+  // bridge returns the coins by itself, so the page offers only the way back.
+  const broadcastRef = useRef(false);
+
+  // Tracking runs in the engine, not the page: it keeps confirming the source,
+  // recording the swap and following the bridge until the coin arrives.
+  const runTool = frozen?.tool ?? 'LI.FI';
+  useLifiTracker(statusTx, {
     onActivity: () => window.dispatchEvent(new Event('nf:activity-updated')),
-    // #62: awaited (capped) before the tracker shows 'done' — the destination
+    // The sending chain has it: the money is with the bridge now.
+    onSourceConfirmed: () => startStep('source-confirm'),
+    onBridge: (p) => {
+      if (p.phase === 'source') startStep('source-confirm');
+      else if (p.phase === 'sending') startStep('bridge-send');
+      else if (p.phase === 'refunding' && flowState.activeId)
+        updateStep(flowState.activeId, {
+          note: t('{{tool}} is sending it back to your wallet.', { tool: runTool }),
+        });
+      else if (p.phase === 'waiting' && flowState.activeId)
+        updateStep(flowState.activeId, {
+          note: t('{{tool}} is waiting on its network. It carries on by itself.', {
+            tool: runTool,
+          }),
+        });
+      else if (p.phase === 'delivered') {
+        const destChain = registryChainOf(statusTx?.toChainId ?? -1);
+        const link =
+          p.receivingTxHash && destChain && destChain !== 'stellar'
+            ? [chainTxLink(t, destChain, p.receivingTxHash)]
+            : undefined;
+        doneStep('bridge-send');
+        doneStep('arrived', {
+          note: p.deliveredAmount
+            ? t('{{amount}} arrived.', {
+                amount: formatCoin(Number(p.deliveredAmount), statusTx?.toSymbol ?? toSymbol),
+              })
+            : undefined,
+          links: link,
+        });
+      }
+    },
+    // #62: awaited (capped) before the tracker shows 'done': the destination
     // chain's balances refresh FIRST, so "Done" never appears against a stale
     // balance that looks like lost funds. Same pattern as CCTP's finish().
     onArrival: async () => {
+      startStep('balance');
       const destChain = registryChainOf(statusTx?.toChainId ?? -1);
       if (destChain && destChain !== 'stellar') await refetchChain(destChain);
     },
     onTerminal: (st) => {
-      if (st === 'done')
-        enqueueSnackbar(
-          t('Swap complete — {{symbol}} delivered to your wallet.', {
-            symbol: statusTx?.toSymbol ?? toSymbol,
-          }),
-          { variant: 'success' }
-        );
+      if (st === 'done') finishRun();
       else if (st === 'refunded')
-        enqueueSnackbar(
-          t('Swap refunded — your {{symbol}} was returned. No funds were lost.', {
-            symbol: statusTx?.fromSymbol ?? fromSymbol,
-          }),
-          { variant: 'warning' }
+        stopRun(
+          t(
+            '{{tool}} could not complete the swap and sent your {{coin}} back to your wallet. Nothing was lost.',
+            { tool: runTool, coin: statusTx?.fromSymbol ?? fromSymbol }
+          )
         );
       else
-        enqueueSnackbar(
+        failRun(
           t(
-            'The swap did not complete. If your {{symbol}} left the wallet, the bridge returns it automatically — check Activity for the final state.',
-            { symbol: statusTx?.fromSymbol ?? fromSymbol }
-          ),
-          { variant: 'error' }
+            'The swap did not complete. If your {{coin}} left your wallet, the bridge returns it by itself; Activity shows the final state.',
+            { coin: statusTx?.fromSymbol ?? fromSymbol }
+          )
         );
     },
   });
@@ -323,12 +381,122 @@ export function useLifiEngine({
   // choice dialog, never an error (nothing was signed when it fires).
   const [shortfall, setShortfall] = useState<{ tried: string; affordable: string } | null>(null);
 
-  const handleExecute = async () => {
-    if (!quote) return;
+  // ---- the review page -------------------------------------------------------
+  const toolName = quote ? bridgeName(quote) : 'LI.FI';
+  const livePlan: FlowPlan | null =
+    quote && toAmount
+      ? crossChainSwapPlan({
+          t,
+          from: fromSymbol,
+          to: toSymbol,
+          amountIn: formatCoin(amount.toNumber(), fromSymbol),
+          amountOut: `≈ ${formatCoin(toAmount.toNumber(), toSymbol)}`,
+          tool: toolName,
+          fromWallet: { address: fromAddress, href: chainAddressHref(from.chain, fromAddress) },
+          toWallet: { address: toAddress, href: chainAddressHref(to.chain, toAddress) },
+          etaMinutes,
+        })
+      : null;
+  const liveSummary: FlowSummary | null =
+    quote && toAmount
+      ? {
+          rows: [
+            {
+              key: 'pay',
+              label: t('You pay'),
+              value: formatCoin(amount.toNumber(), fromSymbol),
+              detail: amountUsd ? formatUsd(amountUsd.toNumber()) : undefined,
+            },
+            {
+              key: 'get',
+              label: t('You receive'),
+              value: `≈ ${formatCoin(toAmount.toNumber(), toSymbol)}`,
+            },
+            ...(toAmountMin
+              ? [
+                  {
+                    key: 'min',
+                    label: t('At least'),
+                    value: formatCoin(toAmountMin.toNumber(), toSymbol),
+                    detail: t('Or the bridge sends your {{coin}} back', { coin: fromSymbol }),
+                  },
+                ]
+              : []),
+            ...(rate && readableRate(fromSymbol, toSymbol, rate.toNumber())
+              ? [
+                  {
+                    key: 'rate',
+                    label: t('Rate'),
+                    value: readableRate(fromSymbol, toSymbol, rate.toNumber())!,
+                  },
+                ]
+              : []),
+            ...(feeToken
+              ? [
+                  {
+                    key: 'fee',
+                    label: feeLabel,
+                    value: formatCoin(feeToken.toNumber(), fromSymbol),
+                    detail: feeUsd ? formatUsd(feeUsd.toNumber()) : undefined,
+                  },
+                ]
+              : []),
+            ...(gasUsd > 0
+              ? [
+                  {
+                    key: 'gas',
+                    label: t('Network fees'),
+                    value: `≈ ${formatUsd(gasUsd)}`,
+                    detail: swapUsdIn > 0 ? shareOfSwap(t, gasShare) : undefined,
+                    caution: gasShare > 0.2,
+                  },
+                ]
+              : []),
+            { key: 'route', label: t('Exchange'), value: toolName, detail: t('Picked by LI.FI') },
+            ...(etaMinutes
+              ? [{ key: 'time', label: t('Time'), value: t('About {{n}} min', { n: etaMinutes }) }]
+              : []),
+            { key: 'signatures', label: t('Signatures'), value: t('One') },
+          ],
+          note: t(
+            'Exchanges move with the market. You receive at least the minimum above, or the bridge sends your coins back.'
+          ),
+        }
+      : null;
+  const liveLede =
+    quote && toAmount
+      ? t('{{pay}} for about {{get}}, through {{tool}}.', {
+          pay: formatCoin(amount.toNumber(), fromSymbol),
+          get: formatCoin(toAmount.toNumber(), toSymbol),
+          tool: toolName,
+        })
+      : '';
+
+  const resetFlow = useCallback(() => {
+    resetRun();
+    setFrozen(null);
+    setPriceNotice(null);
+    broadcastRef.current = false;
+  }, [resetRun]);
+
+  const handleConfirm = async () => {
+    if (!quote || !livePlan || !liveSummary || confirming || executing) return;
+    setConfirming(true);
+    let approved = false;
+    try {
+      approved = await confirmAction();
+    } finally {
+      setConfirming(false);
+    }
+    if (!approved) return;
+
+    setPriceNotice(null);
+    setFrozen({ summary: liveSummary, lede: liveLede, tool: toolName });
+    broadcastRef.current = false;
+    beginRun(livePlan);
+    startStep('price');
     setExecuting(true);
     try {
-      if (!(await confirmAction())) return;
-
       // ------------------------------------------------------------------
       // Doc 95 Wave 6: a LI.FI quote carries a BUILT transaction. For Bitcoin
       // that is a Chainflip deposit CHANNEL, which expires — so executing a
@@ -341,13 +509,11 @@ export function useLifiEngine({
         const shownOut = toAmount ? toAmount.toFixed() : null;
         const fresh = await requestLifiQuote(quoteBody(amount));
         if (!fresh.ok) {
-          // Nothing has been signed at this point — say exactly that, so the
-          // user is not left wondering whether their coins moved.
-          enqueueSnackbar(
+          // Nothing has been signed at this point — say exactly that.
+          failRun(
             t(
-              'This quote expired and a new one could not be fetched — nothing was sent. Please try again.'
-            ),
-            { variant: 'error' }
+              'This price expired and a new one could not be fetched. Nothing was sent. Please try again.'
+            )
           );
           return;
         }
@@ -358,29 +524,40 @@ export function useLifiEngine({
         setQuoteAt(Date.now());
         setFeePercent(fresh.feePercent);
         if (driftVerdict(shownOut, freshOut) === 'worse') {
-          // The deal on screen is no longer the deal on offer. The card now
-          // shows the new number; pressing Swap again is the consent. We do
-          // NOT silently execute at a materially worse price, and we do not
-          // dead-end either — the button is live and the quote is fresh.
-          enqueueSnackbar(
+          // The deal on screen is no longer the deal on offer. Back to the
+          // review with the new numbers: confirming again is the consent. We
+          // never execute silently at a materially worse price.
+          resetRun();
+          setFrozen(null);
+          setPriceNotice(
             t(
-              'The price moved while this quote was open — the amount shown is updated. Press Swap to continue.'
-            ),
-            { variant: 'warning' }
+              'The price moved while this was open, so the amounts below are new. Confirm again if they work for you.'
+            )
           );
           return;
         }
         live = fresh.quote;
       }
+      doneStep('price');
 
-      const txHash = await executeLifiSwap(live, {
-        bitcoinAddress: addresses.BTC,
-        ethereumAddress: addresses.ETH,
-        solanaAddress: addresses.SOL,
+      const txHash = await executeLifiSwap(
+        live,
+        {
+          bitcoinAddress: addresses.BTC,
+          ethereumAddress: addresses.ETH,
+          solanaAddress: addresses.SOL,
+        },
+        {
+          onStage: (stage) =>
+            stage === 'sign' ? startStep('sign', { waiting: true }) : startStep('send'),
+        }
+      );
+      broadcastRef.current = true;
+      updateStep('send', {
+        links: [chainTxLink(t, from.chain, txHash), lifiTrackLink(t, txHash)],
       });
 
-      // Start the background tracker + open its view. Tracking lives in the
-      // engine now, so closing the dialog won't stop it.
+      // Start the background tracker; the page follows it.
       setStatusTx({
         txHash,
         fromChainId: live.action.fromChainId,
@@ -393,7 +570,6 @@ export function useLifiEngine({
         // carried none (1011 fallback), so the record stores null, not a lie.
         feeAmount: feePercent > 0 ? amount.times(feePercent).toFixed() : undefined,
       });
-      setStatusOpen(true);
       // Source tx is broadcast and recorded — surface the row NOW, not at
       // the first tracker tick (same rule as cctp, 2026-08-19).
       window.dispatchEvent(new Event('nf:activity-updated'));
@@ -403,16 +579,18 @@ export function useLifiEngine({
     } catch (err: any) {
       const { GasShortfallError, maxAffordableEth } = await import('@/lib/lifi/gas-shortfall');
       if (err instanceof GasShortfallError) {
-        // Pre-sign shortfall — offer the affordable amount instead of erroring.
+        // Pre-sign shortfall: nothing was signed. Back to the review, and
+        // offer the affordable amount instead of an error.
+        resetRun();
+        setFrozen(null);
         setShortfall({ tried: amount.toFixed(), affordable: maxAffordableEth(err) });
         return;
       }
       logger.error('[lifi engine] execute failed:', err); // surface stack
-      enqueueSnackbar(
+      failRun(
         isInsufficientGasError(err)
-          ? t('Not enough ETH left to pay the network fee — try a slightly smaller amount.')
-          : friendlyAppError(err),
-        { variant: 'error' }
+          ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
+          : friendlyAppError(err)
       );
     } finally {
       setExecuting(false);
@@ -449,7 +627,7 @@ export function useLifiEngine({
       };
     if (gasShare > 0.5)
       return {
-        label: t('Network fees exceed half this swap — try a larger amount'),
+        label: t('Network fees exceed half this swap: try a larger amount'),
         action: null,
         loading: false,
         helper: (
@@ -471,7 +649,8 @@ export function useLifiEngine({
     if (!quote) return { label: t('Fetching quote…'), action: null, loading: false };
     if (executing)
       return { label: t('Confirm in your passkey prompt…'), action: null, loading: true };
-    return { label: t('Swap with passkey'), action: handleExecute, loading: false };
+    // Opens the review page; only its confirm button runs the swap.
+    return { label: t('Review swap'), action: handleConfirm, loading: false, review: true };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     enabled,
@@ -520,7 +699,7 @@ export function useLifiEngine({
         )}
         {gasShare > 0.2 && gasShare <= 0.5 && (
           <Typography sx={{ fontSize: '11px', color: '#B45309', lineHeight: 1.5 }}>
-            {t('Network fees eat {{pct}}% of this swap — a larger amount gets a better deal.', {
+            {t('Network fees take {{pct}}% of this swap. A larger amount gets a better deal.', {
               pct: Math.round(gasShare * 100),
             })}
           </Typography>
@@ -590,7 +769,7 @@ export function useLifiEngine({
           onUseAffordable={() => {
             onAmountAdjusted?.(shortfall.affordable);
             setShortfall(null);
-            enqueueSnackbar(t('Amount updated — review the fresh quote and press Swap.'), {
+            enqueueSnackbar(t('Amount updated. Look over the new quote, then confirm.'), {
               variant: 'info',
             });
           }}
@@ -607,27 +786,64 @@ export function useLifiEngine({
           onSuccess={handleSetupSuccess}
         />
       )}
-      {statusTx && (
-        <LifiStatusModal
-          open={statusOpen}
-          // Closing only hides the view — the tracker keeps running in the
-          // background and clears the tx once it has settled.
-          onClose={() => {
-            setStatusOpen(false);
-            if (isTerminal(stage)) setStatusTx(null);
-          }}
-          stage={stage}
-          txHash={statusTx.txHash}
-          fromChainId={statusTx.fromChainId}
-          toChainId={statusTx.toChainId}
-          fromSymbol={statusTx.fromSymbol}
-          toSymbol={statusTx.toSymbol}
-        />
-      )}
     </>
   );
 
+  // While a fresh price loads under an open review (a new amount after a gas
+  // spike), the review keeps the last numbers and holds its confirm button.
+  const lastLiveRef = useRef<{ plan: FlowPlan; summary: FlowSummary; lede: string } | null>(null);
+  if (livePlan && liveSummary)
+    lastLiveRef.current = { plan: livePlan, summary: liveSummary, lede: liveLede };
+  const reviewPlan = livePlan ?? (quoteLoading ? (lastLiveRef.current?.plan ?? null) : null);
+  const reviewSummary =
+    liveSummary ?? (quoteLoading ? (lastLiveRef.current?.summary ?? null) : null);
+  const reviewLede = livePlan ? liveLede : (lastLiveRef.current?.lede ?? liveLede);
+  const shownPlan = flowState.phase === 'review' ? reviewPlan : (frozenPlan ?? reviewPlan);
+  const shownSummary =
+    flowState.phase === 'review' ? reviewSummary : (frozen?.summary ?? reviewSummary);
+  // Before the payment is confirmed on its own chain, the tab records the
+  // swap; after that, the bridge delivers whether or not the page is open.
+  const beforeSource = ['price', 'sign', 'send'].includes(flowState.activeId ?? '');
+  const flow: SwapFlow | null =
+    enabled && shownPlan && shownSummary
+      ? {
+          plan: shownPlan,
+          summary: shownSummary,
+          run: flowState,
+          lede: flowState.phase === 'review' ? reviewLede : (frozen?.lede ?? reviewLede),
+          confirm: handleConfirm,
+          blocked:
+            quoteLoading || !quote ? t('Getting a fresh price…') : quoteError ? quoteError : null,
+          busy: confirming,
+          leave: beforeSource
+            ? {
+                safe: false,
+                message: t(
+                  'Keep this page open until {{chain}} confirms the payment, usually within a minute. After that it finishes on its own.',
+                  { chain: from.name }
+                ),
+              }
+            : {
+                safe: true,
+                message: t(
+                  '{{tool}} delivers it whether or not this page is open. You can follow it in Activity.',
+                  { tool: runTool }
+                ),
+              },
+          failActions: broadcastRef.current
+            ? []
+            : [{ label: t('Try again'), primary: true, onClick: resetFlow }],
+          notice: priceNotice ? <FlowNotice>{priceNotice}</FlowNotice> : undefined,
+          doneNote: t('Your {{coin}} is in your {{chain}} wallet.', {
+            coin: toSymbol,
+            chain: to.name,
+          }),
+          reset: resetFlow,
+        }
+      : null;
+
   return {
+    flow,
     toAmount,
     quoteLoading: enabled ? quoteLoading : false,
     quoteError: enabled ? quoteError : null,

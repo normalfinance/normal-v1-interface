@@ -17,6 +17,7 @@ import Stack from '@mui/material/Stack';
 import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
+import { FlowHost } from '@/components/_common/flow';
 import { AppPageHeader } from '@/components/_common/brand';
 import { GetStartedPicker } from '@/components/_common/get-started-picker';
 import WalletReadinessNotice from '@/components/_common/wallet-readiness-notice';
@@ -185,60 +186,66 @@ export default function SwapView() {
 
   return (
     <DashboardContent>
-      <AppPageHeader
-        title="Swap"
-        subtitle="Swap between digital dollars, Bitcoin, Ethereum, Solana and Stellar. It all lands in your own wallet."
-      />
+      {/* The review page and the live journey open here, in place of the
+          page, with the sidebar beside them (components/_common/flow). */}
+      <FlowHost>
+        <AppPageHeader
+          title="Swap"
+          subtitle="Swap between digital dollars, Bitcoin, Ethereum, Solana and Stellar. It all lands in your own wallet."
+        />
 
-      {/* #74: USDC-readiness notices, one per wallet, right wallet's signer.
+        {/* #74: USDC-readiness notices, one per wallet, right wallet's signer.
           Self-hiding: render nothing while checking, on probe failure, or
           when the wallet is ready — most users never see this block. */}
-      {wallet.address && (
-        <Stack spacing={1} sx={{ mb: '16px' }}>
-          <WalletReadinessNotice
-            address={wallet.address}
-            walletLabel={isExternalWallet ? connectedWalletLabel(wallet.walletType) : 'Your wallet'}
-            kind="slot"
-          />
-          {isExternalWallet && companionStellar && (
+        {wallet.address && (
+          <Stack spacing={1} sx={{ mb: '16px' }}>
             <WalletReadinessNotice
-              address={companionStellar.address}
-              walletLabel="Normal wallet"
-              kind="companion"
-              onOpenSetup={() => setSetupOpen(true)}
+              address={wallet.address}
+              walletLabel={
+                isExternalWallet ? connectedWalletLabel(wallet.walletType) : 'Your wallet'
+              }
+              kind="slot"
             />
-          )}
-        </Stack>
-      )}
+            {isExternalWallet && companionStellar && (
+              <WalletReadinessNotice
+                address={companionStellar.address}
+                walletLabel="Normal wallet"
+                kind="companion"
+                onOpenSetup={() => setSetupOpen(true)}
+              />
+            )}
+          </Stack>
+        )}
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '3fr 2fr' },
-          gap: 2,
-          alignItems: 'start',
-        }}
-      >
-        <SwapCard initial={initial} />
-        <SavingsOnrampCard />
-      </Box>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '3fr 2fr' },
+            gap: 2,
+            alignItems: 'start',
+          }}
+        >
+          <SwapCard initial={initial} />
+          <SavingsOnrampCard />
+        </Box>
 
-      <NormalWalletSetupDialog
-        open={setupOpen}
-        onClose={() => setSetupOpen(false)}
-        neededUsdc={0}
-      />
-
-      {/* Unified activity — swaps + cross-chain transfers */}
-      <Box sx={{ mt: 2 }}>
-        <ActivityCard
-          walletAddress={wallet.address}
-          bitcoinAddress={bitcoinAddress}
-          ethereumAddress={ethereumAddress}
-          solanaAddress={solanaAddress}
-          defaultTab="swaps"
+        <NormalWalletSetupDialog
+          open={setupOpen}
+          onClose={() => setSetupOpen(false)}
+          neededUsdc={0}
         />
-      </Box>
+
+        {/* Unified activity — swaps + cross-chain transfers */}
+        <Box sx={{ mt: 2 }}>
+          <ActivityCard
+            walletAddress={wallet.address}
+            bitcoinAddress={bitcoinAddress}
+            ethereumAddress={ethereumAddress}
+            solanaAddress={solanaAddress}
+            defaultTab="swaps"
+          />
+        </Box>
+      </FlowHost>
     </DashboardContent>
   );
 }

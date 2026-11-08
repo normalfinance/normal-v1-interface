@@ -32,6 +32,12 @@ export interface AwaitTxOptions {
 export const TX_VISIBLE_TIMEOUT_MS = 8_000;
 export const TX_VISIBLE_INTERVAL_MS = 700;
 
+/** Where the ledger put it: the ledger number and when that ledger closed. */
+export interface TxRecord {
+  ledger: number | null;
+  closedAt: string | null;
+}
+
 /**
  * Resolves `true` once Horizon reports the transaction, `false` if the budget
  * runs out. Never throws and never blocks the caller indefinitely: a swap that
@@ -43,6 +49,19 @@ export async function awaitTxVisible(
   txHash: string,
   opts: AwaitTxOptions = {}
 ): Promise<boolean> {
+  return (await awaitTxRecord(horizonUrl, txHash, opts)) !== null;
+}
+
+/**
+ * The same wait, keeping what Horizon said: the ledger the transaction is in
+ * and when it closed, for the step that reports it (fields null when the
+ * answer lacks them). null when the budget runs out.
+ */
+export async function awaitTxRecord(
+  horizonUrl: string,
+  txHash: string,
+  opts: AwaitTxOptions = {}
+): Promise<TxRecord | null> {
   const {
     timeoutMs = TX_VISIBLE_TIMEOUT_MS,
     intervalMs = TX_VISIBLE_INTERVAL_MS,
@@ -51,7 +70,7 @@ export async function awaitTxVisible(
     now = () => Date.now(),
   } = opts;
 
-  if (!horizonUrl || !txHash) return false;
+  if (!horizonUrl || !txHash) return null;
   const startedAt = now();
   const base = horizonUrl.replace(/\/+$/, '');
 
@@ -59,12 +78,24 @@ export async function awaitTxVisible(
     try {
       const res = await fetchImpl(`${base}/transactions/${txHash}`, { cache: 'no-store' });
       // 404 is the expected "not ingested yet" answer, not an error.
-      if (res.ok) return true;
+      if (res.ok) {
+        let body: { ledger?: unknown; created_at?: unknown } | null = null;
+        try {
+          body = typeof res.json === 'function' ? await res.json() : null;
+        } catch {
+          /* visible is what matters; the details are a bonus */
+        }
+        const ledger = Number(body?.ledger);
+        return {
+          ledger: Number.isInteger(ledger) && ledger > 0 ? ledger : null,
+          closedAt: typeof body?.created_at === 'string' ? body.created_at : null,
+        };
+      }
     } catch {
       /* transient — Horizon blip or offline; keep trying within the budget */
     }
     // Check AFTER the attempt so a zero budget still gets one honest look.
-    if (now() - startedAt + intervalMs >= timeoutMs) return false;
+    if (now() - startedAt + intervalMs >= timeoutMs) return null;
     await sleep(intervalMs);
   }
 }

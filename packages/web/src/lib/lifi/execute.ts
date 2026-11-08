@@ -81,12 +81,20 @@ function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * Progress for the review page: 'sign' fires right before the passkey prompt
+ * appears, 'broadcast' once the signature is in and the transaction goes out.
+ */
+export type LifiExecStage = 'sign' | 'broadcast';
+type OnStage = ((stage: LifiExecStage) => void) | undefined;
+
 // --- Ethereum source ---------------------------------------------------------
 
 async function executeEvm(
   quote: LifiQuote,
   ethereumAddress: string,
-  subOrgId: string
+  subOrgId: string,
+  onStage: OnStage
 ): Promise<string> {
   const { createPublicClient, serializeTransaction } = await import('viem');
   const { mainnet } = await import('viem/chains');
@@ -144,7 +152,7 @@ async function executeEvm(
   // anything to react to. Refuse instead, and say which side is missing.
   if (!legacyPrice && maxFeePerGas === 0n) {
     throw new Error(
-      'Could not determine a network fee for this swap — the network did not respond with a gas price. Nothing was signed; please try again.'
+      'Could not work out a network fee for this swap: the network did not answer with a gas price. Nothing was signed; please try again.'
     );
   }
 
@@ -224,6 +232,7 @@ async function executeEvm(
     // Serialized + fast-fail-retried like every other passkey ceremony (#51 —
     // this path was missed in the original guard rollout and failed live with
     // WebAuthn NotAllowedError, 2026-08-14).
+    onStage?.('sign');
     const signResult = await runWebauthnCeremony(() =>
       turnkey.signTransaction({
         type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
@@ -237,8 +246,9 @@ async function executeEvm(
       })
     );
     const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
-    if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
+    if (!signedTx) throw new Error('Signing did not complete: no signed transaction came back');
 
+    onStage?.('broadcast');
     log('ETH: broadcasting');
     // Return as soon as the tx is broadcast — the status modal tracks the
     // receipt + bridge non-blockingly (a dropped/underpriced tx surfaces there
@@ -290,13 +300,14 @@ function psbtToHex(data: string): string {
     return hex;
   }
 
-  throw new Error('Unrecognised PSBT encoding from LI.FI — expected hex or base64');
+  throw new Error('Unrecognised PSBT encoding from LI.FI: expected hex or base64');
 }
 
 async function executeBtc(
   quote: LifiQuote,
   bitcoinAddress: string,
-  subOrgId: string
+  subOrgId: string,
+  onStage: OnStage
 ): Promise<string> {
   // The PSBT from LI.FI — re-encoded if needed, but never rebuilt or reordered.
   const psbtHex = psbtToHex(quote.transactionRequest.data);
@@ -347,6 +358,7 @@ async function executeBtc(
   try {
     const { signLifiBtcPsbt } = await import('@/lib/lifi/btc-sign');
     // One ceremony (batched raw-payload signing) — guarded like all others (#51).
+    onStage?.('sign');
     signedTx = await runWebauthnCeremony(() =>
       signLifiBtcPsbt(
         psbtHex,
@@ -381,9 +393,10 @@ async function executeBtc(
     // Keep the decode attached: any Bitcoin signing failure should say what was
     // in the PSBT, or it can't be acted on or reported upstream.
     const msg = err?.shortMessage ?? err?.message ?? String(err);
-    throw new Error(`${msg} — PSBT: ${psbtDescription}`);
+    throw new Error(`${msg}. PSBT: ${psbtDescription}`);
   }
 
+  onStage?.('broadcast');
   log('BTC: broadcasting');
   const { buildAuthHeaders } = await import('@/utils/http');
   const res = await fetch('/api/turnkey/broadcast-btc', {
@@ -405,7 +418,8 @@ async function executeBtc(
 async function executeSol(
   quote: LifiQuote,
   solanaAddress: string,
-  subOrgId: string
+  subOrgId: string,
+  onStage: OnStage
 ): Promise<string> {
   const { PublicKey, Connection, VersionedTransaction } = await import('@solana/web3.js');
 
@@ -423,6 +437,7 @@ async function executeSol(
   // Sign the serialized message bytes (ed25519, no pre-hash) with Turnkey.
   const turnkey = await getTurnkeyClient();
   log('SOL: requesting passkey signature');
+  onStage?.('sign');
   const signResult = await runWebauthnCeremony(() =>
     turnkey.signRawPayload({
       type: 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2',
@@ -437,13 +452,14 @@ async function executeSol(
     })
   );
   const result = signResult?.activity?.result?.signRawPayloadResult;
-  if (!result?.r || !result?.s) throw new Error('Signing failed — no signature returned');
+  if (!result?.r || !result?.s) throw new Error('Signing did not complete: no signature came back');
 
   const signature = new Uint8Array(64);
   signature.set(hexToBytes(result.r.padStart(64, '0')), 0);
   signature.set(hexToBytes(result.s.padStart(64, '0')), 32);
   vtx.signatures[signerIndex] = signature;
 
+  onStage?.('broadcast');
   log('SOL: broadcasting');
   const sig = await connection.sendRawTransaction(vtx.serialize(), { skipPreflight: false });
   log('SOL: broadcast signature', sig);
@@ -457,7 +473,8 @@ export async function executeLifiSwap(
   // One object from the registry rather than a field per chain, so a new chain
   // doesn't change this signature. The per-chain signers below stay separate —
   // each one speaks a different protocol.
-  addresses: ChainAddresses
+  addresses: ChainAddresses,
+  opts: { onStage?: (stage: LifiExecStage) => void } = {}
 ): Promise<string> {
   const info = await getTurnkeyWalletInfo();
   if (!info?.subOrgId) throw new Error('Turnkey wallet not found');
@@ -465,13 +482,13 @@ export async function executeLifiSwap(
   switch (quote.action.fromChainId) {
     case LIFI_CHAIN_IDS.ETH:
       if (!addresses.ethereumAddress) throw new Error('Missing Ethereum address');
-      return executeEvm(quote, addresses.ethereumAddress, info.subOrgId);
+      return executeEvm(quote, addresses.ethereumAddress, info.subOrgId, opts.onStage);
     case LIFI_CHAIN_IDS.BTC:
       if (!addresses.bitcoinAddress) throw new Error('Missing Bitcoin address');
-      return executeBtc(quote, addresses.bitcoinAddress, info.subOrgId);
+      return executeBtc(quote, addresses.bitcoinAddress, info.subOrgId, opts.onStage);
     case LIFI_CHAIN_IDS.SOL:
       if (!addresses.solanaAddress) throw new Error('Missing Solana address');
-      return executeSol(quote, addresses.solanaAddress, info.subOrgId);
+      return executeSol(quote, addresses.solanaAddress, info.subOrgId, opts.onStage);
     default:
       throw new Error(`Unsupported source chain ${quote.action.fromChainId}`);
   }

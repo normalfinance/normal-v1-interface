@@ -51,7 +51,7 @@ export default function GasShortfallDialog({
       </Typography>
       <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', lineHeight: 1.6, mt: '10px' }}>
         {t(
-          'Nothing was signed or sent. Choosing the smaller amount refreshes your quote — review it and press Swap to confirm.'
+          'Nothing was signed or sent. Choosing the smaller amount gets a new quote: look it over, then confirm.'
         )}
       </Typography>
       <Stack direction="row" spacing={1.25} sx={{ mt: '18px' }}>

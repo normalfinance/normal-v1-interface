@@ -5,6 +5,7 @@ import type { Theme, SxProps } from '@mui/material/styles';
 
 import { formatNumberLocale } from '@/locales';
 import { RouterLink } from '@/routes/components';
+import { priceDomain } from '@/lib/prices/markets';
 import { fTokenAmount, fCurrencyTwoDecimals } from '@/utils/format-number';
 import {
   INK,
@@ -53,26 +54,42 @@ export function formatCoin(amount: number, symbol: string) {
 /** Figures in the UI face with even-width digits, so columns of money line up. */
 export const FIGURES = { fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' } as const;
 
-/** What each asset is called in the app, for people who don't know crypto. */
-export const ASSET_NAMES: Record<string, { name: string; ticker: string }> = {
-  USDC: { name: 'Digital dollars', ticker: 'USDC' },
-  XLM: { name: 'Stellar', ticker: 'XLM' },
-  BTC: { name: 'Bitcoin', ticker: 'BTC' },
-  ETH: { name: 'Ethereum', ticker: 'ETH' },
-  SOL: { name: 'Solana', ticker: 'SOL' },
-};
-
-export const assetName = (symbol: string) => ASSET_NAMES[symbol]?.name ?? symbol;
-
-/** The same name inside a sentence: "Received digital dollars", "Received Bitcoin". */
-export const assetNoun = (symbol: string) =>
-  symbol === 'USDC' ? 'digital dollars' : assetName(symbol);
+/** What each asset is called in the app (lib/portfolio/asset-names.ts, one list). */
+export { assetName, assetNoun, ASSET_NAMES } from '@/lib/portfolio/asset-names';
 
 /**
  * The app's language for dates and times, the one its money is formatted in:
  * never the browser's, or an English page shows Slovenian dates.
  */
 export const appLocale = () => formatNumberLocale().code ?? 'en-US';
+
+/**
+ * A coin's price: cents from a dollar up, four decimals under one ($0.2987).
+ * Pass `digits` to print two prices alike ($0.9997 to $1.0002).
+ */
+export function formatPrice(value: number, digits = Math.abs(value) >= 1 ? 2 : 4) {
+  return new Intl.NumberFormat(appLocale(), {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
+/** Big money in short: $1.73T, $38.2B. */
+export const formatCompactUsd = (value: number) =>
+  new Intl.NumberFormat(appLocale(), {
+    style: 'currency',
+    currency: 'USD',
+    notation: 'compact',
+    maximumFractionDigits: 2,
+  }).format(value);
+
+/** A big count in short: 19.95M. */
+export const formatCompact = (value: number) =>
+  new Intl.NumberFormat(appLocale(), { notation: 'compact', maximumFractionDigits: 2 }).format(
+    value
+  );
 
 /** A 24-hour price change: green when up, grey when down, nothing when unknown. */
 export function Change({ pct, sx }: { pct: number | null | undefined; sx?: SxProps<Theme> }) {
@@ -164,9 +181,16 @@ export function SeeAll({ href, children = 'See all' }: { href: string; children?
   );
 }
 
-/** The rows of a list, with a hairline between each two. */
+/**
+ * The rows of a list, with a hairline between each two. The selector has to
+ * outrank a row's own styles: a clickable row is MUI's ButtonBase, which
+ * resets its border to 0, and a plain `* + *` lost to that, so linked rows
+ * had no lines between them.
+ */
+export const ROW_LINES = { '& > :not(:first-child)': { borderTop: HAIRLINE } } as const;
+
 export function RowList({ children, sx }: { children: ReactNode; sx?: SxProps<Theme> }) {
-  return <Box sx={[{ '& > * + *': { borderTop: HAIRLINE } }, ...sxList(sx)]}>{children}</Box>;
+  return <Box sx={[ROW_LINES, ...sxList(sx)]}>{children}</Box>;
 }
 
 type ListRowProps = {
@@ -446,13 +470,16 @@ export function ActionButton({
 
 /** A page's action buttons in a row; on phones they share the width. */
 export function ActionRow({ children, count }: { children: ReactNode; count: number }) {
+  const columns = count === 6 ? 3 : 2;
   return (
     <Box
       sx={{
         display: { xs: 'grid', sm: 'flex' },
-        gridTemplateColumns: `repeat(${count === 4 ? 2 : Math.min(count, 3)}, minmax(0, 1fr))`,
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
         flexWrap: 'wrap',
         gap: 1,
+        // An odd count: the main button takes the first row on its own.
+        ...(count % 2 === 1 && { '& > :first-of-type': { gridColumn: '1 / -1' } }),
       }}
     >
       {children}
@@ -505,7 +532,10 @@ export function StatStrip({ items, loading = false }: { items: Stat[]; loading?:
             {loading ? <Skeleton variant="text" width={96} /> : item.value}
           </Typography>
           {item.note && !loading && (
-            <Typography component="dd" sx={{ ...FIGURES, m: 0, mt: 0.25, fontSize: 13, color: MUTED }}>
+            <Typography
+              component="dd"
+              sx={{ ...FIGURES, m: 0, mt: 0.25, fontSize: 13, color: MUTED }}
+            >
               {item.note}
             </Typography>
           )}
@@ -537,7 +567,10 @@ export function SummaryBlock({
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: actions ? 'minmax(0, 1fr) auto' : '1fr' },
+          gridTemplateColumns: {
+            xs: 'minmax(0, 1fr)',
+            lg: actions ? 'minmax(0, 1fr) auto' : '1fr',
+          },
           alignItems: 'end',
           gap: 3,
           px: BOX_PX,
@@ -554,6 +587,78 @@ export function SummaryBlock({
       )}
     </Box>
   );
+}
+
+/**
+ * A small price line with no axes: a coin's last 24 hours in its own colour,
+ * over a dashed line at the price the day began with, so up or down reads at a
+ * glance. A coin that barely moved draws flat (`priceDomain`).
+ */
+export function Sparkline({
+  points,
+  color,
+  label,
+  minSpan,
+  height = 32,
+}: {
+  points: number[];
+  color: string;
+  /** What the line says, for screen readers. */
+  label: string;
+  /** The least range drawn, as a share of the price (`minSpanFor`). */
+  minSpan?: number;
+  height?: number;
+}) {
+  if (points.length < 2) return <Box aria-hidden="true" sx={{ height }} />;
+
+  const { min, max } = priceDomain(points, minSpan);
+  const inset = 3;
+  const y = (v: number) => inset + ((max - v) / (max - min)) * (height - inset * 2);
+  const path = points
+    .map(
+      (v, i) => `${i ? 'L' : 'M'}${((i / (points.length - 1)) * 100).toFixed(2)} ${y(v).toFixed(2)}`
+    )
+    .join(' ');
+
+  return (
+    <Box role="img" aria-label={label} sx={{ position: 'relative', height }}>
+      <Box
+        aria-hidden="true"
+        sx={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: Math.round(y(points[0])),
+          borderTop: `1px dashed ${HAIRLINE_STRONG}`,
+        }}
+      />
+      <svg
+        aria-hidden="true"
+        viewBox={`0 0 100 ${height}`}
+        preserveAspectRatio="none"
+        width="100%"
+        height={height}
+        style={{ position: 'relative', display: 'block', overflow: 'visible' }}
+      >
+        <path
+          d={path}
+          fill="none"
+          stroke={color}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+    </Box>
+  );
+}
+
+/** Words for a price line: "up 2.10% in the last 24 hours". */
+export function moveLabel(points: number[], span = 'in the last 24 hours') {
+  if (points.length < 2 || !points[0]) return `No price ${span}`;
+  const pct = ((points[points.length - 1] - points[0]) / points[0]) * 100;
+  return `${pct >= 0 ? 'Up' : 'Down'} ${Math.abs(pct).toFixed(2)}% ${span}`;
 }
 
 /** Rows that stand in for a list while it loads. */

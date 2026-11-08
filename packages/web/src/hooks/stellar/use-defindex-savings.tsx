@@ -42,6 +42,25 @@ import {
 
 // ----------------------------------------------------------------------
 
+/**
+ * What a deposit or withdrawal is doing, for the review page and its journey
+ * (components/_common/flow). With a listener the hook raises no toasts of its
+ * own: the page shows the outcome where it happened.
+ */
+export type SavingsProgress =
+  | {
+      type: 'step';
+      id: 'check' | 'prepare' | 'sign-deposit' | 'sign-withdraw' | 'sign-fee' | 'submit';
+      /** A signature prompt is open. */
+      waiting?: boolean;
+    }
+  | { type: 'submitted'; hash: string; feeHash: string | null; feeSubmitted: boolean }
+  /** The 2FA code was not given: nothing happened. */
+  | { type: 'cancelled' }
+  | { type: 'error'; message: string };
+
+export type SavingsListener = (event: SavingsProgress) => void;
+
 interface UseDefindexSavingsReturn {
   error: string | null;
   setError: Dispatch<SetStateAction<string | null>>;
@@ -55,8 +74,8 @@ interface UseDefindexSavingsReturn {
   needsTrustline: boolean;
   setNeedsTrustline: Dispatch<SetStateAction<boolean>>;
   txStep: string | null;
-  deposit: (amount: string) => Promise<string>;
-  withdraw: (amount: string) => Promise<string>;
+  deposit: (amount: string, onProgress?: SavingsListener) => Promise<string>;
+  withdraw: (amount: string, onProgress?: SavingsListener) => Promise<string>;
   refreshVaultInfo: () => Promise<void>;
   refreshUserPosition: () => Promise<void>;
 }
@@ -178,7 +197,7 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
   // submitting the deposit — so a rejection costs nothing, and a successful
   // deposit always ends up paired with its fee (cron sweeper as backstop).
   const deposit = useCallback(
-    async (amount: string): Promise<string> => {
+    async (amount: string, onProgress?: SavingsListener): Promise<string> => {
       if (!wallet.address) {
         enqueueSnackbar(t('Please connect your wallet first'), { variant: 'error' });
         return '';
@@ -234,7 +253,8 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
             ? await signStellarTxForMgi(xdr, config.NETWORK_PASSPHRASE, walletAddress)
             : await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signedXDR = normalizeSignedXDR(signResult);
-          if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
+          if (!signedXDR)
+            throw new Error('Signing did not complete: no signed transaction came back');
           return signedXDR;
         };
 
@@ -247,6 +267,7 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         const usdcAsset = new Asset('USDC', usdcIssuer);
         const usdcAssetId = usdcAsset.toString(); // "USDC:G..."
         setTxStep('checking');
+        onProgress?.({ type: 'step', id: 'check' });
         try {
           const account = await horizonServer.loadAccount(walletAddress);
           const usdcBalance = account.balances.find(
@@ -267,7 +288,7 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
               const wrongIssuer = (anyUsdc as Horizon.HorizonApi.BalanceLine<'credit_alphanum4'>)
                 .asset_issuer;
               throw new Error(
-                `You have USDC from a different issuer (${wrongIssuer.slice(0, 8)}…) — the app requires ${usdcAssetId}. Please fund your wallet with the correct USDC on ${config.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'mainnet'}.`
+                `You have USDC from a different issuer (${wrongIssuer.slice(0, 8)}…), and the app needs ${usdcAssetId}. Please fund your wallet with the correct USDC on ${config.NETWORK_PASSPHRASE.includes('Test') ? 'testnet' : 'mainnet'}.`
               );
             }
             throw new Error(
@@ -292,15 +313,20 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           // Doc 90 W4: proceeding costs the user TWO signatures before the
           // failure — proceed, but SAY the pre-check could not run.
           logger.warn('Could not pre-check USDC balance:', balanceErr.message);
-          enqueueSnackbar(
-            t(
-              'We could not pre-check your balance — the transaction may still fail after signing.'
-            ),
-            { variant: 'warning' }
-          );
+          if (!onProgress)
+            enqueueSnackbar(
+              t(
+                'We could not check your balance first, so the transaction may still fail after signing.'
+              ),
+              { variant: 'warning' }
+            );
         }
 
-        if (!(await confirmAction())) return '';
+        if (!(await confirmAction())) {
+          onProgress?.({ type: 'cancelled' });
+          return '';
+        }
+        onProgress?.({ type: 'step', id: 'prepare' });
 
         // 1. Build the DeFindex deposit XDR for the NET amount. It carries
         // the account's next sequence number — the fee tx chains behind it.
@@ -342,8 +368,10 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         // either prompt (or a wallet jam, or closing the tab) aborts the whole
         // action with nothing charged and nothing moved — retry costs nothing.
         setTxStep('deposit_sign');
+        onProgress?.({ type: 'step', id: 'sign-deposit', waiting: true });
         const signedDepositXdr = await signOnly(depositData.xdr);
         setTxStep('fee_sign');
+        onProgress?.({ type: 'step', id: 'sign-fee', waiting: true });
         const signedFeeXdr = await signOnly(feeData.xdr);
 
         // 4. Hand the signed pair to the server: it records the deposit BEFORE
@@ -351,6 +379,7 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         // fee, submits the deposit, then collects the fee — and the cron
         // sweeper finishes the pair even if this tab dies right here.
         setTxStep('deposit_broadcast');
+        onProgress?.({ type: 'step', id: 'submit' });
         const pair = await submitFeePair({
           signedServiceXdr: signedDepositXdr,
           signedFeeXdr,
@@ -363,13 +392,20 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           config,
         });
 
-        enqueueSuccessWithStellarExpert(
-          enqueueSnackbar,
-          t,
-          t('Deposit successful!'),
-          pair.serviceHash
-        );
-        if (!pair.feeSubmitted) {
+        onProgress?.({
+          type: 'submitted',
+          hash: pair.serviceHash,
+          feeHash: pair.feeHash,
+          feeSubmitted: pair.feeSubmitted,
+        });
+        if (!onProgress)
+          enqueueSuccessWithStellarExpert(
+            enqueueSnackbar,
+            t,
+            t('Deposit successful!'),
+            pair.serviceHash
+          );
+        if (!pair.feeSubmitted && !onProgress) {
           // Doc 90 W4: the 0.5% fee is escrowed and swept separately — a
           // second small USDC debit minutes later must never be a surprise.
           enqueueSnackbar(
@@ -430,7 +466,13 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
 
         return pair.serviceHash;
       } catch (err: any) {
-        if (err instanceof WalletSessionExpiredError) return '';
+        if (err instanceof WalletSessionExpiredError) {
+          onProgress?.({
+            type: 'error',
+            message: t('Your wallet session expired. Reconnect your wallet and try again.'),
+          });
+          return '';
+        }
         logger.error('Error depositing:', err);
         const rawMessage = String(err?.message ?? '');
         const errorMessage = friendlyAppError(err);
@@ -438,7 +480,8 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           setNeedsTrustline(true);
         }
         setError(errorMessage);
-        enqueueSnackbar(errorMessage, { variant: 'error' });
+        if (onProgress) onProgress({ type: 'error', message: errorMessage });
+        else enqueueSnackbar(errorMessage, { variant: 'error' });
         return '';
       } finally {
         setLoading(false);
@@ -470,7 +513,7 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
   // untouched, and a successful withdrawal always gets its commission
   // collected (server escrow + cron sweeper).
   const withdraw = useCallback(
-    async (amount: string): Promise<string> => {
+    async (amount: string, onProgress?: SavingsListener): Promise<string> => {
       if (!wallet.address) {
         enqueueSnackbar(t('Please connect your wallet first'), { variant: 'error' });
         return '';
@@ -524,11 +567,16 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
             ? await signStellarTxForMgi(xdr, config.NETWORK_PASSPHRASE, walletAddress)
             : await signTransaction(xdr, config.NETWORK_PASSPHRASE);
           const signedXDR = normalizeSignedXDR(signResult);
-          if (!signedXDR) throw new Error('Transaction signing failed — no signed XDR returned');
+          if (!signedXDR)
+            throw new Error('Signing did not complete: no signed transaction came back');
           return signedXDR;
         };
 
-        if (!(await confirmAction())) return '';
+        if (!(await confirmAction())) {
+          onProgress?.({ type: 'cancelled' });
+          return '';
+        }
+        onProgress?.({ type: 'step', id: 'prepare' });
 
         // 1. Build the DeFindex withdraw XDR. The commission (when owed)
         // chains one sequence number behind it, so the commission can only
@@ -571,11 +619,14 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           }
 
           setTxStep('withdraw_sign');
+          onProgress?.({ type: 'step', id: 'sign-withdraw', waiting: true });
           const signedWithdrawXdr = await signOnly(withdrawData.xdr);
           setTxStep('commission_sign');
+          onProgress?.({ type: 'step', id: 'sign-fee', waiting: true });
           const signedCommissionXdr = await signOnly(commissionData.xdr);
 
           setTxStep('withdraw_broadcast');
+          onProgress?.({ type: 'step', id: 'submit' });
           const pair = await submitFeePair({
             signedServiceXdr: signedWithdrawXdr,
             signedFeeXdr: signedCommissionXdr,
@@ -588,13 +639,21 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
             config,
           });
           withdrawTxHash = pair.serviceHash;
+          onProgress?.({
+            type: 'submitted',
+            hash: pair.serviceHash,
+            feeHash: pair.feeHash,
+            feeSubmitted: pair.feeSubmitted,
+          });
         } else {
           // No commission owed — single transaction, but STILL through the
           // server funnel so it gets a record before broadcast (#27). This
           // was the last flow the client submitted straight to Horizon.
           setTxStep('withdraw_sign');
+          onProgress?.({ type: 'step', id: 'sign-withdraw', waiting: true });
           const signedWithdrawXdr = await signOnly(withdrawData.xdr);
           setTxStep('withdraw_broadcast');
+          onProgress?.({ type: 'step', id: 'submit' });
           const single = await submitFeePair({
             signedServiceXdr: signedWithdrawXdr,
             signedFeeXdr: null,
@@ -603,17 +662,24 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
             config,
           });
           withdrawTxHash = single.serviceHash;
+          onProgress?.({
+            type: 'submitted',
+            hash: single.serviceHash,
+            feeHash: null,
+            feeSubmitted: true,
+          });
         }
 
         // No client-side logging anymore: the server recorded this withdrawal
         // BEFORE broadcasting it and settles its status truthfully (#27).
 
-        enqueueSuccessWithStellarExpert(
-          enqueueSnackbar,
-          t,
-          t('Withdrawal successful!'),
-          withdrawTxHash
-        );
+        if (!onProgress)
+          enqueueSuccessWithStellarExpert(
+            enqueueSnackbar,
+            t,
+            t('Withdrawal successful!'),
+            withdrawTxHash
+          );
 
         // Optimistically update the shared savings cache.
         if (positionBefore) {
@@ -654,7 +720,13 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
 
         return withdrawTxHash;
       } catch (err: any) {
-        if (err instanceof WalletSessionExpiredError) return '';
+        if (err instanceof WalletSessionExpiredError) {
+          onProgress?.({
+            type: 'error',
+            message: t('Your wallet session expired. Reconnect your wallet and try again.'),
+          });
+          return '';
+        }
         logger.error('Error withdrawing:', err);
         const rawMessage = String(err?.message ?? '');
         const errorMessage = friendlyAppError(err);
@@ -662,7 +734,8 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
           setNeedsTrustline(true);
         }
         setError(errorMessage);
-        enqueueSnackbar(errorMessage, { variant: 'error' });
+        if (onProgress) onProgress({ type: 'error', message: errorMessage });
+        else enqueueSnackbar(errorMessage, { variant: 'error' });
         return '';
       } finally {
         setLoading(false);

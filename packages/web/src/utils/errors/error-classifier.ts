@@ -154,16 +154,16 @@ export function requiresUserAction(error: AppError | null): boolean {
 // extends the transactions.utils maps with the codes they were missing.
 const HORIZON_CODE_MESSAGES: Record<string, string> = {
   tx_insufficient_balance:
-    'Not enough XLM to cover the network fee — add a little XLM and try again.',
-  tx_insufficient_fee: 'The network fee was too low — try again.',
-  tx_bad_seq: 'The network was mid-update — try again, it usually works immediately.',
-  tx_too_late: 'The transaction took too long and expired — try again.',
-  tx_too_early: 'The transaction was submitted too early — try again.',
-  tx_bad_auth: 'The transaction signature was not accepted — try again.',
+    'Not enough XLM to cover the network fee. Add a little XLM and try again.',
+  tx_insufficient_fee: 'The network fee was too low. Try again.',
+  tx_bad_seq: 'The network was mid-update. Try again: it usually works straight away.',
+  tx_too_late: 'The transaction took too long and expired. Try again.',
+  tx_too_early: 'The transaction was submitted too early. Try again.',
+  tx_bad_auth: 'The transaction signature was not accepted. Try again.',
   tx_no_account: 'The sending account does not exist on the network.',
-  tx_failed: 'The transaction was rejected by the network — nothing was sent.',
+  tx_failed: 'The network rejected the transaction, so nothing was sent.',
   op_underfunded: 'Not enough balance to complete this transaction.',
-  op_no_trust: 'A trustline is missing — enable the asset first.',
+  op_no_trust: 'A trustline is missing. Enable the asset first.',
   op_no_destination: 'The destination account does not exist on the Stellar network.',
   op_not_authorized: 'This asset is not authorized for the destination account.',
   op_line_full: 'The receiving account cannot hold any more of this asset.',
@@ -198,29 +198,29 @@ export function friendlyAppError(raw: unknown): string {
   // 2. Passkey / Turnkey (context-rich variants live in friendlyTurnkeyError;
   //    these are the safe generics for funnels without that context).
   if (/CREDENTIAL_NOT_FOUND|credential ID could not be found/i.test(msg)) {
-    return 'Your device signed with a passkey from a different account — reload the page and try again.';
+    return 'Your device signed with a passkey from a different account. Reload the page and try again.';
   }
   if (
     /NotAllowedError|operation (was )?not allowed|passkey confirmation did not complete/i.test(msg)
   ) {
-    return 'The passkey prompt was dismissed or timed out — try again and confirm with your fingerprint, face or PIN.';
+    return 'The passkey prompt was dismissed or timed out. Try again and confirm with your fingerprint, face or PIN.';
   }
   if (/turnkey|organizationId=/i.test(msg)) {
-    return 'The signing service rejected the request — try again in a moment.';
+    return 'The signing service rejected the request. Try again in a moment.';
   }
 
   // 3. EVM/viem races and rejections.
   if (/nonce too low|replacement transaction underpriced|already known/i.test(msg)) {
-    return 'The network was mid-update — try again, it usually works immediately.';
+    return 'The network was mid-update. Try again: it usually works straight away.';
   }
   if (/insufficient funds for gas|gas required exceeds|max fee per gas/i.test(msg)) {
-    return 'Not enough left to pay the network fee — try a slightly smaller amount.';
+    return 'Not enough left to pay the network fee. Try a slightly smaller amount.';
   }
   if (/user rejected|user denied|rejected the request/i.test(msg)) {
-    return 'The request was declined in your wallet — nothing was sent.';
+    return 'The request was declined in your wallet, so nothing was sent.';
   }
   if (/\breverted\b/i.test(msg)) {
-    return 'The transaction was rejected on-chain — nothing was delivered. You can try again.';
+    return 'The transaction was rejected on-chain, so nothing was delivered. You can try again.';
   }
 
   // 4. Throttling and connectivity.
@@ -230,7 +230,7 @@ export function friendlyAppError(raw: unknown): string {
   if (
     /timeout|timed out|aborted|failed to fetch|networkerror|econnrefused|fetch failed/i.test(msg)
   ) {
-    return 'The network did not answer in time — nothing is lost. Try again in a moment.';
+    return 'The network did not answer in time. Nothing is lost: try again in a moment.';
   }
 
   // 5. Already-human text passes through; dumps collapse to the generic.

@@ -41,10 +41,12 @@ export async function executePivotSwap(params: {
   /** DEX steps to exclude — the failure can live in the swap, not the bridge */
   denyExchanges?: string[];
   onStep?: (step: 'quote' | 'approve' | 'swap') => void;
+  /** Fires once a signed transaction is on the network, before its receipt. */
+  onSent?: (step: 'approve' | 'swap', hash: `0x${string}`) => void;
 }): Promise<PivotSwapResult> {
   const info = await getTurnkeyWalletInfo();
   if (!info?.subOrgId)
-    throw new Error('Could not load your wallet just now — check your connection and try again.');
+    throw new Error('Could not load your wallet just now. Check your connection and try again.');
 
   const { erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } = await import(
     'viem'
@@ -86,6 +88,7 @@ export async function executePivotSwap(params: {
   if (!txr?.to || !txr?.data) throw new Error('LI.FI returned no executable transaction');
 
   const signAndSend = async (
+    step: 'approve' | 'swap',
     to: `0x${string}`,
     dataHex: `0x${string}`,
     value: bigint,
@@ -130,6 +133,7 @@ export async function executePivotSwap(params: {
         throw sendErr;
       }
     }
+    params.onSent?.(step, hash);
     const receipt = await client.waitForTransactionReceipt({ hash });
     if (receipt.status !== 'success') {
       // Classified failure (2026-08-26): a revert is an ON-CHAIN outcome, not
@@ -162,6 +166,7 @@ export async function executePivotSwap(params: {
       // Approve MAX (not the exact amount) so subsequent pivots to the same
       // router skip this signature entirely.
       await signAndSend(
+        'approve',
         usdc,
         encodeFunctionData({
           abi: erc20Abi,
@@ -176,6 +181,7 @@ export async function executePivotSwap(params: {
   // --- 3. the swap ---------------------------------------------------------------
   params.onStep?.('swap');
   const txHash = await signAndSend(
+    'swap',
     txr.to as `0x${string}`,
     txr.data as `0x${string}`,
     BigInt(txr.value ?? '0'),

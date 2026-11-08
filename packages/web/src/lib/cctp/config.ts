@@ -84,3 +84,16 @@ export const CCTP_ETA_SECONDS: Record<'fromStellar' | 'fromEvm', number> = {
   fromStellar: 30, // spike: 20s total (attestation ~7s)
   fromEvm: 19 * 60, // Circle: ~13–19 min mainnet hard finality (testnet slower)
 };
+
+// The EVM network every cross-ecosystem route passes through (the user's own
+// address there holds the USDC between Circle and LI.FI). Not a user chain, so
+// it is not in lib/chains/registry; its facts live here, once. Mainnet only:
+// these routes have no testnet liquidity.
+export const PIVOT_CHAIN = {
+  name: 'Base',
+  explorerTx: (hash: string) => `https://basescan.org/tx/${hash}`,
+  explorerAddress: (address: string) => `https://basescan.org/address/${address}`,
+} as const;
+
+/** LI.FI's own explorer for a bridged transaction. */
+export const lifiScanTx = (hash: string) => `https://scan.li.fi/tx/${hash}`;

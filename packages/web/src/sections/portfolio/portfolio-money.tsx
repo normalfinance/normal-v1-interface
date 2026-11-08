@@ -1,25 +1,28 @@
 'use client';
 
+import type { AssetMarket } from '@/lib/prices/markets';
+import type { Holding } from '@/components/_common/holdings-table';
+
 import { useState } from 'react';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { MUTED } from '@/theme/brand-colors';
+import { useMarkets } from '@/hooks/use-markets';
+import { minSpanFor } from '@/lib/prices/markets';
+import { assetColor } from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
 
 import { AssetAvatar } from '@/components/_common/asset-avatar';
+import { HoldingsTable } from '@/components/_common/holdings-table';
 import { HAIRLINE, SegmentedControl } from '@/components/_common/brand';
 import {
   BOX_PX,
-  Change,
   SeeAll,
-  ListRow,
-  RowList,
   AppBlock,
   assetName,
-  formatUsd,
   formatCoin,
   RowsSkeleton,
 } from '@/components/_common/app-ui';
@@ -42,42 +45,38 @@ export function moneySplit(holdings: HoldingData[]) {
   ];
 }
 
-function Rows({
-  holdings,
-  changes,
-}: {
-  holdings: HoldingData[];
-  changes: Record<string, number | null>;
-}) {
-  return (
-    <RowList>
-      {holdings.map((holding) => {
-        const { token } = holding;
-        const savings = token.symbol === 'Savings';
-        // On an account with two wallets each row names its wallet:
-        // "Digital dollars · Lobstr".
-        const owner = token.name.includes(' · ') ? token.name.split(' · ').pop() : null;
-        const amount = savings
-          ? 'Earning every day'
-          : formatCoin(BigNumber(token.balance).toNumber(), token.symbol);
-        return (
-          <ListRow
-            key={token.contract}
-            href={savings ? paths.savings : paths.assets.details(token.symbol)}
-            icon={<AssetAvatar token={token} size={40} />}
-            title={savings ? 'Savings' : assetName(token.symbol)}
-            subtitle={[amount, owner].filter(Boolean).join(' · ')}
-            value={formatUsd(holding.value)}
-            detail={
-              savings || token.symbol === 'USDC' ? undefined : (
-                <Change pct={changes[token.symbol]} />
-              )
-            }
-          />
-        );
-      })}
-    </RowList>
-  );
+/** One of Home's rows: the asset, its last 24 hours, what it is worth. */
+function toHolding(
+  holding: HoldingData,
+  changes: Record<string, number | null>,
+  markets: Record<string, AssetMarket | undefined>
+): Holding {
+  const { token } = holding;
+  const savings = token.symbol === 'Savings';
+  const market = markets[token.symbol];
+  // On an account with two wallets each row names its wallet:
+  // "0.13 ETH · Lobstr".
+  const owner = token.name.includes(' · ') ? token.name.split(' · ').pop() : null;
+  const amount = savings
+    ? 'Earning every day'
+    : formatCoin(BigNumber(token.balance).toNumber(), token.symbol);
+  return {
+    key: token.contract,
+    href: savings ? paths.savings : paths.assets.details(token.symbol),
+    icon: <AssetAvatar token={token} size={40} />,
+    name: savings ? 'Savings' : assetName(token.symbol),
+    ticker: [token.symbol, owner].filter(Boolean).join(' · '),
+    amount: [amount, owner].filter(Boolean).join(' · '),
+    value: holding.value,
+    price: savings ? null : Number(token.price) || null,
+    change24h: changes[token.symbol] ?? market?.change24h ?? null,
+    stable: token.symbol === 'USDC',
+    sparkline: market?.sparkline24h ?? [],
+    minSpan: minSpanFor(token.symbol),
+    color: assetColor(token.symbol),
+    marketCap: market?.marketCap ?? null,
+    rank: market?.rank ?? null,
+  };
 }
 
 type MoneyBlockProps = {
@@ -91,7 +90,10 @@ type MoneyBlockProps = {
   onRetry: () => void;
 };
 
-/** Home's "Your money": every asset with its value, Savings among them. */
+/**
+ * Home's "Your money": every asset with its last 24 hours and its value,
+ * Savings among them.
+ */
 export function MoneyBlock({
   holdings,
   sections,
@@ -102,6 +104,7 @@ export function MoneyBlock({
 }: MoneyBlockProps) {
   const [section, setSection] = useState(sections?.[0]?.label ?? '');
   const shown = sections?.find((s) => s.label === section)?.data ?? holdings;
+  const { markets } = useMarkets();
 
   return (
     <AppBlock
@@ -136,7 +139,10 @@ export function MoneyBlock({
             </Typography>
           )}
           {shown.length ? (
-            <Rows holdings={shown} changes={changes} />
+            <HoldingsTable
+              variant="compact"
+              rows={shown.map((holding) => toHolding(holding, changes, markets))}
+            />
           ) : (
             <Typography sx={{ py: 5, fontSize: 14, textAlign: 'center', color: MUTED }}>
               Nothing here yet

@@ -5,6 +5,7 @@ import type { ChainId } from '@/lib/chains/registry';
 import type { FreshRead } from '@/hooks/use-wallet-balances';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 
+import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
@@ -20,8 +21,8 @@ import { spendableXlmForOutflow } from '@/utils/stellar-reserve';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
-import React, { useRef, useMemo, useState, useCallback } from 'react';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
+import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { logger, getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import {
@@ -43,6 +44,7 @@ import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
 import PickToken from '@/components/_common/pick-token';
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import { FlowView, FlowPortal } from '@/components/_common/flow';
 import NormalWalletSetupDialog from '@/components/_common/normal-wallet-setup-dialog';
 
 import { useEthGasReserve } from './engines/gas-reserve';
@@ -83,6 +85,10 @@ const CHAIN_OF_SYMBOL: Partial<Record<SwapSymbol, ChainId>> = {
 
 export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
   const { t } = useTranslate();
+  // 'flow': the review page (and then the live journey) fills the page in
+  // place of this card. The card stays mounted underneath: it owns the
+  // engines, and with them the swap in flight.
+  const [view, setView] = useState<'form' | 'flow'>('form');
   const { wallet } = usePersistStore();
   const config = useStellarConfig();
   const btc = useBtcPortfolio(true);
@@ -667,6 +673,49 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
       }
     : engine.button;
 
+  // --- the review page ---------------------------------------------------
+  // Pressing the engine's ready button opens the review; only its confirm
+  // button runs the swap. Back (the page's link, Edit, or the browser's Back
+  // button) returns to this card with everything still filled in.
+  const flow = engine.flow ?? null;
+  const flowRef = useRef(flow);
+  flowRef.current = flow;
+  const openFlow = useCallback(() => {
+    setView('flow');
+    try {
+      // Our own history entry, so the browser's Back returns here. Next.js
+      // copies its router state into it (app-router pushState patch).
+      window.history.pushState({ nfFlow: true }, '');
+    } catch {
+      /* history unavailable: the page's own Back still works */
+    }
+  }, []);
+  const exitFlow = useCallback(() => {
+    flowRef.current?.reset();
+    setView('form');
+    if ((window.history.state as { nfFlow?: boolean } | null)?.nfFlow) window.history.back();
+  }, []);
+  useEffect(() => {
+    if (view !== 'flow') return undefined;
+    const onPop = () => {
+      if (flowRef.current?.run.phase === 'running') {
+        // The page follows a swap that is running: stay, and put the entry back.
+        window.history.pushState({ nfFlow: true }, '');
+        return;
+      }
+      flowRef.current?.reset();
+      setView('form');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [view]);
+  // The quote behind an open review went away (it failed to refresh):
+  // back to the card, which says why.
+  useEffect(() => {
+    if (view === 'flow' && !flow) setView('form');
+  }, [view, flow]);
+  const ctaAction = button.review && flow ? openFlow : button.action;
+
   // --- selection (destination constrained to pairable assets) ---
   const selectFrom = (sym: SwapSymbol) => {
     if (sym === fromSymbol) return;
@@ -1223,8 +1272,8 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
           fullWidth
           variant="contained"
           size="large"
-          disabled={!button.action || button.loading}
-          onClick={() => button.action?.()}
+          disabled={!ctaAction || button.loading}
+          onClick={() => ctaAction?.()}
           startIcon={button.loading ? <CircularProgress size={16} color="inherit" /> : undefined}
           sx={{
             mt: button.helper ? '10px' : '14px',
@@ -1258,6 +1307,50 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
         />
 
         {engine.modals}
+
+        {view === 'flow' && flow && (
+          <FlowPortal>
+            <FlowView
+              plan={flow.plan}
+              run={flow.run}
+              summary={flow.summary}
+              titles={{
+                review: t('Review your swap'),
+                running: t('Swapping'),
+                done: t('Swap complete'),
+                failed: t('Swap stopped'),
+                stopped: t('Swap ended'),
+                'handed-off': t('On its way back'),
+              }}
+              lede={flow.lede}
+              confirm={{
+                label: t('Confirm swap'),
+                onClick: flow.confirm,
+                blocked: flow.blocked,
+                busy: flow.busy,
+              }}
+              back={{ label: t('Back to swap'), onClick: exitFlow }}
+              doneActions={[
+                { label: t('Make another swap'), primary: true, onClick: exitFlow },
+                { label: t('See it in Activity'), href: paths.activity },
+              ]}
+              doneNote={flow.doneNote}
+              failActions={flow.failActions?.map((a) =>
+                a.leave
+                  ? {
+                      ...a,
+                      onClick: () => {
+                        a.onClick?.();
+                        exitFlow();
+                      },
+                    }
+                  : a
+              )}
+              notice={flow.notice}
+              leave={flow.leave}
+            />
+          </FlowPortal>
+        )}
 
         {/* #32 chunk 3: guided Normal-wallet setup for external-wallet users */}
         <NormalWalletSetupDialog

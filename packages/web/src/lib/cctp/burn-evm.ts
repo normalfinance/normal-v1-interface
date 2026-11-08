@@ -55,6 +55,8 @@ export interface EvmBurnParams {
   /** Final recipient on Stellar (G…). Trustline must already exist. */
   stellarRecipient: string;
   onStep?: (step: 'approve' | 'burn') => void;
+  /** Fires once a signed transaction is on the network, before its receipt. */
+  onSent?: (step: 'approve' | 'burn', hash: `0x${string}`) => void;
 }
 
 /** Runs approve (if needed) + depositForBurnWithHook. Returns the burn hash. */
@@ -130,6 +132,7 @@ export async function burnUsdcOnEvm(params: EvmBurnParams): Promise<{
         throw sendErr;
       }
     }
+    params.onSent?.(label === 'approve' ? 'approve' : 'burn', hash);
     const receipt = await client.waitForTransactionReceipt({ hash });
     if (receipt.status !== 'success') throw new Error(`${label} reverted (${hash})`);
     return hash;

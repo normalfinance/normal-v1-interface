@@ -1,14 +1,18 @@
 'use client';
 
 import type { BoxProps } from '@mui/material';
+import type { FlowPlan, FlowSummary } from '@/lib/flow/types';
+import type { SavingsProgress } from '@/hooks/stellar/use-defindex-savings';
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useRouter } from 'next/navigation';
+import { useFlowRun } from '@/hooks/use-flow-run';
 import { chainOfActivityEvent } from '@/lib/tx-events';
 import { usePersistStore } from '@normalfinance/state';
 import { useStellarTokens } from '@/hooks/use-stellar-tokens';
+import { awaitTxRecord } from '@/lib/stellar/await-tx-visible';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
@@ -16,6 +20,7 @@ import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
+import { depositPlan, withdrawPlan, shortAddress } from '@/lib/flow/plans';
 import { xlmFeeStatus, xlmAvailableForFees } from '@/utils/stellar-reserve';
 import {
   getYieldCommission,
@@ -29,10 +34,15 @@ import {
   getSavingsDepositTokenLabel,
 } from '@/utils/token-selectors';
 
-import { keyframes } from '@mui/system';
 import { Box, Stack, Button, Skeleton, Typography, CircularProgress } from '@mui/material';
 
-import { formatUsd } from '@/components/_common/app-ui';
+import { FlowView, FlowPortal } from '@/components/_common/flow';
+import { formatUsd, formatCoin } from '@/components/_common/app-ui';
+import {
+  ledgerNote,
+  stellarTxLink,
+  stellarAccountHref,
+} from '@/components/_common/flow/flow-links';
 
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
@@ -41,11 +51,6 @@ import { TrustlineModal } from './trustline-modal';
 import { SavingsSetupDialog } from './savings-setup-dialog';
 
 // ----------------------------------------------------------------------
-
-const txDotsAnim = keyframes`
-  0%   { width: 0; }
-  100% { width: 1.2em; }
-`;
 
 interface SavingsCardProps extends BoxProps {
   /** The page titles the card and shows the rate itself: no header of its own. */
@@ -68,7 +73,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
   // wallet, where a hybrid user's savings usually live and where every
   // action is passkey-only. EVERYTHING below — position, balances, setup
   // state, fee semaphore, deposit/withdraw signing — follows the TARGET.
-  const { companionStellar } = useWalletBalances(true);
+  const { companionStellar, refreshFresh } = useWalletBalances(true);
   const isExternalConnected = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
   const savingsHybrid = isExternalConnected && !!companionStellar;
   const [savingsWalletTab, setSavingsWalletTab] = useState<'normal' | 'connected'>('normal');
@@ -96,7 +101,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
     error,
     needsTrustline,
     setNeedsTrustline,
-    txStep,
     deposit,
     withdraw,
   } = useDefindexSavings(savingsTargetAddress);
@@ -143,17 +147,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
       setAmount(truncateToSevenDecimals(parseFloat(userPosition.currentValue)));
     }
   }, [mode, savingsDepositBalance, userPosition]);
-
-  const handleAction = useCallback(async () => {
-    if (!amount || parseFloat(amount) <= 0) return;
-    const parsedAmt = parseFloat(amount);
-
-    // Nothing happened, so don't make them type it again.
-    const hash = await (mode === 'deposit' ? deposit(amount) : withdraw(amount));
-    if (!hash) return;
-    if (mode === 'deposit') setSpentOnDeposits((prev) => prev + parsedAmt);
-    setAmount('');
-  }, [mode, amount, deposit, withdraw]);
 
   const availableBalance =
     mode === 'deposit' ? savingsDepositBalance : userPosition?.currentValue || '0';
@@ -280,50 +273,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
     return () => window.removeEventListener('nf:activity-updated', handler);
   }, []);
 
-  // #26 sign-both-first: both signatures are collected BEFORE anything is
-  // submitted, then the pair is submitted server-side in one phase.
-  const depositSteps = [
-    { id: 'checking', label: t('Checking balance'), sub: t('Verifying USDC on Stellar') },
-    { id: 'deposit_sign', label: t('Signing deposit'), sub: t('Approve in your wallet · 1 of 2') },
-    { id: 'fee_sign', label: t('Signing fee payment'), sub: t('Approve in your wallet · 2 of 2') },
-    {
-      id: 'deposit_broadcast',
-      label: t('Crediting savings vault'),
-      sub: `Blend USDC pool · ${vaultInfo?.apy || 0}% APY`,
-    },
-  ];
-  const hasWithdrawCommission =
-    parsedAmount > 0 ? yieldCommission > 0 : parseFloat(userPosition?.earnings || '0') > 0;
-  const withdrawSteps = hasWithdrawCommission
-    ? [
-        {
-          id: 'withdraw_sign',
-          label: t('Signing withdrawal'),
-          sub: t('Approve in your wallet · 1 of 2'),
-        },
-        {
-          id: 'commission_sign',
-          label: t('Signing yield commission'),
-          sub: t('Approve in your wallet · 2 of 2'),
-        },
-        {
-          id: 'withdraw_broadcast',
-          label: t('Processing withdrawal'),
-          sub: 'horizon.stellar.org',
-        },
-      ]
-    : [
-        { id: 'withdraw_sign', label: t('Signing withdrawal'), sub: t('Approve in your wallet') },
-        {
-          id: 'withdraw_broadcast',
-          label: t('Broadcasting to Stellar'),
-          sub: 'horizon.stellar.org',
-        },
-      ];
-  const txSteps = mode === 'deposit' ? depositSteps : withdrawSteps;
-  const activeStepIdx = txStep ? txSteps.findIndex((s) => s.id === txStep) : -1;
-  const stepsTiming = mode === 'deposit' ? '~30s' : hasWithdrawCommission ? '~20s' : '~10s';
-
   const handleAddTrustline = useCallback(async () => {
     if (!savingsUsdcIssuer) {
       enqueueSnackbar(t('USDC issuer not configured'), { variant: 'error' });
@@ -373,6 +322,272 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
     return () => clearInterval(id);
   }, [feeStatus]);
 
+  // ---- the review page and the journey (components/_common/flow) ----------
+  // The button opens a review of every step; only the confirm button there
+  // starts the deposit or withdrawal. The card stays mounted underneath and
+  // runs it, reporting each step to the page.
+  const [view, setView] = useState<'form' | 'flow'>('form');
+  const {
+    run: flowState,
+    plan: frozenPlan,
+    begin: beginRun,
+    start: startStep,
+    done: doneStep,
+    fail: failRun,
+    finish: finishRun,
+    reset: resetRun,
+  } = useFlowRun();
+  const [frozen, setFrozen] = useState<{
+    mode: 'deposit' | 'withdraw';
+    summary: FlowSummary;
+    lede: string;
+  } | null>(null);
+
+  const actingAddress = savingsTargetAddress ?? wallet.address;
+  const walletLabel = savingsTargetAddress
+    ? t('Your Normal wallet')
+    : isExternalConnected
+      ? t('Your {{wallet}} wallet', { wallet: connectedWalletLabel(wallet.walletType) })
+      : undefined;
+  const walletRef = {
+    address: actingAddress,
+    href: stellarAccountHref(actingAddress),
+    label: walletLabel,
+  };
+  const rate = vaultInfo ? `${Number(vaultInfo.apy).toFixed(2)}% ${t('a year')}` : null;
+  const commissionOwed = mode === 'withdraw' && yieldCommission > 0;
+  const withdrawNet = Math.max(parsedAmount - (commissionOwed ? yieldCommission : 0), 0);
+
+  const livePlan: FlowPlan | null =
+    parsedAmount <= 0
+      ? null
+      : mode === 'deposit'
+        ? depositPlan({
+            t,
+            amount: formatCoin(parsedAmount, 'USDC'),
+            fee: formatCoin(depositFee, 'USDC'),
+            net: formatCoin(netDepositAmount, 'USDC'),
+            wallet: walletRef,
+            rate,
+          })
+        : withdrawPlan({
+            t,
+            amount: formatCoin(parsedAmount, 'USDC'),
+            commission: commissionOwed ? formatCoin(yieldCommission, 'USDC') : null,
+            net: formatCoin(withdrawNet, 'USDC'),
+            wallet: walletRef,
+          });
+
+  const fromRow = {
+    key: 'from',
+    label: mode === 'deposit' ? t('From') : t('To'),
+    value: walletLabel ?? t('Your Stellar wallet'),
+    detail: shortAddress(actingAddress),
+  };
+  const networkRow = {
+    key: 'network',
+    label: t('Network fee'),
+    value: t('Usually 0.05 to 0.5 XLM'),
+    detail: t('Paid in XLM by your wallet'),
+  };
+  const liveSummary: FlowSummary | null =
+    parsedAmount <= 0
+      ? null
+      : mode === 'deposit'
+        ? {
+            rows: [
+              {
+                key: 'amount',
+                label: t('You deposit'),
+                value: formatCoin(parsedAmount, 'USDC'),
+                detail: formatUsd(parsedAmount),
+              },
+              {
+                key: 'fee',
+                label: t('Normal fee (0.5%)'),
+                value: formatCoin(depositFee, 'USDC'),
+              },
+              {
+                key: 'net',
+                label: t('Goes into savings'),
+                value: formatCoin(netDepositAmount, 'USDC'),
+              },
+              ...(rate
+                ? [
+                    {
+                      key: 'rate',
+                      label: t('Earns'),
+                      value: rate,
+                      detail: t('About {{usd}} a year at today’s rate', {
+                        usd: formatUsd((netDepositAmount * Number(vaultInfo?.apy ?? 0)) / 100),
+                      }),
+                    },
+                  ]
+                : []),
+              fromRow,
+              { key: 'into', label: t('Into'), value: t('Normal Savings') },
+              { key: 'signatures', label: t('Signatures'), value: t('Two') },
+              networkRow,
+              { key: 'time', label: t('Time'), value: t('About 20 seconds') },
+            ],
+            note: t('The rate moves with the market, and you can withdraw at any time.'),
+          }
+        : {
+            rows: [
+              {
+                key: 'amount',
+                label: t('You withdraw'),
+                value: formatCoin(parsedAmount, 'USDC'),
+                detail: formatUsd(parsedAmount),
+              },
+              {
+                key: 'fee',
+                label: t('Commission on earnings'),
+                value: commissionOwed ? formatCoin(yieldCommission, 'USDC') : t('None'),
+                detail: commissionOwed
+                  ? t('{{rate}}% of the earnings in this withdrawal', {
+                      rate: yieldCommissionRatePct,
+                    })
+                  : t('No earnings in this withdrawal'),
+              },
+              {
+                key: 'net',
+                label: t('You receive'),
+                value: formatCoin(withdrawNet, 'USDC'),
+              },
+              { key: 'source', label: t('From'), value: t('Normal Savings') },
+              fromRow,
+              {
+                key: 'signatures',
+                label: t('Signatures'),
+                value: commissionOwed ? t('Two') : t('One'),
+              },
+              networkRow,
+              { key: 'time', label: t('Time'), value: t('About 15 seconds') },
+            ],
+          };
+
+  const liveLede =
+    mode === 'deposit'
+      ? rate
+        ? t('{{amount}} into Normal Savings, earning {{rate}}.', {
+            amount: formatCoin(parsedAmount, 'USDC'),
+            rate,
+          })
+        : t('{{amount}} into Normal Savings.', { amount: formatCoin(parsedAmount, 'USDC') })
+      : t('{{amount}} from Normal Savings to your wallet.', {
+          amount: formatCoin(parsedAmount, 'USDC'),
+        });
+
+  const flowMode = frozen?.mode ?? mode;
+  const shownPlan = flowState.phase === 'review' ? livePlan : (frozenPlan ?? livePlan);
+  const shownSummary =
+    flowState.phase === 'review' ? liveSummary : (frozen?.summary ?? liveSummary);
+
+  const openFlow = useCallback(() => {
+    setView('flow');
+    try {
+      window.history.pushState({ nfFlow: true }, '');
+    } catch {
+      /* the page's own Back still works */
+    }
+  }, []);
+  const flowPhaseRef = useRef(flowState.phase);
+  flowPhaseRef.current = flowState.phase;
+  const leaveFlow = useCallback(() => {
+    resetRun();
+    setFrozen(null);
+    setView('form');
+  }, [resetRun]);
+  const exitFlow = useCallback(() => {
+    leaveFlow();
+    if ((window.history.state as { nfFlow?: boolean } | null)?.nfFlow) window.history.back();
+  }, [leaveFlow]);
+  useEffect(() => {
+    if (view !== 'flow') return undefined;
+    const onPop = () => {
+      if (flowPhaseRef.current === 'running') {
+        window.history.pushState({ nfFlow: true }, '');
+        return;
+      }
+      leaveFlow();
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [view, leaveFlow]);
+
+  const handleConfirm = async () => {
+    if (!livePlan || !liveSummary || parsedAmount <= 0) return;
+    const acting = mode;
+    const amountNow = amount;
+    const parsedAmt = parsedAmount;
+    setFrozen({ mode: acting, summary: liveSummary, lede: liveLede });
+    beginRun(livePlan);
+
+    const seen: {
+      submitted: Extract<SavingsProgress, { type: 'submitted' }> | null;
+      cancelled: boolean;
+      failed: boolean;
+    } = { submitted: null, cancelled: false, failed: false };
+    const onProgress = (event: SavingsProgress) => {
+      if (event.type === 'step') startStep(event.id, event.waiting ? { waiting: true } : undefined);
+      else if (event.type === 'submitted') seen.submitted = event;
+      else if (event.type === 'cancelled') seen.cancelled = true;
+      else if (event.type === 'error') {
+        seen.failed = true;
+        failRun(event.message);
+      }
+    };
+
+    const hash = await (acting === 'deposit'
+      ? deposit(amountNow, onProgress)
+      : withdraw(amountNow, onProgress));
+    if (!hash) {
+      if (seen.cancelled && !seen.failed) {
+        // No 2FA code: nothing happened, so back to the review as it was.
+        resetRun();
+        setFrozen(null);
+      } else if (!seen.failed) {
+        // It stopped before its first step (no wallet, no vault): say so
+        // rather than leave the page waiting on a step that never comes.
+        failRun(t('This could not start. Check that your wallet is connected, then try again.'));
+      }
+      return;
+    }
+    const pair = seen.submitted;
+    doneStep('submit', { links: [stellarTxLink(t, hash)] });
+    if (acting === 'deposit') setSpentOnDeposits((prev) => prev + parsedAmt);
+    setAmount('');
+
+    // Which ledger it landed in, straight from Horizon (bounded).
+    startStep('confirmed');
+    const record = await awaitTxRecord(config.HORIZON_URL, hash).catch(() => null);
+    doneStep('confirmed', { note: ledgerNote(t, record) });
+
+    const owesFee = acting === 'deposit' || !!pair?.feeHash;
+    if (owesFee) {
+      if (pair?.feeSubmitted && pair.feeHash) {
+        doneStep('fee', { links: [stellarTxLink(t, pair.feeHash, t('View the fee'))] });
+      } else {
+        doneStep('fee', {
+          note: t('Normal collects it within a few minutes, as a separate small payment.'),
+        });
+      }
+    }
+
+    // Savings already shows the new figure (the hook wrote it the moment the
+    // network confirmed); the wallet balance is refreshed here, capped so a
+    // slow read never holds up a deposit that already went through.
+    startStep('balance');
+    await Promise.race([
+      refreshFresh().catch(() => {}),
+      new Promise((r) => {
+        setTimeout(r, 15_000);
+      }),
+    ]);
+    finishRun();
+  };
+
   const isWithdrawPositionLoading = mode === 'withdraw' && positionFetching && !userPosition;
   const isActionDisabled =
     loading ||
@@ -393,8 +608,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
           : isAmountMissing
             ? t('Enter amount')
             : mode === 'deposit'
-              ? t('Deposit')
-              : t('Withdraw');
+              ? t('Review deposit')
+              : t('Review withdrawal');
 
   return (
     <Box
@@ -1067,7 +1282,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
           <Button
             fullWidth
             disabled={isActionDisabled}
-            onClick={handleAction}
+            onClick={openFlow}
             sx={{
               background: '#0A0A0F',
               borderRadius: 'var(--radius-md)',
@@ -1091,153 +1306,86 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
         )}
       </WalletGate>
 
-      {/* TX Log */}
-      <Box
-        sx={(theme) => ({
-          mt: '14px',
-          pt: '14px',
-          borderTop: '1px dashed rgba(10,10,15,0.12)',
-          ...theme.applyStyles('dark', { borderTop: '1px dashed rgba(255,255,255,0.1)' }),
-        })}
-      >
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ mb: '10px' }}
-        >
-          <Typography
-            sx={{
-              fontSize: '11px',
-              fontWeight: 500,
-              textTransform: 'uppercase',
-              letterSpacing: '0.16em',
-              color: 'text.disabled',
+      {/* Every step is shown on the review page before anything moves. */}
+      {!needsSetup && (
+        <Typography sx={{ mt: '12px', fontSize: '12.5px', lineHeight: 1.5, color: '#6B6B76' }}>
+          {mode === 'deposit'
+            ? t('You see every step, the fee and where your money goes before you confirm.')
+            : t('You see every step and what you receive before you confirm.')}
+        </Typography>
+      )}
+
+      {view === 'flow' && shownPlan && shownSummary && (
+        <FlowPortal>
+          <FlowView
+            plan={shownPlan}
+            run={flowState}
+            summary={shownSummary}
+            titles={
+              flowMode === 'deposit'
+                ? {
+                    review: t('Review your deposit'),
+                    running: t('Depositing'),
+                    done: t('Deposit complete'),
+                    failed: t('Deposit stopped'),
+                    stopped: t('Deposit ended'),
+                    'handed-off': t('Deposit on its way'),
+                  }
+                : {
+                    review: t('Review your withdrawal'),
+                    running: t('Withdrawing'),
+                    done: t('Withdrawal complete'),
+                    failed: t('Withdrawal stopped'),
+                    stopped: t('Withdrawal ended'),
+                    'handed-off': t('Withdrawal on its way'),
+                  }
+            }
+            lede={flowState.phase === 'review' ? liveLede : (frozen?.lede ?? liveLede)}
+            confirm={{
+              label: mode === 'deposit' ? t('Confirm deposit') : t('Confirm withdrawal'),
+              onClick: handleConfirm,
+              blocked: lowXlmForSavings
+                ? t('Add a little XLM first: it pays the network fee.')
+                : isInsufficientBalance
+                  ? t('That is more than you have. Go back and change the amount.')
+                  : null,
             }}
-          >
-            {mode === 'deposit'
-              ? t('What happens when you deposit')
-              : t('What happens when you withdraw')}
-          </Typography>
-          <Typography sx={{ fontSize: '10px', color: 'text.disabled' }}>{stepsTiming}</Typography>
-        </Stack>
-
-        <Stack>
-          {txSteps.map((step, idx) => {
-            const isDone = activeStepIdx >= 0 && idx < activeStepIdx;
-            const isActive = idx === activeStepIdx;
-            const isPending = !isDone && !isActive;
-            return (
-              <Box
-                key={step.id}
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: '22px 1fr',
-                  alignItems: 'center',
-                  gap: '10px',
-                  py: '6px',
-                  opacity: isPending ? 0.4 : 1,
-                  transition: 'opacity 0.3s ease',
-                }}
-              >
-                {/* Step icon */}
-                <Box
-                  sx={(theme) => ({
-                    width: 18,
-                    height: 18,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    background: isDone ? '#1AB37D' : isActive ? '#0A0A0F' : '#F0F0F4',
-                    border: isPending ? '1px dashed rgba(10,10,15,0.2)' : 'none',
-                    transition: 'background 0.4s ease',
-                    ...theme.applyStyles('dark', {
-                      background: isDone
-                        ? '#1AB37D'
-                        : isActive
-                          ? '#FFFFFF'
-                          : 'rgba(255,255,255,0.1)',
-                      border: isPending ? '1px dashed rgba(255,255,255,0.2)' : 'none',
-                    }),
-                  })}
-                >
-                  {isDone ? (
-                    <svg width="10" height="10" viewBox="0 0 12 12" style={{ display: 'block' }}>
-                      <path
-                        d="M2 6 L5 9 L10 3"
-                        stroke="#fff"
-                        strokeWidth="2"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  ) : isActive ? (
-                    <CircularProgress
-                      size={8}
-                      sx={(theme) => ({
-                        color: '#FFFFFF',
-                        display: 'block',
-                        ...theme.applyStyles('dark', { color: '#0A0A0F' }),
-                      })}
-                    />
-                  ) : (
-                    <Box
-                      sx={{
-                        width: 5,
-                        height: 5,
-                        borderRadius: '50%',
-                        flexShrink: 0,
-                        background: 'rgba(10,10,15,0.25)',
-                      }}
-                    />
-                  )}
-                </Box>
-
-                {/* Step text */}
-                <Box>
-                  <Typography
-                    component="span"
-                    sx={(theme) => ({
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      display: 'block',
-                      color: isDone ? '#1AB37D' : isActive ? 'text.primary' : 'text.secondary',
-                      transition: 'color 0.3s ease',
-                      ...(isActive && {
-                        '&::after': {
-                          content: '"..."',
-                          display: 'inline-block',
-                          overflow: 'hidden',
-                          verticalAlign: 'bottom',
-                          width: 0,
-                          animation: `${txDotsAnim} 1.2s steps(4, end) infinite`,
-                        },
-                      }),
-                    })}
-                  >
-                    {step.label}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: '11px',
-                      color: 'text.disabled',
-                      fontVariantNumeric: 'tabular-nums',
-                      letterSpacing: '-0.01em',
-                      mt: '1px',
-                      display: 'block',
-                    }}
-                  >
-                    {step.sub}
-                  </Typography>
-                </Box>
-              </Box>
-            );
-          })}
-        </Stack>
-      </Box>
+            back={{ label: t('Back to savings'), onClick: exitFlow }}
+            doneActions={[
+              { label: t('Back to savings'), primary: true, onClick: exitFlow },
+              { label: t('See it in Activity'), href: paths.activity },
+            ]}
+            doneNote={
+              flowMode === 'deposit'
+                ? t('Your digital dollars are in Normal Savings, earning from today.')
+                : t('Your digital dollars are in your wallet.')
+            }
+            failActions={[
+              {
+                label: t('Try again'),
+                primary: true,
+                onClick: () => {
+                  resetRun();
+                  setFrozen(null);
+                },
+              },
+            ]}
+            leave={
+              ['check', 'prepare', 'sign-deposit', 'sign-withdraw', 'sign-fee'].includes(
+                flowState.activeId ?? ''
+              )
+                ? {
+                    safe: false,
+                    message: t('Stay a few seconds until it is sent, so no prompt is left open.'),
+                  }
+                : {
+                    safe: true,
+                    message: t('Stellar finishes this in seconds, with or without this page.'),
+                  }
+            }
+          />
+        </FlowPortal>
+      )}
 
       <TrustlineModal
         open={needsTrustline}

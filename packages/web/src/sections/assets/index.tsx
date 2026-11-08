@@ -1,13 +1,14 @@
 'use client';
 
 import type { Token } from '@normalfinance/types';
+import type { Holding } from '@/components/_common/holdings-table';
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { MUTED } from '@/theme/brand-colors';
+import { useMarkets } from '@/hooks/use-markets';
+import { minSpanFor } from '@/lib/prices/markets';
 import { cdn, logger } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useUsdPrice } from '@/hooks/use-price-history';
@@ -16,18 +17,14 @@ import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
-import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
+import { assetColor, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
-import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
 import { AppPageHeader } from '@/components/_common/brand';
 import { AssetAvatar } from '@/components/_common/asset-avatar';
+import { HoldingsTable } from '@/components/_common/holdings-table';
 import {
-  Change,
-  FIGURES,
-  ListRow,
-  RowList,
   AppBlock,
   Headline,
   assetName,
@@ -40,7 +37,7 @@ import {
 
 export default function AssetsView() {
   const { t } = useTranslate();
-  const router = useRouter();
+  const { markets } = useMarkets();
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
   const { wallet } = usePersistStore();
@@ -227,23 +224,45 @@ export default function AssetsView() {
       total: group.tokens.reduce((sum, token) => sum + valueOf(token), 0),
     }));
 
-  const handleRowClick = (token: Token) => {
-    // Savings is a product, not a chain asset — its row opens /savings.
-    router.push(isSavings(token) ? paths.savings : paths.assets.details(token.symbol));
-  };
+  const apy = savings.vaultInfo?.apy ?? null;
 
-  /** A row's second line: the amount, its price, and on two-wallet accounts each wallet's share. */
-  const subtitleOf = (token: Token) => {
-    const balance = BigNumber(token.balance).toNumber();
+  /** One row of the table. Savings is a product, not a coin: its row opens /savings. */
+  const holdingOf = (token: Token): Holding => {
+    const savingsRow = isSavings(token);
+    const market = markets[token.symbol];
+    // On two-wallet accounts the name carries each wallet's share.
     const wallets = token.name.includes(' · ')
       ? token.name.split(' · ').slice(1).join(' · ')
       : null;
-    const amount = isSavings(token)
-      ? t('Normal Savings')
-      : token.symbol === 'USDC'
-        ? formatCoin(balance, 'USDC')
-        : `${formatCoin(balance, token.symbol)} at ${formatUsd(Number(token.price))}`;
-    return [amount, wallets].filter(Boolean).join(' · ');
+    const name = savingsRow
+      ? t('Savings')
+      : ASSET_NAMES[token.symbol]
+        ? assetName(token.symbol)
+        : token.symbol;
+    const amount = savingsRow
+      ? apy !== null
+        ? t('Earning {{apy}}% a year', { apy: Number(apy).toFixed(2) })
+        : t('Earning every day')
+      : formatCoin(BigNumber(token.balance).toNumber(), token.symbol);
+    return {
+      key: token.contract,
+      href: savingsRow ? paths.savings : paths.assets.details(token.symbol),
+      icon: <AssetAvatar token={token} size={40} />,
+      name,
+      ticker: [savingsRow ? t('Normal Savings') : token.symbol, wallets]
+        .filter(Boolean)
+        .join(' · '),
+      amount: [amount, wallets].filter(Boolean).join(' · '),
+      value: valueOf(token),
+      price: savingsRow ? null : Number(token.price) || market?.price || null,
+      change24h: changeOf(token.symbol) ?? market?.change24h ?? null,
+      stable: token.symbol === 'USDC',
+      sparkline: market?.sparkline24h ?? [],
+      minSpan: minSpanFor(token.symbol),
+      color: assetColor(token.symbol),
+      marketCap: market?.marketCap ?? null,
+      rank: market?.rank ?? null,
+    };
   };
 
   return (
@@ -265,63 +284,31 @@ export default function AssetsView() {
         <Headline label={t('Total')} value={formatUsd(totalValue)} />
       </SummaryBlock>
 
-      {globalIsLoading ? (
-        <AppBlock flush sx={{ mt: { xs: 4, md: 5 } }}>
+      <AppBlock
+        flush
+        title={t('Holdings')}
+        action={
+          // CoinGecko's free data asks to be credited where it is shown.
+          <Typography sx={{ fontSize: 12.5, color: 'text.secondary' }}>
+            {t('Market data from CoinGecko')}
+          </Typography>
+        }
+        sx={{ mt: { xs: 4, md: 5 } }}
+      >
+        {globalIsLoading ? (
           <RowsSkeleton rows={5} />
-        </AppBlock>
-      ) : (
-        groups.map((group, index) => (
-          <AppBlock
-            key={group.key}
-            flush
-            title={
-              <>
-                {group.title}
-                <Box
-                  component="span"
-                  sx={{ display: { xs: 'none', sm: 'inline' }, ml: 1.5, fontWeight: 400, color: MUTED }}
-                >
-                  {group.note}
-                </Box>
-              </>
-            }
-            action={
-              <Typography sx={{ ...FIGURES, fontSize: 15, fontWeight: 500 }}>
-                {formatUsd(group.total)}
-              </Typography>
-            }
-            sx={{ mt: index === 0 ? { xs: 4, md: 5 } : 4 }}
-          >
-            <RowList>
-              {group.tokens.map((token) => {
-                const savingsRow = isSavings(token);
-                const balance = BigNumber(token.balance).toNumber();
-                return (
-                  <ListRow
-                    key={token.contract}
-                    onClick={() => handleRowClick(token)}
-                    icon={<AssetAvatar token={token} size={40} />}
-                    title={
-                      savingsRow
-                        ? t('Savings')
-                        : ASSET_NAMES[token.symbol]
-                          ? assetName(token.symbol)
-                          : token.symbol
-                    }
-                    subtitle={subtitleOf(token)}
-                    value={formatUsd(valueOf(token))}
-                    detail={
-                      savingsRow || token.symbol === 'USDC' || balance === 0 ? undefined : (
-                        <Change pct={changeOf(token.symbol)} />
-                      )
-                    }
-                  />
-                );
-              })}
-            </RowList>
-          </AppBlock>
-        ))
-      )}
+        ) : (
+          <HoldingsTable
+            groups={groups.map((group) => ({
+              key: group.key,
+              title: group.title,
+              note: group.note,
+              total: group.total,
+              rows: group.tokens.map(holdingOf),
+            }))}
+          />
+        )}
+      </AppBlock>
     </DashboardContent>
   );
 }
