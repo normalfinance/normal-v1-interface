@@ -20,8 +20,8 @@ const ASSET_DISPLAY: Record<string, { name: string; icon: string }> = {
   BTC: { name: 'Bitcoin', icon: cdn('tokens/bitcoin.webp') },
   ETH: { name: 'Ethereum', icon: cdn('tokens/ethereum.webp') },
   SOL: { name: 'Solana', icon: cdn('tokens/solana.webp') },
-  XLM: { name: 'Stellar Lumens', icon: getCryptoIconUrl('XLM') },
-  USDC: { name: 'USD Coin', icon: getCryptoIconUrl('USDC') },
+  XLM: { name: 'Stellar', icon: getCryptoIconUrl('XLM') },
+  USDC: { name: 'Digital dollars', icon: getCryptoIconUrl('USDC') },
 };
 
 export function assetDisplay(symbol: string): { name: string; icon: string } {

@@ -26,6 +26,7 @@ import {
   stellarSwapPlan,
   cctpInboundPlan,
   cctpOutboundPlan,
+  indexPurchasePlan,
   crossChainSwapPlan,
 } from '@/lib/flow/plans';
 
@@ -61,7 +62,8 @@ type Scenario =
   | 'btc-eth'
   | 'usdc-btc'
   | 'btc-usdc'
-  | 'refund';
+  | 'refund'
+  | 'index';
 
 interface Sample {
   plan: FlowPlan;
@@ -202,6 +204,44 @@ function sample(t: (k: string, o?: Record<string, unknown>) => string, s: Scenar
         lede: '25 USDC for about 0.000284 BTC, over Circle and Chainflip.',
         titles: swapTitles(t),
         doneNote: 'Your BTC is in your Bitcoin wallet.',
+      };
+    case 'index':
+      return {
+        plan: indexPurchasePlan({
+          t,
+          amountUsdc: '100 USDC',
+          legs: [
+            { symbol: 'BTC', amountUsdc: '60 USDC', weight: '60%', amountOut: '≈ 0.000681 BTC' },
+            { symbol: 'ETH', amountUsdc: '25 USDC', weight: '25%', amountOut: '≈ 0.00982 ETH' },
+            { symbol: 'SOL', amountUsdc: '15 USDC', weight: '15%', amountOut: '≈ 0.1 SOL' },
+          ],
+          stellarWallet: { address: G },
+          baseWallet: { address: ETH },
+        }),
+        summary: rows([
+          ['You pay', '$100.00', 'Digital dollars from your Stellar wallet'],
+          ['Bitcoin (60%)', '$60.00', '≈ 0.000681 BTC'],
+          ['Ethereum (25%)', '$25.00', '≈ 0.00982 ETH'],
+          ['Solana (15%)', '$15.00', '≈ 0.1 SOL'],
+          [
+            'Exchange fees',
+            'About 0.75% of each coin',
+            'Normal 0.5% and LI.FI 0.25%, taken in the exchange',
+          ],
+          ['Network fees', 'Paid by Normal', 'Except the Stellar fee, paid in XLM by your wallet'],
+          ['Signatures', 'One'],
+          ['Time', 'Usually 10 to 60 minutes', 'Bitcoin is the slowest to arrive'],
+        ]),
+        lede: '$100.00 split into Bitcoin, Ethereum and Solana.',
+        titles: {
+          review: t('Review your purchase'),
+          running: t('Buying'),
+          done: t('Purchase complete'),
+          failed: t('Purchase stopped'),
+          stopped: t('Purchase ended'),
+          'handed-off': t('On its way'),
+        },
+        doneNote: 'Your Bitcoin, Ethereum and Solana are in your wallets.',
       };
     case 'btc-usdc':
       return {
@@ -349,6 +389,7 @@ const SCENARIOS: Scenario[] = [
   'usdc-btc',
   'btc-usdc',
   'refund',
+  'index',
 ];
 const MODES: RunPhase[] = ['review', 'running', 'done', 'failed', 'stopped', 'handed-off'];
 

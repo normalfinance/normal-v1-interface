@@ -10,6 +10,7 @@ import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { useFlowRun } from '@/hooks/use-flow-run';
 import { useDebounce } from '@/hooks/use-debounce';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { MONO } from '@/sections/portfolio/_shared';
 import { bridgeName } from '@/lib/flow/lifi-status';
 import { executeLifiSwap } from '@/lib/lifi/execute';
@@ -19,6 +20,7 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { driftVerdict, isQuoteStale } from '@/lib/lifi/quote-freshness';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { isBroadcastUncertain, UNCERTAIN_SEND_MESSAGE } from '@/lib/chains/broadcast-safety';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -587,6 +589,14 @@ export function useLifiEngine({
         return;
       }
       logger.error('[lifi engine] execute failed:', err); // surface stack
+      if (isBroadcastUncertain(err)) {
+        // It may have gone out: no "Try again", which could be a second swap.
+        // The page says so and links the transaction where its id is known.
+        broadcastRef.current = true;
+        if (err.hash) updateStep('send', { links: [chainTxLink(t, from.chain, err.hash)] });
+        failRun(t(UNCERTAIN_SEND_MESSAGE));
+        return;
+      }
       failRun(
         isInsufficientGasError(err)
           ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
@@ -688,7 +698,7 @@ export function useLifiEngine({
               sx={{
                 fontSize: '12px',
                 fontWeight: 500,
-                color: gasShare > 0.2 ? '#B45309' : '#0A0A0F',
+                color: gasShare > 0.2 ? BRAND_COLORS.yellow.deep : '#0A0A0F',
                 ...MONO,
               }}
             >
@@ -698,7 +708,7 @@ export function useLifiEngine({
           </Box>
         )}
         {gasShare > 0.2 && gasShare <= 0.5 && (
-          <Typography sx={{ fontSize: '11px', color: '#B45309', lineHeight: 1.5 }}>
+          <Typography sx={{ fontSize: '11px', color: BRAND_COLORS.yellow.deep, lineHeight: 1.5 }}>
             {t('Network fees take {{pct}}% of this swap. A larger amount gets a better deal.', {
               pct: Math.round(gasShare * 100),
             })}

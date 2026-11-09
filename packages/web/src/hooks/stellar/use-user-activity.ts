@@ -152,7 +152,9 @@ function mapCctpTransfer(tr: CctpTransferRow): Extract<Activity, { type: 'Swap' 
   // Outbound (USDC → BTC/ETH/SOL) isn't truly done at COMPLETED — that only marks
   // the CCTP bridge (mint on Base); the target asset arrives after the LI.FI
   // pivot (dstSwapTxHash). Inbound (→ USDC on Stellar) is done at COMPLETED.
-  const outbound = tr.direction === 'stellar_to_crosschain';
+  // A crypto index purchase settles like an outbound swap: done once its
+  // coins' exchanges are out (server/index-legs.ts marks the row then).
+  const outbound = tr.direction === 'stellar_to_crosschain' || tr.direction === 'stellar_to_index';
   const refunded = tr.status === 'REFUNDED';
   const failed = tr.status === 'FAILED';
   const succeeded = outbound

@@ -95,7 +95,7 @@ export default function BtcSweepPage() {
       });
 
       const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
-      if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
+      if (!signedTx) throw new Error('Signing failed: no signed transaction returned');
 
       const res = await fetch('/api/turnkey/broadcast-btc', {
         method: 'POST',
@@ -148,7 +148,7 @@ export default function BtcSweepPage() {
 
       {reattached && (
         <div style={{ marginTop: 18, color: '#0a7a4d', fontSize: 13 }}>
-          Done — your account now uses {reattached} as its Bitcoin address. Refresh the portfolio
+          Done. Your account now uses {reattached} as its Bitcoin address. Refresh the portfolio
           page.
         </div>
       )}
@@ -167,7 +167,7 @@ export default function BtcSweepPage() {
             disabled={busy}
             style={{ marginTop: 12, padding: '10px 18px', cursor: 'pointer', fontWeight: 500 }}
           >
-            {busy ? 'Signing…' : '2 — Sign with passkey & broadcast'}
+            {busy ? 'Signing…' : '2. Sign with passkey & broadcast'}
           </button>
         </div>
       )}

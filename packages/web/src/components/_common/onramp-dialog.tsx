@@ -224,7 +224,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
         if (!status) return;
         setMgiCommitted((prev) => (prev && prev.id === id ? { ...prev, status } : prev));
         if (status === 'completed') {
-          enqueueSnackbar(t('MoneyGram deposit completed — USDC received'), {
+          enqueueSnackbar(t('MoneyGram deposit completed. USDC received'), {
             variant: 'success',
           });
           window.dispatchEvent(new Event('nf:activity-updated'));
@@ -565,7 +565,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
               >
                 <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
                   {mgiCommitted.status === 'completed'
-                    ? t('Cash received — USDC delivered')
+                    ? t('Cash received. USDC delivered')
                     : FAILED_MGI_STATUSES.has(mgiCommitted.status)
                       ? t('This deposit is no longer active')
                       : t('Drop off your cash')}
@@ -581,7 +581,7 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
                           }
                         )
                       : t(
-                          'Bring ${{amount}} in cash to the MoneyGram location you selected. No code is needed — the agent finds your transaction by your name and phone number, and your receipt with a reference number comes after paying. Your USDC arrives here shortly after.',
+                          'Bring ${{amount}} in cash to the MoneyGram location you selected. No code is needed: the agent finds your transaction by your name and phone number, and your receipt with a reference number comes after paying. Your USDC arrives here shortly after.',
                           { amount: mgiCommitted.amount }
                         )}
                 </Typography>
@@ -610,13 +610,13 @@ const OnRampDialog: React.FC<OnRampDialogProps> = ({
               <Button variant="contained" fullWidth size="large" onClick={handleDialogClose}>
                 {mgiCommitted.status === 'completed'
                   ? t('Done')
-                  : t("Done — I'll drop off the cash")}
+                  : t("Done, I'll drop off the cash")}
               </Button>
 
               {mgiCommitted.status !== 'completed' && (
                 <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
                   {t(
-                    'You can close this — the deposit stays visible under Activity on your USDC page.'
+                    'You can close this. The deposit stays visible under Activity on your USDC page.'
                   )}
                 </Typography>
               )}

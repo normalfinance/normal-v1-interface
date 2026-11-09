@@ -9,6 +9,7 @@ import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { Horizon } from '@stellar/stellar-sdk';
 import { fCurrency } from '@/utils/format-number';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { usePendingOutflow } from '@/lib/spendable';
 import { usePersistStore } from '@normalfinance/state';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
@@ -587,7 +588,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
       } catch {
         // Doc 90 W4: the fresh-read invariant broke silently — say it.
         setAmount(spendableBalance.toFixed(7, BigNumber.ROUND_DOWN));
-        enqueueSnackbar(t('Could not read your live balance — MAX used the cached value.'), {
+        enqueueSnackbar(t('Could not read your live balance. MAX used the cached value.'), {
           variant: 'warning',
         });
       } finally {
@@ -1087,7 +1088,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       <Typography
                         sx={{ fontSize: '12px', fontWeight: 500, color: ns.color, lineHeight: 1.4 }}
                       >
-                        {t('{{network}} network — the address must be a {{network}} address', {
+                        {t('{{network}} network: the address must be a {{network}} address', {
                           network: netName,
                         })}
                       </Typography>
@@ -1129,11 +1130,11 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     <Iconify
                       icon="eva:alert-triangle-outline"
                       width={18}
-                      sx={{ color: '#B45309', mt: '1px', flexShrink: 0 }}
+                      sx={{ color: BRAND_COLORS.yellow.deep, mt: '1px', flexShrink: 0 }}
                     />
                     <Typography sx={{ fontSize: '12.5px', color: '#78350F', lineHeight: 1.5 }}>
                       {t(
-                        'We could not verify whether this address needs a memo. If you are sending to an exchange, double-check its deposit page — without a required memo the funds will not be credited.'
+                        'We could not verify whether this address needs a memo. If you are sending to an exchange, double-check its deposit page: without a required memo the funds will not be credited.'
                       )}
                     </Typography>
                   </Box>
@@ -1153,7 +1154,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                     <Iconify
                       icon="eva:alert-triangle-outline"
                       width={18}
-                      sx={{ color: '#B45309', mt: '1px', flexShrink: 0 }}
+                      sx={{ color: BRAND_COLORS.yellow.deep, mt: '1px', flexShrink: 0 }}
                     />
                     <Typography sx={{ fontSize: '12.5px', color: '#78350F', lineHeight: 1.5 }}>
                       {memoRequirement.name

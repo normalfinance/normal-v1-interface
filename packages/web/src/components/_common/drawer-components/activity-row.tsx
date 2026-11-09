@@ -6,6 +6,7 @@ import type { Activity } from '@/types/activity';
 
 import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { format, getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
@@ -337,7 +338,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                     px: '7px',
                     borderRadius: 'var(--radius-sm)',
                     bgcolor: 'rgba(245,158,11,0.1)',
-                    color: '#B45309',
+                    color: BRAND_COLORS.yellow.deep,
                     fontSize: '10px',
                     fontWeight: 500,
                     letterSpacing: '0.02em',
@@ -379,7 +380,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                     px: '7px',
                     borderRadius: 'var(--radius-sm)',
                     bgcolor: 'rgba(245,158,11,0.1)',
-                    color: '#B45309',
+                    color: BRAND_COLORS.yellow.deep,
                     fontSize: '10px',
                     fontWeight: 500,
                     letterSpacing: '0.02em',

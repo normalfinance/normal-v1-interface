@@ -250,7 +250,7 @@ export function PortfolioBitcoinCard({ userId, userEmail }: PortfolioBitcoinCard
         }}
       >
         Send Bitcoin to your address above to get started. Your funds are secured by device
-        biometrics — Normal never holds your private keys.
+        biometrics. Normal never holds your private keys.
       </Box>
     </Box>
   );

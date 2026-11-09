@@ -13,6 +13,7 @@
 // this layer's job). Mainnet-only Base, same as the client version.
 
 import { EVM_USDC } from '@/lib/cctp/config';
+import { sendSignedEvmTransaction } from '@/lib/chains/evm-send';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 
 import { getLifiQuote } from './lifi-quote';
@@ -110,18 +111,12 @@ export async function autopilotPivotSwap(params: {
         // USDC wire ≈ USD; caps armed on the pivot itself, not the approve.
         amountUsd: label === 'pivot' ? Number(params.amountWire) / 1e6 : undefined,
       })) as `0x${string}`;
-      try {
-        hash = await client.sendRawTransaction({ serializedTransaction: raw });
-      } catch (sendErr: any) {
-        const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
-        if (
-          attempt === 0 &&
-          /nonce too low|already known|replacement transaction underpriced/i.test(m)
-        ) {
-          continue;
-        }
-        throw sendErr;
-      }
+      // Re-sign only when the chain shows the nonce is held by another
+      // transaction, never ours (lib/chains/evm-send.ts).
+      const result = await sendSignedEvmTransaction(client, raw, { chainLabel: 'base' });
+      if (result.sent) hash = result.hash;
+      else if (attempt === 0) continue;
+      else throw result.error;
     }
     // Hash first, receipt second (see autopilot-burn).
     await params.onBroadcast?.(hash, label);

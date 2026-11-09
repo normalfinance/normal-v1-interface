@@ -321,7 +321,7 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
         // own address and the activity row keeps tracking delivery.
         log('bridge still pending after poll budget — honest handoff');
         enqueueSnackbar(
-          `Your ${toSymbol} is still on its way — this route can take a while. It arrives automatically; you can track it in Activity.`,
+          `Your ${toSymbol} is still on its way. This route can take a while. It arrives automatically; you can track it in Activity.`,
           { variant: 'info', autoHideDuration: 12000 }
         );
       }

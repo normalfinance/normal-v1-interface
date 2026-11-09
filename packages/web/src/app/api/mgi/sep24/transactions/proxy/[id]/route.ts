@@ -68,6 +68,6 @@ export const GET = withAuth(async (req: Request, { user, params }) => {
     });
   } catch (e: any) {
     console.error('[MGI] /api/mgi/sep24/transaction/proxy/:id crashed:', e);
-    return j(500, { error: 'MoneyGram is temporarily unavailable — please try again.' });
+    return j(500, { error: 'MoneyGram is temporarily unavailable. Please try again.' });
   }
 });

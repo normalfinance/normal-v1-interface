@@ -76,12 +76,17 @@ export function formatPrice(value: number, digits = Math.abs(value) >= 1 ? 2 : 4
   }).format(value);
 }
 
-/** Big money in short: $1.73T, $38.2B. */
+/**
+ * Big money in short: $1.73T, $38.2B. The minimum is spelled out because
+ * engines disagree on the default: some keep the dollar's two decimals in
+ * compact notation and print $38.20B.
+ */
 export const formatCompactUsd = (value: number) =>
   new Intl.NumberFormat(appLocale(), {
     style: 'currency',
     currency: 'USD',
     notation: 'compact',
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(value);
 
@@ -479,7 +484,7 @@ export function ActionRow({ children, count }: { children: ReactNode; count: num
         flexWrap: 'wrap',
         gap: 1,
         // An odd count: the main button takes the first row on its own.
-        ...(count % 2 === 1 && { '& > :first-of-type': { gridColumn: '1 / -1' } }),
+        ...(count % 2 === 1 && { '& > :first-child': { gridColumn: '1 / -1' } }),
       }}
     >
       {children}

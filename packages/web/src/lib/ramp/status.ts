@@ -156,7 +156,7 @@ export function toInFlightRamp(row: RampTransferRow): InFlightRamp {
   } else {
     message =
       row.status === 'provider_complete'
-        ? `Sold ${amount} — payout on the way`
+        ? `Sold ${amount}. Payout on the way`
         : `Selling ${row.asset} via ${label}`;
     detail =
       row.status === 'provider_complete'

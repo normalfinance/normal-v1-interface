@@ -23,6 +23,7 @@ import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
 import NorthEastRounded from '@mui/icons-material/NorthEastRounded';
 import SouthWestRounded from '@mui/icons-material/SouthWestRounded';
 import SwapHorizRounded from '@mui/icons-material/SwapHorizRounded';
+import DonutSmallOutlined from '@mui/icons-material/DonutSmallOutlined';
 import ChevronLeftRounded from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRounded from '@mui/icons-material/ChevronRightRounded';
 import AccountBalanceOutlined from '@mui/icons-material/AccountBalanceOutlined';
@@ -146,9 +147,10 @@ type Described = {
 
 /**
  * Each row in words, for people who don't know crypto: what happened, with
- * whom, and how much. Money in is +, money out is −; moves inside the
- * account (savings, swaps) carry no sign. The icon says the kind, in grey:
- * colour is kept for pending and failed.
+ * whom, and how much. Money in is +, money out is −; a move into or out of
+ * Savings carries no sign, and a swap shows what came in (+) over what it
+ * cost (−). The icon says the kind, in grey: colour is kept for pending and
+ * failed.
  */
 function describe(a: Activity): Described {
   switch (a.type) {
@@ -184,6 +186,20 @@ function describe(a: Activity): Described {
       };
     }
     case 'Swap': {
+      // A crypto index purchase: digital dollars out, several coins in.
+      if (a.tokenOut.symbol === 'INDEX') {
+        return {
+          icon: <DonutSmallOutlined />,
+          title: 'Bought the crypto index',
+          subtitle: 'Bitcoin, Ethereum and Solana',
+          value: `−${amountOf(a.tokenIn.amount, a.tokenIn.symbol)}`,
+          status: a.failed
+            ? { tone: 'failed', label: 'Failed' }
+            : a.pending
+              ? { tone: 'pending', label: 'Pending' }
+              : undefined,
+        };
+      }
       // A pending swap whose delivered amount is still unknown must not show a
       // confident zero (live test 2026-08-19: an in-flight BTC to USDC row).
       const outKnown = !(a.pending && !(a.tokenOut.amount > 0));
@@ -540,43 +556,43 @@ export function ActivityCard({
       ) : (
         <RowList>
           {groupByDay(shown).map((group) => (
-          <Box key={group.key}>
-            <Typography
-              sx={{
-                px: BOX_PX,
-                pt: 1.75,
-                pb: 0.25,
-                fontSize: 12.5,
-                fontWeight: 500,
-                color: MUTED,
-              }}
-            >
-              {group.label}
-            </Typography>
-            <RowList>
-              {group.items.map((activity) => {
-                const row = describe(activity);
-                const walletTag = (activity as Activity & { walletTag?: string }).walletTag;
-                const subtitle = [row.subtitle, walletTag].filter(Boolean).join(' · ');
-                return (
-                  <ListRow
-                    key={activity.id}
-                    onClick={clickFor(activity)}
-                    icon={<RowIcon>{row.icon}</RowIcon>}
-                    title={row.title}
-                    badge={
-                      row.status && (
-                        <StatusBadge tone={row.status.tone}>{row.status.label}</StatusBadge>
-                      )
-                    }
-                    subtitle={subtitle || undefined}
-                    value={row.value}
-                    detail={row.detail ?? timeOf(Number(activity.timestamp) || 0)}
-                  />
-                );
-              })}
-            </RowList>
-          </Box>
+            <Box key={group.key}>
+              <Typography
+                sx={{
+                  px: BOX_PX,
+                  pt: 1.75,
+                  pb: 0.25,
+                  fontSize: 12.5,
+                  fontWeight: 500,
+                  color: MUTED,
+                }}
+              >
+                {group.label}
+              </Typography>
+              <RowList>
+                {group.items.map((activity) => {
+                  const row = describe(activity);
+                  const walletTag = (activity as Activity & { walletTag?: string }).walletTag;
+                  const subtitle = [row.subtitle, walletTag].filter(Boolean).join(' · ');
+                  return (
+                    <ListRow
+                      key={activity.id}
+                      onClick={clickFor(activity)}
+                      icon={<RowIcon>{row.icon}</RowIcon>}
+                      title={row.title}
+                      badge={
+                        row.status && (
+                          <StatusBadge tone={row.status.tone}>{row.status.label}</StatusBadge>
+                        )
+                      }
+                      subtitle={subtitle || undefined}
+                      value={row.value}
+                      detail={row.detail ?? timeOf(Number(activity.timestamp) || 0)}
+                    />
+                  );
+                })}
+              </RowList>
+            </Box>
           ))}
         </RowList>
       )}

@@ -5,15 +5,17 @@ import { useTranslate } from '@/locales';
 import { resetPassword } from '@/services/auth';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { INK, FAINT, MUTED, BRAND_COLORS } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
+import CheckCircleRounded from '@mui/icons-material/CheckCircleRounded';
 
-import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
+import { HAIRLINE, BLOCK_SX, INK_BUTTON_SX } from '@/components/_common/brand';
 
 // ----------------------------------------------------------------------
 
@@ -50,57 +52,42 @@ export function SettingsSecurity() {
   };
 
   return (
-    <Box
-      sx={{
-        p: { xs: '20px', md: '24px' },
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid rgba(10,10,15,0.08)',
-        bgcolor: '#FFFFFF',
-        maxWidth: 480,
-      }}
-    >
-      <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
-        {t('Reset Password')}
+    <Box sx={{ ...BLOCK_SX, maxWidth: 480 }}>
+      <Typography sx={{ fontSize: 14, fontWeight: 500, color: INK, mb: 0.5 }}>
+        {t('Reset password')}
       </Typography>
-      <Typography sx={{ fontSize: '13px', color: '#6B6B76', mb: '20px' }}>
+      <Typography sx={{ fontSize: 13, color: MUTED, mb: 2.5 }}>
         {t('Click below to receive a password reset link at your email address.')}
       </Typography>
 
       {!resetEmailSent ? (
         <Stack spacing={2}>
-          {/* Email display */}
-          <Box>
+          {/* The address the link goes to: words, not a code (Mono is only
+              for addresses and hashes on chain). */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+              py: 1.25,
+              borderTop: HAIRLINE,
+              borderBottom: HAIRLINE,
+            }}
+          >
+            <Typography sx={{ fontSize: 14, color: MUTED }}>{t('Email')}</Typography>
             <Typography
               sx={{
-                fontSize: '11px',
+                minWidth: 0,
+                fontSize: 14,
                 fontWeight: 500,
-                color: '#9A9AA3',
-                textTransform: 'uppercase',
-                letterSpacing: '0.16em',
-                mb: '8px',
+                color: INK,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
-              {t('Email')}
+              {user?.email ?? ''}
             </Typography>
-            <Box
-              sx={{
-                px: '14px',
-                py: '12px',
-                borderRadius: 'var(--radius-md)',
-                bgcolor: '#FAFAFB',
-                border: '1px solid rgba(10,10,15,0.08)',
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: '13px',
-                  color: '#6B6B76',
-                  fontFamily: '"Geist Mono", ui-monospace, monospace',
-                }}
-              >
-                {user?.email || '—'}
-              </Typography>
-            </Box>
           </Box>
 
           <Turnstile
@@ -116,41 +103,33 @@ export function SettingsSecurity() {
             disabled={isSubmitting || !captchaToken}
             startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : null}
             sx={{
-              borderRadius: 'var(--radius-md)',
-              bgcolor: '#0A0A0F',
+              ...INK_BUTTON_SX,
               fontWeight: 500,
-              fontSize: '14px',
-              py: '12px',
+              fontSize: 14,
+              py: 1.5,
               textTransform: 'none',
-              letterSpacing: '-0.01em',
-              '&:hover': { bgcolor: '#2A2A33' },
-              '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
+              '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: FAINT },
             }}
           >
-            {isSubmitting ? t('Sending...') : t('Send Reset Link')}
+            {isSubmitting ? t('Sending...') : t('Send reset link')}
           </Button>
         </Stack>
       ) : (
+        // Done: the green panel of the app's endings (colour for meaning).
         <Box
           sx={{
             display: 'flex',
-            gap: '12px',
-            p: '16px',
-            borderRadius: 'var(--radius-md)',
-            bgcolor: 'rgba(16,185,129,0.05)',
-            border: '1px solid rgba(16,185,129,0.2)',
+            gap: 1.5,
+            p: 2,
+            bgcolor: BRAND_COLORS.mint.tint,
           }}
         >
-          <Iconify
-            icon="solar:check-circle-bold"
-            width={20}
-            sx={{ color: 'success.main', flexShrink: 0, mt: '1px' }}
-          />
+          <CheckCircleRounded sx={{ fontSize: 20, color: BRAND_COLORS.mint.deep, mt: '1px' }} />
           <Box>
-            <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 500, color: INK, mb: 0.5 }}>
               {t("We've sent a password reset link to")} {user?.email}
             </Typography>
-            <Typography sx={{ fontSize: '12px', color: '#6B6B76', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
               {t('Please check your inbox and spam folder. The link will expire in 1 hour.')}
             </Typography>
           </Box>

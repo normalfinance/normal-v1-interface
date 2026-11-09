@@ -17,6 +17,7 @@ import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
+import { BLOCK_SX } from '@/components/_common/brand';
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import WalletExportDialog from '@/components/_common/wallet-export-dialog';
@@ -139,16 +140,7 @@ export function DeleteAccountCard() {
 
   return (
     <>
-      <Box
-        sx={{
-          p: { xs: '20px', md: '24px' },
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid rgba(220,38,38,0.2)',
-          bgcolor: '#FFFFFF',
-          maxWidth: 480,
-          mt: 2,
-        }}
-      >
+      <Box sx={{ ...BLOCK_SX, maxWidth: 480, mt: 2 }}>
         <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
           {t('Delete account')}
         </Typography>

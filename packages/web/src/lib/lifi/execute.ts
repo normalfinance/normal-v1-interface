@@ -9,6 +9,13 @@ import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { runWebauthnCeremony } from '@/lib/turnkey/webauthn-guard';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
+import {
+  base58,
+  sendVerdict,
+  errorMessage,
+  settleUncertainSend,
+  BroadcastUncertainError,
+} from '@/lib/chains/broadcast-safety';
 
 // ---------------------------------------------------------------------------
 // Executes a LI.FI quote's transactionRequest on the source chain, signed by
@@ -97,6 +104,7 @@ async function executeEvm(
   onStage: OnStage
 ): Promise<string> {
   const { createPublicClient, serializeTransaction } = await import('viem');
+  const { sendSignedEvmTransaction } = await import('@/lib/chains/evm-send');
   const { mainnet } = await import('viem/chains');
 
   const tx = quote.transactionRequest;
@@ -250,25 +258,20 @@ async function executeEvm(
 
     onStage?.('broadcast');
     log('ETH: broadcasting');
-    // Return as soon as the tx is broadcast — the status modal tracks the
-    // receipt + bridge non-blockingly (a dropped/underpriced tx surfaces there
-    // as "Failed", not as a frozen button).
-    try {
-      hash = await client.sendRawTransaction({
-        serializedTransaction: (signedTx.startsWith('0x')
-          ? signedTx
-          : `0x${signedTx}`) as `0x${string}`,
-      });
-    } catch (sendErr: any) {
-      const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
-      if (
-        attempt === 0 &&
-        /nonce too low|already known|replacement transaction underpriced/i.test(m)
-      ) {
-        continue;
-      }
-      throw sendErr;
-    }
+    // Return as soon as the tx is broadcast: the page tracks the receipt and
+    // the bridge without blocking (a dropped tx surfaces there as failed).
+    // The send itself never re-signs (lib/chains/evm-send.ts): "already
+    // known" is our own transaction, a nonce race re-signs only when the
+    // chain shows the nonce holder is not ours, and an unclear error is
+    // settled from the chain or ends as "not sure", never as a second swap.
+    const result = await sendSignedEvmTransaction(
+      client,
+      (signedTx.startsWith('0x') ? signedTx : `0x${signedTx}`) as `0x${string}`,
+      { chainLabel: 'ethereum' }
+    );
+    if (result.sent) hash = result.hash;
+    else if (attempt === 0) continue;
+    else throw result.error;
   }
   log('ETH: broadcast hash', hash);
   return hash;
@@ -399,18 +402,49 @@ async function executeBtc(
   onStage?.('broadcast');
   log('BTC: broadcasting');
   const { buildAuthHeaders } = await import('@/utils/http');
-  const res = await fetch('/api/turnkey/broadcast-btc', {
-    method: 'POST',
-    headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ signedTxHex: signedTx }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? `Broadcast failed (${res.status})`);
+  // Our route is safe to call again with the SAME signed transaction: it
+  // checks the mempool for this very txid before and after relaying, and
+  // answers success when the transaction is already there. So an unclear
+  // failure (a dropped connection, a 5xx) is settled by sending the same
+  // bytes again, never by signing anything new.
+  const post = async (): Promise<string> => {
+    const res = await fetch('/api/turnkey/broadcast-btc', {
+      method: 'POST',
+      headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signedTxHex: signedTx }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw Object.assign(new Error(body.error ?? `Broadcast failed (${res.status})`), {
+        httpStatus: res.status,
+      });
+    }
+    const data = await res.json();
+    return data.txid as string;
+  };
+  const verdictOf = (e: unknown) =>
+    sendVerdict('bitcoin', errorMessage(e), (e as { httpStatus?: number })?.httpStatus);
+
+  try {
+    const txid = await post();
+    log('BTC: broadcast txid', txid);
+    return txid;
+  } catch (err) {
+    if (verdictOf(err) === 'rejected') throw err;
+    // Looking it up IS sending it again here: the route answers with the
+    // txid whether it relays the transaction or finds it already relayed.
+    let txid: string | null = null;
+    const again = async () => {
+      txid = await post();
+      return true;
+    };
+    const settled = await settleUncertainSend({ lookup: again, resend: again, verdictOf });
+    if (settled.sent && txid) {
+      log('BTC: broadcast txid (after sending the same transaction again)', txid);
+      return txid;
+    }
+    throw new BroadcastUncertainError('bitcoin', null);
   }
-  const data = await res.json();
-  log('BTC: broadcast txid', data.txid);
-  return data.txid as string;
 }
 
 // --- Solana source -----------------------------------------------------------
@@ -461,9 +495,39 @@ async function executeSol(
 
   onStage?.('broadcast');
   log('SOL: broadcasting');
-  const sig = await connection.sendRawTransaction(vtx.serialize(), { skipPreflight: false });
-  log('SOL: broadcast signature', sig);
-  return sig;
+  // A Solana transaction's id is its first signature, known before it is
+  // sent; the same signed bytes can be sent again without making a second
+  // transaction. So an unclear send error is settled from the chain.
+  const bytes = vtx.serialize();
+  const ours = base58(vtx.signatures[0]);
+  const send = () => connection.sendRawTransaction(bytes, { skipPreflight: false });
+  const verdictOf = (e: unknown) => sendVerdict('solana', errorMessage(e));
+  try {
+    const sig = await send();
+    log('SOL: broadcast signature', sig);
+    return sig;
+  } catch (err) {
+    const verdict = verdictOf(err);
+    if (verdict === 'sent') return ours;
+    if (verdict === 'rejected') throw err;
+    const settled = await settleUncertainSend({
+      lookup: async () => {
+        const { value } = await connection.getSignatureStatuses([ours], {
+          searchTransactionHistory: true,
+        });
+        // Landed, even if it failed on chain: it was sent, and the tracker
+        // reports how it ended.
+        return value[0] != null;
+      },
+      resend: send,
+      verdictOf,
+    });
+    if (settled.sent) {
+      log('SOL: broadcast signature (settled from the chain)', ours);
+      return ours;
+    }
+    throw new BroadcastUncertainError('solana', ours);
+  }
 }
 
 // --- Entry -------------------------------------------------------------------

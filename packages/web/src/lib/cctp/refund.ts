@@ -43,7 +43,7 @@ export async function runCctpRefund(args: {
     functionName: 'balanceOf',
     args: [baseAddress as `0x${string}`],
   })) as bigint;
-  if (bal === 0n) throw new Error('No USDC found on Base — it may already be moving.');
+  if (bal === 0n) throw new Error('No USDC found on Base. It may already be moving.');
 
   // Fresh Base→Stellar bridge to the user's own account. `refund` bypasses
   // the $10 min / cap — this recovers existing funds, not a new swap.

@@ -81,7 +81,7 @@ export const GET = withAuth(async (req: NextRequest, { user }) => {
   } catch (err: any) {
     logger.error('[coinbase/offramp-status] exception:', err);
     return NextResponse.json(
-      { error: 'Coinbase is temporarily unavailable — please try again.' },
+      { error: 'Coinbase is temporarily unavailable. Please try again.' },
       { status: 500 }
     );
   }

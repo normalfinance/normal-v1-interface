@@ -3,6 +3,7 @@
 import type { OwnWalletCandidate } from '@/lib/stellar/own-wallets';
 
 import { useTranslate } from '@/locales';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { deriveWalletReadiness } from '@/lib/stellar/wallet-readiness';
 
@@ -50,7 +51,7 @@ function OwnWalletChip({
   let disabled = false;
   if (readiness === 'not-activated') {
     if (isXlm) {
-      hint = t('not active — sending XLM activates it');
+      hint = t('not active: sending XLM activates it');
     } else {
       hint = t('not active yet');
       disabled = true;
@@ -91,7 +92,10 @@ function OwnWalletChip({
       {hint && (
         <Typography
           component="span"
-          sx={{ fontSize: '10.5px', color: selected ? 'rgba(255,255,255,0.7)' : '#B45309' }}
+          sx={{
+            fontSize: '10.5px',
+            color: selected ? 'rgba(255,255,255,0.7)' : BRAND_COLORS.yellow.deep,
+          }}
         >
           {hint}
         </Typography>

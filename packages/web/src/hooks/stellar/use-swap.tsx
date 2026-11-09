@@ -464,7 +464,7 @@ export function useSwap(
           // Doc 90 W2: the silent '' return left the progress modal spinning
           // on "Preparing the swap" forever. Surface it — the modal shows
           // this with Try again; the reconnect snackbar already fired.
-          setError('Your wallet session expired — reconnect your wallet and try again.');
+          setError('Your wallet session expired. Reconnect your wallet and try again.');
           return '';
         }
         logger.error('Error executing swap:', err);

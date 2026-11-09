@@ -25,6 +25,7 @@ import RemoveRounded from '@mui/icons-material/RemoveRounded';
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
 import NorthEastRounded from '@mui/icons-material/NorthEastRounded';
 import SwapHorizRounded from '@mui/icons-material/SwapHorizRounded';
+import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import { HAIRLINE } from '../brand';
 import { Elapsed, formatDuration } from './flow-time';
@@ -48,7 +49,9 @@ function PlaceIcon({ place }: { place: FlowPlace }) {
         ? SavingsOutlined
         : place.glyph === 'bridge'
           ? HubOutlined
-          : SwapHorizRounded;
+          : place.glyph === 'wallets'
+            ? AccountBalanceWalletOutlined
+            : SwapHorizRounded;
     return (
       <Box
         aria-hidden="true"

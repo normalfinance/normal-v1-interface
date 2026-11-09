@@ -307,7 +307,7 @@ export function CoinbaseOfframpModal({
         if (sawError) {
           enqueueSnackbar(
             t(
-              'Could not reach Coinbase to check for a pending cash-out — close this and try again.'
+              'Could not reach Coinbase to check for a pending cash-out. Close this and try again.'
             ),
             { variant: 'warning' }
           );
@@ -349,7 +349,7 @@ export function CoinbaseOfframpModal({
       clearFill(txn.transactionId);
       setError(
         t(
-          'This Coinbase sale’s 30-minute window has passed, so Coinbase would no longer match the deposit. Nothing was sent — start a new sale on Coinbase.'
+          'This Coinbase sale’s 30-minute window has passed, so Coinbase would no longer match the deposit. Nothing was sent. Start a new sale on Coinbase.'
         )
       );
       return;
@@ -365,7 +365,7 @@ export function CoinbaseOfframpModal({
       if (!txn.memo && (await destinationRequiresMemo(config.HORIZON_URL, txn.toAddress))) {
         setError(
           t(
-            'This destination requires a memo, but Coinbase didn’t provide one — we can’t safely send. Please contact support.'
+            'This destination requires a memo, but Coinbase didn’t provide one. We can’t safely send. Please contact support.'
           )
         );
         return;
@@ -420,7 +420,7 @@ export function CoinbaseOfframpModal({
           : t('A network fee has to stay in the wallet to send.');
       setError(
         t(
-          '{{why}} You can sell at most about {{avail}} {{symbol}} right now — start a new sale on Coinbase and enter {{avail}} (or less) instead of using Max.',
+          '{{why}} You can sell at most about {{avail}} {{symbol}} right now. Start a new sale on Coinbase and enter {{avail}} (or less) instead of using Max.',
           { why, avail, symbol }
         )
       );
@@ -502,7 +502,7 @@ export function CoinbaseOfframpModal({
               {stage === 'sending' && t('Approve the send with your passkey…')}
               {stage === 'confirming' &&
                 t(
-                  'Crypto sent. Coinbase will pay out your cash once it confirms — you can close this.'
+                  'Crypto sent. Coinbase will pay out your cash once it confirms. You can close this.'
                 )}
               {stage === 'done' &&
                 t(
@@ -510,14 +510,14 @@ export function CoinbaseOfframpModal({
                 )}
               {stage === 'pending' &&
                 t(
-                  'Your crypto was sent, but Coinbase hasn’t confirmed the sale yet. This usually resolves within minutes — the row stays Pending in Activity until it does. Nothing more to do here.'
+                  'Your crypto was sent, but Coinbase hasn’t confirmed the sale yet. This usually resolves within minutes. The row stays Pending in Activity until it does. Nothing more to do here.'
                 )}
               {stage === 'failed' &&
                 (sentHash
                   ? t(
-                      'Coinbase reported this sale as failed or expired after your crypto was sent. Nothing more should be sent — the crypto arrives as a balance in your Coinbase account, where you can sell it directly or contact Coinbase support.'
+                      'Coinbase reported this sale as failed or expired after your crypto was sent. Nothing more should be sent: the crypto arrives as a balance in your Coinbase account, where you can sell it directly or contact Coinbase support.'
                     )
-                  : t('We couldn’t complete the send. No funds were moved — you can try again.'))}
+                  : t('We couldn’t complete the send. No funds were moved. You can try again.'))}
               {stage === 'none' &&
                 t(
                   'We didn’t find a pending Coinbase sell order. If you just confirmed one, give it a moment and reopen.'
@@ -588,7 +588,7 @@ export function CoinbaseOfframpModal({
           {stage === 'ready' && windowExpired && (
             <Typography sx={{ fontSize: '12.5px', color: '#B91C1C', lineHeight: 1.5 }}>
               {t(
-                'Coinbase matches deposits for 30 minutes after “Cash out now”. This sale is past that window — start a new sale on Coinbase instead of sending.'
+                'Coinbase matches deposits for 30 minutes after “Cash out now”. This sale is past that window. Start a new sale on Coinbase instead of sending.'
               )}
             </Typography>
           )}

@@ -12,6 +12,7 @@
 import { type NetworkType } from '@normalfinance/utils';
 import { stellarContractToBytes32 } from '@/lib/cctp/addresses';
 import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
+import { sendSignedEvmTransaction } from '@/lib/chains/evm-send';
 import { bytesToHex, encodeStellarHookData } from '@/lib/cctp/hookdata';
 import {
   EVM_CCTP,
@@ -133,18 +134,12 @@ export async function autopilotBurnUsdc(params: AutopilotBurnParams): Promise<{
         purpose: `cctp-inbound-${label}`,
         amountUsd: label === 'depositForBurnWithHook' ? legUsd : undefined,
       })) as `0x${string}`;
-      try {
-        hash = await client.sendRawTransaction({ serializedTransaction: raw });
-      } catch (sendErr: any) {
-        const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
-        if (
-          attempt === 0 &&
-          /nonce too low|already known|replacement transaction underpriced/i.test(m)
-        ) {
-          continue;
-        }
-        throw sendErr;
-      }
+      // Re-sign only when the chain shows the nonce is held by another
+      // transaction, never ours (lib/chains/evm-send.ts).
+      const result = await sendSignedEvmTransaction(client, raw, { chainLabel: chain.name });
+      if (result.sent) hash = result.hash;
+      else if (attempt === 0) continue;
+      else throw result.error;
     }
     // Doc 95 Wave 3: hand the hash UP before waiting for the receipt. A
     // receipt-wait failure (RPC hiccup, function timeout) used to discard a

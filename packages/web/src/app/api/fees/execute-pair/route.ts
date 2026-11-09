@@ -224,7 +224,7 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
         return NextResponse.json(
           {
             success: false,
-            error: 'Fee transaction window is missing or too short — rebuild the pair',
+            error: 'Fee transaction window is missing or too short. Rebuild the pair',
           },
           { status: 400 }
         );

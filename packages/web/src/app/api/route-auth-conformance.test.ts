@@ -62,6 +62,7 @@ const PARTIAL_LOGIN_ROUTES: Record<string, string> = {
 const ACTION_CODE_ROUTES = [
   'cctp/transfers',
   'fees/execute-pair',
+  'index/purchases',
   'savings/deposit',
   'savings/withdraw',
   'send/execute',

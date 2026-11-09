@@ -1,0 +1,821 @@
+'use client';
+
+import type { FlowPlan, FlowSummary } from '@/lib/flow/types';
+import type { TurnkeyChain } from '@/lib/turnkey/add-account';
+import type { TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+
+import { paths } from '@/routes/paths';
+import { BigNumber } from 'bignumber.js';
+import { useTranslate } from '@/locales';
+import { CHAINS } from '@/lib/chains/registry';
+import { buildAuthHeaders } from '@/utils/http';
+import { CCTP_DOMAIN } from '@/lib/cctp/config';
+import { useMarkets } from '@/hooks/use-markets';
+import { useFlowRun } from '@/hooks/use-flow-run';
+import { useNetworkStore } from '@normalfinance/state';
+import { assetDisplay } from '@/lib/portfolio/display';
+import { confirmAction } from '@/lib/auth/action-code';
+import { DashboardContent } from '@/layouts/dashboard';
+import { evmAddressToBytes } from '@/lib/cctp/addresses';
+import { readBridgeStatus } from '@/lib/flow/lifi-status';
+import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
+import { useWalletBalances } from '@/hooks/use-wallet-balances';
+import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
+import { indexBuyStepId, indexPurchasePlan } from '@/lib/flow/plans';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { INK, FAINT, MUTED, CANVAS, HAIRLINE_COLOR } from '@/theme/brand-colors';
+import {
+  weightLabel,
+  CRYPTO_INDEX,
+  splitPurchase,
+  purchaseVerdict,
+  wireToUsdNumber,
+  minimumPurchaseWire,
+} from '@/lib/index/basket';
+
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import InputBase from '@mui/material/InputBase';
+import Typography from '@mui/material/Typography';
+
+import { AppPageHeader, INK_BUTTON_SX } from '@/components/_common/brand';
+import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
+import { FlowView, FlowHost, FlowPortal } from '@/components/_common/flow';
+import AutopilotConsentDialog from '@/components/_common/autopilot-consent-dialog';
+import {
+  Change,
+  FIGURES,
+  ListRow,
+  RowList,
+  AppBlock,
+  formatUsd,
+  assetName,
+  formatCoin,
+  formatPrice,
+} from '@/components/_common/app-ui';
+import {
+  baseTxLink,
+  chainTxLink,
+  lifiTrackLink,
+  stellarTxLink,
+  baseAddressHref,
+  stellarAccountHref,
+} from '@/components/_common/flow/flow-links';
+
+// ---------------------------------------------------------------------------
+// /app/crypto-index: buy Bitcoin, Ethereum and Solana in one purchase, with
+// one passkey signature (lib/index/basket.ts for how the money moves).
+//
+// The page follows the app's rule for moving money: "Review purchase" opens
+// the review with every step and figure, only Confirm signs, and the journey
+// then follows the money. After the Stellar transfer is sent, the rest needs
+// no page: the cron mints on Base and buys the coins if this page closes.
+// ---------------------------------------------------------------------------
+
+const LIFI_CHAIN_ID = { BTC: 20000000000001, ETH: 1, SOL: 1151111081099710 } as const;
+const BASE_LIFI_CHAIN_ID = 8453;
+const CHAIN_OF = { BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const;
+type Coin = keyof typeof CHAIN_OF;
+
+const sleep = (ms: number) =>
+  new Promise<void>((r) => {
+    setTimeout(r, ms);
+  });
+
+const toWire = (amount: string): bigint | null => {
+  const n = BigNumber(amount);
+  if (!n.isFinite() || n.lte(0)) return null;
+  return BigInt(n.times(1_000_000).integerValue(BigNumber.ROUND_DOWN).toFixed());
+};
+
+type LegRead = {
+  symbol: Coin;
+  status: string;
+  dstSwapTxHash: string | null;
+  dstAmount: string | null;
+  amountWire: string;
+};
+type PurchaseRead = {
+  purchase: { id: string; status: string; mintTxHash: string | null; destAddress: string };
+  phase: string;
+  legs: LegRead[];
+};
+
+async function readPurchase(id: string): Promise<PurchaseRead | null> {
+  try {
+    const res = await fetch(`/api/index/purchases/${id}`, {
+      headers: await buildAuthHeaders(),
+      credentials: 'include',
+    });
+    return res.ok ? ((await res.json()) as PurchaseRead) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function CryptoIndexView() {
+  const { t } = useTranslate();
+  const { user } = useSupabaseAuth();
+  const network = useNetworkStore((s) => s.network);
+  const { markets } = useMarkets();
+  const { assets, refresh } = useWalletBalances(true);
+  const flow = useFlowRun();
+  const { run: flowState } = flow;
+
+  const [amount, setAmount] = useState('');
+  const [view, setView] = useState<'form' | 'flow'>('form');
+  const [frozen, setFrozen] = useState<{ summary: FlowSummary; lede: string } | null>(null);
+  const [info, setInfo] = useState<TurnkeyWalletInfo | null>(null);
+  const [autopilot, setAutopilot] = useState<boolean | null>(null);
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [setupChain, setSetupChain] = useState<TurnkeyChain | null>(null);
+  const [busy, setBusy] = useState(false);
+  const movedRef = useRef(false);
+  const cancelled = useRef(false);
+
+  const loadInfo = useCallback(async () => {
+    setInfo(await getTurnkeyWalletInfo().catch(() => null));
+  }, []);
+  const loadAutopilot = useCallback(async () => {
+    try {
+      const res = await fetch('/api/autopilot/status', { headers: await buildAuthHeaders() });
+      const data = await res.json();
+      setAutopilot(!!data?.active);
+    } catch {
+      setAutopilot(false);
+    }
+  }, []);
+  useEffect(() => {
+    loadInfo();
+    loadAutopilot();
+    return () => {
+      cancelled.current = true;
+    };
+  }, [loadInfo, loadAutopilot]);
+
+  const usdcBalance = Number(
+    assets.find((a) => a.chain === 'stellar' && a.symbol === 'USDC')?.balance ?? 0
+  );
+  const wire = toWire(amount);
+  const minimum = minimumPurchaseWire();
+  const verdict = wire ? purchaseVerdict(wire, null) : null;
+  const tooMuch = wire !== null && wireToUsdNumber(wire) > usdcBalance;
+  const missing = CRYPTO_INDEX.legs.filter(
+    (l) => info && !info[CHAINS[CHAIN_OF[l.symbol]].addressField as keyof TurnkeyWalletInfo]
+  );
+
+  // ---- the plan and the summary, from the amount ---------------------------
+  const buildPlan = useCallback(
+    (totalWire: bigint): FlowPlan => {
+      const slices = splitPurchase(totalWire);
+      return indexPurchasePlan({
+        t,
+        amountUsdc: formatCoin(wireToUsdNumber(totalWire), 'USDC'),
+        legs: slices.map((s) => {
+          const price = markets[s.symbol]?.price;
+          const usd = wireToUsdNumber(s.amountWire);
+          return {
+            symbol: s.symbol,
+            amountUsdc: formatCoin(usd, 'USDC'),
+            weight: weightLabel(s.weightBps),
+            amountOut: price ? `≈ ${formatCoin(usd / price, s.symbol)}` : undefined,
+          };
+        }),
+        stellarWallet: {
+          address: info?.stellarAddress,
+          href: stellarAccountHref(info?.stellarAddress),
+        },
+        baseWallet: {
+          address: info?.ethereumAddress,
+          href: baseAddressHref(info?.ethereumAddress),
+        },
+      });
+    },
+    [t, markets, info]
+  );
+
+  const buildSummary = useCallback(
+    (totalWire: bigint): FlowSummary => ({
+      rows: [
+        {
+          key: 'pay',
+          label: t('You pay'),
+          value: formatUsd(wireToUsdNumber(totalWire)),
+          detail: t('Digital dollars from your Stellar wallet'),
+        },
+        ...splitPurchase(totalWire).map((s) => {
+          const price = markets[s.symbol]?.price;
+          const usd = wireToUsdNumber(s.amountWire);
+          return {
+            key: s.symbol,
+            label: t('{{coin}} ({{weight}})', {
+              coin: assetName(s.symbol),
+              weight: weightLabel(s.weightBps),
+            }),
+            value: formatUsd(usd),
+            detail: price ? `≈ ${formatCoin(usd / price, s.symbol)}` : undefined,
+          };
+        }),
+        {
+          key: 'fees',
+          label: t('Exchange fees'),
+          value: t('About 0.75% of each coin'),
+          detail: t('Normal 0.5% and LI.FI 0.25%, taken in the exchange'),
+        },
+        {
+          key: 'network',
+          label: t('Network fees'),
+          value: t('Paid by Normal'),
+          detail: t('Except the Stellar fee, paid in XLM by your wallet'),
+        },
+        { key: 'signatures', label: t('Signatures'), value: t('One') },
+        {
+          key: 'time',
+          label: t('Time'),
+          value: t('Usually 10 to 60 minutes'),
+          detail: t('Bitcoin is the slowest to arrive'),
+        },
+      ],
+      note: t(
+        'Prices move while the coins are bought. Each exchange guarantees a minimum, or that coin’s share comes back to you as digital dollars.'
+      ),
+    }),
+    [t, markets]
+  );
+
+  const liveWire = verdict?.ok ? wire : null;
+  const livePlan = useMemo(() => (liveWire ? buildPlan(liveWire) : null), [liveWire, buildPlan]);
+  const liveSummary = useMemo(
+    () => (liveWire ? buildSummary(liveWire) : null),
+    [liveWire, buildSummary]
+  );
+  const liveLede = liveWire
+    ? t('{{pay}} split into Bitcoin, Ethereum and Solana.', {
+        pay: formatUsd(wireToUsdNumber(liveWire)),
+      })
+    : '';
+  const shownPlan = flowState.phase === 'review' ? livePlan : (flow.plan ?? livePlan);
+  const shownSummary =
+    flowState.phase === 'review' ? liveSummary : (frozen?.summary ?? liveSummary);
+
+  // ---- opening and leaving the review --------------------------------------
+  const openFlow = useCallback(() => {
+    setView('flow');
+    try {
+      window.history.pushState({ nfFlow: true }, '');
+    } catch {
+      /* the page's own Back still works */
+    }
+  }, []);
+  const phaseRef = useRef(flowState.phase);
+  phaseRef.current = flowState.phase;
+  const leaveFlow = useCallback(() => {
+    flow.reset();
+    setFrozen(null);
+    setView('form');
+    movedRef.current = false;
+  }, [flow]);
+  const exitFlow = useCallback(() => {
+    leaveFlow();
+    if ((window.history.state as { nfFlow?: boolean } | null)?.nfFlow) window.history.back();
+  }, [leaveFlow]);
+  useEffect(() => {
+    if (view !== 'flow') return undefined;
+    const onPop = () => {
+      if (phaseRef.current === 'running') {
+        window.history.pushState({ nfFlow: true }, '');
+        return;
+      }
+      leaveFlow();
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [view, leaveFlow]);
+
+  // ---- the run ---------------------------------------------------------------
+  const follow = useCallback(
+    async (id: string) => {
+      // Circle: attest, then the mint on Base (each read advances the row).
+      flow.start('attest');
+      let read: PurchaseRead | null = null;
+      for (let misses = 0; ; ) {
+        if (cancelled.current) return;
+
+        read = await readPurchase(id);
+        misses = read ? 0 : misses + 1;
+        if (misses >= 12) {
+          flow.handOff(
+            t('Lost connection while following this purchase. It carries on on our servers.')
+          );
+          return;
+        }
+        const st = read?.purchase.status;
+        if (st === 'FAILED') throw new Error(t('Circle could not complete the transfer.'));
+        if (st === 'ATTESTED' || st === 'MINT_SUBMITTED') flow.start('mint');
+        if (read?.purchase.mintTxHash) break;
+
+        await sleep(5_000);
+      }
+      flow.done('mint', { links: [baseTxLink(t, read!.purchase.mintTxHash!)] });
+
+      // Base: Autopilot buys each coin. The request runs the legs one after
+      // another; reads alongside it mark each one as its swap goes out.
+      flow.start('gas');
+      const finishing = fetch(`/api/index/purchases/${id}/finish`, {
+        method: 'POST',
+        headers: await buildAuthHeaders(),
+        credentials: 'include',
+      }).catch(() => null);
+      const legsDone = new Set<string>();
+      for (let rounds = 0; rounds < 120; rounds += 1) {
+        if (cancelled.current) return;
+
+        read = (await readPurchase(id)) ?? read;
+        const legs = read?.legs ?? [];
+        const held = legs.find((l) => l.status === 'HELD');
+        if (held) {
+          throw new Error(
+            t(
+              'The exchange for {{coin}} kept failing, so its share is safe as digital dollars at your own Base address. Contact support to move it.',
+              { coin: assetName(held.symbol) }
+            )
+          );
+        }
+        for (const leg of legs) {
+          if (leg.dstSwapTxHash && !legsDone.has(leg.symbol)) {
+            legsDone.add(leg.symbol);
+            flow.done(indexBuyStepId(leg.symbol), {
+              links: [baseTxLink(t, leg.dstSwapTxHash), lifiTrackLink(t, leg.dstSwapTxHash)],
+            });
+          }
+        }
+        const next = legs.find((l) => !l.dstSwapTxHash);
+        if (!next) break;
+        flow.start(indexBuyStepId(next.symbol));
+        // A leg left waiting (a route that reverted) gets another try.
+        if (rounds > 0 && rounds % 10 === 0) {
+          await fetch(`/api/index/purchases/${id}/finish`, {
+            method: 'POST',
+            headers: await buildAuthHeaders(),
+            credentials: 'include',
+          }).catch(() => null);
+        }
+
+        await sleep(3_000);
+      }
+      await finishing;
+      const legs = read?.legs ?? [];
+      if (legs.some((l) => !l.dstSwapTxHash)) {
+        flow.handOff(t('Normal keeps buying the rest on its servers. Check Activity in a while.'));
+        return;
+      }
+
+      // Delivery: each exchange sends its coin to the person's own wallet.
+      flow.start('deliver');
+      const pending = new Map(legs.map((l) => [l.symbol, l]));
+      const arrived: string[] = [];
+      let undelivered: Coin | null = null;
+      for (let polls = 0; pending.size && !undelivered && polls < 240; polls += 1) {
+        if (cancelled.current) return;
+        for (const [symbol, leg] of [...pending]) {
+          try {
+            const q = new URLSearchParams({
+              txHash: leg.dstSwapTxHash!,
+              fromChain: String(BASE_LIFI_CHAIN_ID),
+              toChain: String(LIFI_CHAIN_ID[symbol]),
+            });
+
+            const res = await fetch(`/api/lifi/status?${q}`);
+
+            const data = res.ok ? await res.json() : null;
+            const progress = readBridgeStatus(data?.status);
+            if (progress.phase === 'delivered') {
+              pending.delete(symbol);
+              arrived.push(assetName(symbol));
+              const link = progress.receivingTxHash
+                ? [chainTxLink(t, CHAIN_OF[symbol], progress.receivingTxHash)]
+                : [];
+              flow.update('deliver', {
+                note: t('Arrived so far: {{coins}}.', { coins: arrived.join(', ') }),
+                links: link,
+              });
+            } else if (progress.phase === 'refunded' || progress.phase === 'failed') {
+              undelivered = symbol;
+            }
+          } catch {
+            // a read that failed: ask again on the next round
+          }
+        }
+
+        if (pending.size && !undelivered) await sleep(15_000);
+      }
+      if (undelivered) {
+        throw new Error(
+          t(
+            'The exchange could not deliver {{coin}} and sent its share back as digital dollars to your own Base address. The other coins are not affected.',
+            { coin: assetName(undelivered) }
+          )
+        );
+      }
+      if (pending.size) {
+        flow.handOff(t('The exchanges are still delivering. Your coins arrive on their own.'));
+        return;
+      }
+      flow.done('deliver');
+      flow.done('arrived');
+      flow.start('balance');
+      // The balances re-read in the background; give them a moment, never longer.
+      refresh();
+      await sleep(4_000);
+      flow.finish();
+    },
+    [flow, t, refresh]
+  );
+
+  const handleConfirm = useCallback(async () => {
+    if (!liveWire || !livePlan || !liveSummary || busy) return;
+    if (!autopilot) {
+      setConsentOpen(true);
+      return;
+    }
+    setBusy(true);
+    let approved = false;
+    try {
+      approved = await confirmAction();
+    } finally {
+      setBusy(false);
+    }
+    if (!approved) return;
+
+    movedRef.current = false;
+    cancelled.current = false;
+    setFrozen({ summary: liveSummary, lede: liveLede });
+    flow.begin(livePlan);
+    try {
+      flow.start('record');
+      const res = await fetch('/api/index/purchases', {
+        method: 'POST',
+        headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ amountWire: liveWire.toString() }),
+      });
+      const created = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(created?.error ?? t('This purchase could not be saved.'));
+      const id: string = created.purchase.id;
+      const destAddress: string = created.purchase.destAddress;
+
+      flow.start('prepare');
+      // Which signature is open: the one-time permission, or the transfer.
+      let signing: 'approve' | 'burn-sign' = 'burn-sign';
+      const { approveTxHash, burnTxHash } = await burnUsdcOnStellar({
+        network,
+        stellarAddress: info!.stellarAddress!,
+        amountWire: liveWire,
+        destinationDomain: CCTP_DOMAIN.base,
+        mintRecipient: evmAddressToBytes(destAddress),
+        onStep: (st) => {
+          signing = st === 'approve' ? 'approve' : 'burn-sign';
+          flow.start(signing);
+        },
+        onSigning: () => flow.update(signing, { waiting: true }),
+        onSubmitted: (st, hash) => {
+          if (st === 'approve') {
+            flow.update('approve', {
+              waiting: false,
+              links: [stellarTxLink(t, hash, t('View the permission'))],
+            });
+          } else {
+            movedRef.current = true;
+            flow.start('burn', { links: [stellarTxLink(t, hash)] });
+          }
+        },
+      });
+      movedRef.current = true;
+      if (approveTxHash && approveTxHash !== 'skipped') {
+        flow.done('approve', { note: t('Done. Later purchases skip this.') });
+      }
+      flow.done('burn', { links: [stellarTxLink(t, burnTxHash)] });
+      // The burn hash on the row is what lets the cron finish this without the page.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const patched = await fetch(`/api/cctp/transfers/${id}`, {
+          method: 'PATCH',
+          headers: await buildAuthHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({ burnTxHash }),
+        }).catch(() => null);
+        if (patched?.ok) break;
+
+        await sleep(1500 * (attempt + 1));
+      }
+      window.dispatchEvent(new Event('nf:activity-updated'));
+      await follow(id);
+    } catch (e) {
+      flow.fail(friendlyAppError(e));
+    }
+  }, [liveWire, livePlan, liveSummary, liveLede, busy, autopilot, flow, network, info, t, follow]);
+
+  const activeId = flowState.activeId ?? '';
+  const beforeSent = ['record', 'prepare', 'approve', 'burn-sign'].includes(activeId);
+
+  // ---- the page --------------------------------------------------------------
+  const field = { fontSize: 13.5, color: MUTED } as const;
+  const canReview = !!liveWire && !tooMuch && !missing.length && !!info?.stellarAddress;
+
+  return (
+    <FlowHost>
+      <DashboardContent>
+        <AppPageHeader
+          title={t('Crypto index')}
+          subtitle={t('Bitcoin, Ethereum and Solana in one purchase, with one signature.')}
+        />
+
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 7fr) minmax(0, 5fr)' },
+            alignItems: 'start',
+            gap: { xs: 4, lg: 3 },
+          }}
+        >
+          <Box sx={{ minWidth: 0, order: { xs: 2, lg: 1 }, display: 'grid', gap: 4 }}>
+            <AppBlock
+              flush
+              title={t('What you buy')}
+              action={
+                <Typography sx={{ fontSize: 12.5, color: MUTED }}>
+                  {t('Market data from CoinGecko')}
+                </Typography>
+              }
+            >
+              <RowList>
+                {CRYPTO_INDEX.legs.map((leg) => {
+                  const m = markets[leg.symbol];
+                  return (
+                    <ListRow
+                      key={leg.symbol}
+                      icon={
+                        <Box
+                          component="img"
+                          src={assetDisplay(leg.symbol).icon}
+                          alt=""
+                          sx={{ width: 40, height: 40, borderRadius: '50%', display: 'block' }}
+                        />
+                      }
+                      title={assetName(leg.symbol)}
+                      subtitle={t('{{weight}} of every purchase', {
+                        weight: weightLabel(leg.weightBps),
+                      })}
+                      value={m ? formatPrice(m.price) : undefined}
+                      detail={<Change pct={m?.change24h ?? null} />}
+                      href={paths.assets.details(leg.symbol)}
+                    />
+                  );
+                })}
+              </RowList>
+            </AppBlock>
+
+            <AppBlock title={t('How it works')}>
+              {[
+                t(
+                  'You sign once, on Stellar. Circle moves your digital dollars to your own Base address.'
+                ),
+                t(
+                  'Auto-finish buys each coin there, at its share, and the exchanges send it to your own wallet on its network.'
+                ),
+                t(
+                  'The coins are yours, in your wallets, like any you buy one by one. Nothing is pooled with anyone else.'
+                ),
+              ].map((line) => (
+                <Typography
+                  key={line}
+                  sx={{ fontSize: 14, lineHeight: '22px', color: MUTED, '& + &': { mt: 1.25 } }}
+                >
+                  {line}
+                </Typography>
+              ))}
+            </AppBlock>
+          </Box>
+
+          <Box sx={{ minWidth: 0, order: { xs: 1, lg: 2 } }}>
+            <AppBlock title={t('Buy')}>
+              <Box sx={{ bgcolor: CANVAS, px: 2, py: 1.75 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                  }}
+                >
+                  <Typography sx={{ fontSize: 12, color: MUTED }}>
+                    {t('Amount in digital dollars')}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography sx={{ ...FIGURES, fontSize: 12, color: FAINT }}>
+                      {t('In your wallet: {{amount}}', { amount: formatUsd(usdcBalance) })}
+                    </Typography>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => setAmount(String(Math.floor(usdcBalance * 100) / 100))}
+                      sx={{ minWidth: 0, height: 26, px: 1, fontSize: 11, fontWeight: 500 }}
+                    >
+                      MAX
+                    </Button>
+                  </Box>
+                </Box>
+                <InputBase
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+                  placeholder="0.00"
+                  inputProps={{
+                    inputMode: 'decimal',
+                    'aria-label': t('Amount in digital dollars'),
+                  }}
+                  sx={{
+                    mt: 1,
+                    width: '100%',
+                    '& input': {
+                      ...FIGURES,
+                      fontSize: 26,
+                      fontWeight: 500,
+                      color: INK,
+                      textAlign: 'right',
+                      p: 0,
+                    },
+                  }}
+                />
+              </Box>
+
+              {verdict?.ok && (
+                <Box sx={{ mt: 1.5 }}>
+                  {verdict.slices.map((s, i) => (
+                    <Box
+                      key={s.symbol}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        py: 1,
+                        borderTop: i ? `1px solid ${HAIRLINE_COLOR}` : 'none',
+                      }}
+                    >
+                      <Typography sx={field}>
+                        {assetName(s.symbol)} · {weightLabel(s.weightBps)}
+                      </Typography>
+                      <Typography sx={{ ...FIGURES, fontSize: 13.5, fontWeight: 500, color: INK }}>
+                        {formatUsd(wireToUsdNumber(s.amountWire))}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+
+              {wire !== null && verdict && !verdict.ok && (
+                <Typography sx={{ mt: 1.5, fontSize: 12.5, color: '#B91C1C' }}>
+                  {t(
+                    'The smallest purchase is {{min}}, so every coin’s share is worth its exchange.',
+                    {
+                      min: formatUsd(wireToUsdNumber(minimum)),
+                    }
+                  )}
+                </Typography>
+              )}
+              {tooMuch && (
+                <Typography sx={{ mt: 1.5, fontSize: 12.5, color: '#B91C1C' }}>
+                  {t('That is more than you have.')}
+                </Typography>
+              )}
+
+              {missing.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography sx={{ ...field, mb: 1 }}>
+                    {t('First add these to your wallet, one passkey confirmation each:')}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {missing.map((l) => (
+                      <Button
+                        key={l.symbol}
+                        variant="outlined"
+                        onClick={() => setSetupChain(CHAIN_OF[l.symbol] as TurnkeyChain)}
+                      >
+                        {t('Add {{coin}}', { coin: assetName(l.symbol) })}
+                      </Button>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              <Button
+                fullWidth
+                disabled={!canReview}
+                onClick={openFlow}
+                sx={{
+                  ...INK_BUTTON_SX,
+                  mt: 2,
+                  height: 48,
+                  fontSize: 15,
+                  fontWeight: 500,
+                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: FAINT },
+                }}
+              >
+                {t('Review purchase')}
+              </Button>
+              <Typography sx={{ mt: 1.5, fontSize: 12.5, lineHeight: 1.5, color: MUTED }}>
+                {autopilot === false
+                  ? t(
+                      'One signature needs auto-finish: you can turn it on at the review. Minimum {{min}}.',
+                      { min: formatUsd(wireToUsdNumber(minimum)) }
+                    )
+                  : t(
+                      'You see every step and each coin’s share before you confirm. Minimum {{min}}.',
+                      { min: formatUsd(wireToUsdNumber(minimum)) }
+                    )}
+              </Typography>
+            </AppBlock>
+          </Box>
+        </Box>
+
+        {view === 'flow' && shownPlan && shownSummary && (
+          <FlowPortal>
+            <FlowView
+              plan={shownPlan}
+              run={flowState}
+              summary={shownSummary}
+              titles={{
+                review: t('Review your purchase'),
+                running: t('Buying'),
+                done: t('Purchase complete'),
+                failed: t('Purchase stopped'),
+                stopped: t('Purchase ended'),
+                'handed-off': t('On its way'),
+              }}
+              lede={flowState.phase === 'review' ? liveLede : (frozen?.lede ?? liveLede)}
+              confirm={{
+                label: autopilot ? t('Confirm purchase') : t('Turn on auto-finish'),
+                onClick: handleConfirm,
+                blocked: tooMuch
+                  ? t('That is more than you have. Go back and change the amount.')
+                  : null,
+                busy,
+              }}
+              back={{ label: t('Back to the index'), onClick: exitFlow }}
+              doneActions={[
+                { label: t('Make another purchase'), primary: true, onClick: exitFlow },
+                { label: t('See it in Activity'), href: paths.activity },
+              ]}
+              doneNote={t('Your Bitcoin, Ethereum and Solana are in your wallets.')}
+              failActions={
+                movedRef.current
+                  ? [{ label: t('See it in Activity'), href: paths.activity }]
+                  : [
+                      {
+                        label: t('Try again'),
+                        primary: true,
+                        onClick: () => {
+                          flow.reset();
+                          setFrozen(null);
+                        },
+                      },
+                    ]
+              }
+              leave={
+                beforeSent
+                  ? {
+                      safe: false,
+                      message: t('Stay a few seconds until it is sent, so no prompt is left open.'),
+                    }
+                  : {
+                      safe: true,
+                      message: t('Normal finishes this on its servers, with or without this page.'),
+                    }
+              }
+            />
+          </FlowPortal>
+        )}
+
+        <AutopilotConsentDialog
+          open={consentOpen}
+          onChoose={(enabled) => {
+            setConsentOpen(false);
+            if (enabled) loadAutopilot();
+          }}
+        />
+        {user && setupChain && (
+          <ChainSetupDialog
+            open
+            onClose={() => setSetupChain(null)}
+            chain={setupChain}
+            userId={user.id}
+            userEmail={user.email}
+            onSuccess={async () => {
+              setSetupChain(null);
+              await loadInfo();
+            }}
+          />
+        )}
+      </DashboardContent>
+    </FlowHost>
+  );
+}

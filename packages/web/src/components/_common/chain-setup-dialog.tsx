@@ -162,7 +162,7 @@ export function ChainSetupDialog({
           >
             <Typography sx={{ fontSize: '13px', color: '#2A2A33', lineHeight: 1.55 }}>
               {t(
-                'You don’t have a {{chain}} address yet. To continue, add {{chain}} to your Normal wallet — it takes one passkey confirmation and is created on the same secure wallet you already use.',
+                'You don’t have a {{chain}} address yet. To continue, add {{chain}} to your Normal wallet. It takes one passkey confirmation and is created on the same secure wallet you already use.',
                 { chain: label }
               )}
             </Typography>

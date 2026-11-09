@@ -184,7 +184,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
         invalidateTurnkeyWalletInfo();
       } else if (step === 'activate') {
         const xlm = findToken('XLM');
-        if (!xlm) throw new Error(t('XLM balance not loaded yet — try again in a moment.'));
+        if (!xlm) throw new Error(t('XLM balance not loaded yet. Try again in a moment.'));
         const amount = BigNumber(fundingXlm);
         if (!amount.gte(2)) throw new Error(t('At least 2 XLM is needed to activate the wallet.'));
         // Name the real problem instead of "the transfer was not completed"
@@ -194,7 +194,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
         if (BigNumber(xlm.balance || 0).lt(amount)) {
           throw new Error(
             t(
-              '{{wallet}} only has {{have}} XLM — either lower the amount, or use the QR code above to send at least 1 XLM from another wallet or an exchange.',
+              '{{wallet}} only has {{have}} XLM. Either lower the amount, or use the QR code above to send at least 1 XLM from another wallet or an exchange.',
               {
                 wallet: t('Your connected wallet'),
                 have: BigNumber(xlm.balance || 0).toFixed(2),
@@ -218,7 +218,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
         if (!usdc)
           throw new Error(
             tokens.length === 0
-              ? t('Balances are still loading — try again in a moment.')
+              ? t('Balances are still loading. Try again in a moment.')
               : t('Your connected wallet has no USDC to move.')
           );
         const amount = BigNumber(fundUsdc || 0);
@@ -243,12 +243,12 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
   const stepMeta: Record<SetupStep, { label: string; sub: string; cta: string }> = {
     create: {
       label: t('Create your Normal wallet'),
-      sub: t('One passkey confirmation — your connected wallet stays connected.'),
+      sub: t('One passkey confirmation. Your connected wallet stays connected.'),
       cta: t('Create with passkey'),
     },
     activate: {
       label: t('Activate it with a little XLM'),
-      sub: t('New Stellar accounts need XLM to exist — sent from your connected wallet.'),
+      sub: t('New Stellar accounts need XLM to exist. Sent from your connected wallet.'),
       cta: t('Send XLM'),
     },
     trustline: {
@@ -258,7 +258,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
     },
     fund: {
       label: t('Move the USDC you want to swap'),
-      sub: t('Sent from your connected wallet — you approve it there.'),
+      sub: t('Sent from your connected wallet. You approve it there.'),
       cta: t('Move USDC'),
     },
     ready: {
@@ -292,7 +292,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
       </Stack>
       <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', mb: '14px', lineHeight: 1.5 }}>
         {t(
-          'Cross-chain swaps run through your Normal wallet — a passkey-secured wallet that can hold BTC, ETH and SOL.'
+          'Cross-chain swaps run through your Normal wallet, a passkey-secured wallet that can hold BTC, ETH and SOL.'
         )}
       </Typography>
 
@@ -380,7 +380,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                   }}
                 >
                   {t(
-                    'Send at least 1 XLM to this address from any wallet or exchange — this screen continues by itself as soon as it arrives.'
+                    'Send at least 1 XLM to this address from any wallet or exchange. This screen continues by itself as soon as it arrives.'
                   )}
                 </Typography>
                 {qrUrl && (

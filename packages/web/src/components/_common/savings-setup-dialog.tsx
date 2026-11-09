@@ -285,7 +285,7 @@ export function SavingsSetupDialog({
               >
                 <Typography sx={{ fontSize: '13px', color: '#2A2A33', lineHeight: 1.55 }}>
                   {t(
-                    'Your Stellar account needs a little XLM to activate before it can hold USDC. Scan the code or send at least 1 XLM to the account ID below — it activates automatically the moment funds arrive.'
+                    'Your Stellar account needs a little XLM to activate before it can hold USDC. Scan the code or send at least 1 XLM to the account ID below. It activates automatically the moment funds arrive.'
                   )}
                 </Typography>
               </Box>
@@ -411,7 +411,7 @@ export function SavingsSetupDialog({
                 <CircularProgress size={13} sx={{ color: '#9A9AA3' }} />
                 {isCheckingAccount
                   ? t('Checking…')
-                  : t('Watching for your XLM — activates automatically')}
+                  : t('Watching for your XLM. Activates automatically')}
               </Box>
             </Stack>
           )}
@@ -430,7 +430,7 @@ export function SavingsSetupDialog({
               >
                 <Typography sx={{ fontSize: '13px', color: '#2A2A33', lineHeight: 1.55 }}>
                   {t(
-                    'Nice — your account is active. Add a USDC trustline so it can hold and earn USDC. One quick signature, just a tiny network fee.'
+                    'Nice, your account is active. Add a USDC trustline so it can hold and earn USDC. One quick signature, just a tiny network fee.'
                   )}
                 </Typography>
               </Box>
@@ -478,7 +478,7 @@ export function SavingsSetupDialog({
                 <Iconify icon="solar:check-circle-bold" width={30} sx={{ color: '#0A6649' }} />
               </Box>
               <Typography sx={{ fontSize: '14px', color: '#2A2A33', textAlign: 'center' }}>
-                {t('You’re all set — deposit USDC to start earning.')}
+                {t('You’re all set. Deposit USDC to start earning.')}
               </Typography>
               <Button
                 fullWidth

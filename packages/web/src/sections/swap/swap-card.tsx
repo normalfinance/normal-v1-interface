@@ -567,9 +567,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
               // Cleared on success via resetInput.
               if (movedForAmount.current === amountUsdc) {
                 enqueueSnackbar(
-                  t(
-                    'Your USDC was already moved for this swap — continuing without a second move.'
-                  ),
+                  t('Your USDC was already moved for this swap. Continuing without a second move.'),
                   { variant: 'info' }
                 );
                 return true;
@@ -666,7 +664,7 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
             }}
           >
             {t(
-              'Cross-chain swaps run through your Normal wallet — a passkey-secured wallet that can hold BTC, ETH and SOL.'
+              'Cross-chain swaps run through your Normal wallet, a passkey-secured wallet that can hold BTC, ETH and SOL.'
             )}
           </Typography>
         ),

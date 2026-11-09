@@ -84,7 +84,7 @@ export function buildCctpPayload(
   if (kind === 'refunded') {
     return {
       title: 'Swap returned',
-      body: 'Your swap could not complete. Your USDC is safe in your wallet — open Normal to retry or bring it back.',
+      body: 'Your swap could not complete. Your USDC is safe in your wallet. Open Normal to retry or bring it back.',
       data,
     };
   }

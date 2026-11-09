@@ -24,8 +24,8 @@ export interface SwapAsset {
 }
 
 export const SWAP_ASSETS: SwapAsset[] = [
-  { symbol: 'XLM', name: 'Stellar Lumens', group: 'stellar', decimals: 7 },
-  { symbol: 'USDC', name: 'USD Coin', group: 'stellar', decimals: 7 },
+  { symbol: 'XLM', name: 'Stellar', group: 'stellar', decimals: 7 },
+  { symbol: 'USDC', name: 'Digital dollars', group: 'stellar', decimals: 7 },
   { symbol: 'BTC', name: 'Bitcoin', group: 'crosschain', decimals: 8 },
   { symbol: 'ETH', name: 'Ethereum', group: 'crosschain', decimals: 18 },
   { symbol: 'SOL', name: 'Solana', group: 'crosschain', decimals: 9 },

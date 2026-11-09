@@ -39,6 +39,8 @@ export const paths = {
   /** Same destination as the /invest → /app/swap permanent redirect */
   invest: '/app/swap',
   savings: '/app/savings',
+  /** The crypto index (behind NEXT_PUBLIC_INDEX_ENABLED). */
+  cryptoIndex: '/app/crypto-index',
   activity: '/app/activity',
   assets: {
     root: '/app/assets',

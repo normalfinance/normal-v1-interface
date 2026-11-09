@@ -52,6 +52,7 @@ export async function executePivotSwap(params: {
     'viem'
   );
   const { base } = await import('viem/chains');
+  const { sendSignedEvmTransaction } = await import('@/lib/chains/evm-send');
   const client = createPublicClient({ chain: base, transport: await baseFallbackTransport() });
   const from = params.evmAddress as `0x${string}`;
   const usdc = EVM_USDC.base.mainnet;
@@ -81,7 +82,7 @@ export async function executePivotSwap(params: {
     if (res?.ok && data?.success) break;
     if (attempt < 2) await new Promise((r) => setTimeout(r, 1_500 * (attempt + 1)));
   }
-  if (!data?.success) throw new Error(data?.error ?? 'No route from Base — try again shortly');
+  if (!data?.success) throw new Error(data?.error ?? 'No route from Base. Try again shortly');
   const quote = data.quote;
   const approvalAddress: `0x${string}` | undefined = quote.estimate?.approvalAddress;
   const txr = quote.transactionRequest;
@@ -120,18 +121,12 @@ export async function executePivotSwap(params: {
         maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
       });
       const raw = await signEvmTxWithTurnkey(unsigned, info.subOrgId!, params.evmAddress);
-      try {
-        hash = await client.sendRawTransaction({ serializedTransaction: raw });
-      } catch (sendErr: any) {
-        const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
-        if (
-          attempt === 0 &&
-          /nonce too low|already known|replacement transaction underpriced/i.test(m)
-        ) {
-          continue;
-        }
-        throw sendErr;
-      }
+      // Re-sign only when the chain shows the nonce is held by another
+      // transaction, never ours (lib/chains/evm-send.ts).
+      const result = await sendSignedEvmTransaction(client, raw, { chainLabel: 'base' });
+      if (result.sent) hash = result.hash;
+      else if (attempt === 0) continue;
+      else throw result.error;
     }
     params.onSent?.(step, hash);
     const receipt = await client.waitForTransactionReceipt({ hash });

@@ -25,7 +25,7 @@ export interface FlowPlace {
   /** The network a wallet is on; USDC on Stellar wears the Stellar badge. */
   network?: 'stellar' | 'bitcoin' | 'ethereum' | 'solana' | 'base';
   /** A place that is a service, not a wallet: its grey icon. */
-  glyph?: 'vault' | 'bridge' | 'exchange';
+  glyph?: 'vault' | 'bridge' | 'exchange' | 'wallets';
   /** How much is there when the money arrives: "25.00 USDC", "≈ 0.00029 BTC". */
   amount?: string;
   /** An address only the person controls. */

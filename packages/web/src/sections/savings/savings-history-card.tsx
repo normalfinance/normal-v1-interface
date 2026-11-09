@@ -4,6 +4,7 @@ import type { SavingsDepositActivity, SavingsWithdrawActivity } from '@/types/ac
 
 import { useState } from 'react';
 import { CHAINS } from '@/lib/chains/registry';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { useUserActivity } from '@/hooks/stellar/use-user-activity';
 
 import Box from '@mui/material/Box';
@@ -73,7 +74,7 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
       title="History"
       action={
         historyFailed ? (
-          <Typography sx={{ fontSize: 13, color: '#B45309' }}>
+          <Typography sx={{ fontSize: 13, color: BRAND_COLORS.yellow.deep }}>
             Couldn&apos;t load. Trying again…
           </Typography>
         ) : undefined

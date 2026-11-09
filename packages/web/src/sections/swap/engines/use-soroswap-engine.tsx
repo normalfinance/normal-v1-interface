@@ -1,5 +1,6 @@
 'use client';
 
+import type { SwapQuote } from '@/types/swap';
 import type { FlowPlan, FlowSummary } from '@/lib/flow/types';
 
 import { BigNumber } from 'bignumber.js';
@@ -24,6 +25,7 @@ import { useSwap, type SoroswapStage, type SoroswapStageInfo } from '@/hooks/ste
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import { FlowNotice } from '@/components/_common/flow';
 import { useSnackbar } from '@/components/template/snackbar';
 import { formatUsd, formatCoin } from '@/components/_common/app-ui';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
@@ -34,6 +36,11 @@ import {
 } from '@/components/_common/flow/flow-links';
 
 import type { SwapFlow, StellarSymbol, SwapEngineResult } from './types';
+
+/** A price older than this is fetched again at Confirm. */
+const QUOTE_FRESH_MS = 45_000;
+/** A fresh price this much worse goes back to the review instead of signing. */
+const PRICE_MOVE_LIMIT = 0.01;
 
 const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace' } as const;
 
@@ -90,10 +97,10 @@ export function useSoroswapEngine({
   const { startAction } = useAssetActionsContext();
   const [stellarSetupOpen, setStellarSetupOpen] = useState(false);
 
-  const ADDRESS: Record<StellarSymbol, string> = {
-    XLM: config.XLM_ADDRESS || 'native',
-    USDC: config.USDC_ADDRESS,
-  };
+  const ADDRESS: Record<StellarSymbol, string> = useMemo(
+    () => ({ XLM: config.XLM_ADDRESS || 'native', USDC: config.USDC_ADDRESS }),
+    [config.XLM_ADDRESS, config.USDC_ADDRESS]
+  );
 
   // The review page and live journey (components/_common/flow). Nothing runs
   // until the person confirms there; the hook then reports build / sign /
@@ -110,6 +117,11 @@ export function useSoroswapEngine({
     reset: resetRun,
   } = useFlowRun();
   const [confirming, setConfirming] = useState(false);
+  // Set when Confirm found the price had moved: the review shows the new
+  // figures with this notice and waits for a second Confirm.
+  const [priceNotice, setPriceNotice] = useState<string | null>(null);
+  // When the quote on screen was fetched (a fresh one at Confirm when old).
+  const quoteAtRef = useRef(0);
   // The summary and sentence freeze with the plan: the quote and the amount
   // clear the moment the swap succeeds, and the page must keep its numbers.
   const [frozen, setFrozen] = useState<{ summary: FlowSummary; lede: string } | null>(null);
@@ -182,6 +194,13 @@ export function useSoroswapEngine({
   }, [enabled, debouncedAmount, fromSymbol, toSymbol, getQuote, clearQuote]);
 
   const toAmount = quote?.amountOut ? BigNumber(quote.amountOut) : null;
+
+  useEffect(() => {
+    if (quote) quoteAtRef.current = Date.now();
+  }, [quote]);
+  useEffect(() => {
+    setPriceNotice(null);
+  }, [debouncedAmount, fromSymbol, toSymbol]);
   const insufficient = amount.gt(0) && amount.gt(fromBalance);
   // ------------------------------------------------------------------------
   // Doc 95 Wave 6: a Soroswap swap is a SOROBAN transaction — its fee is
@@ -226,16 +245,16 @@ export function useSoroswapEngine({
       : undefined;
 
   const buildPlan = useCallback(
-    (embedded: boolean): FlowPlan | null =>
-      quote
+    (embedded: boolean, q: SwapQuote | null = quote): FlowPlan | null =>
+      q
         ? stellarSwapPlan({
             t,
             from: fromSymbol,
             to: toSymbol,
-            amountIn: formatCoin(Number(quote.amountIn), fromSymbol),
-            amountOut: `≈ ${formatCoin(Number(quote.amountOut), toSymbol)}`,
-            minOut: formatCoin(Number(quote.minAmountOut), toSymbol),
-            fee: formatCoin(Number(quote.fee || 0), fromSymbol),
+            amountIn: formatCoin(Number(q.amountIn), fromSymbol),
+            amountOut: `≈ ${formatCoin(Number(q.amountOut), toSymbol)}`,
+            minOut: formatCoin(Number(q.minAmountOut), toSymbol),
+            fee: formatCoin(Number(q.fee || 0), fromSymbol),
             embedded,
             wallet: {
               address: swapAddress,
@@ -248,10 +267,12 @@ export function useSoroswapEngine({
   );
 
   const buildSummary = useCallback(
-    (embedded: boolean): FlowSummary | null => {
-      if (!quote) return null;
-      const amountIn = Number(quote.amountIn);
-      const fee = Number(quote.fee || 0);
+    (embedded: boolean, q: SwapQuote | null = quote): FlowSummary | null => {
+      if (!q) return null;
+      const amountIn = Number(q.amountIn);
+      const fee = Number(q.fee || 0);
+      const rate =
+        parseFloat(q.amountIn) > 0 ? BigNumber(q.amountOut).dividedBy(q.amountIn).toFixed(6) : null;
       const usd = (n: number) =>
         fromPrice.gt(0) ? formatUsd(fromPrice.multipliedBy(n).toNumber()) : undefined;
       return {
@@ -265,20 +286,20 @@ export function useSoroswapEngine({
           {
             key: 'get',
             label: t('You receive'),
-            value: `≈ ${formatCoin(Number(quote.amountOut), toSymbol)}`,
+            value: `≈ ${formatCoin(Number(q.amountOut), toSymbol)}`,
           },
           {
             key: 'min',
             label: t('At least'),
-            value: formatCoin(Number(quote.minAmountOut), toSymbol),
+            value: formatCoin(Number(q.minAmountOut), toSymbol),
             detail: t('Or the swap does not happen'),
           },
-          ...(exchangeRate
+          ...(rate
             ? [
                 {
                   key: 'rate',
                   label: t('Rate'),
-                  value: `1 ${fromSymbol} = ${exchangeRate} ${toSymbol}`,
+                  value: `1 ${fromSymbol} = ${rate} ${toSymbol}`,
                 },
               ]
             : []),
@@ -312,15 +333,20 @@ export function useSoroswapEngine({
         ),
       };
     },
-    [quote, t, fromSymbol, toSymbol, fromPrice, exchangeRate, walletLabel, swapAddress]
+    [quote, t, fromSymbol, toSymbol, fromPrice, walletLabel, swapAddress]
   );
 
-  const lede = quote
-    ? t('{{pay}} for about {{get}}, on Stellar.', {
-        pay: formatCoin(Number(quote.amountIn), fromSymbol),
-        get: formatCoin(Number(quote.amountOut), toSymbol),
-      })
-    : '';
+  const ledeOf = useCallback(
+    (q: SwapQuote | null) =>
+      q
+        ? t('{{pay}} for about {{get}}, on Stellar.', {
+            pay: formatCoin(Number(q.amountIn), fromSymbol),
+            get: formatCoin(Number(q.amountOut), toSymbol),
+          })
+        : '',
+    [t, fromSymbol, toSymbol]
+  );
+  const lede = ledeOf(quote);
 
   rebuildRef.current = (embedded: boolean) => {
     const plan = buildPlan(embedded);
@@ -337,26 +363,46 @@ export function useSoroswapEngine({
   const handleConfirm = useCallback(async () => {
     if (!quote || confirming) return;
     setConfirming(true);
+    let live: SwapQuote = quote;
     let approved = false;
     try {
+      // A price that has sat on the review for a while is fetched again
+      // before anything is signed (as on the phone). One that got more than
+      // 1% worse is not signed: the review shows the new figures and waits
+      // for a second Confirm. A failed fetch leaves the hook's error showing.
+      if (Date.now() - quoteAtRef.current > QUOTE_FRESH_MS) {
+        const fresh = await getQuote(ADDRESS[fromSymbol], ADDRESS[toSymbol], quote.amountIn);
+        if (!fresh) return;
+        const before = BigNumber(quote.amountOut);
+        if (before.gt(0) && BigNumber(fresh.amountOut).lt(before.times(1 - PRICE_MOVE_LIMIT))) {
+          setPriceNotice(
+            t(
+              'The price moved while this was open, so the amounts below are new. Confirm again if they work for you.'
+            )
+          );
+          return;
+        }
+        live = fresh;
+      }
       approved = await confirmAction();
     } finally {
       setConfirming(false);
     }
     if (!approved) return;
+    setPriceNotice(null);
 
-    const embedded = !!quote.embedded;
-    const plan = buildPlan(embedded);
-    const summary = buildSummary(embedded);
+    const embedded = !!live.embedded;
+    const plan = buildPlan(embedded, live);
+    const summary = buildSummary(embedded, live);
     if (!plan || !summary) return;
     embeddedRef.current = embedded;
     submittedRef.current = null;
     setError(null);
-    setFrozen({ summary, lede });
+    setFrozen({ summary, lede: ledeOf(live) });
     beginRun(plan);
 
     // '' on failure: the hook set `error`, and the effect above fails the run.
-    const hash = await executeSwap(quote, { tokenInSymbol: fromSymbol, tokenOutSymbol: toSymbol });
+    const hash = await executeSwap(live, { tokenInSymbol: fromSymbol, tokenOutSymbol: toSymbol });
     if (!hash) return;
     const submitted = submittedRef.current as SoroswapStageInfo | null;
     doneStep('submit', { links: [stellarTxLink(t, hash)] });
@@ -397,9 +443,11 @@ export function useSoroswapEngine({
   }, [
     quote,
     confirming,
+    getQuote,
+    ADDRESS,
     buildPlan,
     buildSummary,
-    lede,
+    ledeOf,
     setError,
     beginRun,
     executeSwap,
@@ -588,6 +636,10 @@ export function useSoroswapEngine({
                 message: t('Stellar finishes this in seconds, with or without this page.'),
               },
           failActions: [{ label: t('Try again'), primary: true, onClick: resetFlow }],
+          notice:
+            priceNotice && flowState.phase === 'review' ? (
+              <FlowNotice>{priceNotice}</FlowNotice>
+            ) : undefined,
           doneNote: t('Your {{coin}} is in your wallet.', { coin: toSymbol }),
           reset: resetFlow,
         }

@@ -96,7 +96,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
     try {
       setBusy(true);
       await addTrustLine('USDC', config.USDC_ISSUER);
-      enqueueSnackbar(t('USDC trustline added — this wallet can now hold USDC.'), {
+      enqueueSnackbar(t('USDC trustline added. This wallet can now hold USDC.'), {
         variant: 'success',
       });
       await probe.refetch();
@@ -194,7 +194,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
             }}
           >
             {t(
-              'Send at least {{amount}} XLM to this address from any wallet or exchange — 1 XLM activates it and ~0.5 XLM is reserved by the USDC trustline. We advance automatically when it arrives.',
+              'Send at least {{amount}} XLM to this address from any wallet or exchange: 1 XLM activates it and ~0.5 XLM is reserved by the USDC trustline. We advance automatically when it arrives.',
               { amount: SUGGESTED_XLM }
             )}
           </Typography>
@@ -260,7 +260,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
         <Stack spacing={1.25}>
           <Typography sx={{ fontSize: '12px', color: '#6B6B76', lineHeight: 1.55 }}>
             {t(
-              '{{wallet}} is active. One approval in your wallet adds the USDC trustline (reserves ~0.5 XLM) — after that it can hold and receive USDC.',
+              '{{wallet}} is active. One approval in your wallet adds the USDC trustline (reserves ~0.5 XLM). After that it can hold and receive USDC.',
               { wallet: walletLabel }
             )}
           </Typography>

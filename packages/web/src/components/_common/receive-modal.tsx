@@ -180,7 +180,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         />
       ) : (
         <Typography sx={{ fontSize: '13px', color: '#9A9AA3' }}>
-          {t('QR unavailable — copy the address below.')}
+          {t('QR unavailable. Copy the address below.')}
         </Typography>
       )}
     </Box>
@@ -498,7 +498,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
               />
               <Typography sx={{ fontSize: '12px', color: '#2A2A33', lineHeight: 1.5 }}>
                 {t(
-                  'This is a Stellar address — only send assets on the Stellar network here (XLM, USDC). Assets sent from other networks cannot be recovered.'
+                  'This is a Stellar address. Only send assets on the Stellar network here (XLM, USDC). Assets sent from other networks cannot be recovered.'
                 )}
               </Typography>
             </Box>

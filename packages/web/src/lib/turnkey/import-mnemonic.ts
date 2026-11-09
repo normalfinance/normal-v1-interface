@@ -116,7 +116,7 @@ export async function importMnemonicIntoTurnkey(
     },
   });
   const walletId = importActivity?.activity?.result?.importWalletResult?.walletId;
-  if (!walletId) throw new Error('Import did not complete — no wallet returned');
+  if (!walletId) throw new Error('Import did not complete: no wallet returned');
 
   // 8 — record on our server (it reads the addresses from Turnkey itself)
   const completeRes = await fetch('/api/turnkey/import', {

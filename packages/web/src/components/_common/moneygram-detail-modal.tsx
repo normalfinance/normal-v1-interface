@@ -111,7 +111,7 @@ export default function MoneyGramDetailModal({
                   {t('Amount')}
                 </Typography>
                 <Typography variant="subtitle2">
-                  {tx.amount ? `$${parseFloat(tx.amount).toFixed(2)} USDC` : '—'}
+                  {tx.amount ? `$${parseFloat(tx.amount).toFixed(2)} USDC` : ''}
                 </Typography>
               </Stack>
 
@@ -155,7 +155,7 @@ export default function MoneyGramDetailModal({
             {tx.kind === 'deposit' && PENDING_MGI_STATUSES.has(tx.status) && (
               <Typography variant="caption" color="text.secondary">
                 {t(
-                  'Drop off the cash at the MoneyGram location you selected — no code needed. Your USDC arrives shortly after paying.'
+                  'Drop off the cash at the MoneyGram location you selected. No code needed. Your USDC arrives shortly after paying.'
                 )}
               </Typography>
             )}

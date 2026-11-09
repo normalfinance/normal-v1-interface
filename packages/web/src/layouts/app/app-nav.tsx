@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 
 import { paths } from '@/routes/paths';
+import { indexEnabled } from '@/lib/index/flag';
 
 import HomeOutlined from '@mui/icons-material/HomeOutlined';
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import SwapHorizOutlined from '@mui/icons-material/SwapHorizOutlined';
+import DonutSmallOutlined from '@mui/icons-material/DonutSmallOutlined';
 import ReceiptLongOutlined from '@mui/icons-material/ReceiptLongOutlined';
 import HelpOutlineOutlined from '@mui/icons-material/HelpOutlineOutlined';
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
@@ -43,12 +45,21 @@ export type AppNavGroup = {
 };
 
 const [HOME, ASSETS, ACTIVITY, SAVINGS, SWAP] = APP_NAV_MAIN;
+const CRYPTO_INDEX_NAV: AppNavItem = {
+  title: 'Crypto index',
+  href: paths.cryptoIndex,
+  icon: <DonutSmallOutlined />,
+};
 const [SETTINGS, HELP] = APP_NAV_SECONDARY;
 
 /** The desktop sidebar, in groups: your money, what Normal does with it, your account. */
 export const APP_NAV_GROUPS: AppNavGroup[] = [
   { items: [HOME, ASSETS, ACTIVITY] },
-  { title: 'Products', items: [SAVINGS, SWAP] },
+  {
+    title: 'Products',
+    // The crypto index shows only where it is switched on (lib/index/flag.ts).
+    items: indexEnabled() ? [SAVINGS, SWAP, CRYPTO_INDEX_NAV] : [SAVINGS, SWAP],
+  },
   { title: 'Account', items: [SETTINGS, HELP] },
 ];
 

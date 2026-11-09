@@ -960,7 +960,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       <>
                         <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 260 }}>
                           {t(
-                            'Pick an asset to get started — we’ll set up your wallet for it in one tap.'
+                            'Pick an asset to get started. We’ll set up your wallet for it in one tap.'
                           )}
                         </Typography>
                         <Button
@@ -1014,7 +1014,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
             {t(
-              "You'll be signed out and your wallet disconnected from this device. Make sure you've backed up your recovery phrase — without it, an imported wallet can't be restored."
+              "You'll be signed out and your wallet disconnected from this device. Make sure you've backed up your recovery phrase: without it, an imported wallet can't be restored."
             )}
           </Typography>
         </DialogContent>

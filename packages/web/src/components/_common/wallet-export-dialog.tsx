@@ -167,7 +167,7 @@ export default function WalletExportDialog({
       // over the row: they differ exactly in the case this feature exists for.
       if (seedsFailed) {
         throw new Error(
-          'Could not confirm which wallet this phrase belongs to — use Retry above, then export.'
+          'Could not confirm which wallet this phrase belongs to. Use Retry above, then export.'
         );
       }
       const exportWalletId = seed?.walletId ?? wallet.walletId;
@@ -176,7 +176,7 @@ export default function WalletExportDialog({
       }
 
       const container = document.getElementById(IFRAME_CONTAINER_ID);
-      if (!container) throw new Error(t('Export view is not ready — try again.'));
+      if (!container) throw new Error(t('Export view is not ready. Try again.'));
 
       // 1) Mount Turnkey's export iframe; init() returns ITS one-time public
       //    key. The phrase will only ever be decrypted inside this iframe.
@@ -287,7 +287,7 @@ export default function WalletExportDialog({
         </Typography>
         <Typography sx={{ fontSize: '12.5px', color: '#2A2A33', lineHeight: 1.55 }}>
           {t(
-            'Write it on paper and store it offline. Never type it into any website or share it — Normal will never ask you for it.'
+            'Write it on paper and store it offline. Never type it into any website or share it. Normal will never ask you for it.'
           )}
         </Typography>
       </Box>
@@ -306,10 +306,10 @@ export default function WalletExportDialog({
       >
         <Typography sx={{ fontSize: '12.5px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
           {seeds.length > 1
-            ? t('This phrase restores {{label}} — and only these addresses:', {
+            ? t('This phrase restores {{label}}, and only these addresses:', {
                 label: seed?.label ?? t('this wallet'),
               })
-            : t('One phrase — your whole wallet. It restores all of these:')}
+            : t('One phrase: your whole wallet. It restores all of these:')}
         </Typography>
 
         {seedsFailed && (
@@ -327,7 +327,7 @@ export default function WalletExportDialog({
           >
             <Typography sx={{ fontSize: '12px', color: '#7F1D1D', flex: 1, lineHeight: 1.45 }}>
               {t(
-                'Could not load your wallet list — exporting now could show the wrong wallet\u2019s phrase.'
+                'Could not load your wallet list. Exporting now could show the wrong wallet\u2019s phrase.'
               )}
             </Typography>
             <Box
@@ -395,7 +395,7 @@ export default function WalletExportDialog({
         </Stack>
         <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', mt: '8px', lineHeight: 1.5 }}>
           {t(
-            'Enter these words in MetaMask (Ethereum), Phantom (Solana), Freighter (Stellar) or Sparrow (Bitcoin) and the same addresses come back — even if Normal is unavailable.'
+            'Enter these words in MetaMask (Ethereum), Phantom (Solana), Freighter (Stellar) or Sparrow (Bitcoin) and the same addresses come back, even if Normal is unavailable.'
           )}
         </Typography>
       </Box>
@@ -404,7 +404,7 @@ export default function WalletExportDialog({
         <>
           <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.6, mb: '18px' }}>
             {t(
-              'You will confirm with your passkey. The phrase is shown only inside a secure Turnkey window — Normal never sees it.'
+              'You will confirm with your passkey. The phrase is shown only inside a secure Turnkey window. Normal never sees it.'
             )}
           </Typography>
           <Button
@@ -531,7 +531,7 @@ export default function WalletExportDialog({
               '&:hover': { bgcolor: '#0A0A0F', opacity: 0.85 },
             }}
           >
-            {requireConfirm ? t('Done — continue') : t('Done')}
+            {requireConfirm ? t('Done, continue') : t('Done')}
           </Button>
         </>
       )}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { PENDING_MGI_STATUSES } from '@/lib/mgi/statuses';
 import { useMgiTransactions } from '@/hooks/use-mgi-transactions';
 
@@ -43,14 +44,18 @@ export default function MoneyGramPendingBanner() {
               border: '1px solid rgba(245,158,11,0.25)',
             }}
           >
-            <Iconify icon="solar:hand-money-bold" width={22} style={{ color: '#B45309' }} />
+            <Iconify
+              icon="solar:hand-money-bold"
+              width={22}
+              style={{ color: BRAND_COLORS.yellow.deep }}
+            />
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="subtitle2" sx={{ color: '#92400E' }}>
                 {tx.kind === 'deposit'
                   ? t('MoneyGram cash deposit pending')
                   : t('MoneyGram cash-out pending')}
               </Typography>
-              <Typography variant="caption" sx={{ color: '#B45309' }}>
+              <Typography variant="caption" sx={{ color: BRAND_COLORS.yellow.deep }}>
                 {tx.amount ? `$${parseFloat(tx.amount).toFixed(2)} USDC · ` : ''}
                 {tx.kind === 'deposit'
                   ? t('drop off the cash at your chosen location to complete it')

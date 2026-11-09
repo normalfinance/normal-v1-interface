@@ -99,7 +99,7 @@ export function createSolanaAdapter(
         const info = await getTurnkeyWalletInfo();
         if (!info?.subOrgId)
           throw new Error(
-            'Could not load your wallet just now — check your connection and try again.'
+            'Could not load your wallet just now. Check your connection and try again.'
           );
         const subOrgId = info.subOrgId;
 
@@ -155,7 +155,7 @@ export function createSolanaAdapter(
         );
 
         const result = signResult?.activity?.result?.signRawPayloadResult;
-        if (!result?.r || !result?.s) throw new Error('Signing failed — no signature returned');
+        if (!result?.r || !result?.s) throw new Error('Signing failed: no signature returned');
 
         const signature = new Uint8Array(64);
         signature.set(hexToBytes(result.r.padStart(64, '0')), 0);

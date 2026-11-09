@@ -45,7 +45,7 @@ const SUPPORTED: AssetMeta[] = [
   {
     symbol: 'USDC',
     blockchain: 'stellar',
-    name: 'USD Coin',
+    name: 'Digital dollars',
     icon: assetDisplay('USDC').icon,
     decimals: 7,
     contract: '__usdc__',
@@ -53,7 +53,7 @@ const SUPPORTED: AssetMeta[] = [
   {
     symbol: 'XLM',
     blockchain: 'stellar',
-    name: 'Stellar Lumens',
+    name: 'Stellar',
     icon: assetDisplay('XLM').icon,
     decimals: 7,
     contract: '__xlm__',

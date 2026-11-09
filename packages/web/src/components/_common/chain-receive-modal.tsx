@@ -143,7 +143,7 @@ export function ChainReceiveModal({
               />
             ) : qrFailed ? (
               <Typography sx={{ fontSize: '12.5px', color: '#9A9AA3', textAlign: 'center' }}>
-                {t('QR unavailable — copy the address below.')}
+                {t('QR unavailable. Copy the address below.')}
               </Typography>
             ) : (
               <CircularProgress size={36} sx={{ color: '#9A9AA3' }} />

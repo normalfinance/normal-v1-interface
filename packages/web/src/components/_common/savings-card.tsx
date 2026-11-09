@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useFlowRun } from '@/hooks/use-flow-run';
 import { chainOfActivityEvent } from '@/lib/tx-events';
 import { usePersistStore } from '@normalfinance/state';
+import { MUTED, BRAND_COLORS } from '@/theme/brand-colors';
 import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { awaitTxRecord } from '@/lib/stellar/await-tx-visible';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
@@ -662,15 +663,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
                 py: '5px',
               }}
             >
-              <Box
-                sx={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  bgcolor: '#1AB37D',
-                  flexShrink: 0,
-                }}
-              />
               <Typography
                 sx={{
                   fontSize: '12px',
@@ -801,7 +793,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
                   {label}
                 </Typography>
                 {positionError && !userPosition ? (
-                  <Typography sx={{ fontSize: '12px', color: '#B45309' }}>
+                  <Typography sx={{ fontSize: '12px', color: BRAND_COLORS.yellow.deep }}>
                     {t('Unavailable. Retrying…')}
                   </Typography>
                 ) : !userPosition ? (
@@ -1105,14 +1097,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
           (the disable logic keys on the same classifier, so the light and the
           buttons can never disagree). */}
       {!needsSetup && feeStatus === 'ok' && (
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: '12px', px: '2px' }}>
-          <Box
-            sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#1AB37D', flexShrink: 0 }}
-          />
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', lineHeight: 1.4 }}>
-            {t('XLM fee reserve healthy: deposits and withdrawals are covered.')}
-          </Typography>
-        </Stack>
+        <Typography sx={{ mb: '12px', px: '2px', fontSize: '12px', color: MUTED, lineHeight: 1.4 }}>
+          {t('XLM fee reserve healthy: deposits and withdrawals are covered.')}
+        </Typography>
       )}
       {!needsSetup && (feeStatus === 'low' || feeStatus === 'blocked') && (
         <Box

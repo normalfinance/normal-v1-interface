@@ -264,7 +264,7 @@ export const useStellarWalletsKit = () => {
     const connectedAddress = useStellarWalletKitStore.getState().publicKey;
     if (!connectedAddress) {
       // User closed the picker — say so instead of total silence.
-      enqueueSnackbar('Wallet connection was cancelled — nothing was linked.', {
+      enqueueSnackbar('Wallet connection was cancelled. Nothing was linked.', {
         variant: 'info',
       });
       return;

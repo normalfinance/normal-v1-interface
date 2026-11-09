@@ -149,7 +149,7 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
             fontFamily: 'inherit',
           }}
         >
-          Your session expired — please sign in again to continue.
+          Your session expired. Please sign in again to continue.
           <button
             type="button"
             onClick={() => window.location.assign('/')}

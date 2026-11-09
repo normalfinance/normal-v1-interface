@@ -71,7 +71,7 @@ export function PostConnectReadinessToast() {
           localStorage.setItem(seenKey, '1');
           enqueueSnackbar(
             t(
-              '{{wallet}} connected — it is not active on Stellar yet. Open your wallet drawer to set it up.',
+              '{{wallet}} connected. It is not active on Stellar yet. Open your wallet drawer to set it up.',
               { wallet: label }
             ),
             { variant: 'warning', autoHideDuration: 10_000 }
@@ -83,7 +83,7 @@ export function PostConnectReadinessToast() {
         localStorage.setItem(seenKey, '1');
         enqueueSnackbar(
           t(
-            '{{wallet}} connected — it has no USDC trustline yet, so USDC sent to it would bounce. You can add one from the wallet menu.',
+            '{{wallet}} connected. It has no USDC trustline yet, so USDC sent to it would bounce. You can add one from the wallet menu.',
             { wallet: label }
           ),
           { variant: 'warning', autoHideDuration: 10_000 }
@@ -144,7 +144,7 @@ export default function WalletReadinessNotice({
     try {
       setBusy(true);
       await addTrustLine('USDC', config.USDC_ISSUER);
-      enqueueSnackbar(t('USDC trustline added — this wallet can now hold USDC.'), {
+      enqueueSnackbar(t('USDC trustline added. This wallet can now hold USDC.'), {
         variant: 'success',
       });
       await probe.refetch();
@@ -157,10 +157,10 @@ export default function WalletReadinessNotice({
 
   const isActivation = readiness === 'not-activated';
   const message = isActivation
-    ? t('{{wallet}} is not active on Stellar yet — send it at least 1 XLM to activate it.', {
+    ? t('{{wallet}} is not active on Stellar yet. Send it at least 1 XLM to activate it.', {
         wallet: walletLabel,
       })
-    : t('{{wallet}} has no USDC trustline — USDC sent to it would bounce back to the sender.', {
+    : t('{{wallet}} has no USDC trustline: USDC sent to it would bounce back to the sender.', {
         wallet: walletLabel,
       });
 

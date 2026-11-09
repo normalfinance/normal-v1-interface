@@ -323,14 +323,14 @@ export function CctpRecoveryBanner({ addresses }: Props) {
             if (row?.status === 'FAILED') {
               enqueueSnackbar(
                 t(
-                  'That swap had already failed on-chain — nothing was bridged and your funds never left your wallet. Removed it from in-flight.'
+                  'That swap had already failed on-chain. Nothing was bridged and your funds never left your wallet. Removed it from in-flight.'
                 ),
                 { variant: 'info' }
               );
             } else {
               enqueueSnackbar(
                 t(
-                  'USDC has not reached Base yet — the bridge is still working. This finishes by itself; nothing to do.'
+                  'USDC has not reached Base yet: the bridge is still working. This finishes by itself; nothing to do.'
                 ),
                 { variant: 'info' }
               );
@@ -349,7 +349,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
             stellarRecipient: tr.destAddress,
           });
           await patch(tr.id, headers, { burnTxHash, dstAmount: wireToUsdc(burnWire) });
-          enqueueSnackbar(t('Bridging your USDC to Stellar — completes automatically (~20 min).'), {
+          enqueueSnackbar(t('Bridging your USDC to Stellar. Completes automatically (~20 min).'), {
             variant: 'info',
           });
         } else {
@@ -362,7 +362,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
             );
           const bal = await readBaseUsdc(network, tr.destAddress);
           if (bal === 0n)
-            throw new Error(t('No USDC found on Base — it may already be on its way.'));
+            throw new Error(t('No USDC found on Base. It may already be on its way.'));
           // Deny list for THIS retry (2026-08-26 forensic): the recorded
           // bridge AND the recorded DEX steps — the poisoned element can be
           // either (today's reverts died in a fake token inside the "fly"
@@ -435,7 +435,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         enqueueSnackbar(
           e?.__pivotRevert
             ? t(
-                'The exchange route failed on the provider side — your USDC is safe. Try again to use a different route.'
+                'The exchange route failed on the provider side. Your USDC is safe. Try again to use a different route.'
               )
             : friendlyAppError(e),
           { variant: 'error' }
@@ -465,7 +465,7 @@ export function CctpRecoveryBanner({ addresses }: Props) {
           stellarAddress: tr.srcAddress,
         });
         enqueueSnackbar(
-          t('Bringing your USDC back to Stellar — completes automatically (~20 min).'),
+          t('Bringing your USDC back to Stellar. Completes automatically (~20 min).'),
           { variant: 'info' }
         );
         refresh();
@@ -526,19 +526,19 @@ export function CctpRecoveryBanner({ addresses }: Props) {
                 {phase === 'halt-receive'
                   ? verifiedIds.has(tr.id)
                     ? t(
-                        'Your USDC is safe in your own Base account — finish delivering it to Stellar'
+                        'Your USDC is safe in your own Base account. Finish delivering it to Stellar'
                       )
                     : t(
-                        'USDC heading to your own Base account via the bridge — finish once it arrives'
+                        'USDC heading to your own Base account via the bridge. Finish once it arrives'
                       )
                   : phase === 'halt-finish'
                     ? verifiedIds.has(tr.id)
                       ? t(
-                          'Your USDC is safe in your own Base account — finish the swap to {{sym}}',
+                          'Your USDC is safe in your own Base account. Finish the swap to {{sym}}',
                           { sym: tr.dstAsset }
                         )
-                      : t('USDC heading to your own Base account — finish once it arrives')
-                    : t('Completing automatically — no action needed')}
+                      : t('USDC heading to your own Base account. Finish once it arrives')
+                    : t('Completing automatically. No action needed')}
               </Typography>
             </Box>
             {isHalt && (

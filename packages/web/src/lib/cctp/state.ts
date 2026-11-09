@@ -74,8 +74,8 @@ export async function advanceTransfer(transfer: CctpTransfer): Promise<CctpTrans
               status: 'FAILED',
               errorDetail:
                 verdict === 'REFUNDED'
-                  ? 'Source swap refunded — funds returned to the sender; nothing was bridged'
-                  : 'Source transaction reverted on-chain — funds never left the sender; nothing was bridged',
+                  ? 'Source swap refunded: funds returned to the sender; nothing was bridged'
+                  : 'Source transaction reverted on-chain: funds never left the sender; nothing was bridged',
             },
           });
           break;
@@ -348,6 +348,7 @@ export async function advancePendingTransfers(): Promise<{
   advanced: number;
   byStatus: Record<string, number>;
   pivotsFinished: number;
+  indexPurchasesFinished: number;
 }> {
   await prisma.cctpTransfer.updateMany({
     where: {
@@ -358,7 +359,7 @@ export async function advancePendingTransfers(): Promise<{
     },
     data: {
       status: 'FAILED',
-      errorDetail: 'Expired — no transaction was ever sent; no funds moved',
+      errorDetail: 'Expired: no transaction was ever sent; no funds moved',
     },
   });
 
@@ -412,5 +413,16 @@ export async function advancePendingTransfers(): Promise<{
   // outbound pivot sweep reads mintTxHash written moments ago.
   const pivotsFinished = await finishStalledPivots();
 
-  return { advanced: pending.length, byStatus, pivotsFinished };
+  // Crypto index purchases whose page closed before the coins were bought
+  // (server/index-legs.ts). Lazy: it drags the Turnkey SDK, and most ticks
+  // have nothing for it. A failure here must not fail the whole pass.
+  let indexPurchasesFinished = 0;
+  try {
+    const { finishIdleIndexPurchases } = await import('@/server/index-legs');
+    indexPurchasesFinished = await finishIdleIndexPurchases();
+  } catch (e) {
+    console.error('[cctp-advance] index legs sweep failed:', e);
+  }
+
+  return { advanced: pending.length, byStatus, pivotsFinished, indexPurchasesFinished };
 }

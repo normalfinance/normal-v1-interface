@@ -30,6 +30,7 @@ import { fCurrency } from '@/utils/format-number';
 import { runCctpRefund } from '@/lib/cctp/refund';
 import { useFlowRun } from '@/hooks/use-flow-run';
 import { useDebounce } from '@/hooks/use-debounce';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executeLifiSwap } from '@/lib/lifi/execute';
 import { abortTimeout } from '@/utils/abort-timeout';
@@ -54,6 +55,7 @@ import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react'
 import { cctpRefundPlan, cctpInboundPlan, cctpOutboundPlan } from '@/lib/flow/plans';
 import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
 import { setActiveCctpTransfer, getActiveCctpTransfer } from '@/lib/cctp/active-transfer';
+import { isBroadcastUncertain, UNCERTAIN_SEND_MESSAGE } from '@/lib/chains/broadcast-safety';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -1051,6 +1053,14 @@ export function useCctpEngine({
           window.dispatchEvent(new Event('nf:activity-updated'));
           return;
         }
+        if (isBroadcastUncertain(e)) {
+          // The source send may have gone out (lib/chains/broadcast-safety.ts):
+          // the row stays open, the hash goes on it so the server can follow the
+          // transfer if it did land, and the page offers no second send.
+          broadcastStarted = true;
+          movedRef.current = true;
+          if (e.hash) await patch({ srcSwapTxHash: e.hash }).catch(() => {});
+        }
         if (String(e?.message) !== 'cancelled') {
           logger.error('[cctp engine] stage failed:', e); // surface stack
           // Stash the run's transfer id BEFORE the active marker is cleared —
@@ -1072,9 +1082,11 @@ export function useCctpEngine({
               pivotRevertExchanges: Array.isArray(e.exchanges) ? e.exchanges.join('+') : '',
             }).catch(() => {});
           }
-          const message = isInsufficientGasError(e)
-            ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
-            : friendlyAppError(e);
+          const message = isBroadcastUncertain(e)
+            ? t(UNCERTAIN_SEND_MESSAGE)
+            : isInsufficientGasError(e)
+              ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
+              : friendlyAppError(e);
           failRun(message);
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
           if (e?.__optionsExhausted) {
@@ -1411,9 +1423,11 @@ export function useCctpEngine({
               pivotRevertExchanges: Array.isArray(e.exchanges) ? e.exchanges.join('+') : '',
             }).catch(() => {});
           }
-          const message = isInsufficientGasError(e)
-            ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
-            : friendlyAppError(e);
+          const message = isBroadcastUncertain(e)
+            ? t(UNCERTAIN_SEND_MESSAGE)
+            : isInsufficientGasError(e)
+              ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
+              : friendlyAppError(e);
           failRun(message);
           setActiveCctpTransfer(null); // something went wrong → recovery banner returns
           if (e?.__optionsExhausted) {
@@ -1552,9 +1566,11 @@ export function useCctpEngine({
         window.dispatchEvent(new Event('nf:activity-updated'));
         return;
       }
-      const message = isInsufficientGasError(e)
-        ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
-        : friendlyAppError(e);
+      const message = isBroadcastUncertain(e)
+        ? t(UNCERTAIN_SEND_MESSAGE)
+        : isInsufficientGasError(e)
+          ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
+          : friendlyAppError(e);
       failRun(message);
       setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
@@ -1859,7 +1875,7 @@ export function useCctpEngine({
             sx={{
               fontSize: '12px',
               fontWeight: 500,
-              color: gasShare > 0.2 ? '#B45309' : '#0A0A0F',
+              color: gasShare > 0.2 ? BRAND_COLORS.yellow.deep : '#0A0A0F',
               ...MONO,
             }}
           >
@@ -1869,7 +1885,7 @@ export function useCctpEngine({
         </Stack>
       )}
       {gasShare > 0.2 && gasShare <= 0.5 && (
-        <Typography sx={{ fontSize: '11px', color: '#B45309', lineHeight: 1.5 }}>
+        <Typography sx={{ fontSize: '11px', color: BRAND_COLORS.yellow.deep, lineHeight: 1.5 }}>
           {t('Network fees take {{pct}}% of this swap. A larger amount gets a better deal.', {
             pct: Math.round(gasShare * 100),
           })}

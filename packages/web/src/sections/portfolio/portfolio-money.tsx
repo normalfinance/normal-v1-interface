@@ -110,7 +110,14 @@ export function MoneyBlock({
     <AppBlock
       flush
       title="Your money"
-      action={<SeeAll href={paths.assets.root}>All assets</SeeAll>}
+      action={
+        // CoinGecko's free data asks to be credited where it is shown, and
+        // Home's prices and daily changes come from it too (aggregate.ts).
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography sx={{ fontSize: 12.5, color: MUTED }}>Prices from CoinGecko</Typography>
+          <SeeAll href={paths.assets.root}>All assets</SeeAll>
+        </Box>
+      }
     >
       {loading ? (
         <RowsSkeleton rows={4} />

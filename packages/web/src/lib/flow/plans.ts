@@ -978,3 +978,196 @@ export function cctpRefundPlan(p: {
     ],
   };
 }
+
+// ---- crypto index (2026-11-09) ----------------------------------------------
+// One purchase of several coins, with one signature: the person signs the
+// Stellar transfer to Circle; Circle releases the digital dollars on Base;
+// auto-finish buys each coin there and the exchanges deliver them. Same words
+// as the single-coin Circle swap up to Base, then one step per coin.
+
+export interface IndexPlanLeg {
+  symbol: Coin;
+  /** This coin's share: "60.00 USDC". */
+  amountUsdc: string;
+  /** "60%". */
+  weight: string;
+  /** "≈ 0.00071 BTC", when a price is known. */
+  amountOut?: string;
+}
+
+/** The step id for buying one coin of an index: "buy-btc". */
+export const indexBuyStepId = (symbol: string) => `buy-${symbol.toLowerCase()}`;
+
+const listWords = (t: Translate, words: string[]) =>
+  words.length <= 1
+    ? (words[0] ?? '')
+    : t('{{head}} and {{last}}', {
+        head: words.slice(0, -1).join(', '),
+        last: words[words.length - 1],
+      });
+
+export function indexPurchasePlan(p: {
+  t: Translate;
+  amountUsdc: string;
+  legs: IndexPlanLeg[];
+  stellarWallet?: WalletRef;
+  baseWallet?: WalletRef;
+}): FlowPlan {
+  const { t } = p;
+  const coins = listWords(
+    t,
+    p.legs.map((l) => assetNoun(l.symbol))
+  );
+  const chains = listWords(
+    t,
+    p.legs.map((l) => chainName(l.symbol))
+  );
+  // The slowest network sets how long delivery can take.
+  const slowest = p.legs.reduce<Coin | null>(
+    (worst, l) =>
+      !worst ||
+      CHAINS[CHAIN_OF[l.symbol]].settlement.maxMinutes >
+        CHAINS[CHAIN_OF[worst]].settlement.maxMinutes
+        ? l.symbol
+        : worst,
+    null
+  );
+
+  return {
+    items: [
+      place(
+        walletPlace(
+          'stellar',
+          t('Your Stellar wallet'),
+          p.stellarWallet,
+          'USDC',
+          p.amountUsdc,
+          'stellar'
+        )
+      ),
+      step({
+        id: 'record',
+        title: t('Save the plan'),
+        detail: t(
+          'Normal records this purchase and each coin’s share before anything moves, so it can be finished even if this page closes.'
+        ),
+        actor: t('Normal'),
+        money: 'here',
+        eta: t('A second'),
+      }),
+      step({
+        id: 'prepare',
+        title: t('Prepare the transfer'),
+        detail: t(
+          'Normal checks the transfer with the Stellar network before you are asked to sign.'
+        ),
+        actor: t('Normal'),
+        money: 'here',
+        eta: t('A few seconds'),
+      }),
+      step({
+        id: 'approve',
+        title: t('Allow Circle to collect it'),
+        detail: t(
+          'A one-time permission for Circle’s contract to take the USDC you send. Later purchases skip this.'
+        ),
+        actor: t('You'),
+        money: 'here',
+        optional: t('First time only'),
+        signature: true,
+      }),
+      step({
+        id: 'burn-sign',
+        title: t('Approve the purchase'),
+        detail: t(
+          'Your passkey signs once. Everything after this is done for you, by auto-finish.'
+        ),
+        actor: t('You'),
+        money: 'here',
+        signature: true,
+      }),
+      step({
+        id: 'burn',
+        title: t('Hand it to Circle'),
+        detail: t(
+          'Circle takes {{amount}} off Stellar. The same amount can only be created at your own {{chain}} address.',
+          { amount: p.amountUsdc, chain: PIVOT_CHAIN.name }
+        ),
+        actor: t('Stellar network'),
+        money: 'moving',
+        eta: t('Seconds'),
+      }),
+      place(circlePlace(t)),
+      step({
+        id: 'attest',
+        title: t('Circle confirms'),
+        detail: t('Circle checks the transfer on Stellar and signs a release for {{chain}}.', {
+          chain: PIVOT_CHAIN.name,
+        }),
+        actor: t('Circle'),
+        money: 'here',
+        eta: t('About {{n}} seconds', { n: CCTP_ETA_SECONDS.fromStellar }),
+      }),
+      step({
+        id: 'mint',
+        title: t('Created on {{chain}}', { chain: PIVOT_CHAIN.name }),
+        detail: t(
+          'Normal delivers Circle’s release to {{chain}}, which creates {{amount}} at your address. Normal pays this network fee.',
+          { chain: PIVOT_CHAIN.name, amount: p.amountUsdc }
+        ),
+        actor: t('Normal'),
+        money: 'moving',
+        eta: t('Seconds'),
+      }),
+      place(basePlace(t, p.baseWallet, p.amountUsdc)),
+      step({
+        id: 'gas',
+        title: t('Cover the exchange fees'),
+        detail: t('Normal takes care of the network fees for the exchanges.'),
+        actor: t('Normal'),
+        money: 'here',
+      }),
+      ...p.legs.map((leg) =>
+        step({
+          id: indexBuyStepId(leg.symbol),
+          title: t('Buy {{coin}}', { coin: assetNoun(leg.symbol) }),
+          detail: t(
+            '{{amount}} ({{weight}}) is exchanged for {{coin}} and sent to your {{chain}} wallet. Signed for you by auto-finish, the way you set it up.',
+            {
+              amount: leg.amountUsdc,
+              weight: leg.weight,
+              coin: assetNoun(leg.symbol),
+              chain: chainName(leg.symbol),
+            }
+          ),
+          actor: AUTO(t),
+          money: 'moving',
+          eta: t('Seconds'),
+        })
+      ),
+      step({
+        id: 'deliver',
+        title: t('The exchanges deliver your coins'),
+        detail: t('Each exchange sends its coin to your own wallet on that coin’s network.'),
+        actor: t('The exchanges'),
+        money: 'moving',
+        eta: slowest ? settlementText(t, slowest) : undefined,
+      }),
+      place({
+        id: 'wallets',
+        label: t('Your {{chains}} wallets', { chains }),
+        detail: t('Each coin in its own wallet, only you control them.'),
+        glyph: 'wallets',
+        own: true,
+      }),
+      step({
+        id: 'arrived',
+        title: t('Your coins arrived'),
+        detail: t('{{coins}} are in your wallets.', { coins }),
+        actor: t('The networks'),
+        money: 'here',
+      }),
+      step(balanceStep(t, t('Your wallets show the new amounts.'))),
+    ],
+  };
+}

@@ -648,7 +648,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
         // useSendToken surfaced the reason in a toast; keep it on screen too.
         logger.warn('[mgi-withdraw] send returned no hash', { id: w.id });
         setMgiSendError(
-          t('The send did not go through — see the message above, fix the cause and try again.')
+          t('The send did not go through. See the message above, fix the cause and try again.')
         );
         return;
       }
@@ -659,7 +659,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
           : prev
       );
       reportMgiStatus(w.id, { status: 'pending_user_transfer_complete' });
-      enqueueSnackbar(t('USDC sent to MoneyGram — your reference number follows shortly.'), {
+      enqueueSnackbar(t('USDC sent to MoneyGram. Your reference number follows shortly.'), {
         variant: 'success',
       });
     } catch (e: any) {
@@ -789,7 +789,7 @@ const OffRampDialog: React.FC<OffRampDialogProps> = ({
                       )}
                 </MgiPanel>
               ) : mgiWithdraw.instructions ? (
-                <MgiPanel tone="info" title={t('Step 2 — send your USDC to MoneyGram')}>
+                <MgiPanel tone="info" title={t('Step 2: send your USDC to MoneyGram')}>
                   {t(
                     'MoneyGram is ready. Send exactly {{amount}} USDC with one passkey confirmation; your cash reference number follows.',
                     {

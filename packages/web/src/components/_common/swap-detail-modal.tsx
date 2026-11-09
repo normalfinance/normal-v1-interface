@@ -15,6 +15,7 @@ import type { Activity } from '@/types/activity';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { abortTimeout } from '@/utils/abort-timeout';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -219,7 +220,7 @@ export function SwapDetailModal({
   }, [transferId]);
 
   const fmt = useCallback((v: string | null) => {
-    if (!v) return '—';
+    if (!v) return '';
     const n = Number(v);
     return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: 8 }) : v;
   }, []);
@@ -348,7 +349,7 @@ export function SwapDetailModal({
                       <Iconify
                         icon="eva:alert-triangle-fill"
                         width={18}
-                        sx={{ color: '#B45309' }}
+                        sx={{ color: BRAND_COLORS.yellow.deep }}
                       />
                     ) : isActive ? (
                       <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />

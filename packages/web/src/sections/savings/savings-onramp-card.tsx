@@ -1,125 +1,63 @@
 'use client';
 
 import { useTranslate } from '@/locales';
+import { MUTED } from '@/theme/brand-colors';
 import { ModalType } from '@normalfinance/types';
 import { useAppStore } from '@normalfinance/state';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 
-import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
-import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import AccountBalanceOutlined from '@mui/icons-material/AccountBalanceOutlined';
+import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import { WalletGate } from '@/components/_common/wallet-gate';
+import { BOX_PX, RowIcon, ListRow, RowList, AppBlock } from '@/components/_common/app-ui';
 
-function OnrampButton({
-  icon,
-  label,
-  description,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <Box
-      component="button"
-      onClick={onClick}
-      sx={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '14px',
-        p: '14px 16px',
-        borderRadius: 'var(--radius-md)',
-        border: '1px solid rgba(10,10,15,0.08)',
-        bgcolor: '#FFFFFF',
-        cursor: 'pointer',
-        textAlign: 'left',
-        fontFamily: 'inherit',
-        transition: 'border-color 0.15s',
-        '&:hover': {
-          borderColor: 'rgba(10,10,15,0.14)',
-        },
-      }}
-    >
-      <Box
-        sx={{
-          width: 40,
-          height: 40,
-          borderRadius: 'var(--radius-md)',
-          bgcolor: '#F4F4F7',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        {icon}
-      </Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', lineHeight: 1.3 }}>
-          {label}
-        </Typography>
-        <Typography sx={{ fontSize: '12px', color: '#6B6B76', mt: '2px' }}>
-          {description}
-        </Typography>
-      </Box>
-      <Box sx={{ ml: 'auto', color: 'rgba(10,10,15,0.25)', fontSize: '18px', flexShrink: 0 }}>
-        →
-      </Box>
-    </Box>
-  );
-}
-
+/**
+ * "Need USDC?": the two ways to bring digital dollars in, as rows of the app's
+ * lists (2026-11-08: was a hand-coloured card from before the app style).
+ */
 export function SavingsOnrampCard() {
   const { t } = useTranslate();
   const { setModalView } = useAppStore();
   const { startAction } = useAssetActionsContext();
 
   return (
-    <Box
-      sx={{
-        p: { xs: '20px', md: '24px' },
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid rgba(10,10,15,0.08)',
-        bgcolor: '#FFFFFF',
-      }}
-    >
-      <Typography sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
-        {t('Need USDC?')}
-      </Typography>
-      <Typography sx={{ fontSize: '13px', color: '#6B6B76', mb: '16px' }}>
+    <AppBlock flush title={t('Need USDC?')}>
+      <Typography sx={{ px: BOX_PX, pt: 1.75, pb: 0.25, fontSize: 13.5, color: MUTED }}>
         {t('Add funds to start earning.')}
       </Typography>
-
-      <Stack spacing={1.5}>
+      <RowList>
         <WalletGate
           buttonText={t('Login to deposit cash')}
           fullWidth
           variant="soft"
           requireWalletConnection={false}
         >
-          <OnrampButton
-            icon={<AccountBalanceOutlinedIcon sx={{ fontSize: 20, color: '#0A0A0F' }} />}
-            label={t('Deposit cash')}
-            description={t('Bank transfer or card via MoneyGram')}
+          <ListRow
+            icon={
+              <RowIcon>
+                <AccountBalanceOutlined />
+              </RowIcon>
+            }
+            title={t('Deposit cash')}
+            subtitle={t('Bank transfer or card via MoneyGram')}
             onClick={() => setModalView(ModalType.ON_RAMP, true)}
           />
         </WalletGate>
-
         <WalletGate buttonText={t('Login to deposit crypto')} fullWidth variant="soft">
-          <OnrampButton
-            icon={<AccountBalanceWalletOutlinedIcon sx={{ fontSize: 20, color: '#0A0A0F' }} />}
-            label={t('Deposit crypto')}
-            description={t('Send from any external wallet')}
+          <ListRow
+            icon={
+              <RowIcon>
+                <AccountBalanceWalletOutlined />
+              </RowIcon>
+            }
+            title={t('Deposit crypto')}
+            subtitle={t('Send from any external wallet')}
             onClick={() => startAction('receive')}
           />
         </WalletGate>
-      </Stack>
-    </Box>
+      </RowList>
+    </AppBlock>
   );
 }

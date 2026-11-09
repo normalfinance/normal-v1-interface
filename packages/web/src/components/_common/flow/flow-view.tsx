@@ -149,7 +149,8 @@ function PositionBox({ plan, run }: { plan: FlowPlan; run: RunState }) {
     run.phase === 'review'
       ? t('Nothing moves until you confirm.')
       : position?.moving && to
-        ? t('From {{place}}', { place: at?.label })
+        ? // 'Your Base address' reads 'From your Base address' mid-sentence.
+          t('From {{place}}', { place: at?.label?.replace(/^Your /, 'your ') })
         : [place?.amount, place?.detail].filter(Boolean).join(' · ');
 
   return (

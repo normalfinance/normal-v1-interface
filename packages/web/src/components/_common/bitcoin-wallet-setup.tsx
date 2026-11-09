@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 
 import Box from '@mui/material/Box';
@@ -56,7 +57,7 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
           borderRadius: 'var(--radius-md)',
           border: '1px solid rgba(247,147,26,0.25)',
           bgcolor: 'rgba(247,147,26,0.06)',
-          color: '#B45309',
+          color: BRAND_COLORS.yellow.deep,
           fontSize: '14px',
           fontWeight: 500,
           fontFamily: 'inherit',
@@ -70,9 +71,9 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
         }}
       >
         {loading ? (
-          <CircularProgress size={16} sx={{ color: '#B45309' }} />
+          <CircularProgress size={16} sx={{ color: BRAND_COLORS.yellow.deep }} />
         ) : (
-          <FingerprintIcon sx={{ fontSize: 18, color: '#B45309' }} />
+          <FingerprintIcon sx={{ fontSize: 18, color: BRAND_COLORS.yellow.deep }} />
         )}
         {loading ? 'Setting up…' : 'Set up Bitcoin wallet'}
       </Box>

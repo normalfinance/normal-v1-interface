@@ -36,13 +36,13 @@ export default function AutopilotConsentDialog({
     try {
       setBusy(true);
       await grantAutopilotConsent(serverPublicKey);
-      enqueueSnackbar(t('Automatic swap completion is on — change it anytime in Settings.'), {
+      enqueueSnackbar(t('Automatic swap completion is on. Change it anytime in Settings.'), {
         variant: 'success',
       });
       onChoose(true);
     } catch (e: any) {
       // Stay open: the user can retry the passkey or pick "Not now".
-      enqueueSnackbar(e?.message ?? t('Could not enable — you can keep signing manually.'), {
+      enqueueSnackbar(e?.message ?? t('Could not enable. You can keep signing manually.'), {
         variant: 'error',
       });
     } finally {
@@ -61,7 +61,7 @@ export default function AutopilotConsentDialog({
       </Typography>
       <Typography sx={{ fontSize: '13.5px', color: '#6B6B76', lineHeight: 1.6 }}>
         {t(
-          'Cross-chain swaps normally need one more signature after the bridge wait. Enable this and Normal finishes that step for you — including a swap that is running right now. You sign once at the start and walk away.'
+          'Cross-chain swaps normally need one more signature after the bridge wait. Enable this and Normal finishes that step for you, including a swap that is running right now. You sign once at the start and walk away.'
         )}
       </Typography>
       <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', lineHeight: 1.6, mt: '10px' }}>

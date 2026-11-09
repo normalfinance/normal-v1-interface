@@ -38,6 +38,6 @@ export async function submitSendThroughServer(
   if (status === 'success') return { hash };
   if (status === 'failed') throw new Error('Transaction failed on-chain.');
   throw new Error(
-    'Could not confirm the send. Check your activity in a minute — if nothing appears, it is safe to try again.'
+    'Could not confirm the send. Check your activity in a minute. If nothing appears, it is safe to try again.'
   );
 }

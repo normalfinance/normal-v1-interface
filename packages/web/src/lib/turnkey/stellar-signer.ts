@@ -49,7 +49,7 @@ export async function signStellarXdrWithTurnkey(
   );
 
   const sig = result?.activity?.result?.signRawPayloadResult;
-  if (!sig?.r || !sig?.s) throw new Error('Turnkey signing failed — no signature returned');
+  if (!sig?.r || !sig?.s) throw new Error('Turnkey signing failed: no signature returned');
 
   // ed25519 signature is r||s (64 bytes); v is unused
   const signature = Buffer.from(sig.r + sig.s, 'hex');

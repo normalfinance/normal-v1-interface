@@ -374,7 +374,7 @@ const SendReview: React.FC<SendReviewProps> = ({
                     fontFamily: '"Geist Mono", ui-monospace, monospace',
                   }}
                 >
-                  {estimatedFeeSat != null ? `~${estimatedFeeSat.toLocaleString()} sat` : '—'}{' '}
+                  {estimatedFeeSat != null ? `~${estimatedFeeSat.toLocaleString()} sat` : ''}{' '}
                   {btcFeeFiat && (
                     <Box component="span" sx={{ color: '#9A9AA3', fontWeight: 400 }}>
                       ({fCurrency(btcFeeFiat)})
@@ -528,7 +528,7 @@ const SendReview: React.FC<SendReviewProps> = ({
                       'Blockchain transactions are irreversible. Your device biometrics will be required to authorise the transaction. Double-check the destination address.'
                     )
                   : t(
-                      'Blockchain transactions are irreversible. Double-check the destination address — funds sent to the wrong address cannot be recovered.'
+                      'Blockchain transactions are irreversible. Double-check the destination address: funds sent to the wrong address cannot be recovered.'
                     )}
               </Typography>
             </Box>
