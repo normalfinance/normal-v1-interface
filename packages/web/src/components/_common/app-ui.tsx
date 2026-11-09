@@ -231,13 +231,27 @@ export function ListRow({
     <>
       <Box sx={{ display: 'flex', flexShrink: 0 }}>{icon}</Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        {/* The badge sits beside the title while both fit, and drops under it
+            when they don't (a phone row), so the title is never cut short to
+            make room for "Pending" or "Action needed". */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            columnGap: 1,
+            rowGap: 0.5,
+            minWidth: 0,
+          }}
+        >
           <Typography
             component="span"
             sx={{
               fontSize: 15,
               fontWeight: 500,
               color: INK,
+              minWidth: 0,
+              maxWidth: '100%',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',

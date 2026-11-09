@@ -48,6 +48,8 @@ export type Holding = {
   minSpan?: number;
   color: string;
   marketCap: number | null;
+  /** Its share of what the table shows, 0 to 1 (Home's share column). */
+  share?: number;
   rank: number | null;
 };
 
@@ -59,7 +61,7 @@ export type HoldingGroup = {
   rows: Holding[];
 };
 
-type Variant = 'full' | 'compact';
+type Variant = 'full' | 'compact' | 'home';
 
 // The columns at each width. Compact (Home) stops at the sparkline; full (Assets)
 // adds the price from tablets and the market cap from laptops.
@@ -67,6 +69,13 @@ const COLUMNS: Record<Variant, Record<string, string>> = {
   compact: {
     xs: 'minmax(0, 1fr) auto',
     sm: 'minmax(0, 1fr) 88px minmax(104px, auto)',
+  },
+  // Home at full width: the price (what one coin is worth now) and each
+  // holding's share of the person's money take the market cap's place.
+  home: {
+    xs: 'minmax(0, 1fr) auto',
+    sm: 'minmax(0, 1fr) 88px minmax(104px, auto)',
+    md: 'minmax(0, 1.6fr) minmax(0, 1fr) 112px minmax(0, 0.7fr) minmax(0, 1fr)',
   },
   full: {
     xs: 'minmax(0, 1fr) auto',
@@ -91,10 +100,11 @@ const from = (breakpoint: 'sm' | 'md' | 'lg') => ({
 
 // On the full table the wide layout moves the amount under the value and puts
 // the ticker under the name; phones (and Home) keep the amount by the name.
+const tabled = (variant: Variant) => variant !== 'compact';
 const wideOnly = (variant: Variant) =>
-  variant === 'full' ? { display: { xs: 'none', md: 'inline' } } : { display: 'none' };
+  tabled(variant) ? { display: { xs: 'none', md: 'inline' } } : { display: 'none' };
 const narrowOnly = (variant: Variant) =>
-  variant === 'full' ? { display: { xs: 'inline', md: 'none' } } : { display: 'inline' };
+  tabled(variant) ? { display: { xs: 'inline', md: 'none' } } : { display: 'inline' };
 
 const SUB = { display: 'block', mt: '2px', fontSize: 13.5, color: MUTED } as const;
 const MAIN = { ...FIGURES, display: 'block', fontSize: 15, fontWeight: 500, color: INK } as const;
@@ -104,12 +114,15 @@ function HeaderRow({ variant }: { variant: Variant }) {
   return (
     <Box aria-hidden="true" sx={{ ...rowGrid(variant), py: 1.25 }}>
       <Typography sx={label}>Asset</Typography>
-      {variant === 'full' && (
+      {tabled(variant) && (
         <Typography sx={{ ...label, ...from('md'), textAlign: 'right' }}>Price</Typography>
       )}
       <Typography sx={{ ...label, ...from('sm'), textAlign: 'center' }}>24h</Typography>
       {variant === 'full' && (
         <Typography sx={{ ...label, ...from('lg'), textAlign: 'right' }}>Market cap</Typography>
+      )}
+      {variant === 'home' && (
+        <Typography sx={{ ...label, ...from('md'), textAlign: 'right' }}>Share</Typography>
       )}
       <Typography sx={{ ...label, textAlign: 'right' }}>Value</Typography>
     </Box>
@@ -188,7 +201,7 @@ function HoldingRow({ row, variant }: { row: Holding; variant: Variant }) {
       </Box>
 
       {/* Price, and how it moved today */}
-      {variant === 'full' && (
+      {tabled(variant) && (
         <Box sx={{ ...from('md'), textAlign: 'right' }}>
           {row.price !== null && (
             <>
@@ -233,6 +246,17 @@ function HoldingRow({ row, variant }: { row: Holding; variant: Variant }) {
         </Box>
       )}
 
+      {/* Its share of the person's money (Home) */}
+      {variant === 'home' && (
+        <Box sx={{ ...from('md'), textAlign: 'right' }}>
+          {row.share !== undefined && (
+            <Typography component="span" sx={MAIN}>
+              {row.share < 0.01 && row.share > 0 ? '<1%' : `${Math.round(row.share * 100)}%`}
+            </Typography>
+          )}
+        </Box>
+      )}
+
       {/* What it is worth */}
       <Box sx={{ textAlign: 'right', minWidth: 0 }}>
         <Typography component="span" sx={MAIN}>
@@ -265,9 +289,14 @@ export function HoldingsTable({
   groups?: HoldingGroup[];
   rows?: Holding[];
 }) {
+  // Home's share column: each holding against everything shown.
+  if (variant === 'home' && rows) {
+    const total = rows.reduce((sum, r) => sum + (Number.isFinite(r.value) ? r.value : 0), 0);
+    rows = rows.map((r) => ({ ...r, share: total > 0 ? r.value / total : undefined }));
+  }
   return (
     <Box sx={ROW_LINES}>
-      {variant === 'full' && <HeaderRow variant={variant} />}
+      {tabled(variant) && <HeaderRow variant={variant} />}
       {groups
         ? groups.flatMap((group) => [
             <GroupRow key={`group-${group.key}`} group={group} />,

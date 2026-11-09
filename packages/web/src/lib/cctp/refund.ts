@@ -12,6 +12,7 @@ import { wireToUsdc } from '@/lib/cctp/decimals';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { abortTimeout } from '@/utils/abort-timeout';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
+import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 
 export async function runCctpRefund(args: {
@@ -106,15 +107,25 @@ export async function runCctpRefund(args: {
     } catch {
       /* autopilot unavailable — fall through to the passkey burn */
     }
+    // The server saves its burn's hash the moment it sends it, so a failure
+    // answer (or a lost one: our 300 s wait can end while it still waits for
+    // Base) may sit beside a burn that went out. A passkey burn now would be
+    // a second one, and its hash would be refused (a row keeps its first),
+    // so that money would never be followed. Read the row first; if it has
+    // a burn, stop here. A burn that reverted is handed back by the cron
+    // (lib/cctp/evm-burn-verdict.ts), and the swap still offers Bring back.
+    const fresh = await fetch(`/api/cctp/transfers/${newId}?noAdvance=1`, {
+      headers,
+      credentials: 'include',
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    if (!fresh?.transfer || fresh.transfer.burnTxHash) {
+      throw new Error(
+        "We couldn't tell whether this refund was sent. Check Activity before you try again, so you don't send it twice."
+      );
+    }
   }
-  const { burnTxHash } = await burnUsdcOnEvm({
-    network,
-    chain: 'base',
-    evmAddress: baseAddress,
-    amountWire: bal,
-    stellarRecipient: stellarAddress,
-  });
-
   const patch = (id: string, body: Record<string, string>) =>
     fetch(`/api/cctp/transfers/${id}`, {
       method: 'PATCH',
@@ -122,6 +133,27 @@ export async function runCctpRefund(args: {
       credentials: 'include',
       body: JSON.stringify(body),
     });
+  let burnTxHash: string;
+  try {
+    ({ burnTxHash } = await burnUsdcOnEvm({
+      network,
+      chain: 'base',
+      evmAddress: baseAddress,
+      amountWire: bal,
+      stellarRecipient: stellarAddress,
+    }));
+  } catch (e) {
+    // A refund burn whose send stayed unclear may be on its way: its hash
+    // goes on the refund row so Circle and the cron can follow it (a lost
+    // burn hash strands the money). The original swap is NOT retired here:
+    // if the burn never left, the swap still offers to finish or bring back,
+    // and that path reads the live balance, so it cannot spend twice.
+    const unclear = uncertainBurnHash(e);
+    if (unclear) {
+      await patch(newId, { burnTxHash: unclear, dstAmount: wireToUsdc(bal) }).catch(() => null);
+    }
+    throw e;
+  }
   await patch(newId, { burnTxHash, dstAmount: wireToUsdc(bal) });
   // Retire the original outbound swap as refunded.
   await patch(transferId, { markRefunded: 'true' });

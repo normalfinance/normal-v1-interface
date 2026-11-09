@@ -65,7 +65,8 @@ function toHolding(
     href: savings ? paths.savings : paths.assets.details(token.symbol),
     icon: <AssetAvatar token={token} size={40} />,
     name: savings ? 'Savings' : assetName(token.symbol),
-    ticker: [token.symbol, owner].filter(Boolean).join(' · '),
+    // Savings is a product, not a coin: its second line names it, as on Assets.
+    ticker: [savings ? 'Normal Savings' : token.symbol, owner].filter(Boolean).join(' · '),
     amount: [amount, owner].filter(Boolean).join(' · '),
     value: holding.value,
     price: savings ? null : Number(token.price) || null,
@@ -147,7 +148,7 @@ export function MoneyBlock({
           )}
           {shown.length ? (
             <HoldingsTable
-              variant="compact"
+              variant="home"
               rows={shown.map((holding) => toHolding(holding, changes, markets))}
             />
           ) : (

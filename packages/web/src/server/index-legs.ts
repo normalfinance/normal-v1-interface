@@ -9,6 +9,7 @@ import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
 import { ensureTransferGas } from '@/server/cctp-transfer-gas';
 import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 import {
+  heldDetail,
   legRunnable,
   INDEX_DIRECTION,
   LEG_CRON_IDLE_MS,
@@ -94,19 +95,32 @@ export async function finishIndexPurchase(purchaseId: string): Promise<FinishInd
     outcomes.push(await runLeg(purchase, wallet, leg));
   }
 
-  // Every coin's exchange is out: mark the purchase settled the way an
+  // Every coin's exchange is out (SENT: a hash alone can still be a swap
+  // that reverts and is cleared): mark the purchase settled the way an
   // outbound swap is (its dstSwapTxHash), so Activity stops showing it as
   // pending. The first coin's swap stands for the purchase.
   const after = await prisma.indexLeg.findMany({
     where: { purchaseId },
     orderBy: { weightBps: 'desc' },
-    select: { dstSwapTxHash: true },
+    select: { symbol: true, status: true, dstSwapTxHash: true },
   });
-  if (after.length && after.every((l) => !!l.dstSwapTxHash)) {
+  if (after.length && after.every((l) => l.status === 'SENT' && !!l.dstSwapTxHash)) {
     await prisma.cctpTransfer
       .updateMany({
         where: { id: purchaseId, dstSwapTxHash: null },
-        data: { dstSwapTxHash: after[0].dstSwapTxHash },
+        data: { dstSwapTxHash: after[0].dstSwapTxHash, errorDetail: null },
+      })
+      .catch(() => {});
+  }
+  // A coin that stopped retrying waits for the person: say so on the row,
+  // so Activity and the swap details can offer "Try it again" from anywhere
+  // (the buy page is only one way back).
+  const heldLeg = after.find((l) => l.status === 'HELD');
+  if (heldLeg) {
+    await prisma.cctpTransfer
+      .updateMany({
+        where: { id: purchaseId, dstSwapTxHash: null },
+        data: { errorDetail: heldDetail(heldLeg.symbol) },
       })
       .catch(() => {});
   }
@@ -252,20 +266,42 @@ async function runLeg(purchase: CctpTransfer, wallet: Wallet, leg: Leg): Promise
  * double swap anyway, this just saves the wasted work).
  */
 export async function finishIdleIndexPurchases(limit = 5): Promise<number> {
-  const waiting = await prisma.indexLeg.findMany({
-    where: {
-      status: { in: ['PENDING', 'SWAPPING'] },
-      dstSwapTxHash: null,
-      updatedAt: { lt: new Date(Date.now() - LEG_CRON_IDLE_MS) },
-    },
-    select: { purchaseId: true },
-    distinct: ['purchaseId'],
-    take: limit,
-  });
+  // Only purchases Circle has delivered to Base can buy anything. Legs are
+  // written when the purchase is saved, so a purchase abandoned at the
+  // passkey (or failed before the bridge) keeps three PENDING legs forever;
+  // picking legs alone let five of those fill the take on every tick and the
+  // live purchases behind them never got their fallback (found 2026-11-09).
+  // Longest-idle first, so a purchase that keeps failing cannot hog it either.
+  const idleBefore = new Date(Date.now() - LEG_CRON_IDLE_MS);
+  const waiting = await prisma.$queryRaw<{ purchaseId: string }[]>`
+    SELECT l."purchaseId"
+    FROM index_legs l
+    JOIN cctp_transfers t ON t.id = l."purchaseId"
+    WHERE l.status IN ('PENDING', 'SWAPPING')
+      AND l."dstSwapTxHash" IS NULL
+      AND l."updatedAt" < ${idleBefore}
+      AND t.direction = ${INDEX_DIRECTION}
+      AND (t."mintTxHash" IS NOT NULL OR t.status = 'COMPLETED')
+      AND t.status NOT IN ('FAILED', 'REFUNDED')
+    GROUP BY l."purchaseId"
+    ORDER BY MIN(l."updatedAt") ASC
+    LIMIT ${limit}
+  `;
   let finished = 0;
   for (const { purchaseId } of waiting) {
     const res = await finishIndexPurchase(purchaseId).catch(() => null);
     if (res?.ok && res.legs.some((l) => l.result === 'sent')) finished += 1;
+    if (!res?.ok) {
+      // Refused before any leg ran (wallet-mismatch, autopilot switched off,
+      // an error): nothing touched its legs, so they would stay the longest
+      // idle and head the queue on every tick. Move them to the back.
+      await prisma.indexLeg
+        .updateMany({
+          where: { purchaseId, status: 'PENDING', dstSwapTxHash: null },
+          data: { updatedAt: new Date() },
+        })
+        .catch(() => {});
+    }
   }
   return finished;
 }

@@ -69,6 +69,17 @@ describe('friendlyAppError — dumps collapse, human text survives', () => {
     const anchor = 'MoneyGram: amount is less than the minimum limit of 15 USD';
     expect(friendlyAppError(new Error(anchor))).toBe(anchor);
   });
+  it('a Bitcoin transaction we refuse to sign reads as plain words, not PSBT', () => {
+    for (const raw of [
+      'Unrecognised PSBT encoding from LI.FI: expected hex or base64',
+      'PSBT input 0 carries no witness_utxo. This wallet can only sign segwit',
+      'Refusing to sign: the quote reports a zero amount',
+    ]) {
+      const out = friendlyAppError(new Error(raw));
+      expect(out).toMatch(/could not sign safely/);
+      expect(out).not.toMatch(/PSBT|witness_utxo/);
+    }
+  });
   it('empty and object-ish messages go generic', () => {
     expect(friendlyAppError(undefined)).toMatch(/try again/i);
     expect(friendlyAppError({})).toMatch(/try again/i);

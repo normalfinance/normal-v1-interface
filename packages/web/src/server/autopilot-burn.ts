@@ -13,6 +13,7 @@ import { type NetworkType } from '@normalfinance/utils';
 import { stellarContractToBytes32 } from '@/lib/cctp/addresses';
 import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { sendSignedEvmTransaction } from '@/lib/chains/evm-send';
+import { tagUncertainStep } from '@/lib/chains/broadcast-safety';
 import { bytesToHex, encodeStellarHookData } from '@/lib/cctp/hookdata';
 import {
   EVM_CCTP,
@@ -135,8 +136,13 @@ export async function autopilotBurnUsdc(params: AutopilotBurnParams): Promise<{
         amountUsd: label === 'depositForBurnWithHook' ? legUsd : undefined,
       })) as `0x${string}`;
       // Re-sign only when the chain shows the nonce is held by another
-      // transaction, never ours (lib/chains/evm-send.ts).
-      const result = await sendSignedEvmTransaction(client, raw, { chainLabel: chain.name });
+      // transaction, never ours (lib/chains/evm-send.ts). An unclear send says
+      // which leg it was, so the caller keeps only a burn's hash on the row.
+      const result = await sendSignedEvmTransaction(client, raw, {
+        chainLabel: chain.name,
+      }).catch((e: unknown) => {
+        throw tagUncertainStep(e, label === 'approve' ? 'approve' : 'burn');
+      });
       if (result.sent) hash = result.hash;
       else if (attempt === 0) continue;
       else throw result.error;

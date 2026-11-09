@@ -46,8 +46,8 @@ export type AppNavGroup = {
 
 const [HOME, ASSETS, ACTIVITY, SAVINGS, SWAP] = APP_NAV_MAIN;
 const CRYPTO_INDEX_NAV: AppNavItem = {
-  title: 'Crypto index',
-  href: paths.cryptoIndex,
+  title: 'Indexes',
+  href: paths.indexes.root,
   icon: <DonutSmallOutlined />,
 };
 const [SETTINGS, HELP] = APP_NAV_SECONDARY;

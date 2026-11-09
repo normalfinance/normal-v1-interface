@@ -4,6 +4,8 @@ import {
   base58,
   isNonceRace,
   sendVerdict,
+  tagUncertainStep,
+  uncertainBurnHash,
   settleUncertainSend,
   isBroadcastUncertain,
   BroadcastUncertainError,
@@ -197,5 +199,31 @@ describe('base58', () => {
       if (i % 30 === 0) sig[1] = 0;
       expect(base58(sig)).toBe(encode(sig));
     }
+  });
+});
+
+describe('the leg an unclear send was', () => {
+  it('a burn keeps its hash for the row', () => {
+    const err = tagUncertainStep(new BroadcastUncertainError('Base', '0xburn'), 'burn');
+    expect(uncertainBurnHash(err)).toBe('0xburn');
+  });
+
+  it('a permission never passes for the burn', () => {
+    const err = tagUncertainStep(new BroadcastUncertainError('Base', '0xapprove'), 'approve');
+    expect(uncertainBurnHash(err)).toBeNull();
+  });
+
+  it('an untagged unclear send (a source swap, a pivot) is not a burn', () => {
+    expect(uncertainBurnHash(new BroadcastUncertainError('ethereum', '0xswap'))).toBeNull();
+  });
+
+  it('a plain error is left alone', () => {
+    const plain = new Error('nonce too low');
+    expect(tagUncertainStep(plain, 'burn')).toBe(plain);
+    expect(uncertainBurnHash(plain)).toBeNull();
+  });
+
+  it('the step can be given up front', () => {
+    expect(uncertainBurnHash(new BroadcastUncertainError('stellar', 'abc', 'burn'))).toBe('abc');
   });
 });

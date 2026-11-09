@@ -1,7 +1,9 @@
 import { it, expect, describe } from '@jest/globals';
 
 import {
+  heldDetail,
   legRunnable,
+  heldSymbolOf,
   purchasePhase,
   INDEX_DIRECTION,
   LEG_MAX_ATTEMPTS,
@@ -61,7 +63,9 @@ describe('purchase', () => {
   };
   it('is ready for its legs only once Circle has minted on Base', () => {
     expect(purchaseReadyForLegs(row)).toBe(true);
-    expect(purchaseReadyForLegs({ ...row, mintTxHash: null })).toBe(false);
+    expect(purchaseReadyForLegs({ ...row, status: 'MINT_SUBMITTED', mintTxHash: null })).toBe(false);
+    // a mint someone else ran: COMPLETED with no mint hash of ours, USDC on Base all the same
+    expect(purchaseReadyForLegs({ ...row, mintTxHash: null })).toBe(true);
     expect(purchaseReadyForLegs({ ...row, burnTxHash: null })).toBe(false);
     expect(purchaseReadyForLegs({ ...row, status: 'FAILED' })).toBe(false);
     // a single-coin Circle swap is never mistaken for a purchase
@@ -71,10 +75,22 @@ describe('purchase', () => {
   it('reads as one phase', () => {
     const sent = { status: 'SENT' };
     expect(purchasePhase({ ...row, burnTxHash: null, mintTxHash: null }, [])).toBe('record');
-    expect(purchasePhase({ ...row, mintTxHash: null }, [])).toBe('bridging');
+    expect(purchasePhase({ ...row, status: 'ATTESTED', mintTxHash: null }, [])).toBe('bridging');
+    expect(purchasePhase({ ...row, mintTxHash: null }, [{ status: 'PENDING' }])).toBe('buying');
     expect(purchasePhase(row, [sent, { status: 'PENDING' }])).toBe('buying');
     expect(purchasePhase(row, [sent, sent, sent])).toBe('delivering');
     expect(purchasePhase(row, [sent, { status: 'HELD' }])).toBe('held');
     expect(purchasePhase({ ...row, status: 'FAILED' }, [sent])).toBe('failed');
+  });
+});
+
+describe('a held coin on the purchase row', () => {
+  it('round-trips the coin', () => {
+    expect(heldSymbolOf(heldDetail('SOL'))).toBe('SOL');
+  });
+  it('reads nothing from other details', () => {
+    expect(heldSymbolOf(null)).toBeNull();
+    expect(heldSymbolOf('autofinish no-usdc')).toBeNull();
+    expect(heldSymbolOf('index-held:')).toBeNull();
   });
 });

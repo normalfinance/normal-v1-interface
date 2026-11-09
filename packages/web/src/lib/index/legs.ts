@@ -52,16 +52,36 @@ export interface PurchaseRow {
   mintTxHash: string | null;
 }
 
+/**
+ * Circle's mint has landed on Base. The same rule as the single-coin swap
+ * (server/autopilot-outbound.ts, cctp-phase.ts): a mint someone else ran
+ * ("mint executed externally", lib/cctp/state.ts) leaves the row COMPLETED
+ * with no mint hash of ours, and the USDC is on Base all the same.
+ */
+export const mintLanded = (row: { status: string; mintTxHash: string | null }) =>
+  !!row.mintTxHash || row.status === 'COMPLETED';
+
 /** Circle has released the USDC on Base, so the legs can be bought. */
 export function purchaseReadyForLegs(row: PurchaseRow): boolean {
   return (
     row.direction === INDEX_DIRECTION &&
     !!row.burnTxHash &&
-    !!row.mintTxHash &&
+    mintLanded(row) &&
     row.status !== 'FAILED' &&
     row.status !== 'REFUNDED'
   );
 }
+
+// A held coin is marked on the purchase row itself, so Activity can say the
+// purchase needs the person without reading its legs (server/index-legs.ts
+// writes it, the retry route clears it).
+export const HELD_MARK = 'index-held:';
+
+export const heldDetail = (symbol: string) => `${HELD_MARK}${symbol}`;
+
+/** The coin a purchase is waiting on the person for, or null. */
+export const heldSymbolOf = (errorDetail: string | null | undefined): string | null =>
+  errorDetail?.startsWith(HELD_MARK) ? errorDetail.slice(HELD_MARK.length) || null : null;
 
 /** How the whole purchase reads, from its row and its legs. */
 export type PurchasePhase =
@@ -75,7 +95,7 @@ export type PurchasePhase =
 export function purchasePhase(row: PurchaseRow, legs: { status: string }[]): PurchasePhase {
   if (row.status === 'FAILED' || row.status === 'REFUNDED') return 'failed';
   if (!row.burnTxHash) return 'record';
-  if (!row.mintTxHash) return 'bridging';
+  if (!mintLanded(row)) return 'bridging';
   if (legs.some((l) => l.status === 'HELD')) return 'held';
   if (legs.length && legs.every((l) => l.status === 'SENT')) return 'delivering';
   return 'buying';

@@ -10,6 +10,7 @@ import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fetchOfframpFills } from '@/lib/offramp-fills';
 import { CHAINS, getChainAddress } from '@/lib/chains/registry';
 import { useMemo, useEffect, useSyncExternalStore } from 'react';
+import { heldSymbolOf, INDEX_DIRECTION } from '@/lib/index/legs';
 import { useMgiTransactions } from '@/hooks/use-mgi-transactions';
 import { getLifiStatusOverride } from '@/lib/lifi/status-overrides';
 import { isTerminal, providerLabel, type RampStatus } from '@/lib/ramp/status';
@@ -145,6 +146,7 @@ interface CctpTransferRow {
   srcSwapTxHash: string | null;
   dstSwapTxHash: string | null;
   quoteJson: string | null;
+  errorDetail?: string | null;
   createdAt: string;
 }
 
@@ -154,7 +156,7 @@ function mapCctpTransfer(tr: CctpTransferRow): Extract<Activity, { type: 'Swap' 
   // pivot (dstSwapTxHash). Inbound (→ USDC on Stellar) is done at COMPLETED.
   // A crypto index purchase settles like an outbound swap: done once its
   // coins' exchanges are out (server/index-legs.ts marks the row then).
-  const outbound = tr.direction === 'stellar_to_crosschain' || tr.direction === 'stellar_to_index';
+  const outbound = tr.direction === 'stellar_to_crosschain' || tr.direction === INDEX_DIRECTION;
   const refunded = tr.status === 'REFUNDED';
   const failed = tr.status === 'FAILED';
   const succeeded = outbound
@@ -162,9 +164,12 @@ function mapCctpTransfer(tr: CctpTransferRow): Extract<Activity, { type: 'Swap' 
     : tr.status === 'COMPLETED';
   // Funding source, for the activity row's wallet tag (2026-08-22).
   let fundedFrom: 'external' | 'normal' | undefined;
+  let indexId: string | null = null;
   try {
     const q = tr.quoteJson ? JSON.parse(tr.quoteJson) : null;
     if (q?.fundedFrom === 'external' || q?.fundedFrom === 'normal') fundedFrom = q.fundedFrom;
+    // An index purchase stores which index it bought (lib/index/indexes.ts).
+    if (typeof q?.index === 'string') indexId = q.index;
   } catch {
     /* legacy/unparseable quote blob → no claim about the source */
   }
@@ -181,7 +186,7 @@ function mapCctpTransfer(tr: CctpTransferRow): Extract<Activity, { type: 'Swap' 
       amount: parseFloat(tr.srcAmount ?? '0'),
     },
     tokenOut: {
-      address: `cctp:${tr.dstAsset}`,
+      address: indexId ? `index:${indexId}` : `cctp:${tr.dstAsset}`,
       symbol: tr.dstAsset,
       iconUrl: getCryptoIconUrl(tr.dstAsset),
       amount: parseFloat(tr.dstAmount ?? '0'),
@@ -189,6 +194,9 @@ function mapCctpTransfer(tr: CctpTransferRow): Extract<Activity, { type: 'Swap' 
     pending: !succeeded && !failed && !refunded,
     failed,
     refunded,
+    // A held coin waits for the person, not for the network.
+    needsYou:
+      tr.direction === INDEX_DIRECTION && !succeeded && !failed && !!heldSymbolOf(tr.errorDetail),
   };
 }
 

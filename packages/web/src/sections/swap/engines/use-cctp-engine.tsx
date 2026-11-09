@@ -55,7 +55,11 @@ import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react'
 import { cctpRefundPlan, cctpInboundPlan, cctpOutboundPlan } from '@/lib/flow/plans';
 import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
 import { setActiveCctpTransfer, getActiveCctpTransfer } from '@/lib/cctp/active-transfer';
-import { isBroadcastUncertain, UNCERTAIN_SEND_MESSAGE } from '@/lib/chains/broadcast-safety';
+import {
+  uncertainBurnHash,
+  isBroadcastUncertain,
+  UNCERTAIN_SEND_MESSAGE,
+} from '@/lib/chains/broadcast-safety';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -811,7 +815,7 @@ export function useCctpEngine({
       // activity feed, so we mark it FAILED instead.
       let broadcastStarted = false;
 
-      const srcChain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+      const srcChain =({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
         fromSymbol as CrosschainSymbol
       ];
       try {
@@ -1054,12 +1058,18 @@ export function useCctpEngine({
           return;
         }
         if (isBroadcastUncertain(e)) {
-          // The source send may have gone out (lib/chains/broadcast-safety.ts):
-          // the row stays open, the hash goes on it so the server can follow the
+          // The send may have gone out (lib/chains/broadcast-safety.ts): the
+          // row stays open, the hash goes on it so the server can follow the
           // transfer if it did land, and the page offers no second send.
           broadcastStarted = true;
           movedRef.current = true;
-          if (e.hash) await patch({ srcSwapTxHash: e.hash }).catch(() => {});
+          // Where the hash goes depends on the leg (the burn helpers tag it):
+          // the source swap's on the row's source, the burn's as the burn, and
+          // a permission's nowhere (it moves no money; saved as the burn, the
+          // row would wait for Circle forever).
+          if (e.hash && e.step === null) await patch({ srcSwapTxHash: e.hash }).catch(() => {});
+          const burnHash = uncertainBurnHash(e);
+          if (burnHash) await patch({ burnTxHash: burnHash }).catch(() => {});
         }
         if (String(e?.message) !== 'cancelled') {
           logger.error('[cctp engine] stage failed:', e); // surface stack
@@ -1067,12 +1077,6 @@ export function useCctpEngine({
           // the failure popup's buttons resolve their id from this ref (the
           // marker is already null by the time they render; live 2026-08-26).
           lastFailedRunIdRef.current = getActiveCctpTransfer();
-          // A timed-out Stellar submit may still land on-chain — keep the
-          // hash on the row so the cron/banner can finish it instead of the
-          // run stranding an invisible burn (doc 90 W2).
-          if (e?.mayStillLand && e?.txHash) {
-            await patch({ burnTxHash: String(e.txHash) });
-          }
           // A classified revert records WHICH bridge failed on the row, so a
           // later "Try again" (banner recover) excludes that bridge.
           if (e?.__pivotRevert) {
@@ -1402,18 +1406,24 @@ export function useCctpEngine({
           window.dispatchEvent(new Event('nf:activity-updated'));
           return;
         }
+        const unclearBurn = uncertainBurnHash(e);
+        if (unclearBurn) {
+          // The Stellar burn may be on its way (lib/cctp/stellar-submit.ts).
+          // Its hash goes on the row so Circle and the cron can follow it
+          // (doc 90 W2: a lost hash strands funds), and the page offers no
+          // second send. An unclear pivot on Base is not saved: its hash as the
+          // final leg would mark a swap done whose money may still be at Base,
+          // and a retry reads the live balance, so it cannot spend twice.
+          broadcastStarted = true;
+          movedRef.current = true;
+          await patch({ burnTxHash: unclearBurn }).catch(() => {});
+        }
         if (String(e?.message) !== 'cancelled') {
           logger.error('[cctp engine] stage failed:', e); // surface stack
           // Stash the run's transfer id BEFORE the active marker is cleared —
           // the failure popup's buttons resolve their id from this ref (the
           // marker is already null by the time they render; live 2026-08-26).
           lastFailedRunIdRef.current = getActiveCctpTransfer();
-          // A timed-out Stellar submit may still land on-chain — keep the
-          // hash on the row so the cron/banner can finish it instead of the
-          // run stranding an invisible burn (doc 90 W2).
-          if (e?.mayStillLand && e?.txHash) {
-            await patch({ burnTxHash: String(e.txHash) });
-          }
           // A classified revert records WHICH bridge failed on the row, so a
           // later "Try again" (banner recover) excludes that bridge.
           if (e?.__pivotRevert) {

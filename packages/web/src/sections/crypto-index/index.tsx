@@ -1,5 +1,6 @@
 'use client';
 
+import type { IndexMeta } from '@/lib/index/indexes';
 import type { FlowPlan, FlowSummary } from '@/lib/flow/types';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 import type { TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
@@ -7,9 +8,11 @@ import type { TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { mintLanded } from '@/lib/index/legs';
 import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { CCTP_DOMAIN } from '@/lib/cctp/config';
+import { RouterLink } from '@/routes/components';
 import { useMarkets } from '@/hooks/use-markets';
 import { useFlowRun } from '@/hooks/use-flow-run';
 import { useNetworkStore } from '@normalfinance/state';
@@ -21,6 +24,7 @@ import { readBridgeStatus } from '@/lib/flow/lifi-status';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { indexBuyStepId, indexPurchasePlan } from '@/lib/flow/plans';
@@ -38,12 +42,14 @@ import {
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import InputBase from '@mui/material/InputBase';
+import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
+import ArrowBackOutlined from '@mui/icons-material/ArrowBackOutlined';
 
 import { AppPageHeader, INK_BUTTON_SX } from '@/components/_common/brand';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
-import { FlowView, FlowHost, FlowPortal } from '@/components/_common/flow';
 import AutopilotConsentDialog from '@/components/_common/autopilot-consent-dialog';
+import { FlowView, FlowHost, FlowNotice, FlowPortal } from '@/components/_common/flow';
 import {
   Change,
   FIGURES,
@@ -65,7 +71,7 @@ import {
 } from '@/components/_common/flow/flow-links';
 
 // ---------------------------------------------------------------------------
-// /app/crypto-index: buy Bitcoin, Ethereum and Solana in one purchase, with
+// /app/indexes/<slug>: buy an index (Top 3: Bitcoin, Ethereum and Solana) in one purchase, with
 // one passkey signature (lib/index/basket.ts for how the money moves).
 //
 // The page follows the app's rule for moving money: "Review purchase" opens
@@ -98,7 +104,13 @@ type LegRead = {
   amountWire: string;
 };
 type PurchaseRead = {
-  purchase: { id: string; status: string; mintTxHash: string | null; destAddress: string };
+  purchase: {
+    id: string;
+    status: string;
+    burnTxHash: string | null;
+    mintTxHash: string | null;
+    destAddress: string;
+  };
   phase: string;
   legs: LegRead[];
 };
@@ -115,7 +127,7 @@ async function readPurchase(id: string): Promise<PurchaseRead | null> {
   }
 }
 
-export function CryptoIndexView() {
+export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   const { t } = useTranslate();
   const { user } = useSupabaseAuth();
   const network = useNetworkStore((s) => s.network);
@@ -132,6 +144,9 @@ export function CryptoIndexView() {
   const [consentOpen, setConsentOpen] = useState(false);
   const [setupChain, setSetupChain] = useState<TurnkeyChain | null>(null);
   const [busy, setBusy] = useState(false);
+  // A coin whose exchange kept failing: its purchase and name, for Try again.
+  const [held, setHeld] = useState<{ id: string; coin: string } | null>(null);
+  const [retryNote, setRetryNote] = useState<string | null>(null);
   const movedRef = useRef(false);
   const cancelled = useRef(false);
 
@@ -274,6 +289,8 @@ export function CryptoIndexView() {
   const leaveFlow = useCallback(() => {
     flow.reset();
     setFrozen(null);
+    setHeld(null);
+    setRetryNote(null);
     setView('form');
     movedRef.current = false;
   }, [flow]);
@@ -296,7 +313,7 @@ export function CryptoIndexView() {
 
   // ---- the run ---------------------------------------------------------------
   const follow = useCallback(
-    async (id: string) => {
+    async (id: string, burnTxHash?: string) => {
       // Circle: attest, then the mint on Base (each read advances the row).
       flow.start('attest');
       let read: PurchaseRead | null = null;
@@ -305,6 +322,17 @@ export function CryptoIndexView() {
 
         read = await readPurchase(id);
         misses = read ? 0 : misses + 1;
+        // The burn went out but saving its hash failed: without it nothing
+        // on the server can follow this purchase (and the hourly expiry would
+        // call it unsent), so keep saving it while the page is open.
+        if (read && !read.purchase.burnTxHash && burnTxHash) {
+          await fetch(`/api/cctp/transfers/${id}`, {
+            method: 'PATCH',
+            headers: await buildAuthHeaders(),
+            credentials: 'include',
+            body: JSON.stringify({ burnTxHash }),
+          }).catch(() => null);
+        }
         if (misses >= 12) {
           flow.handOff(
             t('Lost connection while following this purchase. It carries on on our servers.')
@@ -314,44 +342,73 @@ export function CryptoIndexView() {
         const st = read?.purchase.status;
         if (st === 'FAILED') throw new Error(t('Circle could not complete the transfer.'));
         if (st === 'ATTESTED' || st === 'MINT_SUBMITTED') flow.start('mint');
-        if (read?.purchase.mintTxHash) break;
+        // Ours (a hash) or a mint someone else ran (COMPLETED, no hash).
+        if (read && mintLanded(read.purchase)) break;
 
         await sleep(5_000);
       }
-      flow.done('mint', { links: [baseTxLink(t, read!.purchase.mintTxHash!)] });
+      const mintHash = read!.purchase.mintTxHash;
+      flow.done('mint', mintHash ? { links: [baseTxLink(t, mintHash)] } : {});
 
       // Base: Autopilot buys each coin. The request runs the legs one after
       // another; reads alongside it mark each one as its swap goes out.
       flow.start('gas');
+      // A refusal that no retry fixes ends the wait here, in plain words.
+      const refusal: { reason: string | null } = { reason: null };
       const finishing = fetch(`/api/index/purchases/${id}/finish`, {
         method: 'POST',
         headers: await buildAuthHeaders(),
         credentials: 'include',
-      }).catch(() => null);
+      })
+        .then(async (r) => {
+          if (r.status === 400) {
+            const body = await r.json().catch(() => null);
+            refusal.reason = String(body?.reason ?? 'refused');
+          }
+        })
+        .catch(() => null);
       const legsDone = new Set<string>();
       for (let rounds = 0; rounds < 120; rounds += 1) {
         if (cancelled.current) return;
 
         read = (await readPurchase(id)) ?? read;
         const legs = read?.legs ?? [];
-        const held = legs.find((l) => l.status === 'HELD');
-        if (held) {
+        const heldLeg = legs.find((l) => l.status === 'HELD');
+        if (heldLeg) {
+          setHeld({ id, coin: assetName(heldLeg.symbol) });
           throw new Error(
             t(
-              'The exchange for {{coin}} kept failing, so its share is safe as digital dollars at your own Base address. Contact support to move it.',
-              { coin: assetName(held.symbol) }
+              'The exchange for {{coin}} kept failing, so its share is safe as digital dollars at your own Base address. You can try it again on another route.',
+              { coin: assetName(heldLeg.symbol) }
             )
           );
         }
+        if (refusal.reason === 'autopilot-disabled') {
+          flow.handOff(
+            t(
+              'Normal cannot buy the coins right now. Your digital dollars are safe at your own Base address, and Normal buys them as soon as it can.'
+            )
+          );
+          return;
+        }
+        if (refusal.reason) {
+          throw new Error(
+            t(
+              'This purchase needs a look from our team. Your digital dollars are safe at your own Base address. Contact support.'
+            )
+          );
+        }
+        // A coin is bought once its leg is SENT: its hash is written at
+        // broadcast, and a swap that reverts has it cleared again.
         for (const leg of legs) {
-          if (leg.dstSwapTxHash && !legsDone.has(leg.symbol)) {
+          if (leg.status === 'SENT' && leg.dstSwapTxHash && !legsDone.has(leg.symbol)) {
             legsDone.add(leg.symbol);
             flow.done(indexBuyStepId(leg.symbol), {
               links: [baseTxLink(t, leg.dstSwapTxHash), lifiTrackLink(t, leg.dstSwapTxHash)],
             });
           }
         }
-        const next = legs.find((l) => !l.dstSwapTxHash);
+        const next = legs.find((l) => l.status !== 'SENT');
         if (!next) break;
         flow.start(indexBuyStepId(next.symbol));
         // A leg left waiting (a route that reverted) gets another try.
@@ -367,7 +424,7 @@ export function CryptoIndexView() {
       }
       await finishing;
       const legs = read?.legs ?? [];
-      if (legs.some((l) => !l.dstSwapTxHash)) {
+      if (legs.some((l) => l.status !== 'SENT')) {
         flow.handOff(t('Normal keeps buying the rest on its servers. Check Activity in a while.'));
         return;
       }
@@ -387,7 +444,9 @@ export function CryptoIndexView() {
               toChain: String(LIFI_CHAIN_ID[symbol]),
             });
 
-            const res = await fetch(`/api/lifi/status?${q}`);
+            const res = await fetch(`/api/lifi/status?${q}`, {
+              headers: await buildAuthHeaders(),
+            });
 
             const data = res.ok ? await res.json() : null;
             const progress = readBridgeStatus(data?.status);
@@ -453,6 +512,22 @@ export function CryptoIndexView() {
     cancelled.current = false;
     setFrozen({ summary: liveSummary, lede: liveLede });
     flow.begin(livePlan);
+    // The burn hash on the row is what lets the cron finish this without the
+    // page, so it is saved with a few tries.
+    let purchaseId: string | null = null;
+    const saveBurnHash = async (id: string, burnTxHash: string) => {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const patched = await fetch(`/api/cctp/transfers/${id}`, {
+          method: 'PATCH',
+          headers: await buildAuthHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({ burnTxHash }),
+        }).catch(() => null);
+        if (patched?.ok) return;
+
+        await sleep(1500 * (attempt + 1));
+      }
+    };
     try {
       flow.start('record');
       const res = await fetch('/api/index/purchases', {
@@ -464,7 +539,17 @@ export function CryptoIndexView() {
       const created = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(created?.error ?? t('This purchase could not be saved.'));
       const id: string = created.purchase.id;
+      purchaseId = id;
       const destAddress: string = created.purchase.destAddress;
+      // The server takes this from the person's own wallet row; check it
+      // here too, before anything is signed, so a wrong row can never send
+      // their money to someone else's address.
+      if (
+        !info?.ethereumAddress ||
+        destAddress?.toLowerCase() !== info.ethereumAddress.toLowerCase()
+      ) {
+        throw new Error(t('This purchase could not be saved.'));
+      }
 
       flow.start('prepare');
       // Which signature is open: the one-time permission, or the transfer.
@@ -497,24 +582,65 @@ export function CryptoIndexView() {
         flow.done('approve', { note: t('Done. Later purchases skip this.') });
       }
       flow.done('burn', { links: [stellarTxLink(t, burnTxHash)] });
-      // The burn hash on the row is what lets the cron finish this without the page.
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        const patched = await fetch(`/api/cctp/transfers/${id}`, {
+      await saveBurnHash(id, burnTxHash);
+      window.dispatchEvent(new Event('nf:activity-updated'));
+      await follow(id, burnTxHash);
+    } catch (e) {
+      // The transfer may be on its way (lib/cctp/stellar-submit.ts): keep its
+      // hash so Circle and the cron can finish it, and offer no second
+      // purchase until Activity shows what happened.
+      const unclearBurn = uncertainBurnHash(e);
+      if (unclearBurn && purchaseId) {
+        movedRef.current = true;
+        await saveBurnHash(purchaseId, unclearBurn);
+        window.dispatchEvent(new Event('nf:activity-updated'));
+        flow.fail(
+          t(
+            "We couldn't tell whether this purchase was sent. Check Activity before you buy again, so you don't buy twice."
+          )
+        );
+        return;
+      }
+      if (purchaseId && !movedRef.current) {
+        // Nothing reached Stellar (a declined passkey, a refused send): retire
+        // the purchase now, as the swap page does, instead of it reading
+        // "pending" in Activity until the hourly expiry. The server only
+        // allows this while the row has no transaction hash at all.
+        await fetch(`/api/cctp/transfers/${purchaseId}`, {
           method: 'PATCH',
           headers: await buildAuthHeaders(),
           credentials: 'include',
-          body: JSON.stringify({ burnTxHash }),
+          body: JSON.stringify({ markFailed: true }),
         }).catch(() => null);
-        if (patched?.ok) break;
-
-        await sleep(1500 * (attempt + 1));
+        window.dispatchEvent(new Event('nf:activity-updated'));
       }
-      window.dispatchEvent(new Event('nf:activity-updated'));
-      await follow(id);
-    } catch (e) {
       flow.fail(friendlyAppError(e));
     }
   }, [liveWire, livePlan, liveSummary, liveLede, busy, autopilot, flow, network, info, t, follow]);
+
+  // Put a held coin back in line: the server retries it on another route
+  // (api/index/purchases/:id/retry), the page says so and steps aside.
+  const retryHeld = useCallback(
+    async (h: { id: string; coin: string }) => {
+      setHeld(null);
+      setRetryNote(t('Trying {{coin}} again on another route…', { coin: h.coin }));
+      const res = await fetch(`/api/index/purchases/${h.id}/retry`, {
+        method: 'POST',
+        headers: await buildAuthHeaders(),
+        credentials: 'include',
+      }).catch(() => null);
+      setRetryNote(
+        res?.ok
+          ? t('{{coin}} is being bought again. It finishes on its own: follow it in Activity.', {
+              coin: h.coin,
+            })
+          : t('That did not start. Your {{coin}} share is still safe at your own Base address.', {
+              coin: h.coin,
+            })
+      );
+    },
+    [t]
+  );
 
   const activeId = flowState.activeId ?? '';
   const beforeSent = ['record', 'prepare', 'approve', 'burn-sign'].includes(activeId);
@@ -526,8 +652,27 @@ export function CryptoIndexView() {
   return (
     <FlowHost>
       <DashboardContent>
+        <ButtonBase
+          component={RouterLink}
+          href={paths.indexes.root}
+          sx={{
+            alignSelf: 'flex-start',
+            gap: 0.75,
+            ml: -1,
+            mb: 2,
+            px: 1,
+            py: 0.5,
+            fontSize: 14,
+            fontWeight: 500,
+            color: 'text.secondary',
+            '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+          }}
+        >
+          <ArrowBackOutlined sx={{ fontSize: 16 }} />
+          {t('Indexes')}
+        </ButtonBase>
         <AppPageHeader
-          title={t('Crypto index')}
+          title={meta.name}
           subtitle={t('Bitcoin, Ethereum and Solana in one purchase, with one signature.')}
         />
 
@@ -760,25 +905,35 @@ export function CryptoIndexView() {
                   : null,
                 busy,
               }}
-              back={{ label: t('Back to the index'), onClick: exitFlow }}
+              back={{ label: t('Back to {{name}}', { name: meta.name }), onClick: exitFlow }}
               doneActions={[
                 { label: t('Make another purchase'), primary: true, onClick: exitFlow },
                 { label: t('See it in Activity'), href: paths.activity },
               ]}
               doneNote={t('Your Bitcoin, Ethereum and Solana are in your wallets.')}
+              notice={retryNote ? <FlowNotice>{retryNote}</FlowNotice> : undefined}
               failActions={
-                movedRef.current
-                  ? [{ label: t('See it in Activity'), href: paths.activity }]
-                  : [
+                held
+                  ? [
                       {
-                        label: t('Try again'),
+                        label: t('Try {{coin}} again', { coin: held.coin }),
                         primary: true,
-                        onClick: () => {
-                          flow.reset();
-                          setFrozen(null);
-                        },
+                        onClick: () => retryHeld(held),
                       },
+                      { label: t('See it in Activity'), href: paths.activity },
                     ]
+                  : movedRef.current
+                    ? [{ label: t('See it in Activity'), href: paths.activity }]
+                    : [
+                        {
+                          label: t('Try again'),
+                          primary: true,
+                          onClick: () => {
+                            flow.reset();
+                            setFrozen(null);
+                          },
+                        },
+                      ]
               }
               leave={
                 beforeSent

@@ -258,16 +258,39 @@ function Marker({ number, state }: { number: number; state: StepState | undefine
     );
   }
   if (status === 'active') {
+    // The step that is happening now turns (Niko 2026-11-09: a loading circle,
+    // not just a number). Yellow while it waits on the person's prompt. Still
+    // for people who ask for less motion: the ring alone still reads as busy.
+    const waiting = !!state?.waiting;
+    const ink = waiting ? BRAND_COLORS.yellow.deep : INK;
     return (
       <Box
-        sx={{
-          ...base,
-          bgcolor: state?.waiting ? BRAND_COLORS.yellow.tint : INK,
-          color: state?.waiting ? BRAND_COLORS.yellow.deep : PAPER,
-          border: state?.waiting ? `1px solid ${BRAND_COLORS.yellow.deep}` : 'none',
-        }}
+        role="img"
+        aria-label={waiting ? 'Waiting for you' : 'In progress'}
+        sx={{ ...base, bgcolor: waiting ? BRAND_COLORS.yellow.tint : PAPER }}
       >
-        {number}
+        <Box
+          component="svg"
+          viewBox="0 0 22 22"
+          aria-hidden="true"
+          sx={{
+            width: 22,
+            height: 22,
+            display: 'block',
+            animation: 'nf-step-turn 0.9s linear infinite',
+            '@keyframes nf-step-turn': { to: { transform: 'rotate(360deg)' } },
+            '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+          }}
+        >
+          <circle cx="11" cy="11" r="9.25" fill="none" stroke={HAIRLINE_STRONG} strokeWidth="1.5" />
+          <path
+            d="M11 1.75 A9.25 9.25 0 0 1 20.25 11"
+            fill="none"
+            stroke={ink}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </Box>
       </Box>
     );
   }

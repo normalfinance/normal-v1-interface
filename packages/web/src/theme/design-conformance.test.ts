@@ -38,7 +38,8 @@ import {
 /** Files allowed a non-token radius, each with its reason. */
 const RADIUS_EXCEPTIONS: Record<string, string> = {
   'components/_common/stat-card.tsx': 'ApexCharts bar option: a number of pixels, not CSS',
-  'theme/create-theme.ts': 'MUI needs a number here; it equals --radius-md (0: everything is square)',
+  'theme/create-theme.ts':
+    'MUI needs a number here; it equals --radius-md (0: everything is square)',
   'sections/home/hero-phone.tsx':
     'the screen of the phone in the hero photo: its corners are measured from the photo',
   'sections/home/cta-phones.tsx':
@@ -181,7 +182,12 @@ describe('design rules', () => {
       // as a style object or with MUI's keyframes template.
       ...violations(
         /'@keyframes [^']+':\s*\{(?:[^{}]|\{[^{}]*\})*\}|\bkeyframes`[^`]*`/g,
-        (match) => !/\btransform\b|translate|scale(?:X|Y)?\(/.test(match[0])
+        (match) =>
+          !/\btransform\b|translate|scale(?:X|Y)?\(/.test(match[0]) ||
+          // The one thing that turns: the loading ring on the step that is
+          // happening now (Niko 2026-11-09). It stays still for people who
+          // ask for less motion (components/_common/flow/flow-journey.tsx).
+          match[0].startsWith("'@keyframes nf-step-turn'")
       ),
       // Panels and indicators jump to their new place; they never slide there.
       ...violations(/\btransition:\s*['`][^'`]*\btransform\b/g, () => false),

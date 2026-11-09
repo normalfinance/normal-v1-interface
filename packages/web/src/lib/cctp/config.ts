@@ -66,6 +66,16 @@ export const EVM_CCTP: Record<NetworkType, EvmCctpContracts> = {
   },
 };
 
+// How many blocks deep a reverted burn must sit before the cron treats the
+// revert as final and lets the transfer be burned again
+// (lib/cctp/evm-burn-verdict.ts). Generous on purpose: a revert that a reorg
+// later turned into a success would be a burn nobody follows. Ethereum: two
+// epochs (finalized). Base: about ten minutes of 2-second blocks.
+export const EVM_REVERT_FINAL_DEPTH: Record<'ethereum' | 'base', number> = {
+  ethereum: 64,
+  base: 300,
+};
+
 // Native USDC token per EVM chain (testnet = the corresponding Sepolia).
 export const EVM_USDC: Record<'ethereum' | 'base', Record<NetworkType, `0x${string}`>> = {
   ethereum: {

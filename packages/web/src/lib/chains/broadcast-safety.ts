@@ -99,19 +99,41 @@ export class BroadcastUncertainError extends Error {
   /** The transaction's own id, when it is known before broadcast. */
   readonly hash: string | null;
 
-  constructor(chain: string, hash: string | null) {
+  /** Which leg of a Circle transfer it was, set by the burn helpers: a
+   *  permission ('approve') moves no money, the 'burn' does. Null elsewhere. */
+  step: UncertainStep | null = null;
+
+  constructor(chain: string, hash: string | null, step: UncertainStep | null = null) {
     super(UNCERTAIN_SEND_MESSAGE);
     this.name = 'BroadcastUncertainError';
     this.chain = chain;
     this.hash = hash;
+    this.step = step;
   }
 }
+
+export type UncertainStep = 'approve' | 'burn';
 
 export const isBroadcastUncertain = (err: unknown): err is BroadcastUncertainError =>
   err instanceof BroadcastUncertainError ||
   (typeof err === 'object' &&
     err !== null &&
     (err as { name?: string }).name === 'BroadcastUncertainError');
+
+/** Mark an unclear send with the leg it was (the burn helpers call this). */
+export function tagUncertainStep<E>(err: E, step: UncertainStep): E {
+  if (isBroadcastUncertain(err)) (err as BroadcastUncertainError).step = step;
+  return err;
+}
+
+/**
+ * The hash a transfer row must keep after an unclear send: the burn's own,
+ * and only the burn's. A lost burn hash strands the money (nothing ever asks
+ * Circle for it); a permission's hash saved as the burn leaves the row
+ * waiting for Circle forever. Null when the unclear send was anything else.
+ */
+export const uncertainBurnHash = (err: unknown): string | null =>
+  isBroadcastUncertain(err) && err.step === 'burn' ? err.hash : null;
 
 export const SETTLE_WINDOW_MS = 30_000;
 const SETTLE_INTERVAL_MS = 3_000;

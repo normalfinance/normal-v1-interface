@@ -350,9 +350,11 @@ export default function PortfolioView() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 7fr) minmax(0, 5fr)' },
+          // One column at every width (Niko 2026-11-09): your money across the
+          // page, with room for each coin's price and share, then the activity.
+          gridTemplateColumns: 'minmax(0, 1fr)',
           alignItems: 'start',
-          gap: { xs: 4, lg: 3 },
+          gap: 4,
           mt: { xs: 4, md: 5 },
         }}
       >

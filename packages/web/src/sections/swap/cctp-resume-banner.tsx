@@ -34,6 +34,7 @@ import { scopedAmountWire } from '@/lib/cctp/amounts';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
+import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { parseFailedTool, parseFailedExchanges } from '@/lib/cctp/failure-class';
@@ -347,6 +348,18 @@ export function CctpRecoveryBanner({ addresses }: Props) {
             evmAddress: tr.srcAddress,
             amountWire: burnWire,
             stellarRecipient: tr.destAddress,
+          }).catch(async (e: unknown) => {
+            // A burn whose send stayed unclear may be on its way: keep its hash
+            // on the row (a lost burn hash strands the money). The row then
+            // follows Circle instead of offering a second burn.
+            const unclear = uncertainBurnHash(e);
+            if (unclear) {
+              await patch(tr.id, headers, {
+                burnTxHash: unclear,
+                dstAmount: wireToUsdc(burnWire),
+              }).catch(() => null);
+            }
+            throw e;
           });
           await patch(tr.id, headers, { burnTxHash, dstAmount: wireToUsdc(burnWire) });
           enqueueSnackbar(t('Bridging your USDC to Stellar. Completes automatically (~20 min).'), {

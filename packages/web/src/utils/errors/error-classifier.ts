@@ -208,6 +208,11 @@ export function friendlyAppError(raw: unknown): string {
   if (/turnkey|organizationId=/i.test(msg)) {
     return 'The signing service rejected the request. Try again in a moment.';
   }
+  // The exchange handed over a Bitcoin transaction we refuse to sign as it is
+  // (lib/lifi/execute.ts, btc-sign.ts): nothing was signed or sent.
+  if (/\bPSBT\b|witness_utxo|Refusing to sign/i.test(msg)) {
+    return 'The exchange sent a Bitcoin transaction we could not sign safely. Nothing was sent. Try again in a moment.';
+  }
 
   // 3. EVM/viem races and rejections.
   if (/nonce too low|replacement transaction underpriced|already known/i.test(msg)) {

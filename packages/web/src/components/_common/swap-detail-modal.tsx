@@ -15,9 +15,12 @@ import type { Activity } from '@/types/activity';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
+import { indexById } from '@/lib/index/indexes';
 import { BRAND_COLORS } from '@/theme/brand-colors';
 import { abortTimeout } from '@/utils/abort-timeout';
+import { assetName } from '@/lib/portfolio/asset-names';
 import { useState, useEffect, useCallback } from 'react';
+import { heldSymbolOf, INDEX_DIRECTION } from '@/lib/index/legs';
 
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
@@ -51,6 +54,7 @@ interface CctpTransferDetail {
   dstSwapTxHash: string | null;
   gasTopUpTxHash: string | null;
   errorDetail: string | null;
+  quoteJson?: string | null;
   createdAt: string;
 }
 
@@ -82,8 +86,41 @@ const shortHash = (h: string) => (h.length > 14 ? `${h.slice(0, 8)}…${h.slice(
 
 type Translate = (key: string, opts?: Record<string, unknown>) => string;
 
+/** The index an index purchase bought (its quote stores the id), or null. */
+function indexOfTransfer(tr: CctpTransferDetail) {
+  if (tr.direction !== INDEX_DIRECTION) return null;
+  try {
+    return indexById(tr.quoteJson ? JSON.parse(tr.quoteJson)?.index : null);
+  } catch {
+    return null;
+  }
+}
+
 function buildSteps(tr: CctpTransferDetail, t: Translate): Step[] {
   const attested = !!tr.eventNonce || !!tr.mintTxHash || tr.status === 'COMPLETED';
+  // An index purchase: one transfer to Base, then each coin bought there.
+  // It used to fall into the swap-in branch below ("Swap INDEX to USDC")
+  // and read as done the moment Circle finished, before any coin was bought.
+  if (tr.direction === INDEX_DIRECTION) {
+    const held = tr.dstSwapTxHash ? null : heldSymbolOf(tr.errorDetail);
+    return [
+      { key: 'burn', label: t('Hand it to Circle'), sub: t('From your Stellar wallet'), hash: tr.burnTxHash, explorer: 'stellar' },
+      { key: 'attest', label: t('Circle confirms'), sub: attested ? t('Confirmed') : t('Waiting for Circle'), hash: null, explorer: null, done: attested },
+      { key: 'mint', label: t('Created on {{chain}}', { chain: 'Base' }), sub: t('Digital dollars at your own Base address'), hash: tr.mintTxHash, explorer: 'base', done: tr.status === 'COMPLETED' },
+      {
+        key: 'buy',
+        label: t('Buy the coins'),
+        sub: held
+          ? t('{{coin}} is waiting for you to try it again', { coin: assetName(held) })
+          : tr.dstSwapTxHash
+            ? t('Every coin bought')
+            : t('Buying each coin'),
+        hash: null,
+        explorer: null,
+        done: !!tr.dstSwapTxHash,
+      },
+    ];
+  }
   if (tr.direction === 'stellar_to_crosschain') {
     return [
       {
@@ -167,6 +204,8 @@ export function SwapDetailModal({
   const { t } = useTranslate();
   const [transfer, setTransfer] = useState<CctpTransferDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [retryNote, setRetryNote] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     // Keep the last content mounted while the dialog animates closed (transferId
@@ -175,6 +214,7 @@ export function SwapDetailModal({
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     setTransfer(null);
+    setRetryNote(null);
     setLoading(true);
 
     // LIVE VIEW, not a snapshot (#66 follow-up, observed live): this dialog
@@ -199,7 +239,14 @@ export function SwapDetailModal({
         const fresh: CctpTransferDetail | null = res.ok ? (data.transfer ?? null) : null;
         // Never clobber shown content with a transient failure.
         if (fresh) setTransfer(fresh);
-        if (!fresh || !TERMINAL.includes(fresh.status)) {
+        // A swap out or an index purchase is COMPLETED once Circle is done,
+        // with its last step still to come: keep watching until it lands.
+        const lastStepPending =
+          !!fresh &&
+          fresh.status === 'COMPLETED' &&
+          (fresh.direction === 'stellar_to_crosschain' || fresh.direction === INDEX_DIRECTION) &&
+          !fresh.dstSwapTxHash;
+        if (!fresh || !TERMINAL.includes(fresh.status) || lastStepPending) {
           timer = setTimeout(load, 8_000);
         }
       } catch {
@@ -230,26 +277,62 @@ export function SwapDetailModal({
   // Outbound COMPLETED means "minted on Base", not "delivered" — the pivot is
   // its own step and must earn its own green (live 2026-08-26: a stuck swap
   // showed all-green + Completed while the SOL never moved).
+  // An index purchase too: COMPLETED is Circle's part, the coins come after.
+  const settlesLater =
+    transfer?.direction === 'stellar_to_crosschain' || transfer?.direction === INDEX_DIRECTION;
   const isDone =
-    transfer?.status === 'COMPLETED' &&
-    (transfer.direction !== 'stellar_to_crosschain' || !!transfer.dstSwapTxHash);
+    transfer?.status === 'COMPLETED' && (!settlesLater || !!transfer.dstSwapTxHash);
+  // A coin of an index purchase that stopped retrying: the person's move.
+  const heldCoin =
+    transfer?.direction === INDEX_DIRECTION && !transfer.dstSwapTxHash
+      ? heldSymbolOf(transfer.errorDetail)
+      : null;
   const isFailed = transfer?.status === 'FAILED';
   // Waiting on the USER, not on the chain — the icon must say "your move",
   // never spin (Niko 2026-08-26: "the loading stuff that is not correct").
   const needsAction =
-    !!transfer &&
+    !!heldCoin ||
+    (!!transfer &&
     transfer.direction === 'stellar_to_crosschain' &&
     (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
     !transfer.dstSwapTxHash &&
-    transfer.status !== 'REFUNDED';
+    transfer.status !== 'REFUNDED');
   const activeIdx = isDone ? -1 : steps.findIndex((s) => !(s.done || !!s.hash));
   const chip = transfer
     ? transfer.direction === 'stellar_to_crosschain' &&
       transfer.status === 'COMPLETED' &&
       !transfer.dstSwapTxHash
       ? { label: t('Action needed'), color: '#8A4A00', bg: 'rgba(245,158,11,0.12)' }
-      : STATUS_CHIP[transfer.status]
+      : heldCoin
+        ? { label: t('Action needed'), color: '#8A4A00', bg: 'rgba(245,158,11,0.12)' }
+        : transfer.direction === INDEX_DIRECTION && transfer.status === 'COMPLETED' && !isDone
+          ? undefined // Circle's part is done, the coins are still being bought
+          : STATUS_CHIP[transfer.status]
     : undefined;
+
+  // Put a held coin back in line from here (recovery reachable from wherever
+  // the person already is): the same request and words as the buy page.
+  const retryHeld = async () => {
+    if (!transferId || !heldCoin) return;
+    const coin = assetName(heldCoin);
+    setRetrying(true);
+    setRetryNote(t('Trying {{coin}} again on another route…', { coin }));
+    const res = await fetch(`/api/index/purchases/${transferId}/retry`, {
+      method: 'POST',
+      headers: await buildAuthHeaders(),
+      credentials: 'include',
+    }).catch(() => null);
+    setRetrying(false);
+    // The coin is back in line (the server cleared the mark): show it so now,
+    // without waiting for the next read.
+    if (res?.ok) setTransfer((tr) => (tr ? { ...tr, errorDetail: null } : tr));
+    setRetryNote(
+      res?.ok
+        ? t('{{coin}} is being bought again. It finishes on its own: follow it in Activity.', { coin })
+        : t('That did not start. Your {{coin}} share is still safe at your own Base address.', { coin })
+    );
+    window.dispatchEvent(new Event('nf:activity-updated'));
+  };
 
   return (
     <Dialog
@@ -261,7 +344,7 @@ export function SwapDetailModal({
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '14px' }}>
         <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
-          {t('Swap details')}
+          {transfer?.direction === INDEX_DIRECTION ? t('Purchase details') : t('Swap details')}
         </Typography>
         <Box
           component="button"
@@ -294,8 +377,17 @@ export function SwapDetailModal({
           >
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
-                {fmt(transfer.srcAmount)} {transfer.srcAsset} → {fmt(transfer.dstAmount)}{' '}
-                {transfer.dstAsset}
+                {transfer.direction === INDEX_DIRECTION ? (
+                  <>
+                    {fmt(transfer.srcAmount)} {transfer.srcAsset} →{' '}
+                    {indexOfTransfer(transfer)?.name ?? t('an index')}
+                  </>
+                ) : (
+                  <>
+                    {fmt(transfer.srcAmount)} {transfer.srcAsset} → {fmt(transfer.dstAmount)}{' '}
+                    {transfer.dstAsset}
+                  </>
+                )}
               </Typography>
               <Chip
                 label={t(chip?.label ?? 'In progress')}
@@ -481,6 +573,36 @@ export function SwapDetailModal({
                 {t('Finish this transfer')}
               </Box>
             )}
+          {heldCoin && !retrying && (
+            <Box
+              component="button"
+              onClick={retryHeld}
+              disabled={retrying}
+              sx={{
+                mt: '12px',
+                appearance: 'none',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                px: '16px',
+                py: '10px',
+                width: '100%',
+                fontSize: '13px',
+                fontWeight: 500,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                bgcolor: '#0A0A0F',
+                color: '#fff',
+                '&:hover': { opacity: 0.85 },
+              }}
+            >
+              {t('Try {{coin}} again', { coin: assetName(heldCoin) })}
+            </Box>
+          )}
+          {retryNote && (
+            <Typography sx={{ mt: '12px', fontSize: '13px', lineHeight: 1.5, color: 'text.secondary' }}>
+              {retryNote}
+            </Typography>
+          )}
         </>
       )}
     </Dialog>

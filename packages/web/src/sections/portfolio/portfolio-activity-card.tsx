@@ -6,6 +6,7 @@ import type { ChainId } from '@/lib/chains/registry';
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
+import { indexById } from '@/lib/index/indexes';
 import { usePersistStore } from '@normalfinance/state';
 import { INK, HOVER, MUTED } from '@/theme/brand-colors';
 import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
@@ -39,6 +40,7 @@ import {
   RowList,
   AppBlock,
   appLocale,
+  assetName,
   assetNoun,
   formatUsd,
   formatCoin,
@@ -188,16 +190,21 @@ function describe(a: Activity): Described {
     case 'Swap': {
       // A crypto index purchase: digital dollars out, several coins in.
       if (a.tokenOut.symbol === 'INDEX') {
+        const index = indexById(a.tokenOut.address.replace(/^index:/, ''));
         return {
           icon: <DonutSmallOutlined />,
-          title: 'Bought the crypto index',
-          subtitle: 'Bitcoin, Ethereum and Solana',
+          title: index ? `Bought the ${index.name} index` : 'Bought an index',
+          subtitle: index
+            ? index.def.legs.map((leg) => assetName(leg.symbol)).join(', ')
+            : undefined,
           value: `−${amountOf(a.tokenIn.amount, a.tokenIn.symbol)}`,
           status: a.failed
             ? { tone: 'failed', label: 'Failed' }
-            : a.pending
-              ? { tone: 'pending', label: 'Pending' }
-              : undefined,
+            : a.needsYou
+              ? { tone: 'pending', label: 'Action needed' }
+              : a.pending
+                ? { tone: 'pending', label: 'Pending' }
+                : undefined,
         };
       }
       // A pending swap whose delivered amount is still unknown must not show a

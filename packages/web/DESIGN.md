@@ -122,6 +122,7 @@ The design is flat. Depth comes from a hairline: a box is its line, on the white
 - Nothing slides, lifts, scales, bounces, scrolls on its own or shakes.
 - What may change: colour, opacity and numbers. A section may fade in as it arrives (`Reveal`), a number may count up, a demo may show digits appearing (the hero phone, the 2FA card). All of it honours `prefers-reduced-motion`.
 - The theme does the rest: no button ripple, menus and tooltips fade, drawers appear in place, input labels jump rather than slide.
+- One thing turns: the loading ring on the step of a money journey that is happening now (the owner's call, 2026-11-09), in ink, or yellow while it waits on the person's prompt. It stands still under `prefers-reduced-motion`, and the design test names it as the only exception.
 - An error says what went wrong in words; it never shakes.
 
 ## Corners (tested)
@@ -209,7 +210,7 @@ Eyebrows never start with a dash or line **(tested)**.
 - Every way money moves (add, send, receive, swap, cash out) starts from **Move money**. Home's balance block offers the same four (Add money, Send, Receive, Swap) through the same flows (`startAction`).
 - A page is its title and a grey line under it (`AppPageHeader`), then sections: a grey title above a square box drawn with a hairline (`AppBlock`; lists run edge to edge, `RowList` and `ListRow`). Every title row is one height, so boxes side by side start level.
 - The top of a page is its `SummaryBlock`: the main figure in ink (`Headline`: the balance on Home, an asset's balance, the savings balance), the page's actions beside it (`ActionButton`, the first ink), and under a hairline the figures that break it down (`StatStrip`). No bright blocks, no ink cards.
-- On wide screens the rest sits in two columns, the main one wider (Home: your money, then recent activity; Savings: earnings and history, then deposit or withdraw). On phones the action comes first.
+- Home is one column at every width: the balance, then your money across the page (each coin with its price, its line, its share of your money and its value), then recent activity. On wide screens Savings sits in two columns, the main one wider (earnings and history, then deposit or withdraw). On phones the action comes first.
 - Savings has its own page. Elsewhere it is one row among the assets ("Your money", Assets), never a block of its own.
 - **Money in plain words.** Dollars to two decimals (`formatUsd`), coins with as many decimals as they need and no more (`formatCoin`: 0.0142 BTC), in the UI face with even digits (`FIGURES`). Mono only for addresses and hashes. USDC is "digital dollars" (`assetName`, `assetNoun` inside a sentence). Dates and times in the app's language (`appLocale`), never the browser's.
 - **Activity reads as sentences**, grouped by day: "Received digital dollars, from GASJ…XVYV, +$50.00". Money in is +, money out is −. A move into or out of Savings carries no sign; a swap shows what came in (+) with what it cost under it (−). Each row's icon is grey (`RowIcon`) and says the kind; only pending (yellow) and failed (red) are coloured (`StatusBadge`). A hairline runs between days. Home shows the five newest with "See all".
