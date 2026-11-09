@@ -31,20 +31,6 @@ import type { HoldingData } from './_shared';
 
 // ----------------------------------------------------------------------
 
-/**
- * Where the money is: digital dollars, crypto, savings, always in that order
- * (the Assets page's groups).
- */
-export function moneySplit(holdings: HoldingData[]) {
-  const sum = (match: (symbol: string) => boolean) =>
-    holdings.filter((h) => match(h.token.symbol)).reduce((total, h) => total + h.value, 0);
-  return [
-    { key: 'cash', label: 'Digital dollars', value: sum((s) => s === 'USDC') },
-    { key: 'crypto', label: 'Crypto', value: sum((s) => s !== 'USDC' && s !== 'Savings') },
-    { key: 'savings', label: 'Savings', value: sum((s) => s === 'Savings') },
-  ];
-}
-
 /** One of Home's rows: the asset, its last 24 hours, what it is worth. */
 function toHolding(
   holding: HoldingData,
@@ -108,18 +94,13 @@ export function MoneyBlock({
   const { markets } = useMarkets();
 
   return (
+    <Box>
     <AppBlock
-      flush
-      title="Your money"
-      action={
-        // CoinGecko's free data asks to be credited where it is shown, and
-        // Home's prices and daily changes come from it too (aggregate.ts).
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography sx={{ fontSize: 12.5, color: MUTED }}>Prices from CoinGecko</Typography>
-          <SeeAll href={paths.assets.root}>All assets</SeeAll>
-        </Box>
-      }
-    >
+        flush
+        openOnPhone
+        title="Your money"
+        action={<SeeAll href={paths.assets.root}>All assets</SeeAll>}
+      >
       {loading ? (
         <RowsSkeleton rows={4} />
       ) : (
@@ -159,5 +140,12 @@ export function MoneyBlock({
         </>
       )}
     </AppBlock>
+      {/* CoinGecko's free data asks to be credited where it is shown, and
+          Home's prices and daily changes come from it too (aggregate.ts).
+          Under the list, so the title row stays short on a phone. */}
+      <Typography sx={{ mt: 1, fontSize: 12.5, color: MUTED, textAlign: 'right' }}>
+        Prices from CoinGecko
+      </Typography>
+    </Box>
   );
 }

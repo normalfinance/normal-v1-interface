@@ -107,7 +107,7 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
       return NextResponse.json({ success: false, error: BUSY_MESSAGE }, { status: 429 });
     }
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to build deposit transaction' },
+      { success: false, error: error.message || 'The deposit could not be prepared, so nothing moved. Try again in a moment.' },
       { status: 500 }
     );
   }

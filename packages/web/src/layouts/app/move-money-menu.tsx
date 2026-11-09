@@ -6,8 +6,8 @@ import { useState } from 'react';
 import { paths } from '@/routes/paths';
 import { useRouter } from '@/routes/hooks';
 import { indexEnabled } from '@/lib/index/flag';
-import { INK, MUTED } from '@/theme/brand-colors';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
+import { INK, HOVER, MUTED, PAPER, HAIRLINE_STRONG } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Menu from '@mui/material/Menu';
@@ -67,8 +67,8 @@ const ITEMS: MoveItem[] = [
   },
 ];
 
-// Indexes, only where they are switched on (lib/index/flag.ts): on a phone
-// this menu is the only way to them, the sidebar being desktop only.
+// Indexes, only where they are switched on (lib/index/flag.ts): buying one
+// is a way money moves, beside the Indexes tab and sidebar entry.
 const INDEX_ITEM: MoveItem = {
   key: 'indexes',
   label: 'Buy an index',
@@ -80,7 +80,7 @@ const INDEX_ITEM: MoveItem = {
  * The app's one primary action, like a bank app's "Payment or transfer": every
  * way money moves, in one menu. The flows are the existing ones; Swap is a page.
  */
-export function MoveMoneyMenu({ variant = 'button' }: { variant?: 'button' | 'tab' }) {
+export function MoveMoneyMenu({ variant = 'button' }: { variant?: 'button' | 'outlined' }) {
   const router = useRouter();
   const { startAction } = useAssetActionsContext();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -95,30 +95,30 @@ export function MoveMoneyMenu({ variant = 'button' }: { variant?: 'button' | 'ta
   };
 
   const trigger =
-    variant === 'tab' ? (
+    variant === 'outlined' ? (
+      // The phone's top bar: an outlined button, never a filled block (Niko
+      // 2026-11-09: the black Move tab in the bottom bar had to go).
       <ButtonBase
         aria-haspopup="menu"
         aria-expanded={!!anchor}
         onClick={(event) => setAnchor(event.currentTarget)}
-        sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, height: '100%', color: INK }}
+        sx={{
+          gap: 0.75,
+          height: 36,
+          px: 1.5,
+          fontSize: 14,
+          fontWeight: 500,
+          whiteSpace: 'nowrap',
+          color: INK,
+          bgcolor: PAPER,
+          border: `1px solid ${HAIRLINE_STRONG}`,
+          '& svg': { fontSize: 18 },
+          '&:hover': { bgcolor: HOVER },
+          '&.Mui-focusVisible': { outline: `2px solid ${INK}`, outlineOffset: 2 },
+        }}
       >
-        <Box
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 40,
-            height: 32,
-            borderRadius: 'var(--radius-md)',
-            bgcolor: INK,
-            color: '#FFFFFF',
-          }}
-        >
-          <SyncAltRounded sx={{ fontSize: 20 }} />
-        </Box>
-        <Typography component="span" sx={{ fontSize: 11, fontWeight: 500 }}>
-          Move
-        </Typography>
+        <SyncAltRounded />
+        Move money
       </ButtonBase>
     ) : (
       <Button
@@ -140,9 +140,10 @@ export function MoveMoneyMenu({ variant = 'button' }: { variant?: 'button' | 'ta
         anchorEl={anchor}
         open={!!anchor}
         onClose={close}
-        anchorOrigin={{ vertical: variant === 'tab' ? 'top' : 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: variant === 'tab' ? 'bottom' : 'top', horizontal: 'right' }}
-        slotProps={{ paper: { sx: { mt: variant === 'tab' ? -1 : 1, minWidth: 280 } } }}
+        // Both triggers sit in the top bar, so the menu always opens below.
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{ paper: { sx: { mt: 1, minWidth: 280 } } }}
       >
         {(indexEnabled() ? [...ITEMS, INDEX_ITEM] : ITEMS).map((item) => (
           <MenuItem key={item.key} onClick={() => select(item.key)} sx={{ gap: 1.5, py: 1 }}>

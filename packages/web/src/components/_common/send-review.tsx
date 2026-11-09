@@ -26,7 +26,7 @@ import {
 } from '@mui/material';
 
 import { Iconify } from '../template/iconify';
-import { NetworkBadge, getAssetNetwork } from './network-badge';
+import { getAssetNetwork } from './network-badge';
 
 import type { SendParams } from './send-adapters';
 
@@ -326,7 +326,10 @@ const SendReview: React.FC<SendReviewProps> = ({
               }}
             >
               <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Network')}</Typography>
-              <NetworkBadge network={getAssetNetwork(sendToken)} />
+              {/* In plain words, not a coloured chip (Niko 2026-11-09). */}
+              <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F' }}>
+                {getAssetNetwork(sendToken)}
+              </Typography>
             </Box>
 
             <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />

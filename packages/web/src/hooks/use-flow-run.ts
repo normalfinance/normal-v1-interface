@@ -32,6 +32,12 @@ export interface FlowRunApi {
   plan: FlowPlan | null;
   begin: (plan: FlowPlan) => void;
   replan: (plan: FlowPlan) => void;
+  /**
+   * Rewrites the plan the run is on (a refund rewrites the rest of the
+   * journey, `refundedPlan`). Reads the current plan, not a render's copy, so
+   * a tracker callback can call it.
+   */
+  reshape: (fn: (plan: FlowPlan) => FlowPlan) => void;
   start: (id: string, patch?: Partial<StepState>) => void;
   update: (id: string, patch: Partial<StepState>) => void;
   done: (id: string, patch?: Partial<StepState>) => void;
@@ -60,6 +66,13 @@ export function useFlowRun(): FlowRunApi {
         setRun(beginRun(Date.now()));
       },
       replan: (next: FlowPlan) => {
+        planRef.current = next;
+        setPlan(next);
+      },
+      reshape: (fn: (plan: FlowPlan) => FlowPlan) => {
+        if (!planRef.current) return;
+        const next = fn(planRef.current);
+        if (next === planRef.current) return;
         planRef.current = next;
         setPlan(next);
       },

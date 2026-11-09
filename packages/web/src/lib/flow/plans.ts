@@ -1158,6 +1158,9 @@ export function indexPurchasePlan(p: {
         label: t('Your {{chains}} wallets', { chains }),
         detail: t('Each coin in its own wallet, only you control them.'),
         glyph: 'wallets',
+        // The coins themselves stand for this place (Niko 2026-11-09: the
+        // index screens needed their coins, not a grey wallet icon).
+        assets: p.legs.map((l) => l.symbol),
         own: true,
       }),
       step({
@@ -1168,6 +1171,64 @@ export function indexPurchasePlan(p: {
         money: 'here',
       }),
       step(balanceStep(t, t('Your wallets show the new amounts.'))),
+    ],
+  };
+}
+
+// ---- a journey that is sent back --------------------------------------------
+
+/** The step ids `refundedPlan` adds, for the engines to report into. */
+export const REFUND_STEP = { send: 'refund-send', arrived: 'refund-arrived' } as const;
+
+/**
+ * The exchange could not complete the swap and sends the money back (Niko
+ * 2026-11-09: "if a swap fails and goes into a refund, the steps should
+ * update"). Everything from `fromStepId` on (the exchange's delivery and what
+ * came after it) is replaced by what happens instead: the exchange sends it
+ * back, to the wallet it came from, and it is there again. Steps before it keep
+ * their ids, so their ticks and links stay. Calling it again changes nothing,
+ * and a plan without that step or without a first wallet is returned as is.
+ */
+export function refundedPlan(
+  plan: FlowPlan,
+  opts: { t: Translate; fromStepId: string; tool: string; coin: string }
+): FlowPlan {
+  const { t, tool } = opts;
+  if (plan.items.some((i) => i.kind === 'step' && i.step.id === REFUND_STEP.send)) return plan;
+  const cut = plan.items.findIndex((i) => i.kind === 'step' && i.step.id === opts.fromStepId);
+  const first = plan.items.find((i) => i.kind === 'place');
+  if (cut < 0 || !first || first.kind !== 'place') return plan;
+  const coin = assetNoun(opts.coin);
+  return {
+    items: [
+      ...plan.items.slice(0, cut),
+      step({
+        id: REFUND_STEP.send,
+        title: t('{{tool}} sends it back', { tool }),
+        detail: t(
+          '{{tool}} could not complete the swap and returns your {{coin}} to the wallet it came from.',
+          { tool, coin }
+        ),
+        actor: tool,
+        money: 'moving',
+      }),
+      place({ ...first.place, id: `${first.place.id}-back`, amount: undefined, back: true }),
+      step({
+        id: REFUND_STEP.arrived,
+        title: t('Back in your wallet'),
+        detail: t('Your {{coin}} is in your wallet again, less any network fees. Nothing was lost.', {
+          coin,
+        }),
+        // The wallet's own network, from the registry (never read from its
+        // label: a connected wallet is called by its own name, "Lobstr").
+        actor:
+          first.place.network && first.place.network in CHAINS
+            ? t('{{chain}} network', {
+                chain: CHAINS[first.place.network as keyof typeof CHAINS].name,
+              })
+            : t('The network'),
+        money: 'here',
+      }),
     ],
   };
 }

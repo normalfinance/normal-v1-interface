@@ -26,6 +26,13 @@ export interface FlowPlace {
   network?: 'stellar' | 'bitcoin' | 'ethereum' | 'solana' | 'base';
   /** A place that is a service, not a wallet: its grey icon. */
   glyph?: 'vault' | 'bridge' | 'exchange' | 'wallets';
+  /** Several coins, each in its own wallet (an index): their icons together. */
+  assets?: string[];
+  /**
+   * The wallet the money came from, met again at the end of a journey that was
+   * sent back (`refundedPlan`): where a calm ending says the money is.
+   */
+  back?: boolean;
   /** How much is there when the money arrives: "25.00 USDC", "≈ 0.00029 BTC". */
   amount?: string;
   /** An address only the person controls. */
@@ -67,6 +74,8 @@ export interface FlowPlan {
 export interface FlowSummaryRow {
   key: string;
   label: string;
+  /** The coin this row is about: its icon before the label (an index's coins). */
+  asset?: string;
   value: string;
   /** A second line under the value: the dollar value, an explanation. */
   detail?: string;

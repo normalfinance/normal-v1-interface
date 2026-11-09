@@ -12,6 +12,7 @@ import { supabase } from '@/lib/createSupabaseClient';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { consumeMarketingOptIn } from '@/lib/auth/auth-routes';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
@@ -513,7 +514,9 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
       setStep('get-started');
     } catch (err: any) {
       logger.error('[OnboardingWizard] Turnkey wallet creation failed:', err);
-      setWalletCreateError(err.message || t('Failed to create wallet. Please try again.'));
+      setWalletCreateError(
+        friendlyAppError(err?.message || t('Your wallet could not be created. Try again in a moment.'))
+      );
     } finally {
       setIsCreatingWallet(false);
     }
@@ -557,7 +560,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
       setStep('get-started');
     } catch (err: any) {
       logger.error('[OnboardingWizard] Import failed:', err);
-      setImportError(err.message || t('Failed to import wallet'));
+      setImportError(friendlyAppError(err?.message || t('Failed to import wallet')));
     } finally {
       setIsImporting(false);
     }
@@ -756,7 +759,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
       enqueueSnackbar(t('USDC trustline added!'), { variant: 'success' });
       await refetchAccountStatus();
     } catch (err: any) {
-      setTrustlineError(err.message || t('Failed to add trustline'));
+      setTrustlineError(friendlyAppError(err?.message || t('Failed to add trustline')));
     }
   };
 

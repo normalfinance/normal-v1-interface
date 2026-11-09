@@ -36,9 +36,11 @@ import { executeLifiSwap } from '@/lib/lifi/execute';
 import { abortTimeout } from '@/utils/abort-timeout';
 import { scopedAmountWire } from '@/lib/cctp/amounts';
 import { confirmAction } from '@/lib/auth/action-code';
+import { assetNoun } from '@/lib/portfolio/asset-names';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
+import { requestLifiQuote } from '@/lib/lifi/request-quote';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
@@ -46,13 +48,18 @@ import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { parseDeliveredAmount } from '@/lib/cctp/delivered-amount';
+import { isBlockhashExpired } from '@/lib/chains/solana-blockhash';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { bridgeName, readBridgeStatus } from '@/lib/flow/lifi-status';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import { driftVerdict, isQuoteStale } from '@/lib/lifi/quote-freshness';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
+// Loaded with the page, never on demand: the catch below reads it first, and
+// a failed on-demand load there threw away the rest of the error handling
+// (live 2026-11-09, the dev server went down mid-swap).
+import { maxAffordableEth, GasShortfallError } from '@/lib/lifi/gas-shortfall';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
-import { cctpRefundPlan, cctpInboundPlan, cctpOutboundPlan } from '@/lib/flow/plans';
 import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
 import { setActiveCctpTransfer, getActiveCctpTransfer } from '@/lib/cctp/active-transfer';
 import {
@@ -60,6 +67,13 @@ import {
   isBroadcastUncertain,
   UNCERTAIN_SEND_MESSAGE,
 } from '@/lib/chains/broadcast-safety';
+import {
+  REFUND_STEP,
+  refundedPlan,
+  cctpRefundPlan,
+  cctpInboundPlan,
+  cctpOutboundPlan,
+} from '@/lib/flow/plans';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -283,6 +297,7 @@ export function useCctpEngine({
     stop: stopRun,
     handOff,
     reset: resetRun,
+    reshape,
   } = useFlowRun();
   const [frozen, setFrozen] = useState<{ summary: FlowSummary; lede: string; tool: string } | null>(
     null
@@ -302,6 +317,11 @@ export function useCctpEngine({
   // on the same page as its own journey (runRefund).
   // Doc 93 0b: WHY a refund started by itself, shown above the steps.
   const [refundNotice, setRefundNotice] = useState<string | null>(null);
+  // When the quote on screen was fetched: an old one is fetched again before
+  // signing, and a materially worse price goes back to the review with this
+  // notice (the LI.FI engine's rule, Doc 95 Wave 6).
+  const quoteAtRef = useRef<number | null>(null);
+  const [priceNotice, setPriceNotice] = useState<string | null>(null);
   const cancelled = useRef(false);
   // The transfer id of the last FAILED run: the failure popup's buttons need
   // it, but the catch clears the active-transfer marker before they render —
@@ -342,6 +362,30 @@ export function useCctpEngine({
     []
   );
 
+  // One request body for the card and for the fresh price at signing, so the
+  // two can never ask for different things.
+  const quoteBody = useCallback(
+    (value: BigNumber) =>
+      direction === 'in'
+        ? {
+            fromSymbol,
+            toSymbol: 'USDC_BASE',
+            fromAmount: value
+              .multipliedBy(BigNumber(10).pow(NATIVE_DECIMALS[fromSymbol as CrosschainSymbol]))
+              .toFixed(0),
+            fromAddress: nativeAddress,
+            toAddress: evmAddress,
+          }
+        : {
+            fromSymbol: 'USDC_BASE',
+            toSymbol,
+            fromAmount: usdcToWire(value.toFixed(6, BigNumber.ROUND_DOWN)).toString(),
+            fromAddress: evmAddress,
+            toAddress: nativeAddress,
+          },
+    [direction, fromSymbol, toSymbol, nativeAddress, evmAddress]
+  );
+
   useEffect(() => {
     const value = BigNumber(debouncedAmount || 0);
     const ready =
@@ -351,6 +395,7 @@ export function useCctpEngine({
       (direction === 'in' ? !!nativeAddress : !!nativeAddress);
     if (!ready) {
       setQuote(null);
+      quoteAtRef.current = null;
       setQuoteError(null);
       setQuoteLoading(false);
       return undefined;
@@ -358,52 +403,22 @@ export function useCctpEngine({
     let stale = false;
     const controller = new AbortController();
     setQuote(null);
+    quoteAtRef.current = null;
+    setPriceNotice(null); // a new amount is a new deal: the old notice is moot
     setQuoteError(null);
     setQuoteLoading(true);
     (async () => {
       try {
-        const body =
-          direction === 'in'
-            ? {
-                fromSymbol,
-                toSymbol: 'USDC_BASE',
-                fromAmount: value
-                  .multipliedBy(BigNumber(10).pow(NATIVE_DECIMALS[fromSymbol as CrosschainSymbol]))
-                  .toFixed(0),
-                fromAddress: nativeAddress,
-                toAddress: evmAddress,
-              }
-            : {
-                fromSymbol: 'USDC_BASE',
-                toSymbol,
-                fromAmount: usdcToWire(value.toFixed(6, BigNumber.ROUND_DOWN)).toString(),
-                fromAddress: evmAddress,
-                toAddress: nativeAddress,
-              };
-        // Doc 90 W4: 429/5xx quote failures are transient — one quiet retry
-        // before parking an error in the card.
-        let res: Response | null = null;
-        let data: any = null;
-        for (let qAttempt = 0; qAttempt < 2; qAttempt++) {
-          res = await fetch('/api/lifi/quote', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-            body: JSON.stringify(body),
-          }).catch(() => null);
-          data = res ? await res.json().catch(() => null) : null;
-          if (stale) return;
-          if (res && res.ok && data?.success) break;
-          const transient = !res || res.status === 429 || res.status >= 500;
-          if (!transient || qAttempt === 1) break;
-          await new Promise((r) => setTimeout(r, 6_000));
-          if (stale) return;
-        }
-        if (!res || !res.ok || !data?.success)
-          setQuoteError(friendlyAppError(data?.error ?? t('Failed to fetch quote')));
+        const got = await requestLifiQuote(quoteBody(value), {
+          signal: controller.signal,
+          cancelled: () => stale,
+        });
+        if (stale) return;
+        if (!got.ok) setQuoteError(friendlyAppError(got.error ?? t('Failed to fetch quote')));
         else {
-          setQuote(data.quote);
-          setFeePercent(typeof data.feePercent === 'number' ? data.feePercent : 0);
+          setQuote(got.quote);
+          quoteAtRef.current = Date.now();
+          setFeePercent(got.feePercent);
         }
       } catch {
         if (!stale) setQuoteError(t('Failed to fetch quote'));
@@ -925,15 +940,29 @@ export function useCctpEngine({
               // REFUNDED = the bridge returned them), so the modal states the
               // truth quietly — no red box, no Try again — and the retirement
               // above makes the banner drop the row.
+              if (verdict === 'REFUNDED') {
+                // The journey now goes back where it came from, both steps
+                // settled (Niko 2026-11-09: the steps update on a refund).
+                reshape((plan) =>
+                  refundedPlan(plan, {
+                    t,
+                    fromStepId: 'bridge-send',
+                    tool: bridgeName(lifiQuote),
+                    coin: fromSymbol,
+                  })
+                );
+                doneStep(REFUND_STEP.send);
+                doneStep(REFUND_STEP.arrived);
+              }
               const calm: Error & { __calmEnd?: boolean } = new Error(
                 verdict === 'REFUNDED'
                   ? t(
                       'The exchange could not complete and returned your {{sym}}: it is back in your wallet. Nothing was lost, and you can simply start a new swap.',
-                      { sym: fromSymbol }
+                      { sym: assetNoun(fromSymbol) }
                     )
                   : t(
                       'The exchange turned this swap down on-chain. That usually means the price moved past its protection while it was being processed. Your {{sym}} never left your wallet; only the small network fee was spent. Get a fresh quote and swap again whenever you like.',
-                      { sym: fromSymbol }
+                      { sym: assetNoun(fromSymbol) }
                     )
               );
               calm.__calmEnd = true;
@@ -1033,7 +1062,11 @@ export function useCctpEngine({
         await patch({ dstAmount });
         await finish();
       } catch (e: any) {
-        const { GasShortfallError, maxAffordableEth } = await import('@/lib/lifi/gas-shortfall');
+        // Solana refused the transaction because its blockhash expired
+        // (nothing was sent). If it could not take a fresh one, signing the
+        // same quote again fails the same way: the next Confirm fetches a new
+        // quote (handleExecute treats an undated quote as stale).
+        if (isBlockhashExpired(e)) quoteAtRef.current = null;
         if (e instanceof GasShortfallError && !broadcastStarted) {
           // Pre-sign shortfall: back to the review, close the row honestly
           // (nothing moved), and offer the affordable amount.
@@ -1137,6 +1170,7 @@ export function useCctpEngine({
       startStep,
       updateStep,
       doneStep,
+      reshape,
       failRun,
       stopRun,
       resetRun,
@@ -1489,7 +1523,46 @@ export function useCctpEngine({
       // an optimistic true mid-run (display only; signing re-checks live).
       .then((v) => setAutopilotOn((prev) => (prev === true ? true : v)))
       .catch(() => setAutopilotOn((prev) => (prev === true ? true : false)));
+    setPriceNotice(null);
     try {
+      // Doc 95 Wave 6, the rule the LI.FI engine already follows: inbound
+      // signs the transaction BUILT into the quote (for Bitcoin, a deposit
+      // address that expires), and the review page can stay open for a long
+      // time. A quote past its age is fetched again before anything is saved
+      // or signed; a materially worse price goes back to the review, because
+      // confirming again is the consent. Outbound signs nothing from this
+      // quote (the pivot fetches its own after the mint), so it skips this.
+      let live = quote;
+      let liveFee = feePercent;
+      if (direction === 'in' && isQuoteStale(Date.now() - (quoteAtRef.current ?? NaN))) {
+        const fresh = await requestLifiQuote(quoteBody(amount));
+        if (!fresh.ok) {
+          // Nothing has been saved or signed at this point: say exactly that.
+          failRun(
+            t(
+              'This price expired and a new one could not be fetched. Nothing was sent. Please try again.'
+            )
+          );
+          return;
+        }
+        setQuote(fresh.quote);
+        quoteAtRef.current = Date.now();
+        setFeePercent(fresh.feePercent);
+        if (driftVerdict(quote.estimate.toAmount, fresh.quote.estimate.toAmount) === 'worse') {
+          resetRun();
+          setFrozen(null);
+          setStage(null);
+          setPriceNotice(
+            t(
+              'The price moved while this was open, so the amounts below are new. Confirm again if they work for you.'
+            )
+          );
+          return;
+        }
+        live = fresh.quote;
+        liveFee = fresh.feePercent;
+      }
+
       // #32 chunk 4b: source = external wallet → move the USDC to the Normal
       // wallet FIRST (kit-signed; execute resolves only once the funds are
       // visible on the companion — the #62 verify-before-act rule, so a burn
@@ -1525,7 +1598,7 @@ export function useCctpEngine({
       const headers = await buildAuthHeaders();
       const amountWire =
         direction === 'in'
-          ? BigInt(quote.estimate.toAmountMin) // USDC that will reach Base
+          ? BigInt(live.estimate.toAmountMin) // USDC that will reach Base
           : usdcToWire(amount.toFixed(6, BigNumber.ROUND_DOWN));
       const res = await fetch('/api/cctp/transfers', {
         method: 'POST',
@@ -1544,8 +1617,8 @@ export function useCctpEngine({
           srcAddress: direction === 'in' ? evmAddress : stellarAddress,
           destAddress: direction === 'in' ? stellarAddress : evmAddress,
           quoteJson: {
-            feePercent,
-            lifiTool: quote?.tool ?? null,
+            feePercent: liveFee,
+            lifiTool: live?.tool ?? null,
             // Which wallet actually PAID (live incident 2026-08-22: the
             // activity row said "Lobstr" for a swap funded by the Normal
             // wallet, because rows were tagged by feed, not by source).
@@ -1555,7 +1628,7 @@ export function useCctpEngine({
         }),
       });
       const data = await res.json();
-      if (!res.ok || !data.id) throw new Error(data.error ?? t('Could not start the swap'));
+      if (!res.ok || !data.id) throw new Error(data.error ?? t('The swap could not be saved, so nothing was sent. Try again in a moment.'));
       doneStep('record');
       // #27's row exists NOW — tell the activity feed so it appears the
       // moment the swap starts, not at Done (Niko live test 2026-08-19).
@@ -1563,7 +1636,7 @@ export function useCctpEngine({
       // This tab now owns the transfer — the recovery banner steps aside
       // until we clear the signal (done / error / unmount).
       setActiveCctpTransfer(data.id);
-      if (direction === 'in') await runInbound(data.id, quote);
+      if (direction === 'in') await runInbound(data.id, live);
       else await runOutbound(data.id, amountWire);
     } catch (e: any) {
       logger.error('[cctp engine] execute failed:', e); // surface stack
@@ -1581,6 +1654,12 @@ export function useCctpEngine({
         : isInsufficientGasError(e)
           ? t('Not enough ETH left to pay the network fee. Try a slightly smaller amount.')
           : friendlyAppError(e);
+      // An error that got past the stage handlers (they normally keep the id)
+      // must not leave "Finish the swap" without a transfer to finish: keep
+      // this run's id before the marker is cleared. Only when a row exists;
+      // with none, nothing moved and the page offers "Try again" instead.
+      const runId = getActiveCctpTransfer();
+      if (runId) lastFailedRunIdRef.current = runId;
       failRun(message);
       setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
@@ -1602,6 +1681,8 @@ export function useCctpEngine({
     doneStep,
     failRun,
     stopRun,
+    resetRun,
+    quoteBody,
     t,
   ]);
 
@@ -2293,6 +2374,8 @@ export function useCctpEngine({
     !['done', 'skipped', 'failed', 'active'].includes(flowState.steps[baseSignStep]?.status ?? '');
   const notice = refundNotice ? (
     <FlowNotice>{refundNotice}</FlowNotice>
+  ) : priceNotice ? (
+    <FlowNotice>{priceNotice}</FlowNotice>
   ) : !refundPlanActive &&
     autopilotOn === false &&
     beforeBaseSign &&

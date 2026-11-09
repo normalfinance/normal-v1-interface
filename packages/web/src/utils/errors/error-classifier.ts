@@ -178,6 +178,10 @@ const TECHNICAL_MARKERS = [
   /[a-zA-Z_]+=[A-Za-z0-9_/+-]{6,}/, // key=value diagnostic dumps
   /[A-Z]{3,}_[A-Z_]{3,}/, // SCREAMING_SNAKE internals (env vars, enum codes)
   /webpack|node_modules|_attributes|xdr|ECONN|ERR_/i,
+  /\bLogs:|getLogs\(\)|Error processing Instruction|custom program error/i, // Solana node dumps
+  // JavaScript and library internals: short, so they used to pass as human
+  // ("Reached end of buffer unexpectedly", seen 2026-11-09).
+  /cannot read propert|is not a function|is not defined|unexpected token|end of buffer|unexpected end of JSON/i,
 ];
 
 /** Map any thrown thing to the one string a user should see. */
@@ -188,7 +192,10 @@ export function friendlyAppError(raw: unknown): string {
       raw ??
       ''
   ).trim();
-  const generic = 'That didn\u2019t go through. Please try again in a moment.';
+  // Every error says what to do next (Niko 2026-11-09: "there should be a
+  // solution for every error"), the fallback included.
+  const generic =
+    'That didn\u2019t go through. Try again in a moment. If it keeps happening, contact support.';
   if (!msg || msg === 'undefined' || msg === 'null' || msg === '[object Object]') return generic;
 
   // 1. Horizon/Soroban result codes anywhere in the text (most specific).
@@ -228,6 +235,40 @@ export function friendlyAppError(raw: unknown): string {
     return 'The transaction was rejected on-chain, so nothing was delivered. You can try again.';
   }
 
+  // 3b. Solana. Its node answers read almost like sentences ("Simulation
+  //     failed. Message: Transaction simulation failed: Blockhash not found.
+  //     Logs: []. Catch the SendTransactionError...") and are short, so they
+  //     used to pass rule 5 as human text and reach the screen (live
+  //     2026-11-09). Every one of these comes from the check Solana runs
+  //     BEFORE it takes a transaction, so nothing was sent.
+  if (/blockhash not found|block ?height exceeded/i.test(msg)) {
+    return 'This waited too long and expired before it was sent, so nothing left your wallet. Try again.';
+  }
+  if (/insufficient funds for rent|InsufficientFundsForRent/i.test(msg)) {
+    return 'This would leave less than Solana’s minimum balance (about 0.001 SOL) in your wallet. Try a slightly smaller amount.';
+  }
+  if (/insufficient lamports|InsufficientFundsForFee|no record of a prior credit/i.test(msg)) {
+    return 'Not enough SOL left to pay the network fee. Try a slightly smaller amount.';
+  }
+  // Solana's own wording only: LI.FI's quote errors say "Step simulation
+  // failed" and belong to the price, not to a send.
+  if (/SendTransactionError|transaction simulation failed/i.test(msg)) {
+    return 'The network turned this down before it was sent, so nothing left your wallet. Try again in a moment.';
+  }
+
+  // 3c. A piece of the page itself could not load: the server stopped, a new
+  //     version was deployed while the page was open, or the connection
+  //     dropped (live 2026-11-09: "Loading chunk ... failed. (error: http://
+  //     ...)" reached the screen mid-swap). Before rule 4: Chrome's wording
+  //     says "Failed to fetch", which is not this.
+  if (
+    /ChunkLoadError|Loading (CSS )?chunk \S+ failed|dynamically imported module|Importing a module script failed/i.test(
+      msg
+    )
+  ) {
+    return 'Part of this page could not load. Reload the page to carry on.';
+  }
+
   // 4. Throttling and connectivity.
   if (/rate ?limit|429|too many requests/i.test(msg)) {
     return 'Too many requests. Please wait a moment and try again.';
@@ -238,7 +279,24 @@ export function friendlyAppError(raw: unknown): string {
     return 'The network did not answer in time. Nothing is lost: try again in a moment.';
   }
 
-  // 5. Already-human text passes through; dumps collapse to the generic.
-  if (msg.length <= 200 && !TECHNICAL_MARKERS.some((re) => re.test(msg))) return msg;
+  const technical = TECHNICAL_MARKERS.some((re) => re.test(msg));
+
+  // 4b. A developer's terse note ("Failed to load accounts", "Could not add
+  //     the trustline", "Invalid amount") says what broke but not what to do.
+  //     Keep the what, add the way out.
+  if (/^invalid amount\b/i.test(msg)) return 'Check the amount and try again.';
+  const terse = /^(?:failed to|could not|couldn['’]t|unable to)\s+(.+?)[.!]?$/i.exec(msg);
+  if (terse && !technical && terse[1].length <= 60 && !/[.!?]/.test(terse[1])) {
+    return `Couldn’t ${terse[1].charAt(0).toLowerCase()}${terse[1].slice(1)}. Try again in a moment.`;
+  }
+
+  // 5. Text written for people passes through: a sentence (it ends like one)
+  //    or a full line from a partner ("MoneyGram: amount is less than the
+  //    minimum limit of 15 USD"). A short fragment with no full stop is a
+  //    library's or a developer's note (live 2026-11-09: "Reached end of
+  //    buffer unexpectedly", "Loading chunk ... failed"), so it gets the
+  //    generic sentence, which says what to do.
+  const sentence = /[.!?)]$/.test(msg) || msg.split(/\s+/).length >= 7;
+  if (msg.length <= 200 && !technical && sentence) return msg;
   return generic;
 }

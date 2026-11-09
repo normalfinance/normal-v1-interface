@@ -9,6 +9,7 @@ import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
 
+import { HAIRLINE } from './brand';
 import {
   BOX_PX,
   Change,
@@ -112,7 +113,16 @@ const MAIN = { ...FIGURES, display: 'block', fontSize: 15, fontWeight: 500, colo
 function HeaderRow({ variant }: { variant: Variant }) {
   const label = { fontSize: 12.5, fontWeight: 500, color: MUTED } as const;
   return (
-    <Box aria-hidden="true" sx={{ ...rowGrid(variant), py: 1.25 }}>
+    <Box
+      aria-hidden="true"
+      sx={{
+        ...rowGrid(variant),
+        py: 1.25,
+        // Home on a phone is two columns that need no names: the first screen
+        // is for the assets themselves (Niko 2026-11-09).
+        ...(variant === 'home' && { display: { xs: 'none', md: 'grid' } }),
+      }}
+    >
       <Typography sx={label}>Asset</Typography>
       {tabled(variant) && (
         <Typography sx={{ ...label, ...from('md'), textAlign: 'right' }}>Price</Typography>
@@ -169,9 +179,13 @@ function HoldingRow({ row, variant }: { row: Holding; variant: Variant }) {
       href={row.href}
       sx={{
         ...rowGrid(variant),
+        // Home on a phone sits on the page: the coin lines up with the balance.
+        ...(variant === 'home' && { px: { xs: 0, md: BOX_PX.md } }),
         width: '100%',
-        minHeight: 68,
-        py: 1.5,
+        // Home on a phone: a 40px coin with 10px above and below, so more of
+        // the list fits on the first screen.
+        minHeight: variant === 'home' ? { xs: 60, md: 68 } : 68,
+        py: variant === 'home' ? { xs: 1.25, md: 1.5 } : 1.5,
         textAlign: 'left',
         '&:hover': { bgcolor: HOVER },
       }}
@@ -295,7 +309,22 @@ export function HoldingsTable({
     rows = rows.map((r) => ({ ...r, share: total > 0 ? r.value / total : undefined }));
   }
   return (
-    <Box sx={ROW_LINES}>
+    <Box
+      sx={[
+        ROW_LINES,
+        // Home on a phone: no box (AppBlock openOnPhone) and no header row, so
+        // each holding draws the line under itself, as the phone mockup does;
+        // from tablets up, the boxed table with lines between rows. The
+        // :nth-child(n) outranks ButtonBase's own border reset.
+        variant === 'home' && {
+          '& > :nth-child(n)': {
+            borderTop: { xs: 'none', md: HAIRLINE },
+            borderBottom: { xs: HAIRLINE, md: 'none' },
+          },
+          '& > :first-child': { borderTop: 'none' },
+        },
+      ]}
+    >
       {tabled(variant) && <HeaderRow variant={variant} />}
       {groups
         ? groups.flatMap((group) => [

@@ -14,11 +14,17 @@ import { BRAND_COLORS } from '@/theme/brand-colors';
 import { MONO } from '@/sections/portfolio/_shared';
 import { bridgeName } from '@/lib/flow/lifi-status';
 import { executeLifiSwap } from '@/lib/lifi/execute';
-import { crossChainSwapPlan } from '@/lib/flow/plans';
 import { confirmAction } from '@/lib/auth/action-code';
+import { assetNoun } from '@/lib/portfolio/asset-names';
+import { requestLifiQuote } from '@/lib/lifi/request-quote';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
+import { isBlockhashExpired } from '@/lib/chains/solana-blockhash';
 import { driftVerdict, isQuoteStale } from '@/lib/lifi/quote-freshness';
+// Loaded with the page, never on demand: the catch below reads it first, and
+// a failed on-demand load there would throw away the error handling.
+import { maxAffordableEth, GasShortfallError } from '@/lib/lifi/gas-shortfall';
+import { REFUND_STEP, refundedPlan, crossChainSwapPlan } from '@/lib/flow/plans';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { isBroadcastUncertain, UNCERTAIN_SEND_MESSAGE } from '@/lib/chains/broadcast-safety';
 
@@ -89,47 +95,6 @@ export interface LifiEngineProps {
   onAmountAdjusted?: (amountEth: string) => void;
 }
 
-type QuoteFetch =
-  | { ok: true; quote: LifiQuote; feePercent: number }
-  | { ok: false; error: unknown };
-
-/**
- * Doc 95 Wave 6: pulled out of the card's effect so the EXECUTE path can ask
- * for a fresh quote with exactly the same request. When the two drifted apart
- * there was no way to re-price at the moment of signing, which is the only
- * moment the price actually matters.
- */
-async function requestLifiQuote(
-  body: Record<string, unknown>,
-  opts: { signal?: AbortSignal; cancelled?: () => boolean } = {}
-): Promise<QuoteFetch> {
-  let res: Response | null = null;
-  let data: any = null;
-  // Doc 90 W4: 429/5xx quote failures are transient — one quiet retry before
-  // parking an error in the card.
-  for (let attempt = 0; attempt < 2; attempt++) {
-    res = await fetch('/api/lifi/quote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: opts.signal,
-      body: JSON.stringify(body),
-    }).catch(() => null);
-    data = res ? await res.json().catch(() => null) : null;
-    if (opts.cancelled?.()) return { ok: false, error: null };
-    if (res && res.ok && data?.success) break;
-    const transient = !res || res.status === 429 || res.status >= 500;
-    if (!transient || attempt === 1) break;
-    await new Promise((r) => setTimeout(r, 6_000));
-    if (opts.cancelled?.()) return { ok: false, error: null };
-  }
-  if (!res || !res.ok || !data?.success) return { ok: false, error: data?.error ?? null };
-  return {
-    ok: true,
-    quote: data.quote as LifiQuote,
-    feePercent: typeof data.feePercent === 'number' ? data.feePercent : 0,
-  };
-}
-
 export function useLifiEngine({
   fromSymbol,
   toSymbol,
@@ -177,6 +142,7 @@ export function useLifiEngine({
     finish: finishRun,
     stop: stopRun,
     reset: resetRun,
+    reshape,
   } = useFlowRun();
   const [frozen, setFrozen] = useState<{ summary: FlowSummary; lede: string; tool: string } | null>(
     null
@@ -192,6 +158,18 @@ export function useLifiEngine({
   // Tracking runs in the engine, not the page: it keeps confirming the source,
   // recording the swap and following the bridge until the coin arrives.
   const runTool = frozen?.tool ?? 'LI.FI';
+  // A refund rewrites the rest of the journey: the exchange sends it back to
+  // the wallet it came from. Safe to call more than once.
+  const sendBack = () =>
+    reshape((plan) =>
+      refundedPlan(plan, {
+        t,
+        fromStepId: 'bridge-send',
+        tool: runTool,
+        coin: statusTx?.fromSymbol ?? fromSymbol,
+      })
+    );
+
   useLifiTracker(statusTx, {
     onActivity: () => window.dispatchEvent(new Event('nf:activity-updated')),
     // The sending chain has it: the money is with the bridge now.
@@ -199,10 +177,14 @@ export function useLifiEngine({
     onBridge: (p) => {
       if (p.phase === 'source') startStep('source-confirm');
       else if (p.phase === 'sending') startStep('bridge-send');
-      else if (p.phase === 'refunding' && flowState.activeId)
-        updateStep(flowState.activeId, {
+      else if (p.phase === 'refunding') {
+        // The journey now goes back where it came from (Niko 2026-11-09: the
+        // steps update when a swap goes into a refund).
+        sendBack();
+        startStep(REFUND_STEP.send, {
           note: t('{{tool}} is sending it back to your wallet.', { tool: runTool }),
         });
+      }
       else if (p.phase === 'waiting' && flowState.activeId)
         updateStep(flowState.activeId, {
           note: t('{{tool}} is waiting on its network. It carries on by itself.', {
@@ -236,14 +218,17 @@ export function useLifiEngine({
     },
     onTerminal: (st) => {
       if (st === 'done') finishRun();
-      else if (st === 'refunded')
+      else if (st === 'refunded') {
+        sendBack();
+        doneStep(REFUND_STEP.send);
+        doneStep(REFUND_STEP.arrived);
         stopRun(
           t(
             '{{tool}} could not complete the swap and sent your {{coin}} back to your wallet. Nothing was lost.',
-            { tool: runTool, coin: statusTx?.fromSymbol ?? fromSymbol }
+            { tool: runTool, coin: assetNoun(statusTx?.fromSymbol ?? fromSymbol) }
           )
         );
-      else
+      } else
         failRun(
           t(
             'The swap did not complete. If your {{coin}} left your wallet, the bridge returns it by itself; Activity shows the final state.',
@@ -579,7 +564,11 @@ export function useLifiEngine({
       setQuote(null);
       setQuoteAt(null);
     } catch (err: any) {
-      const { GasShortfallError, maxAffordableEth } = await import('@/lib/lifi/gas-shortfall');
+      // Solana refused the transaction because its blockhash expired
+      // (nothing was sent). If it could not take a fresh one, signing the
+      // same quote again fails the same way: the next Confirm fetches a new
+      // quote (an undated quote counts as stale).
+      if (isBlockhashExpired(err)) setQuoteAt(null);
       if (err instanceof GasShortfallError) {
         // Pre-sign shortfall: nothing was signed. Back to the review, and
         // offer the affordable amount instead of an error.

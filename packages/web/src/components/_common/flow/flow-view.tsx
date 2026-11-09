@@ -5,6 +5,7 @@ import type { RunPhase, RunState, FlowPlan, FlowSummary } from '@/lib/flow/types
 
 import { useTranslate } from '@/locales';
 import { RouterLink } from '@/routes/components';
+import { getCryptoIconUrl } from '@normalfinance/utils';
 import { placesOf, progressOf, moneyPosition, waitingOnPerson } from '@/lib/flow/run';
 import {
   INK,
@@ -79,6 +80,11 @@ export interface FlowViewProps {
   notice?: ReactNode;
   /** While running: can the person leave this page without parking the money? */
   leave: { safe: boolean; message: string };
+  /**
+   * The panel's title once this page's part is over (handed off): "On its way"
+   * unless the swap now waits on the person ("Your swap needs you").
+   */
+  handOffTitle?: string;
 }
 
 const RED = '#B91C1C';
@@ -243,6 +249,22 @@ function SummaryRows({ summary }: { summary: FlowSummary }) {
           }}
         >
           <Typography component="dt" sx={{ fontSize: 14, color: MUTED, flexShrink: 0 }}>
+            {row.asset && (
+              // Inline, so the label keeps the row's baseline beside the value.
+              <Box
+                component="img"
+                src={getCryptoIconUrl(row.asset)}
+                alt=""
+                sx={{
+                  width: 20,
+                  height: 20,
+                  mr: 1,
+                  verticalAlign: '-5px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                }}
+              />
+            )}
             {row.label}
           </Typography>
           <Box component="dd" sx={{ m: 0, minWidth: 0, textAlign: 'right' }}>
@@ -368,6 +390,7 @@ export function FlowView({
   failActions = [],
   notice,
   leave,
+  handOffTitle,
 }: FlowViewProps) {
   const { t } = useTranslate();
   const { phase } = run;
@@ -428,7 +451,7 @@ export function FlowView({
               ? run.startedAt && run.endedAt
                 ? t('Done in {{time}}', { time: formatDuration(run.endedAt - run.startedAt) })
                 : t('Done')
-              : t('On its way')}
+              : (handOffTitle ?? t('On its way'))}
           </Typography>
           {(run.ending ?? doneNote) && (
             <Typography sx={{ mt: 0.5, fontSize: 13.5, lineHeight: 1.55, color: INK_SOFT }}>

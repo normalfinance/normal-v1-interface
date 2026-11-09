@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import type { IndexMeta } from '@/lib/index/indexes';
 
 import { paths } from '@/routes/paths';
@@ -8,9 +9,16 @@ import { useMarkets } from '@/hooks/use-markets';
 import { RouterLink } from '@/routes/components';
 import { minSpanFor } from '@/lib/prices/markets';
 import { basketChange, basketSeries } from '@/lib/index/indexes';
-import { assetColor, assetDisplay } from '@/lib/portfolio/display';
-import { weightLabel, wireToUsdNumber, minimumPurchaseWire } from '@/lib/index/basket';
-import { INK, MUTED, PAPER, INK_SOFT, HAIRLINE_COLOR, HAIRLINE_STRONG } from '@/theme/brand-colors';
+import { wireToUsdNumber, minimumPurchaseWire } from '@/lib/index/basket';
+import {
+  INK,
+  HOVER,
+  MUTED,
+  PAPER,
+  INK_SOFT,
+  HAIRLINE_COLOR,
+  HAIRLINE_STRONG,
+} from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -23,27 +31,51 @@ import {
   Change,
   FIGURES,
   Sparkline,
-  assetName,
   formatUsd,
 } from '@/components/_common/app-ui';
 
+import { CoinStack, WeightBar } from './index-parts';
+
 // ---------------------------------------------------------------------------
 // An index as a card to pick (Niko 2026-11-09: many indexes will follow, so
-// each one is a block people choose). It stands out by what it holds, not by
-// decoration: the coins' own logos, the basket's day as a line, and its
-// weights as one bar in each coin's colour (the colour a coin is known by,
-// as on its price line). The whole card is the link: its border turns ink and
-// its arrow fills on hover or keyboard focus.
+// each one is a block people choose), made "a little more premium" the same
+// day while staying minimal. It stands out by what it holds, not decoration:
+// the coins and the name; the basket's day as a line with a faint flat wash
+// under it; its weights in each coin's colour; then its facts as a factsheet
+// strip (today, what it holds, the smallest purchase) and the way in as the
+// card's full-width ink foot. The whole card is the link: its border turns ink
+// and the foot lightens on hover or keyboard focus.
 // ---------------------------------------------------------------------------
 
-const COIN = 36;
+const COIN = 40;
+
+/** One cell of the card's factsheet strip: a grey label over a figure. */
+function Fact({ label, first = false, children }: { label: string; first?: boolean; children: ReactNode }) {
+  return (
+    <Box
+      sx={{
+        minWidth: 0,
+        px: BOX_PX,
+        py: 1.75,
+        borderLeft: first ? 'none' : `1px solid ${HAIRLINE_COLOR}`,
+      }}
+    >
+      <Typography sx={{ fontSize: 12.5, color: MUTED }}>{label}</Typography>
+      <Typography
+        component="div"
+        sx={{ ...FIGURES, mt: 0.5, fontSize: 16, fontWeight: 500, color: INK, whiteSpace: 'nowrap' }}
+      >
+        {children}
+      </Typography>
+    </Box>
+  );
+}
 
 export function IndexCard({ meta }: { meta: IndexMeta }) {
   const { t } = useTranslate();
   const { markets } = useMarkets();
   const series = basketSeries(meta.def, (s) => markets[s]?.sparkline24h);
   const today = basketChange(meta.def, (s) => markets[s]?.change24h);
-  const label = { fontSize: 12.5, color: MUTED } as const;
 
   return (
     <ButtonBase
@@ -54,15 +86,13 @@ export function IndexCard({ meta }: { meta: IndexMeta }) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
-        gap: 2.5,
         width: '100%',
         height: '100%',
         textAlign: 'left',
-        p: BOX_PX,
         bgcolor: PAPER,
         border: `1px solid ${HAIRLINE_STRONG}`,
         transition: 'border-color 150ms',
-        '& .nf-index-go': { transition: 'background-color 150ms, color 150ms' },
+        '& .nf-index-go': { transition: 'background-color 150ms' },
         '&:hover, &.Mui-focusVisible': {
           borderColor: INK,
           '& .nf-index-go': { bgcolor: INK_SOFT },
@@ -70,124 +100,71 @@ export function IndexCard({ meta }: { meta: IndexMeta }) {
         '&.Mui-focusVisible': { outline: `2px solid ${INK}`, outlineOffset: 2 },
       }}
     >
-      {/* The coins it holds, each on its own white coin, and how the basket did today */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {meta.def.legs.map((leg, i) => (
-            <Box
-              key={leg.symbol}
-              sx={{
-                width: COIN,
-                height: COIN,
-                ml: i ? '-10px' : 0,
-                borderRadius: '50%',
-                bgcolor: PAPER,
-                // A paper border makes the gap between overlapping coins, no shadow;
-                // the hairline sits just inside it.
-                border: `2px solid ${PAPER}`,
-                outline: `1px solid ${HAIRLINE_COLOR}`,
-                outlineOffset: '-3px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                zIndex: meta.def.legs.length - i,
-              }}
+      <Box sx={{ p: BOX_PX, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        {/* The coins it holds beside its name, as on the index's own page; what it
+            is under them at the card's full width, so a phone never squeezes it */}
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75 }}>
+            <CoinStack symbols={meta.def.legs.map((leg) => leg.symbol)} size={COIN} />
+            <Typography
+              component="h2"
+              sx={{ fontSize: 22, fontWeight: 500, letterSpacing: '-0.02em', color: INK }}
             >
-              <Box
-                component="img"
-                src={assetDisplay(leg.symbol).icon}
-                alt=""
-                sx={{ width: COIN - 12, height: COIN - 12, display: 'block' }}
-              />
-            </Box>
-          ))}
-        </Box>
-        <Box sx={{ textAlign: 'right' }}>
-          <Typography sx={label}>{t('Today')}</Typography>
-          <Typography component="div" sx={{ ...FIGURES, fontSize: 15, fontWeight: 500 }}>
-            {today === null ? '' : <Change pct={today} />}
+              {meta.name}
+            </Typography>
+          </Box>
+          <Typography sx={{ mt: 1.5, fontSize: 14, lineHeight: 1.5, color: MUTED }}>
+            {t(meta.tagline)}
           </Typography>
         </Box>
+
+        {/* The basket's day, held at its weights, with a faint flat wash under it */}
+        <Sparkline
+          points={series}
+          color={INK}
+          wash={HOVER}
+          height={88}
+          minSpan={minSpanFor('BTC')}
+          label={t('{{name}} over the last 24 hours', { name: meta.name })}
+        />
+
+        {/* Its weights: one bar, each coin in its own colour, then the words */}
+        <WeightBar def={meta.def} />
       </Box>
 
-      <Box>
-        <Typography
-          component="h2"
-          sx={{ fontSize: 22, fontWeight: 500, letterSpacing: '-0.02em', color: INK }}
+      {/* Its facts, then the way in, at the foot whatever the card's height */}
+      <Box sx={{ mt: 'auto' }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            borderTop: `1px solid ${HAIRLINE_COLOR}`,
+          }}
         >
-          {meta.name}
-        </Typography>
-        <Typography sx={{ mt: 0.5, fontSize: 14, lineHeight: 1.5, color: MUTED }}>
-          {t(meta.tagline)}
-        </Typography>
-      </Box>
-
-      {/* The basket's day, held at its weights */}
-      <Sparkline
-        points={series}
-        color={INK}
-        height={56}
-        minSpan={minSpanFor('BTC')}
-        label={t('{{name}} over the last 24 hours', { name: meta.name })}
-      />
-
-      {/* Its weights: one bar, each coin in its own colour, then the words */}
-      <Box>
-        <Box sx={{ display: 'flex', gap: '2px', height: 6 }} aria-hidden="true">
-          {meta.def.legs.map((leg) => (
-            <Box
-              key={leg.symbol}
-              sx={{ flexGrow: leg.weightBps, bgcolor: assetColor(leg.symbol) }}
-            />
-          ))}
+          <Fact first label={t('Today')}>
+            {today === null ? '' : <Change pct={today} />}
+          </Fact>
+          <Fact label={t('Holds')}>
+            {t('{{count}} coins', { count: meta.def.legs.length })}
+          </Fact>
+          <Fact label={t('From')}>
+            {formatUsd(wireToUsdNumber(minimumPurchaseWire(meta.def)))}
+          </Fact>
         </Box>
-        <Box sx={{ mt: 1.25, display: 'flex', flexWrap: 'wrap', columnGap: 2, rowGap: 0.5 }}>
-          {meta.def.legs.map((leg) => (
-            <Typography key={leg.symbol} sx={{ fontSize: 13, color: MUTED }}>
-              <Box component="span" sx={{ color: INK, fontWeight: 500 }}>
-                {assetName(leg.symbol)}
-              </Box>{' '}
-              <Box component="span" sx={FIGURES}>
-                {weightLabel(leg.weightBps)}
-              </Box>
-            </Typography>
-          ))}
-        </Box>
-      </Box>
-
-      {/* What it takes, and the way in */}
-      <Box
-        sx={{
-          mt: 'auto',
-          pt: 2,
-          borderTop: `1px solid ${HAIRLINE_COLOR}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 1.5,
-        }}
-      >
-        <Typography sx={{ fontSize: 13, color: MUTED }}>
-          {t('From {{min}}, one signature', {
-            min: formatUsd(wireToUsdNumber(minimumPurchaseWire(meta.def))),
-          })}
-        </Typography>
         <Box
           className="nf-index-go"
           aria-hidden="true"
           sx={{
-            display: 'inline-flex',
+            display: 'flex',
             alignItems: 'center',
-            gap: 0.75,
-            height: 40,
-            px: 1.75,
-            fontSize: 14,
+            justifyContent: 'space-between',
+            height: 52,
+            px: BOX_PX,
+            fontSize: 15,
             fontWeight: 500,
             color: PAPER,
             bgcolor: INK,
-            '& svg': { fontSize: 18 },
+            '& svg': { fontSize: 20 },
           }}
         >
           {t('View and buy')}

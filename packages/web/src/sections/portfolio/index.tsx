@@ -16,43 +16,25 @@ import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
-import { appLocale } from '@/components/_common/app-ui';
-import { AppPageHeader } from '@/components/_common/brand';
 import { TwoFactorPrompt } from '@/components/_common/two-factor-prompt';
 import { GetStartedPicker } from '@/components/_common/get-started-picker';
 
+import { MoneyBlock } from './portfolio-money';
 import { BalanceBlock } from './portfolio-balance';
 import { ActivityCard } from './portfolio-activity-card';
-import { MoneyBlock, moneySplit } from './portfolio-money';
 
 import type { HoldingData } from './_shared';
-
-/** Good morning, afternoon or evening, by the visitor's clock. */
-function greeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
-}
 
 // Shown until we know whether the user even has a wallet. Beyond that each
 // card owns its own skeleton, so a slow source never blanks the whole page.
 function PortfolioSkeleton() {
   return (
     <DashboardContent>
-      <Skeleton variant="text" sx={{ width: 220, fontSize: 28, mb: 4 }} />
-      <Skeleton variant="rectangular" height={232} />
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' },
-          gap: 3,
-          mt: 5,
-        }}
-      >
-        <Skeleton variant="rectangular" height={320} />
-        <Skeleton variant="rectangular" height={320} />
-      </Box>
+      {/* The balance, the four tiles, then the assets: Home's own shape. */}
+      <Skeleton variant="text" sx={{ width: 120, fontSize: 14 }} />
+      <Skeleton variant="text" sx={{ width: 240, fontSize: 44 }} />
+      <Skeleton variant="rectangular" sx={{ mt: 2.5, height: { xs: 68, md: 72 } }} />
+      <Skeleton variant="rectangular" sx={{ mt: { xs: 3, md: 5 }, height: 360 }} />
     </DashboardContent>
   );
 }
@@ -326,19 +308,11 @@ export default function PortfolioView() {
     <DashboardContent>
       <TwoFactorPrompt hasFunds={totalBalance > 0} />
 
-      <AppPageHeader
-        title={greeting()}
-        subtitle={new Date().toLocaleDateString(appLocale(), {
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric',
-        })}
-      />
-
+      {/* No greeting and no date (Niko 2026-11-09): the balance first, then
+          the assets right under it, on the first screen of a phone. */}
       <BalanceBlock
         total={totalBalance}
         change={change24h}
-        split={moneySplit(holdingsData)}
         // The totals sum BOTH sources, native-chain balances and the Stellar
         // token store; gated on the capped first paint (doc 117), so a stuck
         // companion lookup can't spin the balance forever.
@@ -355,7 +329,7 @@ export default function PortfolioView() {
           gridTemplateColumns: 'minmax(0, 1fr)',
           alignItems: 'start',
           gap: 4,
-          mt: { xs: 4, md: 5 },
+          mt: { xs: 3, md: 5 },
         }}
       >
         <MoneyBlock

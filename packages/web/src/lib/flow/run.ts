@@ -226,9 +226,12 @@ export function moneyPosition(plan: FlowPlan, state: RunState): MoneyPosition | 
   const places = placesOf(plan);
   if (!places.length) return null;
   // A calm ending (stopRun) means the money is back where it started: a bridge
-  // returned it, or it never left. Every caller of stopRun ends that way.
+  // returned it, or it never left. Every caller of stopRun ends that way. A
+  // journey rewritten for a refund ends at that wallet again (`back`), so the
+  // money is shown there, after the steps that brought it back.
   if (state.phase === 'review' || state.phase === 'stopped') {
-    return { placeId: places[0].id, moving: false, toPlaceId: null };
+    const home = (state.phase === 'stopped' && places.find((p) => p.back)) || places[0];
+    return { placeId: home.id, moving: false, toPlaceId: null };
   }
   if (state.phase === 'done') {
     return { placeId: places[places.length - 1].id, moving: false, toPlaceId: null };

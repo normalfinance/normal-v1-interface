@@ -24,6 +24,7 @@ import WalletReadinessNotice from '@/components/_common/wallet-readiness-notice'
 import NormalWalletSetupDialog from '@/components/_common/normal-wallet-setup-dialog';
 
 import SwapCard from './swap-card';
+import { InProgressBlock } from './in-progress-block';
 import { SavingsOnrampCard } from '../savings/savings-onramp-card';
 
 import type { SwapSymbol } from './engines/types';
@@ -226,7 +227,12 @@ export default function SwapView() {
           }}
         >
           <SwapCard initial={initial} />
-          <SavingsOnrampCard />
+          {/* Swaps still under way sit beside the card, not above it (Niko
+              2026-11-09); each opens its own page with every step. */}
+          <Box sx={{ display: 'grid', gap: 2, minWidth: 0 }}>
+            <InProgressBlock />
+            <SavingsOnrampCard />
+          </Box>
         </Box>
 
         <NormalWalletSetupDialog

@@ -81,7 +81,7 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
   const autopilot = await autopilotStatusFor(user.id).catch(() => null);
   if (!autopilot?.active) {
     return NextResponse.json(
-      { error: 'Turn on automatic swap completion first', autopilot: false },
+      { error: 'Turn on auto-finish first, then try again.', autopilot: false },
       { status: 409 }
     );
   }

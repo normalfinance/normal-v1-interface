@@ -36,6 +36,8 @@ export const paths = {
   /** Home: the signed-in overview */
   portfolio: '/app',
   swap: '/app/swap',
+  /** One Circle swap's own page: every step, where the money is, what it needs. */
+  swapTransfer: (id: string) => `/app/swap/transfers/${id}`,
   /** Same destination as the /invest → /app/swap permanent redirect */
   invest: '/app/swap',
   savings: '/app/savings',

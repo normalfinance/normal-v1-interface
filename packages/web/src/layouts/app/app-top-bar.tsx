@@ -16,8 +16,8 @@ import { NetworkToggle, NETWORK_SWITCH_ENABLED } from '../components/network-tog
 
 /**
  * White, over the white page, with a hairline under it. Desktop: the primary
- * action and the account. Phones: the logo and the account; Move lives in the
- * bottom tabs.
+ * action and the account. Phones: the logo, Move money as an outlined button
+ * (the bottom tabs are places only, Niko 2026-11-09), and the account.
  */
 export function AppTopBar() {
   return (
@@ -50,6 +50,9 @@ export function AppTopBar() {
 
         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
           <MoveMoneyMenu />
+        </Box>
+        <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+          <MoveMoneyMenu variant="outlined" />
         </Box>
 
         <AccountDrawer />

@@ -42,7 +42,36 @@ import { BOX_PX, FIGURES, StatusBadge } from '../app-ui';
 const RED = '#B91C1C';
 const RAIL_X = 11; // centre of the 22px marker
 
+// Up to three coins in the 32px slot every place icon takes, so the text
+// column stays straight: one above, two below, each ringed in white.
+const CLUSTER = [
+  { left: 6.5, top: 0 },
+  { left: 0, top: 13 },
+  { left: 13, top: 13 },
+];
+
 function PlaceIcon({ place }: { place: FlowPlace }) {
+  if (place.assets?.length) {
+    return (
+      <Box aria-hidden="true" sx={{ position: 'relative', width: 32, height: 32, flexShrink: 0 }}>
+        {place.assets.slice(0, CLUSTER.length).map((symbol, i) => (
+          <Avatar
+            key={symbol}
+            src={getCryptoIconUrl(symbol)}
+            alt=""
+            sx={{
+              position: 'absolute',
+              ...CLUSTER[i],
+              width: 19,
+              height: 19,
+              bgcolor: PAPER,
+              border: `1.5px solid ${PAPER}`,
+            }}
+          />
+        ))}
+      </Box>
+    );
+  }
   if (place.glyph) {
     const Icon =
       place.glyph === 'vault'

@@ -18,13 +18,13 @@ import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { buildStellarWalletOptions } from '@/lib/wallet-options';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { buildOwnWalletCandidates } from '@/lib/stellar/own-wallets';
+import { getMaxAmount, sanitizeAmountInput } from '@normalfinance/utils';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import { getLinkedWallets, type LinkedWallet } from '@/services/linked-wallets';
 import { useSendToken, type TransferArgs } from '@/hooks/stellar/use-send-token';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import { knownMemoRequirement, fetchMemoRequirement } from '@/lib/stellar/memo-required';
-import { getMaxAmount, getCryptoIconUrl, sanitizeAmountInput } from '@normalfinance/utils';
 import {
   SAVINGS_XLM_BUFFER,
   STELLAR_TX_FEE_XLM,
@@ -47,6 +47,7 @@ import WalletChoice from '@/components/_common/wallet-choice';
 
 import PickToken from './pick-token';
 import SendReview from './send-review';
+import { AssetAvatar } from './asset-avatar';
 import { Iconify } from '../template/iconify';
 import OwnWalletChips from './own-wallet-chips';
 import PasteIconButton from '../paste-icon-button';
@@ -55,7 +56,7 @@ import { createSolanaAdapter } from './send-adapters/solana';
 import { createStellarAdapter } from './send-adapters/stellar';
 import { createBitcoinAdapter } from './send-adapters/bitcoin';
 import { createEthereumAdapter } from './send-adapters/ethereum';
-import { NetworkBadge, NETWORK_STYLES, getAssetNetwork, type AssetNetwork } from './network-badge';
+import { NETWORK_STYLES, type AssetNetwork } from './network-badge';
 
 import type { SendAdapter } from './send-adapters';
 
@@ -797,11 +798,9 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                         border: '1px solid rgba(10,10,15,0.08)',
                       }}
                     >
-                      <Box
-                        component="img"
-                        src={sendToken.icon || getCryptoIconUrl(sendToken.symbol)}
-                        sx={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }}
-                      />
+                      {/* The network is the small circle on the coin (Niko
+                          2026-11-09: no coloured network chips). */}
+                      <AssetAvatar token={sendToken} size={24} />
                       <Typography
                         sx={{
                           fontSize: '14px',
@@ -812,7 +811,6 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
                       >
                         {sendToken.symbol}
                       </Typography>
-                      <NetworkBadge network={getAssetNetwork(sendToken)} />
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Box
@@ -1053,7 +1051,7 @@ export default function SendModal({ open, onClose, initialSymbol }: SendModalPro
               {!(destination && !isAddressValid) &&
                 adapter &&
                 // Tinted in the NETWORK'S own colour (Niko 2026-08-26: "highlight
-                // it more") — the same palette as the NetworkBadge, so Stellar
+                // it more"): the network's own palette (NETWORK_STYLES), so Stellar
                 // reads teal here, on the badge, and on the review screen.
                 (() => {
                   const netName = (

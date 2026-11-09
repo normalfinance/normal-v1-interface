@@ -15,6 +15,7 @@ import { CCTP_DOMAIN } from '@/lib/cctp/config';
 import { RouterLink } from '@/routes/components';
 import { useMarkets } from '@/hooks/use-markets';
 import { useFlowRun } from '@/hooks/use-flow-run';
+import { minSpanFor } from '@/lib/prices/markets';
 import { useNetworkStore } from '@normalfinance/state';
 import { assetDisplay } from '@/lib/portfolio/display';
 import { confirmAction } from '@/lib/auth/action-code';
@@ -24,12 +25,14 @@ import { readBridgeStatus } from '@/lib/flow/lifi-status';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
+import { basketChange, basketSeries } from '@/lib/index/indexes';
 import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { indexBuyStepId, indexPurchasePlan } from '@/lib/flow/plans';
+import { CoinStack, WeightBar } from '@/sections/indexes/index-parts';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
-import { INK, FAINT, MUTED, CANVAS, HAIRLINE_COLOR } from '@/theme/brand-colors';
+import { INK, FAINT, HOVER, MUTED, CANVAS, HAIRLINE_STRONG } from '@/theme/brand-colors';
 import {
   weightLabel,
   CRYPTO_INDEX,
@@ -51,17 +54,6 @@ import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import AutopilotConsentDialog from '@/components/_common/autopilot-consent-dialog';
 import { FlowView, FlowHost, FlowNotice, FlowPortal } from '@/components/_common/flow';
 import {
-  Change,
-  FIGURES,
-  ListRow,
-  RowList,
-  AppBlock,
-  formatUsd,
-  assetName,
-  formatCoin,
-  formatPrice,
-} from '@/components/_common/app-ui';
-import {
   baseTxLink,
   chainTxLink,
   lifiTrackLink,
@@ -69,6 +61,20 @@ import {
   baseAddressHref,
   stellarAccountHref,
 } from '@/components/_common/flow/flow-links';
+import {
+  BOX_PX,
+  Change,
+  FIGURES,
+  ListRow,
+  RowList,
+  AppBlock,
+  ROW_LINES,
+  Sparkline,
+  formatUsd,
+  assetName,
+  formatCoin,
+  formatPrice,
+} from '@/components/_common/app-ui';
 
 // ---------------------------------------------------------------------------
 // /app/indexes/<slug>: buy an index (Top 3: Bitcoin, Ethereum and Solana) in one purchase, with
@@ -132,6 +138,12 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   const { user } = useSupabaseAuth();
   const network = useNetworkStore((s) => s.network);
   const { markets } = useMarkets();
+  // The basket's day, for the page's line and today's figure (the card's sums).
+  const daySeries = useMemo(
+    () => basketSeries(meta.def, (s) => markets[s]?.sparkline24h),
+    [meta.def, markets]
+  );
+  const today = basketChange(meta.def, (s) => markets[s]?.change24h);
   const { assets, refresh } = useWalletBalances(true);
   const flow = useFlowRun();
   const { run: flowState } = flow;
@@ -225,7 +237,9 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
           const usd = wireToUsdNumber(s.amountWire);
           return {
             key: s.symbol,
-            label: t('{{coin}} ({{weight}})', {
+            // The coin's logo before its name (Niko 2026-11-09).
+            asset: s.symbol,
+            label: t('{{coin}} · {{weight}}', {
               coin: assetName(s.symbol),
               weight: weightLabel(s.weightBps),
             }),
@@ -650,8 +664,11 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   const canReview = !!liveWire && !tooMuch && !missing.length && !!info?.stellarAddress;
 
   return (
-    <FlowHost>
-      <DashboardContent>
+    // The host inside the page's content, as on Swap and Savings: the review
+    // renders into it, so it keeps the page's gutters (Niko 2026-11-09: the
+    // review's top lines sat against the sidebar).
+    <DashboardContent>
+      <FlowHost>
         <ButtonBase
           component={RouterLink}
           href={paths.indexes.root}
@@ -671,10 +688,15 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
           <ArrowBackOutlined sx={{ fontSize: 16 }} />
           {t('Indexes')}
         </ButtonBase>
-        <AppPageHeader
-          title={meta.name}
-          subtitle={t('Bitcoin, Ethereum and Solana in one purchase, with one signature.')}
-        />
+        {/* The index's picture first: the coins it holds, as on its card. */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, mb: 3 }}>
+          <CoinStack symbols={meta.def.legs.map((leg) => leg.symbol)} size={48} />
+          <AppPageHeader
+            title={meta.name}
+            subtitle={t('Bitcoin, Ethereum and Solana in one purchase, with one signature.')}
+            sx={{ mb: 0 }}
+          />
+        </Box>
 
         <Box
           sx={{
@@ -685,15 +707,41 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
           }}
         >
           <Box sx={{ minWidth: 0, order: { xs: 2, lg: 1 }, display: 'grid', gap: 4 }}>
+            {/* The page's one focal point: the basket's day as a line, and its
+                weights in each coin's colour (Niko 2026-11-09: "lift it up"). */}
             <AppBlock
-              flush
-              title={t('What you buy')}
+              title={t('The last 24 hours')}
               action={
                 <Typography sx={{ fontSize: 12.5, color: MUTED }}>
                   {t('Market data from CoinGecko')}
                 </Typography>
               }
             >
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.25 }}>
+                <Typography
+                  component="div"
+                  sx={{ ...FIGURES, fontSize: { xs: 26, md: 30 }, fontWeight: 500, lineHeight: 1.1 }}
+                >
+                  {today === null ? null : <Change pct={today} />}
+                </Typography>
+                <Typography sx={{ fontSize: 13.5, color: MUTED }}>
+                  {t('{{name}} today, at its weights', { name: meta.name })}
+                </Typography>
+              </Box>
+              <Box sx={{ mt: 2.5, mb: 3 }}>
+                <Sparkline
+                  points={daySeries}
+                  color={INK}
+                  wash={HOVER}
+                  height={112}
+                  minSpan={minSpanFor('BTC')}
+                  label={t('{{name}} over the last 24 hours', { name: meta.name })}
+                />
+              </Box>
+              <WeightBar def={meta.def} height={8} />
+            </AppBlock>
+
+            <AppBlock flush title={t('What you buy')}>
               <RowList>
                 {CRYPTO_INDEX.legs.map((leg) => {
                   const m = markets[leg.symbol];
@@ -721,25 +769,64 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
               </RowList>
             </AppBlock>
 
-            <AppBlock title={t('How it works')}>
-              {[
-                t(
-                  'You sign once, on Stellar. Circle moves your digital dollars to your own Base address.'
-                ),
-                t(
-                  'Auto-finish buys each coin there, at its share, and the exchanges send it to your own wallet on its network.'
-                ),
-                t(
-                  'The coins are yours, in your wallets, like any you buy one by one. Nothing is pooled with anyone else.'
-                ),
-              ].map((line) => (
-                <Typography
-                  key={line}
-                  sx={{ fontSize: 14, lineHeight: '22px', color: MUTED, '& + &': { mt: 1.25 } }}
-                >
-                  {line}
-                </Typography>
-              ))}
+            {/* Three numbered steps, drawn like the journey's own steps. */}
+            <AppBlock flush title={t('How it works')}>
+              <Box component="ol" sx={{ m: 0, p: 0, listStyle: 'none', ...ROW_LINES }}>
+                {[
+                  {
+                    title: t('You sign once'),
+                    line: t(
+                      'On Stellar. Circle moves your digital dollars to your own Base address.'
+                    ),
+                  },
+                  {
+                    title: t('Auto-finish buys each coin'),
+                    line: t(
+                      'At its share. The exchanges send each coin to your own wallet on its network.'
+                    ),
+                  },
+                  {
+                    title: t('The coins are yours'),
+                    line: t(
+                      'In your wallets, like any you buy one by one. Nothing is pooled with anyone else.'
+                    ),
+                  },
+                ].map((item, i) => (
+                  <Box
+                    component="li"
+                    key={item.title}
+                    sx={{ display: 'flex', gap: 1.75, px: BOX_PX, py: 2 }}
+                  >
+                    <Box
+                      aria-hidden="true"
+                      sx={{
+                        ...FIGURES,
+                        width: 26,
+                        height: 26,
+                        flexShrink: 0,
+                        borderRadius: '50%',
+                        border: `1px solid ${HAIRLINE_STRONG}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 12.5,
+                        fontWeight: 500,
+                        color: INK,
+                      }}
+                    >
+                      {i + 1}
+                    </Box>
+                    <Box sx={{ minWidth: 0, pt: '2px' }}>
+                      <Typography sx={{ fontSize: 15, fontWeight: 500, color: INK }}>
+                        {item.title}
+                      </Typography>
+                      <Typography sx={{ mt: 0.5, fontSize: 14, lineHeight: '21px', color: MUTED }}>
+                        {item.line}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
             </AppBlock>
           </Box>
 
@@ -751,14 +838,18 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: 1,
+                    // On a narrow phone the balance and MAX take their own line
+                    // rather than squeezing both labels onto two lines each.
+                    flexWrap: 'wrap',
+                    columnGap: 1,
+                    rowGap: 0.5,
                   }}
                 >
-                  <Typography sx={{ fontSize: 12, color: MUTED }}>
+                  <Typography sx={{ fontSize: 12, color: MUTED, whiteSpace: 'nowrap' }}>
                     {t('Amount in digital dollars')}
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography sx={{ ...FIGURES, fontSize: 12, color: FAINT }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+                    <Typography sx={{ ...FIGURES, fontSize: 12, color: FAINT, whiteSpace: 'nowrap' }}>
                       {t('In your wallet: {{amount}}', { amount: formatUsd(usdcBalance) })}
                     </Typography>
                     <Button
@@ -794,28 +885,55 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                 />
               </Box>
 
-              {verdict?.ok && (
-                <Box sx={{ mt: 1.5 }}>
-                  {verdict.slices.map((s, i) => (
+              {/* What each coin gets: always the three coins with their logos,
+                  the dollars and the coin they buy once the amount works. */}
+              <Box sx={{ mt: 1, ...ROW_LINES }}>
+                {meta.def.legs.map((leg) => {
+                  const slice = verdict?.ok
+                    ? verdict.slices.find((s) => s.symbol === leg.symbol)
+                    : undefined;
+                  const usd = slice ? wireToUsdNumber(slice.amountWire) : null;
+                  const price = markets[leg.symbol]?.price;
+                  return (
                     <Box
-                      key={s.symbol}
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        py: 1,
-                        borderTop: i ? `1px solid ${HAIRLINE_COLOR}` : 'none',
-                      }}
+                      key={leg.symbol}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 1.25 }}
                     >
-                      <Typography sx={field}>
-                        {assetName(s.symbol)} · {weightLabel(s.weightBps)}
+                      <Box
+                        component="img"
+                        src={assetDisplay(leg.symbol).icon}
+                        alt=""
+                        sx={{ width: 24, height: 24, borderRadius: '50%', display: 'block' }}
+                      />
+                      <Typography sx={{ ...field, flex: 1, minWidth: 0 }}>
+                        <Box component="span" sx={{ color: INK, fontWeight: 500 }}>
+                          {assetName(leg.symbol)}
+                        </Box>{' '}
+                        <Box component="span" sx={FIGURES}>
+                          {weightLabel(leg.weightBps)}
+                        </Box>
                       </Typography>
-                      <Typography sx={{ ...FIGURES, fontSize: 13.5, fontWeight: 500, color: INK }}>
-                        {formatUsd(wireToUsdNumber(s.amountWire))}
-                      </Typography>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography
+                          sx={{
+                            ...FIGURES,
+                            fontSize: 13.5,
+                            fontWeight: 500,
+                            color: usd === null ? FAINT : INK,
+                          }}
+                        >
+                          {formatUsd(usd ?? 0)}
+                        </Typography>
+                        {usd !== null && !!price && (
+                          <Typography sx={{ ...FIGURES, fontSize: 12, color: MUTED }}>
+                            ≈ {formatCoin(usd / price, leg.symbol)}
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
-                  ))}
-                </Box>
-              )}
+                  );
+                })}
+              </Box>
 
               {wire !== null && verdict && !verdict.ok && (
                 <Typography sx={{ mt: 1.5, fontSize: 12.5, color: '#B91C1C' }}>
@@ -970,7 +1088,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
             }}
           />
         )}
-      </DashboardContent>
-    </FlowHost>
+      </FlowHost>
+    </DashboardContent>
   );
 }

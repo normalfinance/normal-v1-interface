@@ -11,6 +11,7 @@ import {
   stopRun,
   failRun,
   stepsOf,
+  placesOf,
   beginRun,
   skipStep,
   finishRun,
@@ -20,7 +21,9 @@ import {
   completeStep,
 } from '@/lib/flow/run';
 import {
+  REFUND_STEP,
   depositPlan,
+  refundedPlan,
   withdrawPlan,
   cctpRefundPlan,
   stellarSwapPlan,
@@ -364,10 +367,12 @@ function runAt(
     );
   }
   if (mode === 'stopped') {
+    // A journey rewritten for a refund ends with its last step settled too.
+    if (current.id === REFUND_STEP.arrived) run = completeStep(run, plan, current.id, clock + 4000);
     return stopRun(
       run,
       plan,
-      'Chainflip could not complete the swap and sent your BTC back to your wallet. Nothing was lost.',
+      'Chainflip could not complete the swap and sent your Bitcoin back to your wallet. Nothing was lost.',
       now
     );
   }
@@ -422,9 +427,33 @@ export default function FlowPreview() {
     return () => clearInterval(id);
   }, [play, ids]);
 
+  // Stopped, on a swap through an exchange: the exchange sent it back, so the
+  // journey is rewritten the way the engines rewrite it (refundedPlan), both
+  // new steps settled.
+  const bridge = stepsOf(data.plan).find((s) => s.id === 'bridge-send');
+  const sentBack = mode === 'stopped' && !!bridge;
+  const shownPlan = useMemo(
+    () =>
+      sentBack && bridge
+        ? refundedPlan(data.plan, {
+            t,
+            fromStepId: 'bridge-send',
+            tool: bridge.actor,
+            coin: placesOf(data.plan)[0]?.asset ?? '',
+          })
+        : data.plan,
+    [sentBack, bridge, data.plan, t]
+  );
   const run = useMemo(
-    () => runAt(data.plan, mode, at, params.get('wait') === '1' || play, now),
-    [data.plan, mode, at, params, play, now]
+    () =>
+      runAt(
+        shownPlan,
+        mode,
+        sentBack ? REFUND_STEP.arrived : at,
+        params.get('wait') === '1' || play,
+        now
+      ),
+    [shownPlan, mode, sentBack, at, params, play, now]
   );
 
   return (
@@ -463,7 +492,7 @@ export default function FlowPreview() {
         </Box>
       )}
       <FlowView
-        plan={data.plan}
+        plan={shownPlan}
         run={run}
         summary={data.summary}
         titles={data.titles}

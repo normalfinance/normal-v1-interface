@@ -1,6 +1,13 @@
 'use client';
 
-// In-flight & halted cross-ecosystem transfers, shown above the swap card.
+// In-flight & halted cross-ecosystem transfers: the swap page's recovery keeper.
+//
+// It draws nothing any more (Niko 2026-11-09: the block above the swap card had
+// to go). It finds the swaps still under way, finishes or brings them back when
+// asked (nf:cctp-resume, nf:cctp-refund, ?cctpResume=), and publishes its rows
+// to lib/cctp/in-progress.ts: the "In progress" list beside the card and each
+// swap's own page (/app/swap/transfers/[id]) show them. Exactly ONE keeper per
+// page, so a click can never run a recovery twice.
 //
 // Custody note: at every step principal sits at the user's OWN addresses
 // (Turnkey). The relayer only pays gas and replays user-signed CCTP messages —
@@ -37,14 +44,9 @@ import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
+import { publishInProgress, type InProgressItem } from '@/lib/cctp/in-progress';
 import { parseFailedTool, parseFailedExchanges } from '@/lib/cctp/failure-class';
 import { getActiveCctpTransfer, ACTIVE_CCTP_TRANSFER_EVENT } from '@/lib/cctp/active-transfer';
-
-import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
-import CircularProgress from '@mui/material/CircularProgress';
 
 import { useSnackbar } from '@/components/template/snackbar';
 
@@ -69,6 +71,7 @@ interface TransferRow {
   dstSwapTxHash: string | null;
   updatedAt: string;
   errorDetail?: string | null;
+  srcAmount?: string | null;
 }
 
 // Doc 111 (2026-08-28): the phase table lives in cctp-phase.ts, pure and
@@ -143,6 +146,38 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   const visibleTransfers = transfers.filter(
     (tr) => tr.id !== activeId || phaseFor(tr, Date.now()) === 'auto'
   );
+
+  // What is under way, for the page's "In progress" list and each swap's own
+  // page (lib/cctp/in-progress.ts). Published when it changes; cleared when the
+  // keeper leaves the page.
+  const published: InProgressItem[] = visibleTransfers.flatMap((tr) => {
+    const phase = phaseFor(tr, Date.now());
+    return phase === 'hidden'
+      ? []
+      : [
+          {
+            id: tr.id,
+            direction: tr.direction,
+            srcAsset: tr.srcAsset,
+            dstAsset: tr.dstAsset,
+            srcAmount: tr.srcAmount ?? null,
+            amountWire: tr.amountWire,
+            phase,
+            onBase:
+              verifiedIds.has(tr.id) ||
+              (tr.direction === 'stellar_to_crosschain' &&
+                (!!tr.mintTxHash || tr.status === 'COMPLETED')),
+          },
+        ];
+  });
+  const publishedKey = JSON.stringify(published);
+  useEffect(() => {
+    publishInProgress({ items: JSON.parse(publishedKey) as InProgressItem[] });
+  }, [publishedKey]);
+  useEffect(() => {
+    publishInProgress({ busyId });
+  }, [busyId]);
+  useEffect(() => () => publishInProgress({ items: [], busyId: null }), []);
 
   const refresh = useCallback(async () => {
     try {
@@ -495,118 +530,6 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   );
   refundRef.current = refundToStellar;
 
-  if (!visibleTransfers.length) return null;
-  const now = Date.now();
-
-  return (
-    <Box
-      sx={{
-        mb: '12px',
-        p: '12px 16px',
-        borderRadius: 'var(--radius-md)',
-        bgcolor: 'rgba(110,139,255,0.07)',
-        border: '1px solid rgba(110,139,255,0.25)',
-      }}
-    >
-      {visibleTransfers.map((tr) => {
-        const phase = phaseFor(tr, now);
-        const isHalt = phase === 'halt-receive' || phase === 'halt-finish';
-        const usd = (Number(tr.amountWire) / 1e6).toFixed(2);
-        return (
-          <Stack key={tr.id} direction="row" spacing={1.5} alignItems="center" sx={{ py: '5px' }}>
-            {isHalt ? (
-              <Box
-                sx={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: '50%',
-                  bgcolor: '#F59E0B',
-                  flexShrink: 0,
-                }}
-              />
-            ) : (
-              <CircularProgress size={14} sx={{ color: '#3E51B1', flexShrink: 0 }} />
-            )}
-            <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>
-                {t('{{amount}} USDC · {{from}} → {{to}}', {
-                  amount: usd,
-                  from: tr.srcAsset,
-                  to: tr.dstAsset,
-                })}
-              </Typography>
-              <Typography sx={{ fontSize: '11.5px', color: '#6B6B76' }}>
-                {phase === 'halt-receive'
-                  ? verifiedIds.has(tr.id)
-                    ? t(
-                        'Your USDC is safe in your own Base account. Finish delivering it to Stellar'
-                      )
-                    : t(
-                        'USDC heading to your own Base account via the bridge. Finish once it arrives'
-                      )
-                  : phase === 'halt-finish'
-                    ? verifiedIds.has(tr.id)
-                      ? t(
-                          'Your USDC is safe in your own Base account. Finish the swap to {{sym}}',
-                          { sym: tr.dstAsset }
-                        )
-                      : t('USDC heading to your own Base account. Finish once it arrives')
-                    : t('Completing automatically. No action needed')}
-              </Typography>
-            </Box>
-            {isHalt && (
-              <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0 }}>
-                <Button
-                  onClick={() => recover(tr, phase)}
-                  disabled={busyId === tr.id}
-                  size="small"
-                  sx={{
-                    bgcolor: '#0A0A0F',
-                    color: '#fff',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    textTransform: 'none',
-                    borderRadius: 'var(--radius-md)',
-                    px: '12px',
-                    '&:hover': { bgcolor: '#2A2A33' },
-                    '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
-                  }}
-                >
-                  {busyId === tr.id
-                    ? t('Working…')
-                    : phase === 'halt-receive'
-                      ? t('Receive USDC')
-                      : t('Finish')}
-                </Button>
-                {phase === 'halt-finish' && (
-                  <Button
-                    onClick={() => refundToStellar(tr)}
-                    disabled={busyId === tr.id}
-                    size="small"
-                    sx={{
-                      bgcolor: 'transparent',
-                      color: '#0A0A0F',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      textTransform: 'none',
-                      borderRadius: 'var(--radius-md)',
-                      px: '10px',
-                      border: '1px solid rgba(10,10,15,0.2)',
-                      '&:hover': { bgcolor: 'rgba(10,10,15,0.04)' },
-                      '&.Mui-disabled': {
-                        color: '#9A9AA3',
-                        borderColor: 'rgba(10,10,15,0.1)',
-                      },
-                    }}
-                  >
-                    {t('Bring back as USDC')}
-                  </Button>
-                )}
-              </Stack>
-            )}
-          </Stack>
-        );
-      })}
-    </Box>
-  );
+  // The keeper draws nothing: the rows show where they are useful.
+  return null;
 }

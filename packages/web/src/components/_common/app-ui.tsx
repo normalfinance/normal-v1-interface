@@ -118,6 +118,11 @@ type AppBlockProps = {
   action?: ReactNode;
   /** Rows run edge to edge: the box has no padding of its own. */
   flush?: boolean;
+  /**
+   * On phones the list sits on the page with no box, a line under each row
+   * (Home's assets, Niko 2026-11-09, after the phone mockup). Boxed from tablets up.
+   */
+  openOnPhone?: boolean;
   children: ReactNode;
   sx?: SxProps<Theme>;
   'aria-label'?: string;
@@ -127,7 +132,15 @@ type AppBlockProps = {
  * A section of a page: its title above, then a square box drawn with a
  * hairline on the white page. No fill, no shadow: the line is the box.
  */
-export function AppBlock({ title, action, flush = false, children, sx, ...other }: AppBlockProps) {
+export function AppBlock({
+  title,
+  action,
+  flush = false,
+  openOnPhone = false,
+  children,
+  sx,
+  ...other
+}: AppBlockProps) {
   return (
     <Box component="section" sx={[{ minWidth: 0 }, ...sxList(sx)]} {...other}>
       {(title || action) && (
@@ -152,7 +165,7 @@ export function AppBlock({ title, action, flush = false, children, sx, ...other 
       )}
       <Box
         sx={{
-          border: HAIRLINE,
+          border: openOnPhone ? { xs: 'none', md: HAIRLINE } : HAIRLINE,
           bgcolor: PAPER,
           ...(!flush && { px: BOX_PX, py: BOX_PX }),
         }}
@@ -506,6 +519,70 @@ export function ActionRow({ children, count }: { children: ReactNode; count: num
   );
 }
 
+/**
+ * One of Home's ways to move money: a square tile on the grey canvas, its icon
+ * above its word (Niko 2026-11-09, after the phone mockup). All four are equal:
+ * nothing ink, no outline until the pointer is on it.
+ */
+export function ActionTile({
+  icon,
+  label,
+  onClick,
+  href,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick?: () => void;
+  href?: string;
+}) {
+  const link = href ? { component: RouterLink, href } : { onClick };
+  return (
+    <ButtonBase
+      {...link}
+      sx={{
+        flexDirection: 'column',
+        gap: 0.75,
+        height: { xs: 68, md: 72 },
+        minWidth: 0,
+        px: 1,
+        fontSize: 13,
+        fontWeight: 500,
+        whiteSpace: 'nowrap',
+        color: INK,
+        bgcolor: CANVAS,
+        border: '1px solid transparent',
+        '& svg': { fontSize: 22 },
+        '&:hover': { borderColor: HAIRLINE_STRONG },
+        '&.Mui-focusVisible': { outline: `2px solid ${INK}`, outlineOffset: 2 },
+      }}
+    >
+      {/* A fixed slot for the icon, so every word sits on one line whatever
+          the glyph's own height (a button and a link alike). */}
+      <Box component="span" sx={{ display: 'flex', alignItems: 'center', height: 24 }}>
+        {icon}
+      </Box>
+      <Box component="span" sx={{ lineHeight: '18px' }}>
+        {label}
+      </Box>
+    </ButtonBase>
+  );
+}
+
+/** Home's tiles: one row of four at every width, fixed tiles beside the balance on wide screens. */
+export function ActionTiles({ children }: { children: ReactNode }) {
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: 'repeat(4, minmax(0, 1fr))', lg: 'repeat(4, 104px)' },
+        gap: 1,
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
 export type Stat = { key: string; label: string; value: ReactNode; note?: ReactNode };
 
 /**
@@ -619,6 +696,7 @@ export function Sparkline({
   label,
   minSpan,
   height = 32,
+  wash,
 }: {
   points: number[];
   color: string;
@@ -627,6 +705,8 @@ export function Sparkline({
   /** The least range drawn, as a share of the price (`minSpanFor`). */
   minSpan?: number;
   height?: number;
+  /** A faint flat fill under the line (never a gradient): a bigger line's weight. */
+  wash?: string;
 }) {
   if (points.length < 2) return <Box aria-hidden="true" sx={{ height }} />;
 
@@ -659,6 +739,7 @@ export function Sparkline({
         height={height}
         style={{ position: 'relative', display: 'block', overflow: 'visible' }}
       >
+        {wash && <path d={`${path} L100 ${height} L0 ${height} Z`} fill={wash} stroke="none" />}
         <path
           d={path}
           fill="none"

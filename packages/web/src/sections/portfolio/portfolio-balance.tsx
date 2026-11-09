@@ -1,23 +1,18 @@
 'use client';
 
-import type { Stat } from '@/components/_common/app-ui';
-
 import { paths } from '@/routes/paths';
+import { PAPER } from '@/theme/brand-colors';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 
+import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import AddRounded from '@mui/icons-material/AddRounded';
 import NorthEastRounded from '@mui/icons-material/NorthEastRounded';
 import SouthWestRounded from '@mui/icons-material/SouthWestRounded';
 import SwapHorizRounded from '@mui/icons-material/SwapHorizRounded';
 
-import {
-  Headline,
-  formatUsd,
-  ActionRow,
-  ActionButton,
-  SummaryBlock,
-} from '@/components/_common/app-ui';
+import { HAIRLINE } from '@/components/_common/brand';
+import { Headline, formatUsd, ActionTile, ActionTiles } from '@/components/_common/app-ui';
 
 // ----------------------------------------------------------------------
 
@@ -25,19 +20,19 @@ type BalanceBlockProps = {
   total: number;
   /** The wallet's move in dollars over the last 24 hours; null when unknown. */
   change: number | null;
-  /** Where the money is: digital dollars, crypto, savings. */
-  split: { key: string; label: string; value: number }[];
   loading: boolean;
   error: boolean;
   onRetry: () => void;
 };
 
 /**
- * The top of Home: the whole balance, how it moved in the last day, the four
- * ways to move money (the same flows as Move money), and under a hairline,
- * where the money is.
+ * The top of Home: the whole balance, how it moved in the last day, and the
+ * four ways to move money (the same flows as Move money). Nothing else: the
+ * assets follow right under it (Niko 2026-11-09). On phones it sits on the
+ * page with no box, so the list fits on the first screen; from tablets up it
+ * is the page's summary box, the tiles beside the figure on wide screens.
  */
-export function BalanceBlock({ total, change, split, loading, error, onRetry }: BalanceBlockProps) {
+export function BalanceBlock({ total, change, loading, error, onRetry }: BalanceBlockProps) {
   const { startAction } = useAssetActionsContext();
   const moved = change != null && Math.abs(change) >= 0.005;
 
@@ -61,41 +56,32 @@ export function BalanceBlock({ total, change, split, loading, error, onRetry }: 
     `${change > 0 ? '+' : '−'}${formatUsd(Math.abs(change))} in the last 24 hours`
   ) : null;
 
-  const stats: Stat[] = split.map((part) => ({
-    key: part.key,
-    label: part.label,
-    value: formatUsd(part.value),
-    note: total > 0 ? `${Math.round((part.value / total) * 100)}% of the total` : undefined,
-  }));
-
   return (
-    <SummaryBlock
+    <Box
+      component="section"
       aria-label="Total balance"
-      stats={stats}
-      loading={loading}
-      actions={
-        <ActionRow count={4}>
-          <ActionButton
-            primary
-            icon={<AddRounded />}
-            label="Add money"
-            onClick={() => startAction('buy')}
-          />
-          <ActionButton
-            icon={<NorthEastRounded />}
-            label="Send"
-            onClick={() => startAction('send')}
-          />
-          <ActionButton
-            icon={<SouthWestRounded />}
-            label="Receive"
-            onClick={() => startAction('receive')}
-          />
-          <ActionButton icon={<SwapHorizRounded />} label="Swap" href={paths.swap} />
-        </ActionRow>
-      }
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) auto' },
+        alignItems: 'end',
+        gap: { xs: 2.5, md: 3 },
+        bgcolor: PAPER,
+        border: { xs: 'none', md: HAIRLINE },
+        px: { xs: 0, md: '24px' },
+        py: { xs: 0, md: '28px' },
+      }}
     >
       <Headline label="Total balance" value={formatUsd(total)} note={note} loading={loading} />
-    </SummaryBlock>
+      <ActionTiles>
+        <ActionTile icon={<AddRounded />} label="Add money" onClick={() => startAction('buy')} />
+        <ActionTile icon={<NorthEastRounded />} label="Send" onClick={() => startAction('send')} />
+        <ActionTile
+          icon={<SouthWestRounded />}
+          label="Receive"
+          onClick={() => startAction('receive')}
+        />
+        <ActionTile icon={<SwapHorizRounded />} label="Swap" href={paths.swap} />
+      </ActionTiles>
+    </Box>
   );
 }

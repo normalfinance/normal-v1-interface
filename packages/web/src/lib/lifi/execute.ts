@@ -9,6 +9,10 @@ import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { runWebauthnCeremony } from '@/lib/turnkey/webauthn-guard';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
+// A tiny module with no imports of its own: loaded with the page (the engines'
+// error handlers read it too, and an on-demand load can fail mid-swap).
+import { GasShortfallError, computeAffordability } from '@/lib/lifi/gas-shortfall';
+import { freshBlockhash, canRefreshBlockhash } from '@/lib/chains/solana-blockhash';
 import {
   base58,
   sendVerdict,
@@ -171,7 +175,6 @@ async function executeEvm(
   // raises a structured shortfall BEFORE anything signs, and the engines
   // offer the affordable amount instead of an error. Balance-read failure
   // skips the check (the node still enforces it — this is UX, not custody).
-  const { computeAffordability, GasShortfallError } = await import('@/lib/lifi/gas-shortfall');
   // Doc 95 Wave 6: one failed read used to skip the whole check, so a gas
   // spike surfaced as the node's raw "insufficient funds" dump AFTER the
   // passkey. The transport is already a fallback pool (Wave 4), so a second
@@ -470,6 +473,22 @@ async function executeSol(
 
   // Sign the serialized message bytes (ed25519, no pre-hash) with Turnkey.
   const turnkey = await getTurnkeyClient();
+
+  // The blockhash LI.FI put in expires about a minute after the price was
+  // fetched, and the review page can be open longer than that ("Blockhash not
+  // found", nothing sent). Take a fresh one from the node we send through,
+  // when that cannot break anything (see lib/chains/solana-blockhash.ts), as
+  // the LAST thing before the prompt: after the client setup above, so no
+  // other wait sits between it and the signature. freshBlockhash retries once
+  // and bounds each read at 5 s; if the node does not answer, the quote's own
+  // blockhash stays and the send below gives the real answer (an expired one
+  // marks the quote stale in the engines).
+  if (canRefreshBlockhash(vtx, userKey)) {
+    const latest = await freshBlockhash(() => connection.getLatestBlockhash('confirmed'));
+    if (latest) vtx.message.recentBlockhash = latest;
+    else log('SOL: no fresh blockhash, keeping the quote’s own');
+  }
+
   log('SOL: requesting passkey signature');
   onStage?.('sign');
   const signResult = await runWebauthnCeremony(() =>
