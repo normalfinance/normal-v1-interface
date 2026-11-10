@@ -111,22 +111,29 @@ function PlaceIcon({ place }: { place: FlowPlace }) {
         sx={{ width: 32, height: 32, bgcolor: PAPER }}
       />
       {badge && (
+        // The disc on a wrapper, the logo bare inside: dark mode inverts
+        // Stellar's logo, and an invert would turn the image's own fill white.
         <Box
-          component="img"
-          src={cdn('tokens/XLM.webp')}
-          alt=""
           sx={{
             position: 'absolute',
             right: -2,
             bottom: -2,
+            display: 'flex',
             width: 15,
             height: 15,
+            overflow: 'hidden',
             borderRadius: '50%',
             border: `1.5px solid ${PAPER}`,
             bgcolor: PAPER,
-            objectFit: 'cover',
           }}
-        />
+        >
+          <Box
+            component="img"
+            src={cdn('tokens/XLM.webp')}
+            alt=""
+            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </Box>
       )}
     </Box>
   );

@@ -111,10 +111,18 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
     if (error) {
       // The logout request failed (offline, a server error): supabase-js then
       // keeps the session, and the next page would sign straight back in.
-      // Logging out must log this browser out, so stop the token refresh and
-      // drop the stored session here.
+      // Logging out must log this browser out:
+      // 1. pause the token refresh, so a refresh landing now can't write the
+      //    session back;
+      // 2. drop the stored session;
+      // 3. sign out again: with nothing stored there is no request, and the
+      //    client drops its in-memory session and tells its listeners;
+      // 4. restart the refresh (stopping it also removed supabase-js's
+      //    visibility hook), so a sign-in on this page keeps its token fresh.
       await supabase.auth.stopAutoRefresh();
       clearStoredSession();
+      await supabase.auth.signOut({ scope: 'local' });
+      await supabase.auth.startAutoRefresh();
     }
     clearLoginIntent();
   }, []);

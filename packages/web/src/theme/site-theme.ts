@@ -97,6 +97,8 @@ export const SITE_THEME_CSS = [
   `${DARK}{${declarations('dark')}${muiDarkOverrides()}color-scheme:dark;}`,
   `${DARK} body{background-color:var(--nf-paper);color:var(--nf-ink);}`,
   // Stellar's logo is a black rocket: white on the dark page, wherever it shows.
+  // The invert turns the image's own fill white too, so never give this image a
+  // background: put a disc on a wrapper around it (AssetAvatar's badge).
   `${DARK} img[src$="/tokens/XLM.webp"]{filter:invert(1);}`,
 ].join('');
 
