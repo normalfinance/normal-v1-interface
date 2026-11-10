@@ -19,8 +19,10 @@
 //                   (cron). Passive spinner, no action; closing the tab is safe.
 //                   (Outbound bridging is NOT auto — its pivot signature still
 //                   follows — so it's hidden here and owned by the progress modal.)
-//   halt-receive  — INBOUND: LI.FI delivered USDC to the user's Base address but
-//                   the burn never fired. One tap finishes it → USDC on Stellar.
+//   halt-receive  — INBOUND: the coin went to the exchange and nothing is burned
+//                   yet. Its USDC is on its way to the user's Base address or
+//                   already there; waitsOn (cctp-phase.ts) tells which and who
+//                   moves it next. Once there, one tap finishes it → Stellar.
 //   halt-finish   — OUTBOUND: CCTP minted USDC to the user's Base address but the
 //                   LI.FI pivot never ran. One tap finishes it → target asset.
 // Recovery always moves funds FORWARD to the intended asset (never a costly
@@ -37,20 +39,21 @@ import { buildAuthHeaders } from '@/utils/http';
 import { wireToUsdc } from '@/lib/cctp/decimals';
 import { runCctpRefund } from '@/lib/cctp/refund';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
-import { scopedAmountWire } from '@/lib/cctp/amounts';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
+import { arrivedAtBase, scopedAmountWire } from '@/lib/cctp/amounts';
 import { publishInProgress, type InProgressItem } from '@/lib/cctp/in-progress';
 import { parseFailedTool, parseFailedExchanges } from '@/lib/cctp/failure-class';
+import { autopilotActiveFor, AUTOPILOT_CHANGED_EVENT } from '@/lib/cctp/autopilot-active';
 import { getActiveCctpTransfer, ACTIVE_CCTP_TRANSFER_EVENT } from '@/lib/cctp/active-transfer';
 
 import { useSnackbar } from '@/components/template/snackbar';
 
-import { type Phase, bannerPhase } from './cctp-phase';
+import { waitsOn, type Phase, bannerPhase, autoFinishAhead } from './cctp-phase';
 
 type CrosschainSymbol = 'BTC' | 'ETH' | 'SOL';
 const NATIVE_DECIMALS: Record<CrosschainSymbol, number> = { BTC: 8, ETH: 18, SOL: 9 };
@@ -69,7 +72,9 @@ interface TransferRow {
   burnTxHash: string | null;
   mintTxHash: string | null;
   dstSwapTxHash: string | null;
+  createdAt: string;
   updatedAt: string;
+  retryCount?: number | null;
   errorDetail?: string | null;
   srcAmount?: string | null;
 }
@@ -130,6 +135,32 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   // an undelivered (later refunded) leg was described as safely arrived
   // (Niko, 2026-08-20). Unverified rows say "heading to" instead.
   const [verifiedIds, setVerifiedIds] = useState<Set<string>>(new Set());
+  // Is auto-finish on? It decides whether a halted swap "needs you" (Niko
+  // 2026-11-10). null until read: a swap is not called "Needs you" on a guess,
+  // so a badge never appears only to vanish a second later.
+  const [autopilot, setAutopilot] = useState<boolean | null>(null);
+  const hasHalt = transfers.some((tr) => {
+    const ph = bannerPhase(tr);
+    return ph === 'halt-receive' || ph === 'halt-finish';
+  });
+  useEffect(() => {
+    // Two Turnkey reads stand behind it: read once there is a halted swap to
+    // describe (shared with the swap's own page), never per tick, and again
+    // when it is turned on or off.
+    if (!user || !hasHalt) return undefined;
+    let live = true;
+    const read = () => {
+      autopilotActiveFor(user.id).then((on) => {
+        if (live) setAutopilot(on);
+      });
+    };
+    read();
+    window.addEventListener(AUTOPILOT_CHANGED_EVENT, read);
+    return () => {
+      live = false;
+      window.removeEventListener(AUTOPILOT_CHANGED_EVENT, read);
+    };
+  }, [user, hasHalt]);
   // The transfer THIS tab's modal is actively working is hidden here — one
   // entrance per job. The engine clears the signal on error/done/unmount,
   // at which point the row reappears with its recovery action (the old
@@ -151,24 +182,28 @@ export function CctpRecoveryBanner({ addresses }: Props) {
   // page (lib/cctp/in-progress.ts). Published when it changes; cleared when the
   // keeper leaves the page.
   const published: InProgressItem[] = visibleTransfers.flatMap((tr) => {
-    const phase = phaseFor(tr, Date.now());
-    return phase === 'hidden'
-      ? []
-      : [
-          {
-            id: tr.id,
-            direction: tr.direction,
-            srcAsset: tr.srcAsset,
-            dstAsset: tr.dstAsset,
-            srcAmount: tr.srcAmount ?? null,
-            amountWire: tr.amountWire,
-            phase,
-            onBase:
-              verifiedIds.has(tr.id) ||
-              (tr.direction === 'stellar_to_crosschain' &&
-                (!!tr.mintTxHash || tr.status === 'COMPLETED')),
-          },
-        ];
+    const now = Date.now();
+    const phase = phaseFor(tr, now);
+    if (phase === 'hidden') return [];
+    const onBase =
+      verifiedIds.has(tr.id) ||
+      (tr.direction === 'stellar_to_crosschain' && (!!tr.mintTxHash || tr.status === 'COMPLETED'));
+    // Unknown counts as on (see `autopilot`): never a "Needs you" on a guess.
+    const autoFinish = autopilot !== false && autoFinishAhead(tr, now);
+    return [
+      {
+        id: tr.id,
+        direction: tr.direction,
+        srcAsset: tr.srcAsset,
+        dstAsset: tr.dstAsset,
+        srcAmount: tr.srcAmount ?? null,
+        amountWire: tr.amountWire,
+        phase,
+        onBase,
+        waitsOn: waitsOn(phase, { onBase, autoFinish }),
+        autoFinish,
+      },
+    ];
   });
   const publishedKey = JSON.stringify(published);
   useEffect(() => {
@@ -204,9 +239,16 @@ export function CctpRecoveryBanner({ addresses }: Props) {
           })
           .map(async (tr) => {
             try {
-              const addr = phaseFor(tr, now) === 'halt-receive' ? tr.srcAddress : tr.destAddress;
-              const bal = await readBaseUsdc(tr.network as NetworkType, addr);
-              return bal > 0n ? tr.id : null;
+              const receive = phaseFor(tr, now) === 'halt-receive';
+              const bal = await readBaseUsdc(
+                tr.network as NetworkType,
+                receive ? tr.srcAddress : tr.destAddress
+              );
+              // A swap in: its own digital dollars, not a few cents left on
+              // the address by an earlier swap (they would read as arrived
+              // while the exchange is still sending).
+              const seen = receive ? arrivedAtBase(bal, BigInt(tr.amountWire)) : bal > 0n;
+              return seen ? tr.id : null;
             } catch {
               return null;
             }
@@ -335,6 +377,38 @@ export function CctpRecoveryBanner({ addresses }: Props) {
       try {
         const network = tr.network as NetworkType;
         const headers = await buildAuthHeaders();
+
+        if (phase === 'halt-receive') {
+          // INBOUND: has this swap's USDC reached Base? Asked FIRST, before
+          // anything is paid or written (Niko 2026-11-10: a tap while Bitcoin
+          // was still confirming topped up gas, restarted the step's clock and
+          // could only answer "not yet"). The live swap's own arrival rule, so
+          // a few cents left by an earlier swap are not burned as this one.
+          const seen = await readBaseUsdc(network, tr.srcAddress);
+          if (!arrivedAtBase(seen, BigInt(tr.amountWire))) {
+            // Not there. Either the exchange is still sending it, or the
+            // source leg FAILED on-chain and this row is a ghost. Ask the
+            // server (which re-verifies against LI.FI) which one it is, and
+            // retire the ghost instead of erroring at the user (Niko
+            // 2026-08-28: "No USDC found on Base" on a swap whose ETH
+            // provably never moved).
+            const vres = await patch(tr.id, headers, { markSourceRefunded: true });
+            const row = vres?.ok ? (await vres.json().catch(() => null))?.transfer : null;
+            enqueueSnackbar(
+              row?.status === 'FAILED'
+                ? t(
+                    'That swap had already failed on-chain. Nothing was bridged and your funds never left your wallet. Removed it from in-flight.'
+                  )
+                : t(
+                    'Your digital dollars are still on their way to your Base address. Nothing to do until they arrive.'
+                  ),
+              { variant: 'info' }
+            );
+            window.dispatchEvent(new Event('nf:activity-updated')); // re-read the list
+            return;
+          }
+        }
+
         // 1) relayer gas top-up (route is direction-aware; skips if already funded)
         await fetch('/api/cctp/gas-topup', {
           method: 'POST',
@@ -345,32 +419,15 @@ export function CctpRecoveryBanner({ addresses }: Props) {
         await new Promise((r) => setTimeout(r, 6000));
 
         if (phase === 'halt-receive') {
-          // INBOUND: burn whatever USDC actually landed on the user's Base address.
+          // INBOUND: burn what is on the user's Base address now (read again:
+          // the arrival check above came before the gas top-up's wait).
           const bal = await readBaseUsdc(network, tr.srcAddress);
           if (bal === 0n) {
-            // Nothing on Base. Either the source leg is still in flight — or
-            // it FAILED on-chain and this row is a ghost. Ask the server
-            // (which re-verifies against LI.FI) which one it is, and retire
-            // the ghost instead of erroring at the user (Niko 2026-08-28:
-            // "No USDC found on Base" on a swap whose ETH provably never
-            // moved — three surfaces told three different stories).
-            const vres = await patch(tr.id, headers, { markSourceRefunded: true });
-            const row = vres?.ok ? (await vres.json().catch(() => null))?.transfer : null;
-            if (row?.status === 'FAILED') {
-              enqueueSnackbar(
-                t(
-                  'That swap had already failed on-chain. Nothing was bridged and your funds never left your wallet. Removed it from in-flight.'
-                ),
-                { variant: 'info' }
-              );
-            } else {
-              enqueueSnackbar(
-                t(
-                  'USDC has not reached Base yet: the bridge is still working. This finishes by itself; nothing to do.'
-                ),
-                { variant: 'info' }
-              );
-            }
+            // It was there a moment ago: auto-finish (or another tab) has just
+            // sent it on. Nothing to burn, nothing to say but where it is.
+            enqueueSnackbar(t('This swap is already on its way to your Stellar wallet.'), {
+              variant: 'info',
+            });
             window.dispatchEvent(new Event('nf:activity-updated')); // re-read the list
             return;
           }

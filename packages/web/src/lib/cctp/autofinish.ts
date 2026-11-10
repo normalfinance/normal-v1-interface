@@ -57,6 +57,21 @@ export interface AutofinishDecision {
   reason: string;
 }
 
+/**
+ * Will the server still finish this row on its own? The same gate, read for
+ * the page that tells the person who the swap waits on: a row too fresh for
+ * the cron is still ahead of it (it tries once the live tab's minutes have
+ * passed), while a row past the age or attempt limit is the person's to finish.
+ */
+export function autofinishAhead(input: AutofinishInput): boolean {
+  return (
+    Number.isFinite(input.ageMs) &&
+    input.ageMs >= 0 &&
+    input.ageMs <= AUTOFINISH_MAX_AGE_MS &&
+    input.retryCount < AUTOFINISH_MAX_ATTEMPTS
+  );
+}
+
 export function autofinishDecision(input: AutofinishInput): AutofinishDecision {
   if (!Number.isFinite(input.ageMs) || input.ageMs < 0) {
     return { attempt: false, reason: 'unusable age' };

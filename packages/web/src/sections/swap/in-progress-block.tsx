@@ -23,7 +23,8 @@ import {
 // The Circle swaps still under way, beside the swap card (Niko 2026-11-09: the
 // old block above the card had to move, and each swap opens its own page with
 // every step). Plain rows like Activity's: what is moving, where it stands, a
-// yellow "Needs you" only when it waits on the person. Nothing turns here; the
+// yellow "Needs you" only when its next step needs the person's passkey (not
+// while the exchange or auto-finish has it). Nothing turns here; the
 // actions are on the swap's page. Shows nothing when nothing is under way.
 // ---------------------------------------------------------------------------
 
@@ -48,15 +49,25 @@ export function inProgressTitle(t: Translate, item: InProgressItem) {
     : t('{{amount}} to digital dollars', { amount });
 }
 
-/** Where it stands, in one line. */
+/**
+ * Where it stands, in one line, and who it waits on (Niko 2026-11-10: a
+ * Bitcoin swap still confirming said "Needs you"). Short enough to stay whole
+ * in the column beside the card and on a phone (about 50 characters); the
+ * swap's own page says the rest.
+ */
 export function inProgressLine(t: Translate, item: InProgressItem) {
   if (item.phase === 'auto') return t('Completing on its own. Nothing to do.');
-  if (!item.onBase) return t('On its way to your own Base address.');
+  if (item.waitsOn === 'exchange') {
+    return item.autoFinish
+      ? t('On its way to Base. Nothing to do.')
+      : t('On its way to Base. Nothing to do yet.');
+  }
+  if (item.waitsOn === 'normal') return t('At your Base address. Finishing on its own.');
   return item.phase === 'halt-finish'
-    ? t('At your own Base address. Finish the swap to {{coin}}.', {
+    ? t('At your Base address. Finish the swap to {{coin}}.', {
         coin: assetName(item.dstAsset),
       })
-    : t('At your own Base address. Finish it to your Stellar wallet.');
+    : t('At your Base address. Finish it to your wallet.');
 }
 
 export function InProgressBlock() {
@@ -79,9 +90,9 @@ export function InProgressBlock() {
             title={inProgressTitle(t, item)}
             subtitle={inProgressLine(t, item)}
             badge={
-              item.phase === 'auto' ? undefined : (
+              item.waitsOn === 'person' ? (
                 <StatusBadge tone="pending">{t('Needs you')}</StatusBadge>
-              )
+              ) : undefined
             }
           />
         ))}

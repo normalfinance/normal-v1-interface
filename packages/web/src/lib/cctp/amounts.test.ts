@@ -1,6 +1,6 @@
 // Doc 95 Wave 3. The numbers here are the REAL ones from 2026-08-26, when a
 // whole-balance burn swept a sibling transfer's USDC on a live account.
-import { scopedAmountWire } from './amounts';
+import { arrivedAtBase, scopedAmountWire } from './amounts';
 
 const usdc = (n: string) => BigInt(Math.round(Number(n) * 1e6));
 
@@ -54,5 +54,29 @@ describe('scopedAmountWire — boundaries', () => {
     const cap = expected + expected / 20n;
     expect(scopedAmountWire(cap, expected)).toBe(cap);
     expect(scopedAmountWire(cap + 1n, expected)).toBe(cap);
+  });
+});
+
+describe('arrivedAtBase: a swap in has arrived (Niko 2026-11-10)', () => {
+  const expected = usdc('63.1098'); // the Bitcoin swap in the report
+
+  it('nothing there: not arrived', () => {
+    expect(arrivedAtBase(0n, expected)).toBe(false);
+  });
+
+  it('a few cents left by an earlier swap do not count as this one arriving', () => {
+    // Counting them would burn the cents for this swap and strand its real
+    // digital dollars when they land.
+    expect(arrivedAtBase(usdc('0.04'), expected)).toBe(false);
+  });
+
+  it("the live swap's own rule: 95% of the quoted minimum", () => {
+    expect(arrivedAtBase((expected * 95n) / 100n, expected)).toBe(true);
+    expect(arrivedAtBase((expected * 95n) / 100n - 1n, expected)).toBe(false);
+    expect(arrivedAtBase(usdc('63.4'), expected)).toBe(true); // a little more than quoted
+  });
+
+  it('a row with no quote (a sweep) has arrived once anything is there', () => {
+    expect(arrivedAtBase(1n, 0n)).toBe(true);
   });
 });

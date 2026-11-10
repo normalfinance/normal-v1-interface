@@ -18,10 +18,14 @@ import { buildAuthHeaders } from '@/utils/http';
 import { indexById } from '@/lib/index/indexes';
 import { RouterLink } from '@/routes/components';
 import { abortTimeout } from '@/utils/abort-timeout';
+import { useInProgress } from '@/lib/cctp/in-progress';
 import { assetName } from '@/lib/portfolio/asset-names';
 import { useState, useEffect, useCallback } from 'react';
 import { transferEnding } from '@/lib/cctp/transfer-ending';
+import { autoFinishAhead } from '@/sections/swap/cctp-phase';
+import { autopilotActiveFor } from '@/lib/cctp/autopilot-active';
 import { heldSymbolOf, INDEX_DIRECTION } from '@/lib/index/legs';
+import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import {
   INK,
   WELL,
@@ -70,6 +74,8 @@ interface CctpTransferDetail {
   errorDetail: string | null;
   quoteJson?: string | null;
   createdAt: string;
+  updatedAt: string;
+  retryCount?: number | null;
 }
 
 type Explorer = 'lifi' | 'base' | 'stellar';
@@ -112,7 +118,11 @@ function indexOfTransfer(tr: CctpTransferDetail) {
   }
 }
 
-function buildSteps(tr: CctpTransferDetail, t: Translate): Step[] {
+/**
+ * @param arrived  a swap in's digital dollars were seen at the person's Base
+ *                 address (the swap page's keeper, when it is on the page)
+ */
+function buildSteps(tr: CctpTransferDetail, t: Translate, arrived = false): Step[] {
   const attested = !!tr.eventNonce || !!tr.mintTxHash || tr.status === 'COMPLETED';
   // How it ended, if it has: a step not reached by then is not waiting.
   const ending = transferEnding(t, tr);
@@ -240,9 +250,21 @@ function buildSteps(tr: CctpTransferDetail, t: Translate): Step[] {
   const send: Step = {
     key: 'src',
     label: t('Send to the exchange'),
-    sub: t('Exchanged for digital dollars on Base'),
+    sub: t('From your {{coin}} wallet', { coin }),
     hash: tr.srcSwapTxHash,
     explorer: 'lifi',
+  };
+  // The exchange's own part. Sending the coin is not it (Niko 2026-11-10:
+  // this said "Exchanged for digital dollars on Base" while Bitcoin was
+  // still confirming, and Circle's step turned): it is done once the digital
+  // dollars are seen at the Base address, or Circle already has them.
+  const exchanged: Step = {
+    key: 'exchange',
+    label: t('Exchanged for digital dollars'),
+    sub: t('At your own Base address'),
+    hash: null,
+    explorer: null,
+    done: arrived || !!tr.burnTxHash || tr.status === 'COMPLETED',
   };
   if (ending?.kind === 'sent-back') {
     return [
@@ -260,7 +282,7 @@ function buildSteps(tr: CctpTransferDetail, t: Translate): Step[] {
   if (ending?.kind === 'not-sent') {
     return [{ ...send, sub: t('Not sent: nothing left your wallet'), hash: null, stopped: true }];
   }
-  return [send, ...coming];
+  return [send, exchanged, ...coming];
 }
 
 const STATUS_CHIP: Record<string, { label: string; color: string; bg: string }> = {
@@ -277,10 +299,13 @@ export function SwapDetailModal({
   onClose: () => void;
 }) {
   const { t } = useTranslate();
+  const { user } = useSupabaseAuth();
   const [transfer, setTransfer] = useState<CctpTransferDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [retryNote, setRetryNote] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  // Is auto-finish on? Asked only for a swap out waiting on its last swap.
+  const [autopilotOn, setAutopilotOn] = useState<boolean | null>(null);
 
   useEffect(() => {
     // Keep the last content mounted while the dialog animates closed (transferId
@@ -349,7 +374,10 @@ export function SwapDetailModal({
     return Number.isFinite(n) ? n.toLocaleString(appLocale(), { maximumFractionDigits: 8 }) : v;
   }, []);
 
-  const steps = transfer ? buildSteps(transfer, t) : [];
+  // The swap page's keeper, when it is on this page, knows where a swap in's
+  // digital dollars are and who it waits on.
+  const known = useInProgress().items.find((i) => i.id === transferId);
+  const steps = transfer ? buildSteps(transfer, t, !!known?.onBase) : [];
   // First not-yet-done step is the "active" one (unless the whole thing is done).
   // Outbound COMPLETED means "minted on Base", not "delivered" — the pivot is
   // its own step and must earn its own green (live 2026-08-26: a stuck swap
@@ -366,22 +394,52 @@ export function SwapDetailModal({
   // How it ended, in plain words: calm (grey, nothing lost) or a real failure.
   const ending = transfer ? transferEnding(t, transfer) : null;
   const isFailed = ending?.kind === 'failed';
+  // A swap out whose digital dollars are at the person's Base address and
+  // still need the swap to the coin.
+  const pivotWaits =
+    !!transfer &&
+    transfer.direction === 'stellar_to_crosschain' &&
+    (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
+    !transfer.dstSwapTxHash &&
+    transfer.status !== 'REFUNDED';
+  // ...which auto-finish takes on its own when it is on (Niko 2026-11-10: the
+  // In progress list and the swap's page say so; this must not say "Action
+  // needed" about the same swap). Unknown counts as on: never on a guess.
+  const autoFinishing =
+    pivotWaits && autopilotOn !== false && autoFinishAhead(transfer, Date.now());
   // Waiting on the USER, not on the chain — the icon must say "your move",
   // never spin (Niko 2026-08-26: "the loading stuff that is not correct").
-  const needsAction =
-    !!heldCoin ||
-    (!!transfer &&
-      transfer.direction === 'stellar_to_crosschain' &&
-      (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
-      !transfer.dstSwapTxHash &&
-      transfer.status !== 'REFUNDED');
+  const needsAction = !!heldCoin || (pivotWaits && !autoFinishing) || known?.waitsOn === 'person';
+  // Still under way with a step that may need the person: the swap's own
+  // page decides who it waits on, so the popup sends them there.
+  const resumable =
+    !!transfer &&
+    !ending &&
+    transfer.status !== 'REFUNDED' &&
+    ((transfer.direction === 'crosschain_to_stellar' &&
+      !!transfer.srcSwapTxHash &&
+      !transfer.burnTxHash &&
+      transfer.status !== 'COMPLETED') ||
+      pivotWaits);
+  useEffect(() => {
+    if (!pivotWaits || !user) return undefined;
+    let live = true;
+    autopilotActiveFor(user.id).then((on) => {
+      if (live) setAutopilotOn(on);
+    });
+    return () => {
+      live = false;
+    };
+  }, [pivotWaits, user]);
   const activeIdx =
     isDone || ending?.calm ? -1 : steps.findIndex((s) => !(s.done || !!s.hash || s.stopped));
   const chip = transfer
     ? transfer.direction === 'stellar_to_crosschain' &&
       transfer.status === 'COMPLETED' &&
       !transfer.dstSwapTxHash
-      ? { label: t('Action needed'), color: WARNING, bg: 'rgba(245,158,11,0.12)' }
+      ? autoFinishing
+        ? undefined // under way, finished on its own: no chip, like any swap in flight
+        : { label: t('Action needed'), color: WARNING, bg: 'rgba(245,158,11,0.12)' }
       : heldCoin
         ? { label: t('Action needed'), color: WARNING, bg: 'rgba(245,158,11,0.12)' }
         : transfer.direction === INDEX_DIRECTION && transfer.status === 'COMPLETED' && !isDone
@@ -622,54 +680,39 @@ export function SwapDetailModal({
               </Typography>
             </Box>
           )}
-          {/* Honest-bridge-endings (Niko): a resumable transfer is finishable
-              from HERE too — recovery reachable from wherever you already
-              are. The swap page's banner owns the actual handler; this
-              dispatches to it (and gets you there if you're elsewhere). */}
-          {!ending &&
-            transfer.status !== 'REFUNDED' &&
-            ((transfer.direction === 'crosschain_to_stellar' &&
-              !!transfer.srcSwapTxHash &&
-              !transfer.burnTxHash &&
-              transfer.status !== 'COMPLETED') ||
-              (transfer.direction === 'stellar_to_crosschain' &&
-                (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
-                !transfer.dstSwapTxHash)) && (
-              <Box
-                component="button"
-                onClick={() => {
-                  onClose();
-                  if (window.location.pathname.startsWith(paths.swap)) {
-                    window.dispatchEvent(
-                      new CustomEvent('nf:cctp-resume', { detail: { id: transferId } })
-                    );
-                  } else {
-                    // A dispatched event dies with the old document on a full
-                    // navigation (live 2026-08-26: "clicking does nothing" from
-                    // any page but /swap) — the id rides the URL instead.
-                    window.location.assign(`${paths.swap}?cctpResume=${transferId}`);
-                  }
-                }}
-                sx={{
-                  mt: '12px',
-                  appearance: 'none',
-                  border: 'none',
-                  borderRadius: 'var(--radius-md)',
-                  px: '16px',
-                  py: '10px',
-                  width: '100%',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  fontFamily: 'inherit',
-                  cursor: 'pointer',
-                  bgcolor: INK,
-                  color: PAPER,
-                  '&:hover': { opacity: 0.85 },
-                }}
-              >
-                {t('Finish this transfer')}
-              </Box>
-            )}
+          {/* Honest-bridge-endings (Niko): a transfer that may still need a
+              step is reachable from HERE too. It opens the swap's own page,
+              which knows who it waits on and offers "Finish the swap" only
+              when the person is needed (Niko 2026-11-10: a "finish" button
+              here could only answer "not yet" while the exchange or
+              auto-finish had it). */}
+          {resumable && transferId && (
+            <Box
+              component={RouterLink}
+              href={paths.swapTransfer(transferId)}
+              onClick={onClose}
+              sx={{
+                display: 'block',
+                boxSizing: 'border-box',
+                textAlign: 'center',
+                textDecoration: 'none',
+                mt: '12px',
+                borderRadius: 'var(--radius-md)',
+                px: '16px',
+                py: '10px',
+                width: '100%',
+                fontSize: '13px',
+                fontWeight: 500,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                bgcolor: INK,
+                color: PAPER,
+                '&:hover': { opacity: 0.85 },
+              }}
+            >
+              {t('See where it stands')}
+            </Box>
+          )}
           {heldCoin && !retrying && (
             <Box
               component="button"
@@ -704,7 +747,7 @@ export function SwapDetailModal({
           )}
           {/* The swap's own page: its whole journey, where the money is, and
               the way forward when it waits (Niko 2026-11-09). */}
-          {transferId && transfer.direction !== INDEX_DIRECTION && (
+          {transferId && transfer.direction !== INDEX_DIRECTION && !resumable && (
             <Link
               component={RouterLink}
               href={paths.swapTransfer(transferId)}

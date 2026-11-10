@@ -29,6 +29,8 @@ import {
 
 import { bannerPhase } from './cctp-phase';
 
+import type { WaitsOn } from './cctp-phase';
+
 // ---------------------------------------------------------------------------
 // A Circle swap that is no longer on the page that started it, as the same
 // journey that page showed (Niko 2026-11-09: a swap you closed out opens a
@@ -98,6 +100,12 @@ export function transferJourney(
     autopilot: boolean;
     /** The digital dollars were seen at the person's Base address (a halted swap in). */
     onBase?: boolean;
+    /**
+     * Who it waits on, from the page's keeper (cctp-phase.ts waitsOn). Unknown
+     * until the keeper has read the swap: it is then "on its way", never
+     * "needs you" on a guess.
+     */
+    waits?: WaitsOn;
   }
 ): TransferJourney {
   const kind = transferKind(row);
@@ -196,12 +204,16 @@ export function transferJourney(
 
   // Still going: the first step the row has not reached is where it is now.
   // The page hands it off with its own words (handOffRun), which depend on
-  // what it has seen at the Base address.
+  // who it waits on.
   const phase = bannerPhase(row);
-  const needsYou = phase === 'halt-receive' || phase === 'halt-finish';
-  // Waiting on the person is not running: the step shows "Waiting for you"
-  // in yellow, never a turning ring (DESIGN.md: only what is happening turns).
+  const needsYou = phase !== 'hidden' && words.waits === 'person';
+  // Only what is happening turns (DESIGN.md). A swap that waits on the person
+  // has no step running: it is paused before its next step, and the panel
+  // beside the steps asks for them. Every other wait is a step at work, the
+  // network's, the exchange's, Circle's or Normal's, never "Waiting for you"
+  // (Niko 2026-11-10: "Bitcoin confirms the payment" said "Waiting for you"
+  // while the Bitcoin network was confirming it).
   const next = stepsOf(plan).find((s) => statusOf(run, s.id) === 'upcoming');
-  if (next) run = startStep(run, plan, next.id, last, needsYou ? { waiting: true } : {});
+  if (next && !needsYou) run = startStep(run, plan, next.id, last);
   return { kind, plan, run, standing: needsYou ? 'needs-you' : 'on-its-way', ending };
 }

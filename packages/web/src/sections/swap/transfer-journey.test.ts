@@ -67,15 +67,57 @@ describe('transferJourney: a closed-out swap as its journey (Niko 2026-11-09)', 
     expect(j.run.activeId).toBe('attest');
   });
 
-  it('a swap in waiting on the person: needs you, past the exchange once seen on Base', () => {
+  it('a swap in waiting on the person: needs you, past the exchange, no step turning', () => {
     const seen = transferJourney(t, row({ srcSwapTxHash: 's'.repeat(88) }), {
       ...words,
       onBase: true,
+      waits: 'person',
     });
     expect(seen.standing).toBe('needs-you');
     expect(status(seen, 'arrived-base')).toBe('done');
-    const unseen = transferJourney(t, row({ srcSwapTxHash: 's'.repeat(88) }), words);
-    expect(status(unseen, 'arrived-base')).not.toBe('done');
+    // Paused before its next step: the panel asks for the person, no step
+    // runs, and none says "Waiting for you".
+    expect(seen.run.activeId).toBeNull();
+    expect(Object.values(seen.run.steps).some((s) => s?.waiting)).toBe(false);
+  });
+
+  it('the Bitcoin swap in the report: still confirming, on its way, the network at work (Niko 2026-11-10)', () => {
+    // It said "Your swap needs you" and "Bitcoin confirms the payment:
+    // Waiting for you" while the Bitcoin network was confirming it.
+    const btc = row({ srcAsset: 'BTC', srcSwapTxHash: 'b'.repeat(64) });
+    for (const autopilot of [true, false]) {
+      const j = transferJourney(t, btc, {
+        ...words,
+        tool: 'NEAR Intents',
+        autopilot,
+        waits: 'exchange',
+      });
+      expect(j.standing).toBe('on-its-way');
+      expect(status(j, 'send')).toBe('done');
+      expect(j.run.activeId).toBe('source-confirm');
+      expect(j.run.steps['source-confirm']?.waiting).toBeFalsy();
+      expect(status(j, 'arrived-base')).not.toBe('done');
+    }
+  });
+
+  it('at the Base address with auto-finish ahead: on its way, Normal at work', () => {
+    const j = transferJourney(t, row({ srcSwapTxHash: 's'.repeat(88) }), {
+      ...words,
+      onBase: true,
+      waits: 'normal',
+    });
+    expect(j.standing).toBe('on-its-way');
+    expect(status(j, 'arrived-base')).toBe('done');
+    expect(j.run.activeId).toBe('gas');
+    expect(j.run.steps.gas?.waiting).toBeFalsy();
+  });
+
+  it('before the keeper has read it: on its way, never "needs you" on a guess', () => {
+    const j = transferJourney(t, row({ srcSwapTxHash: 's'.repeat(88) }), {
+      ...words,
+      onBase: true,
+    });
+    expect(j.standing).toBe('on-its-way');
   });
 
   it('a swap in the exchange sent back: the journey goes home, every step settled', () => {
@@ -113,22 +155,23 @@ describe('transferJourney: a closed-out swap as its journey (Niko 2026-11-09)', 
     expect(j.run.phase).toBe('done');
   });
 
-  it('a swap out with its digital dollars on Base: needs you, at the exchange', () => {
-    const j = transferJourney(
-      t,
-      row({
-        ...out,
-        status: 'COMPLETED',
-        burnTxHash: 'b'.repeat(64),
-        eventNonce: '1',
-        mintTxHash: `0x${'m'.repeat(64)}`,
-      }),
-      words
-    );
+  it('a swap out with its digital dollars on Base: needs you, or Normal swaps it', () => {
+    const minted = row({
+      ...out,
+      status: 'COMPLETED',
+      burnTxHash: 'b'.repeat(64),
+      eventNonce: '1',
+      mintTxHash: `0x${'m'.repeat(64)}`,
+    });
+    const j = transferJourney(t, minted, { ...words, waits: 'person' });
     expect(j.standing).toBe('needs-you');
     expect(status(j, 'mint')).toBe('done');
     expect(j.run.steps.mint?.links?.[0]?.href).toContain('basescan.org');
-    expect(j.run.activeId).not.toBeNull();
+    expect(j.run.activeId).toBeNull();
+    // Auto-finish takes it: a step at work, not the person's move.
+    const auto = transferJourney(t, minted, { ...words, waits: 'normal' });
+    expect(auto.standing).toBe('on-its-way');
+    expect(auto.run.activeId).not.toBeNull();
   });
 
   it('a swap out brought back as digital dollars ends calmly', () => {

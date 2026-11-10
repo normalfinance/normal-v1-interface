@@ -16,6 +16,7 @@ import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
+import { autopilotActiveFor, AUTOPILOT_CHANGED_EVENT } from '@/lib/cctp/autopilot-active';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
@@ -27,6 +28,7 @@ import { assetName, appLocale, formatCoin } from '@/components/_common/app-ui';
 
 import { transferJourney } from './transfer-journey';
 import { CctpRecoveryBanner } from './cctp-resume-banner';
+import { bannerPhase, exchangeSlowAfterMs } from './cctp-phase';
 
 import type { TransferRowForJourney } from './transfer-journey';
 
@@ -34,9 +36,11 @@ import type { TransferRowForJourney } from './transfer-journey';
 // One Circle swap's own page, for a swap no longer on the page that started it
 // (Niko 2026-11-09: a swap you closed out opens a page with all its steps).
 // The journey it would have shown live, rebuilt from the transfer's row and
-// read again every 15 seconds until it ends; when it waits on the person, the
-// way forward is here ("Finish the swap", "Bring back as digital dollars"),
-// carried out by the page's one recovery keeper.
+// read again every 15 seconds until it ends; when its next step needs the
+// person's passkey, the way forward is here ("Finish the swap", "Bring back as
+// digital dollars"), carried out by the page's one recovery keeper. Who it
+// waits on comes from that keeper (cctp-phase.ts waitsOn): the exchange, Normal
+// or the person; only the person is "Needs you" (Niko 2026-11-10).
 // ---------------------------------------------------------------------------
 
 type Row = TransferRowForJourney & {
@@ -136,16 +140,22 @@ export function TransferView({ id }: { id: string }) {
     };
   }, [user, read]);
 
-  // Only the words of the steps depend on it ("signed for you by auto-finish").
+  // The words of the steps depend on it ("signed for you by auto-finish"):
+  // one read, shared with the page's keeper, again when it is turned on or off.
   useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const res = await fetch('/api/autopilot/status', { headers: await buildAuthHeaders() }).catch(
-        () => null
-      );
-      const data = res?.ok ? await res.json().catch(() => null) : null;
-      setAutopilot(!!data?.active);
-    })();
+    if (!user) return undefined;
+    let live = true;
+    const readAutopilot = () => {
+      autopilotActiveFor(user.id).then((on) => {
+        if (live) setAutopilot(on);
+      });
+    };
+    readAutopilot();
+    window.addEventListener(AUTOPILOT_CHANGED_EVENT, readAutopilot);
+    return () => {
+      live = false;
+      window.removeEventListener(AUTOPILOT_CHANGED_EVENT, readAutopilot);
+    };
   }, [user]);
 
   const keeper = <CctpRecoveryBanner addresses={addresses} />;
@@ -183,6 +193,17 @@ export function TransferView({ id }: { id: string }) {
   }
 
   const tool = toolOf(row);
+  // The keeper's view of this swap: where it is and who moves it next.
+  const item = items.find((i) => i.id === row.id);
+  // Before the keeper has read it (its first second): a swap in whose coin
+  // went to the exchange is with the exchange, as the keeper's own first answer
+  // is until it has seen the Base address. Never "needs you" on a guess.
+  const waits =
+    item?.waitsOn ??
+    (row.direction === 'crosschain_to_stellar' && bannerPhase(row) === 'halt-receive'
+      ? 'exchange'
+      : undefined);
+  const autoFinish = item?.autoFinish ?? autopilot;
   const usdc = Number(wireToUsdc(BigInt(row.amountWire || '0')));
   const words = {
     amountIn:
@@ -199,43 +220,75 @@ export function TransferView({ id }: { id: string }) {
     autopilot,
     // Seen at Base by the keeper, or proved by the mint of a swap out.
     onBase:
-      (items.find((i) => i.id === row.id)?.onBase ?? false) ||
+      (item?.onBase ?? false) ||
       (row.direction === 'stellar_to_crosschain' &&
         (!!row.mintTxHash || row.status === 'COMPLETED')),
+    waits,
   };
   const journey = transferJourney(t, row, words);
   const coin = assetName(journey.kind === 'out' ? row.dstAsset : row.srcAsset);
   const busy = busyId === row.id;
 
   // This page only follows: once the row says where it stands, hand it off
-  // with the words for what happens next.
-  const halt = items.find((i) => i.id === row.id)?.phase;
+  // with the words for what happens next, and who does it.
+  const halt = item?.phase;
+  // The exchange has had it longer than usual (twice its chain's window):
+  // say so, and how it can end, instead of a clock that only counts up.
+  const exchangeSlow =
+    waits === 'exchange' &&
+    Date.now() - (Date.parse(row.updatedAt) || Date.now()) > exchangeSlowAfterMs(row.srcAsset);
+  const exchangeWords = exchangeSlow
+    ? autoFinish
+      ? t(
+          'This is taking longer than usual. Your {{coin}} went to {{tool}}: it either delivers the digital dollars to your own Base address or sends your {{coin}} back to your wallet. Normal finishes the swap on its own once they arrive. You can leave this page.',
+          { coin, tool }
+        )
+      : t(
+          'This is taking longer than usual. Your {{coin}} went to {{tool}}: it either delivers the digital dollars to your own Base address or sends your {{coin}} back to your wallet. Once they arrive, finish the swap here with your passkey. You can leave this page.',
+          { coin, tool }
+        )
+    : autoFinish
+      ? t(
+          '{{tool}} is turning your {{coin}} into digital dollars and sending them to your own Base address. Normal finishes the swap on its own once they arrive. You can leave this page.',
+          { coin, tool }
+        )
+      : t(
+          '{{tool}} is turning your {{coin}} into digital dollars and sending them to your own Base address. Once they arrive, finish the swap here with your passkey. You can leave this page.',
+          { coin, tool }
+        );
   const handOff =
     journey.standing === 'needs-you'
-      ? words.onBase
-        ? journey.kind === 'out'
-          ? t(
-              'Your digital dollars are at your own Base address. Finish the swap to {{coin}}, or bring them back to your Stellar wallet as digital dollars.',
-              { coin }
-            )
-          : t(
-              'Your digital dollars are at your own Base address. Finish the swap to send them on to your Stellar wallet.'
-            )
-        : t(
-            'Your digital dollars are on their way to your own Base address. Finish the swap once they arrive.'
+      ? journey.kind === 'out'
+        ? t(
+            'Your digital dollars are at your own Base address. Finish the swap to {{coin}}, or bring them back to your Stellar wallet as digital dollars.',
+            { coin }
           )
-      : journey.kind === 'out'
-        ? row.dstSwapTxHash
-          ? t('The exchange is sending your {{coin}} to your wallet. It finishes on its own.', {
-              coin,
-            })
-          : t(
-              'Circle is moving your digital dollars to your Base address. The swap to {{coin}} follows when they arrive.',
-              { coin }
-            )
         : t(
-            'Circle is moving your digital dollars to your Stellar wallet. Normal finishes it on its own, usually within 20 minutes. You can leave this page.'
-          );
+            'Your digital dollars are at your own Base address. Finish the swap to send them on to your Stellar wallet.'
+          )
+      : waits === 'exchange'
+        ? exchangeWords
+        : waits === 'normal' && halt !== 'auto'
+          ? journey.kind === 'out'
+            ? t(
+                'Your digital dollars are at your own Base address. Normal swaps them to {{coin}} on its own shortly. You can leave this page.',
+                { coin }
+              )
+            : t(
+                'Your digital dollars are at your own Base address. Normal sends them on to your Stellar wallet on its own shortly. You can leave this page.'
+              )
+          : journey.kind === 'out'
+            ? row.dstSwapTxHash
+              ? t('The exchange is sending your {{coin}} to your wallet. It finishes on its own.', {
+                  coin,
+                })
+              : t(
+                  'Circle is moving your digital dollars to your Base address. The swap to {{coin}} follows when they arrive.',
+                  { coin }
+                )
+            : t(
+                'Circle is moving your digital dollars to your Stellar wallet. Normal finishes it on its own, usually within 20 minutes. You can leave this page.'
+              );
   const run =
     journey.standing === 'needs-you' || journey.standing === 'on-its-way'
       ? handOffRun(journey.run, handOff, Date.parse(row.updatedAt) || Date.now())

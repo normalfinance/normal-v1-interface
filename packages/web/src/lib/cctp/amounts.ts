@@ -23,6 +23,19 @@ const SLIPPAGE_HEADROOM_DIVISOR = 20n;
  * @param expected   what this transfer quoted (wire units); 0/absent means
  *                   "this row is a sweep" (refunds) — take everything
  */
+/**
+ * Have a swap's digital dollars reached the Base address? The live swap's own
+ * arrival rule (95% of the quoted minimum), read without its starting balance:
+ * a few cents left over from an earlier swap must not count as this one
+ * arriving. Counting dust as arrived would burn the dust for this swap and
+ * strand its real digital dollars when they land.
+ */
+export function arrivedAtBase(available: bigint, expected: bigint): boolean {
+  if (available <= 0n) return false;
+  if (expected <= 0n) return true;
+  return available * 100n >= expected * 95n;
+}
+
 export function scopedAmountWire(available: bigint, expected: bigint): bigint {
   if (available <= 0n) return 0n;
   // A refund/sweep row carries no meaningful quote: recover the lot.
