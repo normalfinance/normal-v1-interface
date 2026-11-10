@@ -84,10 +84,10 @@ export const MILESTONES: Milestone[] = [
     status: 'in-progress',
     title: 'Normal Crypto Indexes',
     date: 'Q4 2026',
-    description: 'Build and invest in custom crypto indexes tailored to your strategy.',
+    description: 'Top 3 first: Bitcoin, Ethereum and Solana in one purchase, with one signature.',
   },
   {
-    status: 'planned',
+    status: 'in-progress',
     title: 'Normal Mobile App',
     date: 'Q4 2026',
     description: 'Native iOS and Android app bringing the full Normal experience to mobile.',

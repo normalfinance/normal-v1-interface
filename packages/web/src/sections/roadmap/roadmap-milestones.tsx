@@ -1,22 +1,17 @@
 'use client';
 
+import type { BrandHue } from '@/theme/brand-colors';
+
 import { useState } from 'react';
 import { TYPE } from '@/theme/type-scale';
-import {
-  INK,
-  MUTED,
-  PAPER,
-  BLOCK_COLORS,
-  BRAND_COLORS,
-  HAIRLINE_COLOR,
-} from '@/theme/brand-colors';
+import { BLOCK_COLORS, BRAND_COLORS, HAIRLINE_COLOR } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import CheckRounded from '@mui/icons-material/CheckRounded';
 import ArrowOutwardRounded from '@mui/icons-material/ArrowOutwardRounded';
 
-import { HATCH_SX } from '@/components/_common/hatch';
+import { hatchIn } from '@/components/_common/hatch';
 import {
   GUTTER_SX,
   MONO_FONT,
@@ -43,29 +38,34 @@ const FILTERS: { value: Filter; label: string }[] = [
 /** The cards per row at each width. */
 const COLUMNS = { xs: 1, sm: 2, md: 3 } as const;
 
-// The road in three chapters, oldest first. Each has its own fill: what
-// shipped on the savings green's wash (done), what is being built now as solid
-// blocks of the wallet's blue (the section's one focal point, as bright as the
-// closing carousel's), what is planned left white.
+// The road in three chapters, oldest first, each a zone of one colour (Niko
+// 2026-11-10: the header "darker and the blocks lighter", and every chapter
+// coloured): its header row a block of the colour, as strong as the asks at
+// the foot of the home page, its cards the same colour's pale wash, its empty
+// cells hatched tone on tone. Words in the colour's deep shade throughout.
+// Three colours next to each other in the logo, in its order (Niko 2026-11-10):
+// calm violet for what is done, the biggest chapter; magenta, the most vivid,
+// for what is being built now; warm coral for what is ahead. Tried and
+// dropped: sky, violet, magenta (ended on a heavy pink); magenta, coral,
+// yellow (the past all pink, the yellow repeating the promise below).
 const CHAPTERS: Record<
   MilestoneStatus,
-  { title: string; count: (n: number) => string; colors: { bg: string; color: string } }
+  { title: string; count: (n: number) => string; hue: BrandHue }
 > = {
-  shipped: {
-    title: 'The road behind',
-    count: (n) => `${n} shipped`,
-    colors: { bg: BRAND_COLORS.mint.tint, color: BRAND_COLORS.mint.deep },
-  },
-  'in-progress': {
-    title: 'Building now',
-    count: (n) => `${n} in progress`,
-    colors: { bg: BLOCK_COLORS.sky.surface, color: BLOCK_COLORS.sky.words },
-  },
-  planned: {
-    title: 'The road ahead',
-    count: (n) => `${n} planned`,
-    colors: { bg: PAPER, color: INK },
-  },
+  shipped: { title: 'The road behind', count: (n) => `${n} shipped`, hue: 'violet' },
+  'in-progress': { title: 'Building now', count: (n) => `${n} in progress`, hue: 'magenta' },
+  planned: { title: 'The road ahead', count: (n) => `${n} planned`, hue: 'coral' },
+};
+
+/** A chapter's colours: the block for its header, the wash for its cards. */
+const tones = (status: MilestoneStatus) => {
+  const { hue } = CHAPTERS[status];
+  return {
+    head: BLOCK_COLORS[hue].surface,
+    headWords: BLOCK_COLORS[hue].words,
+    card: BRAND_COLORS[hue].tint,
+    words: BRAND_COLORS[hue].deep,
+  };
 };
 
 const range = (items: Milestone[]) => {
@@ -74,9 +74,10 @@ const range = (items: Milestone[]) => {
   return first === last ? first : `${first} to ${last}`;
 };
 
-/** A chapter's header: a row across the board. */
+/** A chapter's header: a row across the board, a block of its colour. */
 function ChapterHeader({ status, items }: { status: MilestoneStatus; items: Milestone[] }) {
   const chapter = CHAPTERS[status];
+  const { head, headWords } = tones(status);
 
   return (
     <Box
@@ -89,14 +90,19 @@ function ChapterHeader({ status, items }: { status: MilestoneStatus; items: Mile
         rowGap: 0.5,
         ...GUTTER_SX,
         py: { xs: 2.5, md: 3 },
-        bgcolor: PAPER,
+        color: headWords,
+        bgcolor: head,
       }}
     >
-      <Typography component="h3" sx={{ ...TYPE.h3, color: INK }}>
+      <Typography component="h3" sx={{ ...TYPE.h3, color: 'inherit' }}>
         {chapter.title}
       </Typography>
-      <Typography sx={{ ...TYPE.small, color: MUTED }}>{chapter.count(items.length)}</Typography>
-      <Typography sx={{ ...TYPE.small, ml: { sm: 'auto' }, fontFamily: MONO_FONT, color: MUTED }}>
+      <Typography sx={{ ...TYPE.small, color: 'inherit' }}>
+        {chapter.count(items.length)}
+      </Typography>
+      <Typography
+        sx={{ ...TYPE.small, ml: { sm: 'auto' }, fontFamily: MONO_FONT, color: 'inherit' }}
+      >
         {range(items)}
       </Typography>
     </Box>
@@ -105,7 +111,7 @@ function ChapterHeader({ status, items }: { status: MilestoneStatus; items: Mile
 
 /** One milestone: its date, what it is, and the announcement if there is one. */
 function MilestoneCard({ item }: { item: Milestone }) {
-  const { colors } = CHAPTERS[item.status];
+  const { card, words } = tones(item.status);
   const now = item.status === 'in-progress';
   const shipped = item.status === 'shipped';
 
@@ -119,19 +125,14 @@ function MilestoneCard({ item }: { item: Milestone }) {
         ...GUTTER_SX,
         pt: 3,
         pb: { xs: 3.5, md: 4 },
-        color: colors.color,
-        bgcolor: colors.bg,
+        color: words,
+        bgcolor: card,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography
           component="time"
-          sx={{
-            ...TYPE.small,
-            fontFamily: MONO_FONT,
-            whiteSpace: 'nowrap',
-            color: item.status === 'planned' ? MUTED : 'inherit',
-          }}
+          sx={{ ...TYPE.small, fontFamily: MONO_FONT, whiteSpace: 'nowrap', color: 'inherit' }}
         >
           {item.date}
         </Typography>
@@ -143,14 +144,7 @@ function MilestoneCard({ item }: { item: Milestone }) {
       >
         {item.title}
       </Typography>
-      <Typography
-        sx={{
-          ...TYPE.small,
-          mt: 1,
-          maxWidth: 520,
-          color: item.status === 'planned' ? MUTED : 'inherit',
-        }}
-      >
+      <Typography sx={{ ...TYPE.small, mt: 1, maxWidth: 520, color: 'inherit', opacity: 0.85 }}>
         {item.description}
       </Typography>
       {item.link && (
@@ -183,9 +177,11 @@ function MilestoneCard({ item }: { item: Milestone }) {
 
 /**
  * Hatched cells that finish a chapter's last row, at each width, so the board
- * has no holes: hatching is the grid's empty space (DESIGN.md).
+ * has no holes: hatching is the grid's empty space (DESIGN.md), here in the
+ * chapter's own colour, tone on tone, so the zone stays whole.
  */
-function Fillers({ count }: { count: number }) {
+function Fillers({ status, count }: { status: MilestoneStatus; count: number }) {
+  const { head, card } = tones(status);
   const per = (columns: number) => (columns - (count % columns)) % columns;
   const sm = per(COLUMNS.sm);
   const md = per(COLUMNS.md);
@@ -198,8 +194,10 @@ function Fillers({ count }: { count: number }) {
           aria-hidden="true"
           sx={{
             display: { xs: 'none', sm: i < sm ? 'block' : 'none', md: i < md ? 'block' : 'none' },
-            bgcolor: PAPER,
-            ...HATCH_SX,
+            bgcolor: card,
+            // Lines halfway between the wash and the block: the block's own
+            // colour made the empty cells louder than the cards.
+            ...hatchIn(`color-mix(in srgb, ${head} 50%, ${card})`),
           }}
         />
       ))}
@@ -223,7 +221,7 @@ export function RoadmapMilestones() {
   const board = chapters.flatMap(({ status, items }) => [
     <ChapterHeader key={`${status}-header`} status={status} items={items} />,
     ...items.map((item) => <MilestoneCard key={item.title} item={item} />),
-    <Fillers key={`${status}-fill`} count={items.length} />,
+    <Fillers key={`${status}-fill`} status={status} count={items.length} />,
   ]);
 
   return (

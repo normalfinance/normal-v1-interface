@@ -16,6 +16,16 @@ export const HATCH_SX = {
   backgroundImage: `repeating-linear-gradient(135deg, ${HAIRLINE_STRONG} 0 1px, transparent 1px 8px)`,
 } as const;
 
+/**
+ * The same hatch drawn in another colour: tone on tone inside a coloured zone
+ * (the roadmap's chapters fill their empty cells this way), still hard-edged
+ * 1px lines with no fade.
+ */
+export const hatchIn = (line: string) =>
+  ({
+    backgroundImage: `repeating-linear-gradient(135deg, ${line} 0 1px, transparent 1px 8px)`,
+  }) as const;
+
 /** The one height of every hatched strip on the site. */
 export const HATCH_HEIGHT = { xs: 32, md: 48 } as const;
 
