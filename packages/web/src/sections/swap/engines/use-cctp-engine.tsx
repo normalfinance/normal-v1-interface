@@ -30,7 +30,6 @@ import { fCurrency } from '@/utils/format-number';
 import { runCctpRefund } from '@/lib/cctp/refund';
 import { useFlowRun } from '@/hooks/use-flow-run';
 import { useDebounce } from '@/hooks/use-debounce';
-import { BRAND_COLORS } from '@/theme/brand-colors';
 import { burnUsdcOnEvm } from '@/lib/cctp/burn-evm';
 import { executeLifiSwap } from '@/lib/lifi/execute';
 import { abortTimeout } from '@/utils/abort-timeout';
@@ -52,6 +51,7 @@ import { isBlockhashExpired } from '@/lib/chains/solana-blockhash';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { bridgeName, readBridgeStatus } from '@/lib/flow/lifi-status';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
+import { INK, MUTED, FAINT, BRAND_COLORS } from '@/theme/brand-colors';
 import { driftVerdict, isQuoteStale } from '@/lib/lifi/quote-freshness';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
@@ -830,7 +830,7 @@ export function useCctpEngine({
       // activity feed, so we mark it FAILED instead.
       let broadcastStarted = false;
 
-      const srcChain =({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
+      const srcChain = ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' } as const)[
         fromSymbol as CrosschainSymbol
       ];
       try {
@@ -1628,7 +1628,11 @@ export function useCctpEngine({
         }),
       });
       const data = await res.json();
-      if (!res.ok || !data.id) throw new Error(data.error ?? t('The swap could not be saved, so nothing was sent. Try again in a moment.'));
+      if (!res.ok || !data.id)
+        throw new Error(
+          data.error ??
+            t('The swap could not be saved, so nothing was sent. Try again in a moment.')
+        );
       doneStep('record');
       // #27's row exists NOW — tell the activity feed so it appears the
       // moment the swap starts, not at Done (Niko live test 2026-08-19).
@@ -1714,7 +1718,7 @@ export function useCctpEngine({
         action: null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
             {t('Cross-ecosystem swaps route through LI.FI, which has no testnet liquidity.')}
           </Typography>
         ),
@@ -1743,7 +1747,7 @@ export function useCctpEngine({
           action: () => startAction('receive'),
           loading: false,
           helper: (
-            <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+            <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
               {t('Your Stellar account activates once it receives at least 1 XLM.')}
             </Typography>
           ),
@@ -1757,7 +1761,7 @@ export function useCctpEngine({
         action: user ? () => setSetupChain('stellar') : null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
             {t('One passkey adds Stellar to your wallet. The swap continues right after.')}
           </Typography>
         ),
@@ -1786,7 +1790,7 @@ export function useCctpEngine({
                 },
             loading: false,
             helper: (
-              <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+              <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
                 {t(
                   'Your Stellar account needs a USDC trustline to receive the money. Add it from the swap tab (USDC) or the savings page.'
                 )}
@@ -1801,7 +1805,7 @@ export function useCctpEngine({
         action: onNeedsSetup ?? (() => startAction('receive')),
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
             {t(
               'The swap pays its Stellar network fee in XLM from {{which}}, so a little XLM is needed there.',
               { which: onNeedsSetup ? t('your Normal wallet') : t('your wallet') }
@@ -1817,7 +1821,7 @@ export function useCctpEngine({
         action: user ? () => setSetupChain(chain) : null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
             {t('One passkey creates your {{sym}} address. The swap continues right after.', {
               sym,
             })}
@@ -1831,7 +1835,7 @@ export function useCctpEngine({
         action: user ? () => setSetupChain('ethereum') : null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
             {t(
               'The route travels through your own Base address. One passkey creates it, then the swap continues.'
             )}
@@ -1857,7 +1861,7 @@ export function useCctpEngine({
         action: null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
             {t(
               'Each swap between networks has fixed bridge costs. Under $10 they outweigh the swap.'
             )}
@@ -1872,7 +1876,7 @@ export function useCctpEngine({
         action: null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
             {t('This route costs ~${{gas}} in network gas regardless of size.', {
               gas: gasUsd.toFixed(2),
             })}
@@ -1888,7 +1892,7 @@ export function useCctpEngine({
         loading: false,
         review: true,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
             {t(
               'Your USDC moves to your Normal wallet first (one approval in {{wallet}}), then the swap runs with your passkey.',
               { wallet: fundFromExternal.label }
@@ -1944,16 +1948,14 @@ export function useCctpEngine({
   const details = quote ? (
     <Stack spacing={0.75}>
       <Stack direction="row" justifyContent="space-between">
-        <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Route')}</Typography>
-        <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
+        <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Route')}</Typography>
+        <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK, ...MONO }}>
           {routeLabel}
         </Typography>
       </Stack>
       <Stack direction="row" justifyContent="space-between">
-        <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
-          {t('Bridge (Circle CCTP)')}
-        </Typography>
-        <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
+        <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Bridge (Circle CCTP)')}</Typography>
+        <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK, ...MONO }}>
           {t('Free')}
         </Typography>
       </Stack>
@@ -1961,12 +1963,12 @@ export function useCctpEngine({
           gas misled — the leg's REAL gas from the quote, always visible. */}
       {gasUsd > 0 && (
         <Stack direction="row" justifyContent="space-between">
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Network gas')}</Typography>
+          <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Network gas')}</Typography>
           <Typography
             sx={{
               fontSize: '12px',
               fontWeight: 500,
-              color: gasShare > 0.2 ? BRAND_COLORS.yellow.deep : '#0A0A0F',
+              color: gasShare > 0.2 ? BRAND_COLORS.yellow.deep : INK,
               ...MONO,
             }}
           >
@@ -1984,10 +1986,10 @@ export function useCctpEngine({
       )}
       {feePercent > 0 && amount.gt(0) && (
         <Stack direction="row" justifyContent="space-between">
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED }}>
             {t('Normal fee ({{pct}}%)', { pct: +(feePercent * 100).toFixed(2) })}
           </Typography>
-          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
+          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK, ...MONO }}>
             −{amount.multipliedBy(feePercent).toFixed(6)} {fromSymbol}
             {fromPrice.gt(0)
               ? ` (${fCurrency(amount.multipliedBy(feePercent).multipliedBy(fromPrice))})`
@@ -1997,13 +1999,13 @@ export function useCctpEngine({
       )}
       {etaMinutes && (
         <Stack direction="row" justifyContent="space-between">
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Estimated time')}</Typography>
-          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Estimated time')}</Typography>
+          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK, ...MONO }}>
             ~{etaMinutes} {t('min')}
           </Typography>
         </Stack>
       )}
-      <Typography sx={{ fontSize: '11px', color: '#9A9AA3', lineHeight: 1.5 }}>
+      <Typography sx={{ fontSize: '11px', color: FAINT, lineHeight: 1.5 }}>
         {t('Funds travel via your own addresses at every step.')}
       </Typography>
     </Stack>

@@ -5,6 +5,7 @@ import type { SvgIconComponent } from '@mui/icons-material';
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { authedFetch } from '@/utils/authed-fetch';
+import { INK, CANVAS } from '@/theme/brand-colors';
 import { supabase } from '@/lib/createSupabaseClient';
 import { twoFactorErrorMessage } from '@/lib/auth/two-factor';
 
@@ -34,15 +35,10 @@ function IconTile({ icon: Icon, small }: { icon: SvgIconComponent; small: boolea
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: '#F4F4F7',
+        bgcolor: CANVAS,
         border: HAIRLINE,
         borderRadius: 'var(--radius-md)',
-        color: '#0A0A0F',
-        ...theme.applyStyles('dark', {
-          bgcolor: 'rgba(255,255,255,0.06)',
-          borderColor: 'rgba(255,255,255,0.10)',
-          color: 'text.primary',
-        }),
+        color: INK,
       })}
     >
       <Icon sx={{ fontSize: small ? 20 : 24 }} />
@@ -179,7 +175,7 @@ export function TwoFactorChallenge({ onCancel, onRecovered, onVerified }: TwoFac
               fontWeight: 500,
               lineHeight: 1.15,
               letterSpacing: '-0.02em',
-              color: 'var(--auth-ink, #0A0A0F)',
+              color: `var(--auth-ink, ${INK})`,
             }}
           >
             {heading}

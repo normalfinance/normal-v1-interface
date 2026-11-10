@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { BRAND_COLORS } from '@/theme/brand-colors';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
+import { FAINT, DANGER, BRAND_COLORS } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -81,7 +81,7 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
       <Box
         sx={{
           fontSize: '11.5px',
-          color: '#9A9AA3',
+          color: FAINT,
           textAlign: 'center',
           lineHeight: 1.5,
         }}
@@ -93,7 +93,7 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
         <Box
           sx={{
             fontSize: '12px',
-            color: '#B91C1C',
+            color: DANGER,
             bgcolor: 'rgba(185,28,28,0.06)',
             border: '1px solid rgba(185,28,28,0.15)',
             borderRadius: 'var(--radius-md)',

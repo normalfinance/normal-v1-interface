@@ -29,6 +29,7 @@ import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyTurnkeyError } from '@/lib/turnkey/passkey-stamper';
 import { getXlmToken, getSwapUsdcToken } from '@/utils/token-selectors';
+import { INK, WELL, FAINT, MUTED, PAPER, DANGER, INK_SOFT } from '@/theme/brand-colors';
 import { getTurnkeyWalletInfo, invalidateTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import {
   linkWallet,
@@ -279,18 +280,18 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
       slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)', p: '22px' } } }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '6px' }}>
-        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: INK }}>
           {t('Set up your Normal wallet')}
         </Typography>
         <Box
           component="button"
           onClick={busy ? undefined : onClose}
-          sx={{ all: 'unset', cursor: 'pointer', color: '#9A9AA3', display: 'flex' }}
+          sx={{ all: 'unset', cursor: 'pointer', color: FAINT, display: 'flex' }}
         >
           <Iconify icon="mingcute:close-line" width={20} />
         </Box>
       </Stack>
-      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', mb: '14px', lineHeight: 1.5 }}>
+      <Typography sx={{ fontSize: '12.5px', color: MUTED, mb: '14px', lineHeight: 1.5 }}>
         {t(
           'Cross-chain swaps run through your Normal wallet, a passkey-secured wallet that can hold BTC, ETH and SOL.'
         )}
@@ -298,7 +299,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
 
       {probing && !probe && !companionAddress ? (
         <Stack alignItems="center" sx={{ py: '28px' }}>
-          <CircularProgress size={22} sx={{ color: '#0A0A0F' }} />
+          <CircularProgress size={22} sx={{ color: INK }} />
         </Stack>
       ) : (
         <>
@@ -329,25 +330,25 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                     {done ? (
                       <Iconify icon="lets-icons:check-fill" width={20} sx={{ color: '#1AB37D' }} />
                     ) : active && busy ? (
-                      <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />
+                      <CircularProgress size={16} sx={{ color: INK }} />
                     ) : (
                       <Box
                         sx={{
                           width: 8,
                           height: 8,
                           borderRadius: '50%',
-                          bgcolor: active ? '#0A0A0F' : 'rgba(10,10,15,0.15)',
+                          bgcolor: active ? INK : 'rgba(var(--nf-ink-rgb),0.15)',
                           mt: '2px',
                         }}
                       />
                     )}
                   </Box>
                   <Box>
-                    <Typography sx={{ fontSize: '13.5px', fontWeight: 500, color: '#0A0A0F' }}>
+                    <Typography sx={{ fontSize: '13.5px', fontWeight: 500, color: INK }}>
                       {stepMeta[s].label}
                     </Typography>
                     {active && (
-                      <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>
+                      <Typography sx={{ fontSize: '11.5px', color: FAINT }}>
                         {stepMeta[s].sub}
                       </Typography>
                     )}
@@ -366,15 +367,15 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                   p: '14px',
                   mb: '12px',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(10,10,15,0.08)',
-                  bgcolor: '#FAFAFB',
+                  border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
+                  bgcolor: WELL,
                   textAlign: 'center',
                 }}
               >
                 <Typography
                   sx={{
                     fontSize: '12.5px',
-                    color: '#6B6B76',
+                    color: MUTED,
                     mb: '10px',
                     lineHeight: 1.5,
                   }}
@@ -396,7 +397,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                     sx={{
                       ...MONO,
                       fontSize: '11.5px',
-                      color: '#0A0A0F',
+                      color: INK,
                       wordBreak: 'break-all',
                       textAlign: 'left',
                     }}
@@ -408,7 +409,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                   )}
                 </Stack>
                 {probing && (
-                  <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', mt: '6px' }}>
+                  <Typography sx={{ fontSize: '11.5px', color: FAINT, mt: '6px' }}>
                     {t('Watching for the payment…')}
                   </Typography>
                 )}
@@ -419,7 +420,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
               <Typography
                 sx={{
                   fontSize: '12px',
-                  color: '#6B6B76',
+                  color: MUTED,
                   mb: '6px',
                   textAlign: 'center',
                 }}
@@ -451,7 +452,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
             <Typography
               sx={{
                 fontSize: '12px',
-                color: '#B91C1C',
+                color: DANGER,
                 bgcolor: 'rgba(185,28,28,0.06)',
                 border: '1px solid rgba(185,28,28,0.15)',
                 borderRadius: 'var(--radius-md)',
@@ -478,18 +479,18 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
               py: '13px',
               borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: '#0A0A0F',
-              color: '#fff',
+              bgcolor: INK,
+              color: PAPER,
               fontSize: '14px',
               fontWeight: 500,
               fontFamily: 'inherit',
               cursor: busy || probing ? 'not-allowed' : 'pointer',
               opacity: busy || probing ? 0.7 : 1,
-              '&:hover:not(:disabled)': { bgcolor: '#2A2A33' },
+              '&:hover:not(:disabled)': { bgcolor: INK_SOFT },
             }}
           >
             {busy ? (
-              <CircularProgress size={16} sx={{ color: '#fff' }} />
+              <CircularProgress size={16} sx={{ color: PAPER }} />
             ) : step === 'create' || step === 'trustline' ? (
               <FingerprintIcon sx={{ fontSize: 18 }} />
             ) : null}
@@ -500,7 +501,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
             <Typography
               sx={{
                 fontSize: '11.5px',
-                color: '#9A9AA3',
+                color: FAINT,
                 mt: '10px',
                 textAlign: 'center',
               }}

@@ -7,6 +7,7 @@ import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { INK, FAINT, MUTED, PAPER, CANVAS } from '@/theme/brand-colors';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 
 import Box from '@mui/material/Box';
@@ -107,7 +108,7 @@ export default function SavingsView() {
         <Skeleton
           variant="rectangular"
           height={220}
-          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.08)' }}
+          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(var(--nf-ink-rgb),0.08)' }}
         />
         <Box
           sx={{
@@ -120,12 +121,12 @@ export default function SavingsView() {
           <Skeleton
             variant="rectangular"
             height={320}
-            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
+            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }}
           />
           <Skeleton
             variant="rectangular"
             height={200}
-            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
+            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }}
           />
         </Box>
       </DashboardContent>
@@ -153,20 +154,20 @@ export default function SavingsView() {
               width: 56,
               height: 56,
               borderRadius: 'var(--radius-md)',
-              bgcolor: '#F4F4F7',
+              bgcolor: CANVAS,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#9A9AA3',
+              color: FAINT,
             }}
           >
             <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 28 }} />
           </Box>
           <Box>
-            <Box sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
+            <Box sx={{ fontSize: '16px', fontWeight: 500, color: INK, mb: '6px' }}>
               {user ? 'Set up your savings wallet' : 'Connect your wallet'}
             </Box>
-            <Box sx={{ fontSize: '14px', color: '#6B6B76', maxWidth: 300 }}>
+            <Box sx={{ fontSize: '14px', color: MUTED, maxWidth: 300 }}>
               {user
                 ? 'Savings runs on Stellar. Create your Stellar wallet in one tap to start earning yield on USDC.'
                 : 'Sign in to view your savings and start earning yield.'}
@@ -185,8 +186,8 @@ export default function SavingsView() {
               py: '10px',
               borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: '#0A0A0F',
-              color: '#fff',
+              bgcolor: INK,
+              color: PAPER,
               fontSize: '14px',
               fontWeight: 500,
               cursor: 'pointer',

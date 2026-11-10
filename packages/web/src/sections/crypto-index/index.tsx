@@ -32,7 +32,7 @@ import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { indexBuyStepId, indexPurchasePlan } from '@/lib/flow/plans';
 import { CoinStack, WeightBar } from '@/sections/indexes/index-parts';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
-import { INK, FAINT, HOVER, MUTED, CANVAS, HAIRLINE_STRONG } from '@/theme/brand-colors';
+import { INK, FAINT, HOVER, MUTED, CANVAS, DANGER, HAIRLINE_STRONG } from '@/theme/brand-colors';
 import {
   weightLabel,
   CRYPTO_INDEX,
@@ -944,7 +944,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
               </Box>
 
               {wire !== null && verdict && !verdict.ok && (
-                <Typography sx={{ mt: 1.5, fontSize: 12.5, color: '#B91C1C' }}>
+                <Typography sx={{ mt: 1.5, fontSize: 12.5, color: DANGER }}>
                   {t(
                     'The smallest purchase is {{min}}, so every coin’s share is worth its exchange.',
                     {
@@ -954,7 +954,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                 </Typography>
               )}
               {tooMuch && (
-                <Typography sx={{ mt: 1.5, fontSize: 12.5, color: '#B91C1C' }}>
+                <Typography sx={{ mt: 1.5, fontSize: 12.5, color: DANGER }}>
                   {t('That is more than you have.')}
                 </Typography>
               )}
@@ -988,7 +988,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                   height: 48,
                   fontSize: 15,
                   fontWeight: 500,
-                  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: FAINT },
+                  '&.Mui-disabled': { bgcolor: 'rgba(var(--nf-ink-rgb),0.08)', color: FAINT },
                 }}
               >
                 {t('Review purchase')}

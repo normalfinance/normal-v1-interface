@@ -25,6 +25,7 @@ import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { deriveWalletReadiness } from '@/lib/stellar/wallet-readiness';
+import { INK, WELL, FAINT, MUTED, PAPER, CANVAS, INK_SOFT } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -122,18 +123,18 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
       slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)', p: '22px' } } }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '6px' }}>
-        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: INK }}>
           {t('Set up {{wallet}} for USDC', { wallet: walletLabel })}
         </Typography>
         <Box
           component="button"
           onClick={busy ? undefined : onClose}
-          sx={{ all: 'unset', cursor: 'pointer', color: '#9A9AA3', display: 'flex' }}
+          sx={{ all: 'unset', cursor: 'pointer', color: FAINT, display: 'flex' }}
         >
           <Iconify icon="mingcute:close-line" width={20} />
         </Box>
       </Stack>
-      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', mb: '14px', lineHeight: 1.5 }}>
+      <Typography sx={{ fontSize: '12.5px', color: MUTED, mb: '14px', lineHeight: 1.5 }}>
         {t('Two one-time steps and this wallet can hold and receive USDC.')}
       </Typography>
 
@@ -163,19 +164,19 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
                 {done ? (
                   <Iconify icon="lets-icons:check-fill" width={20} sx={{ color: '#1AB37D' }} />
                 ) : active && (busy || (s.key === 'activate' && probe.isLoading)) ? (
-                  <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />
+                  <CircularProgress size={16} sx={{ color: INK }} />
                 ) : (
                   <Box
                     sx={{
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      bgcolor: active ? '#0A0A0F' : 'rgba(10,10,15,0.15)',
+                      bgcolor: active ? INK : 'rgba(var(--nf-ink-rgb),0.15)',
                     }}
                   />
                 )}
               </Box>
-              <Typography sx={{ fontSize: '13.5px', fontWeight: 500, color: '#0A0A0F' }}>
+              <Typography sx={{ fontSize: '13.5px', fontWeight: 500, color: INK }}>
                 {s.label}
               </Typography>
             </Stack>
@@ -188,7 +189,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
           <Typography
             sx={{
               fontSize: '12px',
-              color: '#6B6B76',
+              color: MUTED,
               textAlign: 'center',
               lineHeight: 1.55,
             }}
@@ -207,7 +208,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
                 width: 180,
                 height: 180,
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(10,10,15,0.08)',
+                border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
               }}
             />
           )}
@@ -223,33 +224,29 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
               px: '12px',
               py: '8px',
               borderRadius: 'var(--radius-md)',
-              border: '1px solid rgba(10,10,15,0.14)',
-              bgcolor: '#FAFAFB',
+              border: '1px solid rgba(var(--nf-ink-rgb),0.14)',
+              bgcolor: WELL,
               cursor: 'pointer',
               fontFamily: 'inherit',
-              '&:hover': { bgcolor: '#F4F4F7' },
+              '&:hover': { bgcolor: CANVAS },
             }}
           >
             <Typography
               sx={{
                 ...MONO,
                 fontSize: '11.5px',
-                color: '#0A0A0F',
+                color: INK,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
               }}
             >
               {`${address.slice(0, 10)}…${address.slice(-10)}`}
             </Typography>
-            <Iconify
-              icon="solar:copy-outline"
-              width={14}
-              sx={{ color: '#9A9AA3', flexShrink: 0 }}
-            />
+            <Iconify icon="solar:copy-outline" width={14} sx={{ color: FAINT, flexShrink: 0 }} />
           </Box>
           <Stack direction="row" spacing={0.75} alignItems="center">
-            <CircularProgress size={12} sx={{ color: '#9A9AA3' }} />
-            <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>
+            <CircularProgress size={12} sx={{ color: FAINT }} />
+            <Typography sx={{ fontSize: '11.5px', color: FAINT }}>
               {t('Watching for the payment…')}
             </Typography>
           </Stack>
@@ -258,7 +255,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
 
       {step === 'trustline' && (
         <Stack spacing={1.25}>
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', lineHeight: 1.55 }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, lineHeight: 1.55 }}>
             {t(
               '{{wallet}} is active. One approval in your wallet adds the USDC trustline (reserves ~0.5 XLM). After that it can hold and receive USDC.',
               { wallet: walletLabel }
@@ -276,8 +273,8 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
               fontWeight: 500,
               fontFamily: 'inherit',
               cursor: busy ? 'default' : 'pointer',
-              bgcolor: '#0A0A0F',
-              color: '#fff',
+              bgcolor: INK,
+              color: PAPER,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -286,7 +283,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
               '&:hover': busy ? {} : { opacity: 0.85 },
             }}
           >
-            {busy && <CircularProgress size={14} sx={{ color: '#fff' }} />}
+            {busy && <CircularProgress size={14} sx={{ color: PAPER }} />}
             {busy ? t('Waiting for your approval…') : t('Add USDC trustline')}
           </Box>
         </Stack>
@@ -295,7 +292,7 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
       {step === 'ready' && (
         <Stack alignItems="center" spacing={1.25} sx={{ py: '6px' }}>
           <Iconify icon="lets-icons:check-fill" width={36} sx={{ color: '#1AB37D' }} />
-          <Typography sx={{ fontSize: '13px', color: '#2A2A33', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '13px', color: INK_SOFT, textAlign: 'center' }}>
             {t('{{wallet}} can now hold and receive USDC.', { wallet: walletLabel })}
           </Typography>
           <Box
@@ -311,8 +308,8 @@ export default function ExternalWalletSetupDialog({ open, onClose, address, wall
               fontWeight: 500,
               fontFamily: 'inherit',
               cursor: 'pointer',
-              bgcolor: '#0A0A0F',
-              color: '#fff',
+              bgcolor: INK,
+              color: PAPER,
               '&:hover': { opacity: 0.85 },
             }}
           >

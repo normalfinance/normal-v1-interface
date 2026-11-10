@@ -6,6 +6,7 @@ import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { usePersistStore } from '@normalfinance/state';
+import { useSiteTheme } from '@/layouts/site/use-site-theme';
 import {
   verifyOtp,
   signInWithOtp,
@@ -53,6 +54,8 @@ const AuthLoginModal = ({
   resetEmail = null,
 }: AuthLoginModalProps) => {
   const { t } = useTranslate();
+  // The captcha in the page's mode.
+  const { mode: themeMode } = useSiteTheme();
   const { disclaimer, setDisclaimerAccepted } = usePersistStore();
 
   const [loading, setLoading] = useState(false);
@@ -644,6 +647,7 @@ const AuthLoginModal = ({
 
           <Turnstile
             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
+            options={{ theme: themeMode }}
             onSuccess={(token) => {
               setCaptchaToken(token);
             }}

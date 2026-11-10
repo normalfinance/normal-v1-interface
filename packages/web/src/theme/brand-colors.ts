@@ -215,6 +215,35 @@ export const FOOTER_BG = cssVar('footer');
 export const STATEMENT_COLORS = STATEMENT_PALETTE.light.map((_, i) => cssVar(`statement-${i + 1}`));
 
 /**
+ * Status colours for words and marks (the app's reds, greens and ambers), in
+ * both modes. The light values are the ones the app always used; the dark ones
+ * lift the same hues so they read on the dark page.
+ */
+export type StatusTones = { danger: string; dangerDeep: string; success: string; warning: string };
+
+export const STATUS_PALETTE: Record<Mode, StatusTones> = {
+  light: { danger: '#B91C1C', dangerDeep: '#7F1D1D', success: '#0A6649', warning: '#8A4A00' },
+  dark: { danger: '#F87171', dangerDeep: '#FCA5A5', success: '#5FD3A5', warning: '#F5B860' },
+};
+
+export const DANGER = cssVar('danger');
+export const DANGER_DEEP = cssVar('danger-deep');
+export const SUCCESS = cssVar('success');
+export const WARNING = cssVar('warning');
+
+/**
+ * Ink and paper as rgb channels, for a wash of either at any strength that
+ * follows the mode: `rgba(var(--nf-ink-rgb),0.04)`. The light ink is 10,10,15,
+ * so the app's old `rgba(10,10,15,α)` washes read exactly as before in light
+ * mode and turn into light washes on the dark page.
+ */
+export const INK_RGB = cssVar('ink-rgb');
+export const PAPER_RGB = cssVar('paper-rgb');
+
+/** A well a shade off the page (the app's old #FAFAFB): canvas mixed into paper. */
+export const WELL = 'color-mix(in srgb, var(--nf-canvas) 40%, var(--nf-paper))';
+
+/**
  * Colours that never change with the mode: words and buttons over a photo,
  * the drawings of the app, the logo. Everything else uses the tokens above.
  */

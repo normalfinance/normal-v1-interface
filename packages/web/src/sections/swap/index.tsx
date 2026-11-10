@@ -9,6 +9,7 @@ import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { INK, FAINT, MUTED, PAPER, CANVAS } from '@/theme/brand-colors';
 import { ActivityCard } from '@/sections/portfolio/portfolio-activity-card';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
@@ -72,7 +73,11 @@ export default function SwapView() {
           variant="rectangular"
           height={48}
           width={200}
-          sx={{ borderRadius: 'var(--radius-md)', bgcolor: 'rgba(10,10,15,0.08)', mb: '24px' }}
+          sx={{
+            borderRadius: 'var(--radius-md)',
+            bgcolor: 'rgba(var(--nf-ink-rgb),0.08)',
+            mb: '24px',
+          }}
         />
         <Box
           sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px' }}
@@ -80,12 +85,12 @@ export default function SwapView() {
           <Skeleton
             variant="rectangular"
             height={420}
-            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
+            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }}
           />
           <Skeleton
             variant="rectangular"
             height={200}
-            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
+            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }}
           />
         </Box>
       </DashboardContent>
@@ -101,7 +106,7 @@ export default function SwapView() {
       return (
         <DashboardContent>
           <Box sx={{ display: 'flex', justifyContent: 'center', pt: { xs: 4, md: 7 } }}>
-            <Box sx={{ width: '100%', maxWidth: 460, bgcolor: '#fff' }}>
+            <Box sx={{ width: '100%', maxWidth: 460, bgcolor: PAPER }}>
               <GetStartedPicker />
             </Box>
           </Box>
@@ -127,20 +132,20 @@ export default function SwapView() {
               width: 56,
               height: 56,
               borderRadius: 'var(--radius-md)',
-              bgcolor: '#F4F4F7',
+              bgcolor: CANVAS,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#9A9AA3',
+              color: FAINT,
             }}
           >
             <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 28 }} />
           </Box>
           <Box>
-            <Box sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
+            <Box sx={{ fontSize: '16px', fontWeight: 500, color: INK, mb: '6px' }}>
               Connect your wallet
             </Box>
-            <Box sx={{ fontSize: '14px', color: '#6B6B76', maxWidth: 280 }}>
+            <Box sx={{ fontSize: '14px', color: MUTED, maxWidth: 280 }}>
               Sign in to swap XLM, USDC, BTC, ETH and SOL.
             </Box>
           </Box>
@@ -153,8 +158,8 @@ export default function SwapView() {
               py: '10px',
               borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: '#0A0A0F',
-              color: '#fff',
+              bgcolor: INK,
+              color: PAPER,
               fontSize: '14px',
               fontWeight: 500,
               cursor: 'pointer',

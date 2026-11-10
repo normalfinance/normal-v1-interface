@@ -37,11 +37,6 @@ function applySiteTheme() {
   document.documentElement.style.colorScheme = mode;
 }
 
-function clearSiteTheme() {
-  document.documentElement.removeAttribute(SITE_THEME_ATTR);
-  document.documentElement.style.colorScheme = '';
-}
-
 function notify() {
   applySiteTheme();
   listeners.forEach((listener) => listener());
@@ -86,13 +81,11 @@ export function useSiteTheme() {
 }
 
 /**
- * Mounted by the site frame. Puts the mode on <html> when the marketing site
- * comes on screen (also after a client-side visit to the app, which has none)
- * and takes it off when the site leaves, so the app always renders light.
+ * Mounted by the site frame and the app frame. Puts the visitor's mode on
+ * <html> when either comes on screen: both follow the same choice.
  */
 export function useSiteThemeScope() {
   useLayoutEffect(() => {
     applySiteTheme();
-    return clearSiteTheme;
   }, []);
 }

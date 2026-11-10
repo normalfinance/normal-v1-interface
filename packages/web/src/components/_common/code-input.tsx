@@ -4,14 +4,16 @@ import type { Theme } from '@mui/material/styles';
 
 import { useTranslate } from '@/locales';
 import { useRef, useState, useEffect } from 'react';
+import {
+  INK,
+  PAPER,
+  DANGER as ERROR,
+  HAIRLINE_STRONG as STRONG_HAIRLINE,
+} from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 
 import { MONO_FONT } from './brand';
-
-const INK = '#0A0A0F';
-const ERROR = '#B91C1C';
-const STRONG_HAIRLINE = 'rgba(10,10,15,0.14)';
 
 // Keys that would move the caret off the end, where typing must always land.
 const CARET_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
@@ -87,7 +89,7 @@ export function CodeInput({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: '#FFFFFF',
+          bgcolor: PAPER,
           border: `1px solid ${STRONG_HAIRLINE}`,
           borderRadius: 'var(--radius-md)',
           fontFamily: MONO_FONT,
@@ -102,12 +104,6 @@ export function CodeInput({
           ...(error && {
             borderColor: ERROR,
             outline: '3px solid rgba(185,28,28,0.08)',
-          }),
-          ...theme.applyStyles('dark', {
-            bgcolor: 'rgba(255,255,255,0.04)',
-            borderColor: active ? 'text.primary' : 'rgba(255,255,255,0.16)',
-            color: 'text.primary',
-            ...(error && { borderColor: ERROR }),
           }),
         })}
       >

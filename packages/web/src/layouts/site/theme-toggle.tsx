@@ -10,7 +10,7 @@ import { useSiteTheme, useSiteThemeScope } from './use-site-theme';
 
 // ----------------------------------------------------------------------
 
-/** Rendered once by the site frame: keeps <html> in the visitor's mode. */
+/** Rendered by the site frame and the app frame: keeps <html> in the visitor's mode. */
 export function SiteThemeScope() {
   useSiteThemeScope();
   return null;

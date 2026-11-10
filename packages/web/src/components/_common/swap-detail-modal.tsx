@@ -17,12 +17,23 @@ import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
 import { indexById } from '@/lib/index/indexes';
 import { RouterLink } from '@/routes/components';
-import { BRAND_COLORS } from '@/theme/brand-colors';
 import { abortTimeout } from '@/utils/abort-timeout';
 import { assetName } from '@/lib/portfolio/asset-names';
 import { useState, useEffect, useCallback } from 'react';
 import { transferEnding } from '@/lib/cctp/transfer-ending';
 import { heldSymbolOf, INDEX_DIRECTION } from '@/lib/index/legs';
+import {
+  INK,
+  WELL,
+  FAINT,
+  MUTED,
+  PAPER,
+  DANGER,
+  SUCCESS,
+  WARNING,
+  INK_SOFT,
+  BRAND_COLORS,
+} from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
@@ -111,9 +122,29 @@ function buildSteps(tr: CctpTransferDetail, t: Translate): Step[] {
   if (tr.direction === INDEX_DIRECTION) {
     const held = tr.dstSwapTxHash ? null : heldSymbolOf(tr.errorDetail);
     return [
-      { key: 'burn', label: t('Hand it to Circle'), sub: t('From your Stellar wallet'), hash: tr.burnTxHash, explorer: 'stellar' },
-      { key: 'attest', label: t('Circle confirms'), sub: attested ? t('Confirmed') : ending ? t('Not reached') : t('Waiting for Circle'), hash: null, explorer: null, done: attested },
-      { key: 'mint', label: t('Created on {{chain}}', { chain: 'Base' }), sub: t('Digital dollars at your own Base address'), hash: tr.mintTxHash, explorer: 'base', done: tr.status === 'COMPLETED' },
+      {
+        key: 'burn',
+        label: t('Hand it to Circle'),
+        sub: t('From your Stellar wallet'),
+        hash: tr.burnTxHash,
+        explorer: 'stellar',
+      },
+      {
+        key: 'attest',
+        label: t('Circle confirms'),
+        sub: attested ? t('Confirmed') : ending ? t('Not reached') : t('Waiting for Circle'),
+        hash: null,
+        explorer: null,
+        done: attested,
+      },
+      {
+        key: 'mint',
+        label: t('Created on {{chain}}', { chain: 'Base' }),
+        sub: t('Digital dollars at your own Base address'),
+        hash: tr.mintTxHash,
+        explorer: 'base',
+        done: tr.status === 'COMPLETED',
+      },
       {
         key: 'buy',
         label: t('Buy the coins'),
@@ -134,28 +165,96 @@ function buildSteps(tr: CctpTransferDetail, t: Translate): Step[] {
   if (tr.direction === 'stellar_to_crosschain') {
     const coin = assetName(tr.dstAsset);
     return [
-      { key: 'burn', label: t('Hand it to Circle'), sub: t('From your Stellar wallet'), hash: tr.burnTxHash, explorer: 'stellar' },
-      { key: 'attest', label: t('Circle confirms'), sub: attested ? t('Confirmed') : ending ? t('Not reached') : t('Waiting for Circle'), hash: null, explorer: null, done: attested },
-      { key: 'mint', label: t('Created on {{chain}}', { chain: 'Base' }), sub: t('Digital dollars at your own Base address'), hash: tr.mintTxHash, explorer: 'base' },
+      {
+        key: 'burn',
+        label: t('Hand it to Circle'),
+        sub: t('From your Stellar wallet'),
+        hash: tr.burnTxHash,
+        explorer: 'stellar',
+      },
+      {
+        key: 'attest',
+        label: t('Circle confirms'),
+        sub: attested ? t('Confirmed') : ending ? t('Not reached') : t('Waiting for Circle'),
+        hash: null,
+        explorer: null,
+        done: attested,
+      },
+      {
+        key: 'mint',
+        label: t('Created on {{chain}}', { chain: 'Base' }),
+        sub: t('Digital dollars at your own Base address'),
+        hash: tr.mintTxHash,
+        explorer: 'base',
+      },
       ending?.kind === 'coming-back'
-        ? { key: 'back', label: t('Sent back as digital dollars'), sub: t('The swap to {{coin}} could not finish', { coin }), hash: null, explorer: null, done: true }
-        : { key: 'pivot', label: t('Buy {{coin}}', { coin }), sub: t('Exchanged on Base and sent to your {{coin}} wallet', { coin }), hash: tr.dstSwapTxHash, explorer: 'lifi' },
+        ? {
+            key: 'back',
+            label: t('Sent back as digital dollars'),
+            sub: t('The swap to {{coin}} could not finish', { coin }),
+            hash: null,
+            explorer: null,
+            done: true,
+          }
+        : {
+            key: 'pivot',
+            label: t('Buy {{coin}}', { coin }),
+            sub: t('Exchanged on Base and sent to your {{coin}} wallet', { coin }),
+            hash: tr.dstSwapTxHash,
+            explorer: 'lifi',
+          },
     ];
   }
   // inbound: crosschain_to_stellar
   const coming = [
-    { key: 'burn', label: t('Hand it to Circle'), sub: t('From your Base address'), hash: tr.burnTxHash, explorer: 'base' as const },
-    { key: 'attest', label: t('Circle confirms'), sub: attested ? t('Confirmed') : ending ? t('Not reached') : t('Waiting for Circle, about 20 minutes'), hash: null, explorer: null, done: attested },
-    { key: 'mint', label: t('Created on Stellar'), sub: t('Digital dollars in your Stellar wallet'), hash: tr.mintTxHash, explorer: 'stellar' as const },
+    {
+      key: 'burn',
+      label: t('Hand it to Circle'),
+      sub: t('From your Base address'),
+      hash: tr.burnTxHash,
+      explorer: 'base' as const,
+    },
+    {
+      key: 'attest',
+      label: t('Circle confirms'),
+      sub: attested
+        ? t('Confirmed')
+        : ending
+          ? t('Not reached')
+          : t('Waiting for Circle, about 20 minutes'),
+      hash: null,
+      explorer: null,
+      done: attested,
+    },
+    {
+      key: 'mint',
+      label: t('Created on Stellar'),
+      sub: t('Digital dollars in your Stellar wallet'),
+      hash: tr.mintTxHash,
+      explorer: 'stellar' as const,
+    },
   ];
   // "Bring back as USDC": digital dollars on their way home, no exchange.
   if (tr.srcAsset === 'USDC' && tr.dstAsset === 'USDC') return coming;
   const coin = assetName(tr.srcAsset);
-  const send: Step = { key: 'src', label: t('Send to the exchange'), sub: t('Exchanged for digital dollars on Base'), hash: tr.srcSwapTxHash, explorer: 'lifi' };
+  const send: Step = {
+    key: 'src',
+    label: t('Send to the exchange'),
+    sub: t('Exchanged for digital dollars on Base'),
+    hash: tr.srcSwapTxHash,
+    explorer: 'lifi',
+  };
   if (ending?.kind === 'sent-back') {
     return [
       { ...send, done: true },
-      { key: 'back', label: t('The exchange sends it back'), sub: t('{{coin}} back in your wallet', { coin }), hash: null, explorer: null, done: true },
+      {
+        key: 'back',
+        label: t('The exchange sends it back'),
+        sub: t('{{coin}} back in your wallet', { coin }),
+        hash: null,
+        explorer: null,
+        done: true,
+      },
     ];
   }
   if (ending?.kind === 'not-sent') {
@@ -165,9 +264,9 @@ function buildSteps(tr: CctpTransferDetail, t: Translate): Step[] {
 }
 
 const STATUS_CHIP: Record<string, { label: string; color: string; bg: string }> = {
-  COMPLETED: { label: 'Completed', color: '#0A6649', bg: 'rgba(26,179,125,0.12)' },
-  FAILED: { label: 'Failed', color: '#B91C1C', bg: 'rgba(220,38,38,0.1)' },
-  REFUNDED: { label: 'Refunded', color: '#8A4A00', bg: 'rgba(245,158,11,0.12)' },
+  COMPLETED: { label: 'Completed', color: SUCCESS, bg: 'rgba(26,179,125,0.12)' },
+  FAILED: { label: 'Failed', color: DANGER, bg: 'rgba(220,38,38,0.1)' },
+  REFUNDED: { label: 'Refunded', color: WARNING, bg: 'rgba(245,158,11,0.12)' },
 };
 
 export function SwapDetailModal({
@@ -258,8 +357,7 @@ export function SwapDetailModal({
   // An index purchase too: COMPLETED is Circle's part, the coins come after.
   const settlesLater =
     transfer?.direction === 'stellar_to_crosschain' || transfer?.direction === INDEX_DIRECTION;
-  const isDone =
-    transfer?.status === 'COMPLETED' && (!settlesLater || !!transfer.dstSwapTxHash);
+  const isDone = transfer?.status === 'COMPLETED' && (!settlesLater || !!transfer.dstSwapTxHash);
   // A coin of an index purchase that stopped retrying: the person's move.
   const heldCoin =
     transfer?.direction === INDEX_DIRECTION && !transfer.dstSwapTxHash
@@ -273,26 +371,26 @@ export function SwapDetailModal({
   const needsAction =
     !!heldCoin ||
     (!!transfer &&
-    transfer.direction === 'stellar_to_crosschain' &&
-    (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
-    !transfer.dstSwapTxHash &&
-    transfer.status !== 'REFUNDED');
+      transfer.direction === 'stellar_to_crosschain' &&
+      (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
+      !transfer.dstSwapTxHash &&
+      transfer.status !== 'REFUNDED');
   const activeIdx =
     isDone || ending?.calm ? -1 : steps.findIndex((s) => !(s.done || !!s.hash || s.stopped));
   const chip = transfer
     ? transfer.direction === 'stellar_to_crosschain' &&
       transfer.status === 'COMPLETED' &&
       !transfer.dstSwapTxHash
-      ? { label: t('Action needed'), color: '#8A4A00', bg: 'rgba(245,158,11,0.12)' }
+      ? { label: t('Action needed'), color: WARNING, bg: 'rgba(245,158,11,0.12)' }
       : heldCoin
-        ? { label: t('Action needed'), color: '#8A4A00', bg: 'rgba(245,158,11,0.12)' }
+        ? { label: t('Action needed'), color: WARNING, bg: 'rgba(245,158,11,0.12)' }
         : transfer.direction === INDEX_DIRECTION && transfer.status === 'COMPLETED' && !isDone
           ? undefined // Circle's part is done, the coins are still being bought
           : ending?.calm
             ? {
                 label: ending.kind === 'not-sent' ? t('Not sent') : t('Sent back'),
-                color: '#2A2A33',
-                bg: 'rgba(10,10,15,0.06)',
+                color: INK_SOFT,
+                bg: 'rgba(var(--nf-ink-rgb),0.06)',
               }
             : STATUS_CHIP[transfer.status]
     : undefined;
@@ -315,8 +413,12 @@ export function SwapDetailModal({
     if (res?.ok) setTransfer((tr) => (tr ? { ...tr, errorDetail: null } : tr));
     setRetryNote(
       res?.ok
-        ? t('{{coin}} is being bought again. It finishes on its own: follow it in Activity.', { coin })
-        : t('That did not start. Your {{coin}} share is still safe at your own Base address.', { coin })
+        ? t('{{coin}} is being bought again. It finishes on its own: follow it in Activity.', {
+            coin,
+          })
+        : t('That did not start. Your {{coin}} share is still safe at your own Base address.', {
+            coin,
+          })
     );
     window.dispatchEvent(new Event('nf:activity-updated'));
   };
@@ -330,13 +432,13 @@ export function SwapDetailModal({
       PaperProps={{ sx: { borderRadius: 'var(--radius-lg)', p: '22px', maxWidth: 420 } }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '14px' }}>
-        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: INK }}>
           {transfer?.direction === INDEX_DIRECTION ? t('Purchase details') : t('Swap details')}
         </Typography>
         <Box
           component="button"
           onClick={onClose}
-          sx={{ all: 'unset', cursor: 'pointer', color: '#9A9AA3', display: 'flex' }}
+          sx={{ all: 'unset', cursor: 'pointer', color: FAINT, display: 'flex' }}
         >
           <Iconify icon="mingcute:close-line" width={20} />
         </Box>
@@ -344,10 +446,10 @@ export function SwapDetailModal({
 
       {loading && !transfer ? (
         <Stack alignItems="center" sx={{ py: '32px' }}>
-          <CircularProgress size={22} sx={{ color: '#0A0A0F' }} />
+          <CircularProgress size={22} sx={{ color: INK }} />
         </Stack>
       ) : !transfer ? (
-        <Typography sx={{ fontSize: '13px', color: '#6B6B76', py: '20px', textAlign: 'center' }}>
+        <Typography sx={{ fontSize: '13px', color: MUTED, py: '20px', textAlign: 'center' }}>
           {t('Could not load this transfer.')}
         </Typography>
       ) : (
@@ -357,13 +459,13 @@ export function SwapDetailModal({
             sx={{
               p: '12px 14px',
               borderRadius: 'var(--radius-md)',
-              bgcolor: '#FAFAFB',
-              border: '1px solid rgba(10,10,15,0.08)',
+              bgcolor: WELL,
+              border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
               mb: '14px',
             }}
           >
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
+              <Typography sx={{ fontSize: '15px', fontWeight: 500, color: INK, ...MONO }}>
                 {transfer.direction === INDEX_DIRECTION ? (
                   <>
                     {fmt(transfer.srcAmount)} {transfer.srcAsset} →{' '}
@@ -383,7 +485,7 @@ export function SwapDetailModal({
                   height: 22,
                   fontSize: '11px',
                   fontWeight: 500,
-                  color: chip?.color ?? '#8A4A00',
+                  color: chip?.color ?? WARNING,
                   bgcolor: chip?.bg ?? 'rgba(245,158,11,0.12)',
                   '& .MuiChip-label': { px: '8px' },
                 }}
@@ -417,7 +519,10 @@ export function SwapDetailModal({
                     }}
                   >
                     {s.stopped ? (
-                      <Box sx={{ width: 10, height: 2, bgcolor: '#9A9AA3' }} aria-label={t('Not sent')} />
+                      <Box
+                        sx={{ width: 10, height: 2, bgcolor: FAINT }}
+                        aria-label={t('Not sent')}
+                      />
                     ) : stepDone ? (
                       <Iconify icon="lets-icons:check-fill" width={20} sx={{ color: '#1AB37D' }} />
                     ) : showError ? (
@@ -433,14 +538,14 @@ export function SwapDetailModal({
                         sx={{ color: BRAND_COLORS.yellow.deep }}
                       />
                     ) : isActive ? (
-                      <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />
+                      <CircularProgress size={16} sx={{ color: INK }} />
                     ) : (
                       <Box
                         sx={{
                           width: 8,
                           height: 8,
                           borderRadius: '50%',
-                          bgcolor: 'rgba(10,10,15,0.15)',
+                          bgcolor: 'rgba(var(--nf-ink-rgb),0.15)',
                         }}
                       />
                     )}
@@ -450,13 +555,13 @@ export function SwapDetailModal({
                       sx={{
                         fontSize: '13.5px',
                         fontWeight: 500,
-                        color: '#0A0A0F',
+                        color: INK,
                         lineHeight: 1.35,
                       }}
                     >
                       {s.label}
                     </Typography>
-                    <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', lineHeight: 1.4 }}>
+                    <Typography sx={{ fontSize: '11.5px', color: FAINT, lineHeight: 1.4 }}>
                       {s.sub}
                     </Typography>
                   </Box>
@@ -470,11 +575,11 @@ export function SwapDetailModal({
                         alignItems: 'center',
                         gap: '3px',
                         fontSize: '11px',
-                        color: '#6B6B76',
+                        color: MUTED,
                         textDecoration: 'none',
                         ...MONO,
                         flexShrink: 0,
-                        '&:hover': { color: '#0A0A0F' },
+                        '&:hover': { color: INK },
                       }}
                     >
                       {shortHash(s.hash)}
@@ -487,7 +592,7 @@ export function SwapDetailModal({
           </Stack>
 
           {transfer.gasTopUpTxHash && !['skipped', 'pending'].includes(transfer.gasTopUpTxHash) && (
-            <Typography sx={{ fontSize: '11px', color: '#9A9AA3', mt: '8px' }}>
+            <Typography sx={{ fontSize: '11px', color: FAINT, mt: '8px' }}>
               {t('Network fees on Base were sponsored by Normal.')}
             </Typography>
           )}
@@ -499,16 +604,16 @@ export function SwapDetailModal({
                 px: '12px',
                 py: '10px',
                 borderRadius: 'var(--radius-md)',
-                bgcolor: ending.calm ? '#FAFAFB' : 'rgba(220,38,38,0.05)',
+                bgcolor: ending.calm ? WELL : 'rgba(220,38,38,0.05)',
                 border: ending.calm
-                  ? '1px solid rgba(10,10,15,0.08)'
+                  ? '1px solid rgba(var(--nf-ink-rgb),0.08)'
                   : '1px solid rgba(220,38,38,0.15)',
               }}
             >
               <Typography
                 sx={{
                   fontSize: '12px',
-                  color: '#2A2A33',
+                  color: INK_SOFT,
                   lineHeight: 1.5,
                   wordBreak: 'break-word',
                 }}
@@ -557,8 +662,8 @@ export function SwapDetailModal({
                   fontWeight: 500,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
-                  bgcolor: '#0A0A0F',
-                  color: '#fff',
+                  bgcolor: INK,
+                  color: PAPER,
                   '&:hover': { opacity: 0.85 },
                 }}
               >
@@ -582,8 +687,8 @@ export function SwapDetailModal({
                 fontWeight: 500,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
-                bgcolor: '#0A0A0F',
-                color: '#fff',
+                bgcolor: INK,
+                color: PAPER,
                 '&:hover': { opacity: 0.85 },
               }}
             >
@@ -591,7 +696,9 @@ export function SwapDetailModal({
             </Box>
           )}
           {retryNote && (
-            <Typography sx={{ mt: '12px', fontSize: '13px', lineHeight: 1.5, color: 'text.secondary' }}>
+            <Typography
+              sx={{ mt: '12px', fontSize: '13px', lineHeight: 1.5, color: 'text.secondary' }}
+            >
               {retryNote}
             </Typography>
           )}
@@ -607,7 +714,7 @@ export function SwapDetailModal({
                 mt: '14px',
                 fontSize: '13px',
                 fontWeight: 500,
-                color: '#0A0A0F',
+                color: INK,
                 textAlign: 'center',
                 textDecoration: 'underline',
                 textUnderlineOffset: '3px',

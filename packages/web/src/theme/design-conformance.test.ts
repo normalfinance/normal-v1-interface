@@ -4,7 +4,7 @@ import { it, expect, describe } from '@jest/globals';
 
 import { shadows } from './core/shadows';
 import { customShadows } from './core/custom-shadows';
-import { APP_PATHS, SITE_THEME_CSS, SITE_THEME_ATTR } from './site-theme';
+import { SITE_THEME_CSS, SITE_THEME_ATTR, SITE_THEME_INIT } from './site-theme';
 import {
   INK,
   BAND,
@@ -24,6 +24,7 @@ import {
   SOCIAL_COLORS,
   SOCIAL_PALETTE,
   HAIRLINE_COLOR,
+  STATUS_PALETTE,
   HAIRLINE_STRONG,
   STATEMENT_COLORS,
   STATEMENT_PALETTE,
@@ -289,13 +290,9 @@ describe('the marketing site follows dark mode', () => {
     );
   });
 
-  it('the app routes are left out, so the app stays light', () => {
-    ['/app', '/app/savings', '/login', '/signup', '/auth/callback', '/dev'].forEach((route) =>
-      expect(APP_PATHS.test(route)).toBe(true)
-    );
-    ['/', '/about', '/roadmap', '/contact', '/legal/tos', '/applications', '/developers'].forEach(
-      (route) => expect(APP_PATHS.test(route)).toBe(false)
-    );
+  it('every route follows the choice: the head script leaves no page out', () => {
+    // The app went dark too (2026-11-10), so no route is skipped any more.
+    expect(SITE_THEME_INIT).not.toMatch(/location\.pathname/);
   });
 });
 
@@ -337,6 +334,12 @@ describe.each(MODES)('%s mode stays readable (WCAG AA)', (mode) => {
 
   it.each(Object.entries(BLOCK_PALETTE))('%s: the words on its block of colour', (_, block) => {
     expect(contrast(block[mode].words, block[mode].surface)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("the status colours (the app's reds, greens and ambers) as words on the page", () => {
+    Object.values(STATUS_PALETTE[mode]).forEach((color) => {
+      expect(contrast(color, page.paper)).toBeGreaterThanOrEqual(4.5);
+    });
   });
 
   it('the statement colours as display words on the page', () => {

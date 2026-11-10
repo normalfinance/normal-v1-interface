@@ -1,12 +1,12 @@
 'use client';
 
+import { PAPER } from '@/theme/brand-colors';
 import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
 
 import { getAssetNetwork } from './network-badge';
-
 // ---------------------------------------------------------------------------
 // Asset icon with a small network logo overlaid bottom-right (the familiar
 // wallet pattern: USDC icon + Stellar mini-badge). Only USDC gets the badge —
@@ -44,7 +44,7 @@ export function AssetAvatar({ token, size = 32 }: AssetAvatarProps) {
             height: overlaySize,
             borderRadius: '50%',
             border: '1.5px solid #fff',
-            bgcolor: '#fff',
+            bgcolor: PAPER,
             objectFit: 'cover',
           }}
         />

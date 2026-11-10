@@ -3,6 +3,7 @@ import {
   HUE_PALETTE,
   BLOCK_PALETTE,
   SOCIAL_PALETTE,
+  STATUS_PALETTE,
   STATEMENT_PALETTE,
 } from './brand-colors';
 
@@ -10,7 +11,7 @@ import type { Mode } from './brand-colors';
 
 // ----------------------------------------------------------------------
 
-// Dark mode for the marketing site. Plain values, no 'use client': the root
+// Dark mode for the whole site and app. Plain values, no 'use client': the root
 // layout (a server component) writes both strings into the page head.
 //
 // One attribute drives it: html[data-site-theme="light" | "dark"]. The head
@@ -18,15 +19,12 @@ import type { Mode } from './brand-colors';
 // in localStorage or, without one, their system setting. The site frame keeps
 // it in step after that (layouts/site/use-site-theme.ts).
 //
-// The app (/app), sign-in and the auth callbacks never get the attribute, so
-// they stay light: their screens still use fixed light colours. Moving them to
-// the tokens and dropping them from APP_PATHS is all it takes to bring them in.
+// Every route follows the one choice (Niko 2026-11-10: the app pages in dark
+// and light mode too): the marketing site, the app, sign-in and the auth
+// callbacks. The app reads its colours from the same tokens.
 
 export const SITE_THEME_ATTR = 'data-site-theme';
 export const SITE_THEME_STORAGE_KEY = 'nf-theme';
-
-/** Routes that stay light: everything in app/(wallet). */
-export const APP_PATHS = /^\/(app|login|signup|auth|dev)(\/|$)/;
 
 export type ThemeChoice = Mode | 'system';
 
@@ -50,7 +48,14 @@ function declarations(mode: Mode): string {
   const blocks = Object.entries(BLOCK_PALETTE).flatMap(([hue, tones]) =>
     Object.entries(tones[mode]).map(([tone, value]) => `--nf-block-${hue}-${tone}:${value};`)
   );
-  return [...neutrals, ...hues, ...statement, ...socials, ...blocks].join('');
+  // Ink and paper as rgb channels (`rgba(var(--nf-ink-rgb),0.08)`), and the
+  // status colours, for the app's washes, words and marks in both modes.
+  const commas = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(',');
+  const rgb = [`--nf-ink-rgb:${commas(n.ink)};`, `--nf-paper-rgb:${commas(n.paper)};`];
+  const status = Object.entries(STATUS_PALETTE[mode]).map(
+    ([key, value]) => `--nf-${toKebab(key)}:${value};`
+  );
+  return [...neutrals, ...hues, ...statement, ...socials, ...blocks, ...rgb, ...status].join('');
 }
 
 // In dark mode MUI's own colours follow too, so typography, menus, dialogs and
@@ -91,10 +96,12 @@ export const SITE_THEME_CSS = [
   `:root{${declarations('light')}}`,
   `${DARK}{${declarations('dark')}${muiDarkOverrides()}color-scheme:dark;}`,
   `${DARK} body{background-color:var(--nf-paper);color:var(--nf-ink);}`,
+  // Stellar's logo is a black rocket: white on the dark page, wherever it shows.
+  `${DARK} img[src$="/tokens/XLM.webp"]{filter:invert(1);}`,
 ].join('');
 
 /**
  * Runs in the head before anything paints. Mirrors resolveSiteTheme() in
  * layouts/site/use-site-theme.ts; keep the two in step.
  */
-export const SITE_THEME_INIT = `(function(){try{var d=document.documentElement;if(${APP_PATHS.toString()}.test(location.pathname))return;var c=localStorage.getItem('${SITE_THEME_STORAGE_KEY}');var m=c==='dark'||c==='light'?c:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');d.setAttribute('${SITE_THEME_ATTR}',m);d.style.colorScheme=m;}catch(e){}})();`;
+export const SITE_THEME_INIT = `(function(){try{var d=document.documentElement;var c=localStorage.getItem('${SITE_THEME_STORAGE_KEY}');var m=c==='dark'||c==='light'?c:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');d.setAttribute('${SITE_THEME_ATTR}',m);d.style.colorScheme=m;}catch(e){}})();`;

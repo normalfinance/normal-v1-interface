@@ -3,6 +3,7 @@
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useState, useEffect } from 'react';
+import { WARNING } from '@/theme/brand-colors';
 import { usePersistStore } from '@normalfinance/state';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
@@ -16,7 +17,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { useSnackbar } from '@/components/template/snackbar';
 import ExternalWalletSetupDialog from '@/components/_common/external-wallet-setup-dialog';
-
 // ---------------------------------------------------------------------------
 // #74: the one notice for "this wallet can't hold USDC yet". Self-contained:
 // probes the address, maps through deriveWalletReadiness, renders NOTHING
@@ -190,7 +190,7 @@ export default function WalletReadinessNotice({
         border: '1px solid rgba(245,158,11,0.35)',
       }}
     >
-      <Typography sx={{ fontSize: '12px', color: '#92400E', lineHeight: 1.5 }}>
+      <Typography sx={{ fontSize: '12px', color: WARNING, lineHeight: 1.5 }}>
         {message}
         {!isActivation && (
           <Box component="span" sx={{ color: 'rgba(146,64,14,0.7)' }}>
@@ -215,14 +215,14 @@ export default function WalletReadinessNotice({
             fontFamily: 'inherit',
             cursor: action.busy ? 'default' : 'pointer',
             bgcolor: 'transparent',
-            color: '#92400E',
+            color: WARNING,
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
             '&:hover': action.busy ? {} : { bgcolor: 'rgba(245,158,11,0.12)' },
           }}
         >
-          {action.busy && <CircularProgress size={12} sx={{ color: '#92400E' }} />}
+          {action.busy && <CircularProgress size={12} sx={{ color: WARNING }} />}
           {action.label}
         </Box>
       )}

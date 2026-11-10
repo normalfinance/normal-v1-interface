@@ -9,6 +9,8 @@
 
 import type { Theme, SxProps } from '@mui/material/styles';
 
+import { INK } from '@/theme/brand-colors';
+
 import Box from '@mui/material/Box';
 
 import { Iconify } from '@/components/template/iconify';
@@ -31,8 +33,8 @@ export default function ModalCloseButton({ onClick, sx, ...rest }: Props) {
         height: 28,
         borderRadius: 'var(--radius-md)',
         border: 'none',
-        bgcolor: 'rgba(10,10,15,0.06)',
-        color: '#0A0A0F',
+        bgcolor: 'rgba(var(--nf-ink-rgb),0.06)',
+        color: INK,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -41,8 +43,8 @@ export default function ModalCloseButton({ onClick, sx, ...rest }: Props) {
         flexShrink: 0,
         p: 0,
         transition: 'background 150ms ease',
-        '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
-        '&:focus-visible': { outline: '2px solid #0A0A0F', outlineOffset: '2px' },
+        '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.1)' },
+        '&:focus-visible': { outline: `2px solid ${INK}`, outlineOffset: '2px' },
         ...sx,
       }}
     >

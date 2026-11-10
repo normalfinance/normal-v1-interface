@@ -8,6 +8,7 @@ import {
   INK,
   MUTED,
   PAPER,
+  DANGER,
   INK_SOFT,
   BRAND_COLORS,
   HAIRLINE_STRONG,
@@ -38,7 +39,7 @@ import { BOX_PX, FIGURES, StatusBadge } from '../app-ui';
 // on you is yellow, a failure is red. Everything else is ink and grey.
 // ---------------------------------------------------------------------------
 
-const RED = '#B91C1C';
+const RED = { DANGER };
 const RAIL_X = 11; // centre of the 22px marker
 
 // Up to three coins in the 32px slot every place icon takes, so the text

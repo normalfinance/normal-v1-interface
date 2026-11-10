@@ -9,6 +9,7 @@ import { useTranslate } from '@/locales';
 import { usePersistStore } from '@normalfinance/state';
 import { rememberLoginIntent } from '@/lib/loginIntent';
 import React, { useRef, useState, useEffect } from 'react';
+import { useSiteTheme } from '@/layouts/site/use-site-theme';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
@@ -111,6 +112,8 @@ export function AuthForm() {
   const [challengeShown, setChallengeShown] = useState(false);
 
   const turnstileRef = useRef<TurnstileInstance>(null);
+  // The captcha in the page's mode.
+  const { mode: themeMode } = useSiteTheme();
   const consentRef = useRef<HTMLLabelElement>(null);
   const previousMode = useRef(mode);
   const keepEmailOnSwitch = useRef(false);
@@ -780,7 +783,7 @@ export function AuthForm() {
         <Turnstile
           ref={turnstileRef}
           siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
-          options={{ appearance: 'interaction-only' }}
+          options={{ appearance: 'interaction-only', theme: themeMode }}
           onSuccess={setCaptchaToken}
           onBeforeInteractive={() => setChallengeShown(true)}
           onAfterInteractive={() => setChallengeShown(false)}

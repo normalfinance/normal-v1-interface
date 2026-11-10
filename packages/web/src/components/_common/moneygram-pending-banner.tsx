@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
-import { BRAND_COLORS } from '@/theme/brand-colors';
 import { PENDING_MGI_STATUSES } from '@/lib/mgi/statuses';
+import { WARNING, BRAND_COLORS } from '@/theme/brand-colors';
 import { useMgiTransactions } from '@/hooks/use-mgi-transactions';
 
 import { Box, Stack, Button, Typography } from '@mui/material';
@@ -50,7 +50,7 @@ export default function MoneyGramPendingBanner() {
               style={{ color: BRAND_COLORS.yellow.deep }}
             />
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ color: '#92400E' }}>
+              <Typography variant="subtitle2" sx={{ color: WARNING }}>
                 {tx.kind === 'deposit'
                   ? t('MoneyGram cash deposit pending')
                   : t('MoneyGram cash-out pending')}

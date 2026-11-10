@@ -12,6 +12,7 @@ import { stellarSwapPlan } from '@/lib/flow/plans';
 import { useDebounce } from '@/hooks/use-debounce';
 import { confirmAction } from '@/lib/auth/action-code';
 import { usePersistStore } from '@normalfinance/state';
+import { INK, MUTED, FAINT } from '@/theme/brand-colors';
 import { awaitTxRecord } from '@/lib/stellar/await-tx-visible';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
@@ -36,7 +37,6 @@ import {
 } from '@/components/_common/flow/flow-links';
 
 import type { SwapFlow, StellarSymbol, SwapEngineResult } from './types';
-
 /** A price older than this is fetched again at Confirm. */
 const QUOTE_FRESH_MS = 45_000;
 /** A fresh price this much worse goes back to the review instead of signing. */
@@ -488,7 +488,7 @@ export function useSoroswapEngine({
         action: user ? () => setStellarSetupOpen(true) : null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
             {t('One passkey adds Stellar to your wallet. Swaps run right after.')}
           </Typography>
         ),
@@ -502,7 +502,7 @@ export function useSoroswapEngine({
         action: onNeedsSetup,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
             {t('Your Normal wallet needs a quick setup step before it can swap.')}
           </Typography>
         ),
@@ -516,7 +516,7 @@ export function useSoroswapEngine({
         action: onNeedsSetup ?? (() => startAction('receive')),
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center', px: 1 }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center', px: 1 }}>
             {t(
               'Your Stellar account activates once it receives at least 1 XLM. Then the USDC trustline can be added.'
             )}
@@ -529,7 +529,7 @@ export function useSoroswapEngine({
         action: isAddingTrustline ? null : handleAddTrustline,
         loading: isAddingTrustline,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
             {t('A USDC trustline is required before swapping to USDC')}
           </Typography>
         ),
@@ -576,24 +576,22 @@ export function useSoroswapEngine({
       <Stack spacing={0.75}>
         {exchangeRate && (
           <Stack direction="row" justifyContent="space-between">
-            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Rate')}</Typography>
-            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
+            <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Rate')}</Typography>
+            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK, ...MONO }}>
               1 {fromSymbol} = {exchangeRate} {toSymbol}
             </Typography>
           </Stack>
         )}
         <Stack direction="row" justifyContent="space-between">
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
-            {t('Normal fee (0.5%)')}
-          </Typography>
-          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Normal fee (0.5%)')}</Typography>
+          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK, ...MONO }}>
             −{parseFloat(quote.fee || '0').toFixed(4)} {fromSymbol}
             {fromPrice.gt(0)
               ? ` (${fCurrency(BigNumber(quote.fee || '0').multipliedBy(fromPrice))})`
               : ''}
           </Typography>
         </Stack>
-        <Typography sx={{ fontSize: '11px', color: '#9A9AA3', lineHeight: 1.5 }}>
+        <Typography sx={{ fontSize: '11px', color: FAINT, lineHeight: 1.5 }}>
           {quote?.embedded
             ? t('One signature: the Normal fee is inside the swap transaction.')
             : t("You'll sign two transactions: the Normal fee and your swap.")}

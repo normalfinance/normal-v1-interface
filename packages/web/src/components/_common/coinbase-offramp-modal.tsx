@@ -9,6 +9,7 @@ import { useStellarConfig } from '@/hooks';
 import { authedFetch } from '@/utils/authed-fetch';
 import { useState, useEffect, useCallback } from 'react';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
+import { INK, WELL, MUTED, DANGER, INK_SOFT } from '@/theme/brand-colors';
 import { fetchSolBalance, fetchEthBalance } from '@/hooks/use-chain-portfolio';
 import { saveOfframpFill, fetchOfframpFills, removeOfframpFill } from '@/lib/offramp-fills';
 import {
@@ -31,7 +32,6 @@ import { Iconify } from '@/components/template/iconify';
 import { createSolanaAdapter } from './send-adapters/solana';
 import { createBitcoinAdapter } from './send-adapters/bitcoin';
 import { createEthereumAdapter } from './send-adapters/ethereum';
-
 // Kept back from the send so the source chain can pay its own network fee (and,
 // for SOL, the account's rent-exempt minimum ~0.00089 SOL + ~0.000005 fee).
 // Coinbase's "Max" doesn't know about these, so a max sell would otherwise fail
@@ -489,11 +489,11 @@ export function CoinbaseOfframpModal({
         <Stack spacing={2.5}>
           <Box sx={{ textAlign: 'center' }}>
             <Typography
-              sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+              sx={{ fontSize: '17px', fontWeight: 500, color: INK, letterSpacing: '-0.02em' }}
             >
               {title}
             </Typography>
-            <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '4px' }}>
+            <Typography sx={{ fontSize: '13px', color: MUTED, mt: '4px' }}>
               {stage === 'searching' && t('Looking for your Coinbase sell order…')}
               {stage === 'ready' &&
                 t(
@@ -536,8 +536,8 @@ export function CoinbaseOfframpModal({
                 sx={{
                   p: '14px',
                   borderRadius: 'var(--radius-md)',
-                  bgcolor: '#FAFAFB',
-                  border: '1px solid rgba(10,10,15,0.08)',
+                  bgcolor: WELL,
+                  border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
                 }}
               >
                 <Stack spacing={1.5}>
@@ -555,7 +555,7 @@ export function CoinbaseOfframpModal({
                         sx={{
                           fontSize: '17px',
                           fontWeight: 500,
-                          color: '#0A0A0F',
+                          color: INK,
                           letterSpacing: '-0.01em',
                           fontFamily: 'monospace',
                         }}
@@ -563,7 +563,7 @@ export function CoinbaseOfframpModal({
                         {txn.amount} {symbol}
                       </Typography>
                       {Number(token.price) > 0 && (
-                        <Typography sx={{ fontSize: '12.5px', color: '#6B6B76' }}>
+                        <Typography sx={{ fontSize: '12.5px', color: MUTED }}>
                           ≈ ${(parseFloat(txn.amount) * Number(token.price)).toFixed(2)}
                         </Typography>
                       )}
@@ -586,7 +586,7 @@ export function CoinbaseOfframpModal({
             )}
 
           {stage === 'ready' && windowExpired && (
-            <Typography sx={{ fontSize: '12.5px', color: '#B91C1C', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: '12.5px', color: DANGER, lineHeight: 1.5 }}>
               {t(
                 'Coinbase matches deposits for 30 minutes after “Cash out now”. This sale is past that window. Start a new sale on Coinbase instead of sending.'
               )}
@@ -595,7 +595,7 @@ export function CoinbaseOfframpModal({
 
           {(stage === 'searching' || stage === 'sending' || stage === 'confirming') && (
             <Stack alignItems="center" sx={{ py: 1 }}>
-              <CircularProgress size={26} sx={{ color: '#0A0A0F' }} />
+              <CircularProgress size={26} sx={{ color: INK }} />
             </Stack>
           )}
 
@@ -609,7 +609,7 @@ export function CoinbaseOfframpModal({
                 border: '1px solid rgba(220,38,38,0.15)',
               }}
             >
-              <Typography sx={{ fontSize: '12.5px', color: '#B91C1C', lineHeight: 1.5 }}>
+              <Typography sx={{ fontSize: '12.5px', color: DANGER, lineHeight: 1.5 }}>
                 {error}
               </Typography>
             </Box>
@@ -624,10 +624,10 @@ export function CoinbaseOfframpModal({
                 startIcon={<Iconify icon="solar:shield-keyhole-bold" width={18} />}
                 sx={{
                   borderRadius: 'var(--radius-md)',
-                  bgcolor: '#0A0A0F',
+                  bgcolor: INK,
                   textTransform: 'none',
                   fontWeight: 500,
-                  '&:hover': { bgcolor: '#2A2A33' },
+                  '&:hover': { bgcolor: INK_SOFT },
                 }}
               >
                 {t('Send with passkey')}
@@ -639,10 +639,10 @@ export function CoinbaseOfframpModal({
                 onClick={handleSend}
                 sx={{
                   borderRadius: 'var(--radius-md)',
-                  bgcolor: '#0A0A0F',
+                  bgcolor: INK,
                   textTransform: 'none',
                   fontWeight: 500,
-                  '&:hover': { bgcolor: '#2A2A33' },
+                  '&:hover': { bgcolor: INK_SOFT },
                 }}
               >
                 {t('Try again')}
@@ -656,8 +656,8 @@ export function CoinbaseOfframpModal({
                 borderRadius: 'var(--radius-md)',
                 textTransform: 'none',
                 fontWeight: 500,
-                borderColor: 'rgba(10,10,15,0.16)',
-                color: '#0A0A0F',
+                borderColor: 'rgba(var(--nf-ink-rgb),0.16)',
+                color: INK,
               }}
             >
               {stage === 'ready' ? t('Cancel') : t('Close')}
@@ -684,12 +684,12 @@ function Row({
     <Box
       sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
     >
-      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', flexShrink: 0 }}>{label}</Typography>
+      <Typography sx={{ fontSize: '12.5px', color: MUTED, flexShrink: 0 }}>{label}</Typography>
       <Typography
         sx={{
           fontSize: '12.5px',
           fontWeight: 500,
-          color: '#0A0A0F',
+          color: INK,
           fontFamily: mono ? '"Geist Mono", monospace' : 'inherit',
           ...(truncate
             ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }

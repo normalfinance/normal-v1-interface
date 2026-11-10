@@ -10,7 +10,6 @@ import { useTranslate } from '@/locales';
 import { fCurrency } from '@/utils/format-number';
 import { useFlowRun } from '@/hooks/use-flow-run';
 import { useDebounce } from '@/hooks/use-debounce';
-import { BRAND_COLORS } from '@/theme/brand-colors';
 import { MONO } from '@/sections/portfolio/_shared';
 import { bridgeName } from '@/lib/flow/lifi-status';
 import { executeLifiSwap } from '@/lib/lifi/execute';
@@ -20,6 +19,7 @@ import { requestLifiQuote } from '@/lib/lifi/request-quote';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { isBlockhashExpired } from '@/lib/chains/solana-blockhash';
+import { INK, MUTED, FAINT, BRAND_COLORS } from '@/theme/brand-colors';
 import { driftVerdict, isQuoteStale } from '@/lib/lifi/quote-freshness';
 // Loaded with the page, never on demand: the catch below reads it first, and
 // a failed on-demand load there would throw away the error handling.
@@ -184,8 +184,7 @@ export function useLifiEngine({
         startStep(REFUND_STEP.send, {
           note: t('{{tool}} is sending it back to your wallet.', { tool: runTool }),
         });
-      }
-      else if (p.phase === 'waiting' && flowState.activeId)
+      } else if (p.phase === 'waiting' && flowState.activeId)
         updateStep(flowState.activeId, {
           note: t('{{tool}} is waiting on its network. It carries on by itself.', {
             tool: runTool,
@@ -630,7 +629,7 @@ export function useLifiEngine({
         action: null,
         loading: false,
         helper: (
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', textAlign: 'center', px: 1 }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center', px: 1 }}>
             {t('This route costs ~${{gas}} in network gas regardless of size.', {
               gas: gasUsd.toFixed(2),
             })}
@@ -674,20 +673,20 @@ export function useLifiEngine({
       <Stack spacing={0.75}>
         {rate && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Rate')}</Typography>
-            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
+            <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Rate')}</Typography>
+            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK, ...MONO }}>
               1 {fromSymbol} ≈ {rate.toFixed(6)} {toSymbol}
             </Typography>
           </Box>
         )}
         {gasUsd > 0 && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Network gas')}</Typography>
+            <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Network gas')}</Typography>
             <Typography
               sx={{
                 fontSize: '12px',
                 fontWeight: 500,
-                color: gasShare > 0.2 ? BRAND_COLORS.yellow.deep : '#0A0A0F',
+                color: gasShare > 0.2 ? BRAND_COLORS.yellow.deep : INK,
                 ...MONO,
               }}
             >
@@ -705,35 +704,31 @@ export function useLifiEngine({
         )}
         {toAmountMin && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
-              {t('Minimum received')}
-            </Typography>
-            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
+            <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Minimum received')}</Typography>
+            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK, ...MONO }}>
               {toAmountMin.toFixed(6, BigNumber.ROUND_DOWN)} {toSymbol}
             </Typography>
           </Box>
         )}
         {feeToken && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{feeLabel}</Typography>
-            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
+            <Typography sx={{ fontSize: '12px', color: MUTED }}>{feeLabel}</Typography>
+            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK, ...MONO }}>
               −{feeToken.toFixed(6, BigNumber.ROUND_DOWN)} {fromSymbol}
               {feeUsd ? ` (${fCurrency(feeUsd)})` : ''}
             </Typography>
           </Box>
         )}
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>{t('Route')}</Typography>
-          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Route')}</Typography>
+          <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK }}>
             {quote.tool}
           </Typography>
         </Box>
         {etaMinutes !== null && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
-              {t('Estimated time')}
-            </Typography>
-            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F' }}>
+            <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Estimated time')}</Typography>
+            <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK }}>
               ~{etaMinutes} {t('min')}
             </Typography>
           </Box>
@@ -751,8 +746,8 @@ export function useLifiEngine({
         justifyContent: 'center',
       }}
     >
-      <Iconify icon="eva:info-outline" width={13} sx={{ color: '#9A9AA3' }} />
-      <Typography sx={{ fontSize: '12px', color: '#9A9AA3' }}>
+      <Iconify icon="eva:info-outline" width={13} sx={{ color: FAINT }} />
+      <Typography sx={{ fontSize: '12px', color: FAINT }}>
         {t('{{symbol}} is delivered to your own Normal wallet address.', { symbol: toSymbol })}
       </Typography>
     </Box>

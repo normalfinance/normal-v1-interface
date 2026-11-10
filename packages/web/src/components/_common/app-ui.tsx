@@ -13,6 +13,7 @@ import {
   MUTED,
   PAPER,
   CANVAS,
+  DANGER,
   INK_SOFT,
   BRAND_COLORS,
   HAIRLINE_STRONG,
@@ -414,7 +415,7 @@ export function StatusBadge({
   const colors =
     tone === 'pending'
       ? { color: BRAND_COLORS.yellow.deep, bgcolor: BRAND_COLORS.yellow.tint }
-      : { color: '#B91C1C', bgcolor: 'rgba(185,28,28,0.08)' };
+      : { color: DANGER, bgcolor: 'rgba(185,28,28,0.08)' };
   return (
     <Box
       component="span"

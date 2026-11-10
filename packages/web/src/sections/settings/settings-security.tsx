@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { resetPassword } from '@/services/auth';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { useSiteTheme } from '@/layouts/site/use-site-theme';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { INK, FAINT, MUTED, BRAND_COLORS } from '@/theme/brand-colors';
 
@@ -16,10 +17,11 @@ import CheckCircleRounded from '@mui/icons-material/CheckCircleRounded';
 
 import { useSnackbar } from '@/components/template/snackbar';
 import { HAIRLINE, BLOCK_SX, INK_BUTTON_SX } from '@/components/_common/brand';
-
 // ----------------------------------------------------------------------
 
 export function SettingsSecurity() {
+  // The captcha in the page's mode.
+  const { mode: themeMode } = useSiteTheme();
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { user } = useSupabaseAuth();
@@ -92,6 +94,7 @@ export function SettingsSecurity() {
 
           <Turnstile
             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
+            options={{ theme: themeMode }}
             onSuccess={(token) => {
               setCaptchaToken(token);
             }}
@@ -108,7 +111,7 @@ export function SettingsSecurity() {
               fontSize: 14,
               py: 1.5,
               textTransform: 'none',
-              '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: FAINT },
+              '&.Mui-disabled': { bgcolor: 'rgba(var(--nf-ink-rgb),0.08)', color: FAINT },
             }}
           >
             {isSubmitting ? t('Sending...') : t('Send reset link')}

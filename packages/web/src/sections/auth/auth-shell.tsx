@@ -6,6 +6,7 @@ import NextLink from 'next/link';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
+import { INK, BAND, PAPER } from '@/theme/brand-colors';
 
 import { Box, Stack, Link as MuiLink } from '@mui/material';
 
@@ -22,12 +23,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
       sx={(theme) => ({
         // Brand ink, as on the marketing pages. The theme's text colour is a slate
         // that reads navy on a filled button.
-        '--auth-ink': '#0A0A0F',
-        '--auth-on-ink': '#fff',
-        ...theme.applyStyles('dark', {
-          '--auth-ink': theme.vars.palette.text.primary,
-          '--auth-on-ink': theme.vars.palette.background.paper,
-        }),
+        '--auth-ink': INK,
+        '--auth-on-ink': PAPER,
         minHeight: '100dvh',
         display: 'grid',
         gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) minmax(0, 1.08fr)' },
@@ -85,7 +82,9 @@ function AuthVisual() {
           height: '100%',
           overflow: 'hidden',
           borderRadius: 'var(--radius-lg)',
-          bgcolor: '#0A0A0F',
+          // A dark brand panel in both modes (the band token: ink on the light
+          // page, a raised near-black on the dark one); the mockup blends into it.
+          bgcolor: BAND,
           isolation: 'isolate',
         }}
       >

@@ -3,6 +3,7 @@ import { logger } from '@/utils/logger';
 import { useTranslate } from '@/locales';
 import { useGoToLogin } from '@/hooks/use-go-to-login';
 import { usePersistStore } from '@normalfinance/state';
+import { INK, PAPER, INK_SOFT } from '@/theme/brand-colors';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
@@ -104,13 +105,13 @@ export const WalletGate: React.FC<WalletGateProps> = ({
         size="large"
         sx={{
           mt: 2,
-          bgcolor: '#0A0A0F',
-          color: '#fff',
+          bgcolor: INK,
+          color: PAPER,
           borderRadius: 'var(--radius-md)',
           textTransform: 'none',
           fontWeight: 500,
           boxShadow: 'none',
-          '&:hover': { bgcolor: '#2A2A33', boxShadow: 'none' },
+          '&:hover': { bgcolor: INK_SOFT, boxShadow: 'none' },
         }}
       >
         {t(buttonText)}

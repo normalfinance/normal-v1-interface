@@ -10,6 +10,7 @@ import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { INK, FAINT, MUTED, PAPER, CANVAS } from '@/theme/brand-colors';
 import { assetDisplay, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
@@ -24,7 +25,6 @@ import { BalanceBlock } from './portfolio-balance';
 import { ActivityCard } from './portfolio-activity-card';
 
 import type { HoldingData } from './_shared';
-
 // Shown until we know whether the user even has a wallet. Beyond that each
 // card owns its own skeleton, so a slow source never blanks the whole page.
 function PortfolioSkeleton() {
@@ -226,7 +226,7 @@ export default function PortfolioView() {
       return (
         <DashboardContent>
           <Box sx={{ display: 'flex', justifyContent: 'center', pt: { xs: 4, md: 7 } }}>
-            <Box sx={{ width: '100%', maxWidth: 460, bgcolor: '#fff' }}>
+            <Box sx={{ width: '100%', maxWidth: 460, bgcolor: PAPER }}>
               <GetStartedPicker />
             </Box>
           </Box>
@@ -252,20 +252,20 @@ export default function PortfolioView() {
               width: 56,
               height: 56,
               borderRadius: 'var(--radius-md)',
-              bgcolor: '#F4F4F7',
+              bgcolor: CANVAS,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#9A9AA3',
+              color: FAINT,
             }}
           >
             <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 28 }} />
           </Box>
           <Box>
-            <Box sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
+            <Box sx={{ fontSize: '16px', fontWeight: 500, color: INK, mb: '6px' }}>
               Connect your wallet
             </Box>
-            <Box sx={{ fontSize: '14px', color: '#6B6B76', maxWidth: 280 }}>
+            <Box sx={{ fontSize: '14px', color: MUTED, maxWidth: 280 }}>
               Sign in to view your portfolio, holdings, and activity.
             </Box>
           </Box>
@@ -278,8 +278,8 @@ export default function PortfolioView() {
               py: '10px',
               borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: '#0A0A0F',
-              color: '#fff',
+              bgcolor: INK,
+              color: PAPER,
               fontSize: '14px',
               fontWeight: 500,
               cursor: 'pointer',

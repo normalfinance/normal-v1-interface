@@ -1,7 +1,7 @@
 import type { Token } from '@normalfinance/types';
 import type { PortfolioAsset } from '@/types/portfolio';
 
-import { PALETTE } from '@/theme/brand-colors';
+import { INK } from '@/theme/brand-colors';
 import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
 import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
 
@@ -34,7 +34,8 @@ export function assetDisplay(symbol: string): { name: string; icon: string } {
 // (the registry's teal marks the Stellar chain in badges, not the coin).
 const COIN_COLORS: Record<string, string> = {
   USDC: '#2775CA',
-  XLM: PALETTE.light.ink,
+  // The ink token, so its line turns light on the dark page.
+  XLM: INK,
 };
 
 /** The colour of a coin's price line: its logo's colour, ink when unknown. */
@@ -42,7 +43,7 @@ export function assetColor(symbol: string): string {
   const upper = symbol.toUpperCase();
   if (COIN_COLORS[upper]) return COIN_COLORS[upper];
   const chain = chainForSymbol(upper);
-  return chain ? CHAINS[chain].brandColor : PALETTE.light.ink;
+  return chain ? CHAINS[chain].brandColor : INK;
 }
 
 /** #32: short human label for the connected external wallet, used to tag

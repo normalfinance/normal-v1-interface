@@ -12,6 +12,7 @@
 import type { WalletOption } from '@/lib/wallet-options';
 
 import { useTranslate } from '@/locales/use-locales';
+import { INK, MUTED, PAPER } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -39,7 +40,7 @@ export default function WalletChoice({ options, selectedKey, onSelect, flow, sym
   if (options.length === 1) {
     const only = options[0];
     return (
-      <Typography sx={{ fontSize: '12px', color: '#6B6B76', mb: '10px' }}>
+      <Typography sx={{ fontSize: '12px', color: MUTED, mb: '10px' }}>
         {flow === 'onramp'
           ? t('Funds will arrive in {{label}}', { label: only.label })
           : flow === 'send'
@@ -52,7 +53,7 @@ export default function WalletChoice({ options, selectedKey, onSelect, flow, sym
 
   return (
     <Box sx={{ mb: '12px' }}>
-      <Typography sx={{ fontSize: '12px', color: '#6B6B76', mb: '6px' }}>
+      <Typography sx={{ fontSize: '12px', color: MUTED, mb: '6px' }}>
         {flow === 'onramp' ? t('Deposit to') : flow === 'send' ? t('Send from') : t('Sell from')}
       </Typography>
       <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', rowGap: '6px' }}>
@@ -66,7 +67,9 @@ export default function WalletChoice({ options, selectedKey, onSelect, flow, sym
               onClick={() => onSelect(opt)}
               sx={{
                 appearance: 'none',
-                border: selected ? '1px solid rgba(10,10,15,0.9)' : '1px solid rgba(10,10,15,0.14)',
+                border: selected
+                  ? '1px solid rgba(var(--nf-ink-rgb),0.9)'
+                  : '1px solid rgba(var(--nf-ink-rgb),0.14)',
                 borderRadius: 'var(--radius-sm)',
                 px: '11px',
                 py: '5px',
@@ -74,11 +77,11 @@ export default function WalletChoice({ options, selectedKey, onSelect, flow, sym
                 fontWeight: 500,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
-                bgcolor: selected ? '#0A0A0F' : 'transparent',
-                color: selected ? '#fff' : '#6B6B76',
+                bgcolor: selected ? INK : 'transparent',
+                color: selected ? PAPER : MUTED,
                 transition: 'all .15s ease',
-                '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.3)' },
-                '&:focus-visible': { outline: '2px solid #0A0A0F', outlineOffset: '2px' },
+                '&:hover': selected ? {} : { borderColor: 'rgba(var(--nf-ink-rgb),0.3)' },
+                '&:focus-visible': { outline: `2px solid ${INK}`, outlineOffset: '2px' },
               }}
             >
               {opt.label}

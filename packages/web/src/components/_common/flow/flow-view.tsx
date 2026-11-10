@@ -12,7 +12,9 @@ import {
   HOVER,
   MUTED,
   PAPER,
+  FAINT,
   CANVAS,
+  DANGER,
   INK_SOFT,
   BRAND_COLORS,
   HAIRLINE_STRONG,
@@ -87,7 +89,7 @@ export interface FlowViewProps {
   handOffTitle?: string;
 }
 
-const RED = '#B91C1C';
+const RED = { DANGER };
 
 function Button({
   children,
@@ -120,9 +122,9 @@ function Button({
         '&:hover': { bgcolor: primary ? INK_SOFT : HOVER },
         '&.Mui-focusVisible': { outline: `2px solid ${INK}`, outlineOffset: 2 },
         '&.Mui-disabled': {
-          bgcolor: 'rgba(10,10,15,0.08)',
+          bgcolor: 'rgba(var(--nf-ink-rgb),0.08)',
           borderColor: 'transparent',
-          color: '#9A9AA3',
+          color: FAINT,
         },
       }}
     >
