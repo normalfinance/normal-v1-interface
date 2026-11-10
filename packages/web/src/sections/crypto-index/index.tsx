@@ -1078,6 +1078,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
 
         <AutopilotConsentDialog
           open={consentOpen}
+          purpose="index"
           onChoose={(enabled) => {
             setConsentOpen(false);
             if (enabled) loadAutopilot();
