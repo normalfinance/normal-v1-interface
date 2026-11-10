@@ -37,7 +37,10 @@ const transfer = (from: PublicKey) =>
 
 describe('canRefreshBlockhash', () => {
   it('takes a transaction the person alone signs (the LI.FI shape)', () => {
-    const vtx = build([ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }), transfer(person)]);
+    const vtx = build([
+      ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }),
+      transfer(person),
+    ]);
     expect(canRefreshBlockhash(vtx, person)).toBe(true);
   });
 

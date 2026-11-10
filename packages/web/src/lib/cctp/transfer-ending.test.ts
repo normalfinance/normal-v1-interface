@@ -9,13 +9,20 @@ const ended = (status: string, errorDetail: string | null, srcAsset = 'SOL') =>
 
 describe('transferEnding: how a transfer ended, in plain words (Niko 2026-11-09)', () => {
   it('a coin the exchange sent back is calm, and says nothing was lost', () => {
-    const e = ended('FAILED', 'Source swap refunded: funds returned to the sender; nothing was bridged');
+    const e = ended(
+      'FAILED',
+      'Source swap refunded: funds returned to the sender; nothing was bridged'
+    );
     expect(e).toMatchObject({ kind: 'sent-back', calm: true });
     expect(e!.text).toContain('sent your Solana back to your wallet. Nothing was lost');
   });
 
   it('a swap turned down on-chain is calm: the coin never left', () => {
-    const e = ended('FAILED', 'Source transaction reverted on-chain: funds never left the sender; nothing was bridged', 'ETH');
+    const e = ended(
+      'FAILED',
+      'Source transaction reverted on-chain: funds never left the sender; nothing was bridged',
+      'ETH'
+    );
     expect(e).toMatchObject({ kind: 'not-sent', calm: true });
     expect(e!.text).toContain('your Ethereum never left your wallet');
   });
@@ -40,14 +47,19 @@ describe('transferEnding: how a transfer ended, in plain words (Niko 2026-11-09)
   });
 
   it('brought back as digital dollars: calm, and points at its own line', () => {
-    expect(ended('REFUNDED', 'Refunded: USDC is returning to your Stellar wallet (usually ~20 min)')).toMatchObject({
+    expect(
+      ended('REFUNDED', 'Refunded: USDC is returning to your Stellar wallet (usually ~20 min)')
+    ).toMatchObject({
       kind: 'coming-back',
       calm: true,
     });
   });
 
   it('any other failure is red, in the classifier words with a way out', () => {
-    const e = ended('FAILED', 'Error: execution reverted: 0x08c379a0000000000000000000000000000000000000000000000000000000000000002');
+    const e = ended(
+      'FAILED',
+      'Error: execution reverted: 0x08c379a0000000000000000000000000000000000000000000000000000000000000002'
+    );
     expect(e).toMatchObject({ kind: 'failed', calm: false });
     expect(e!.text).not.toMatch(/0x08c379a0/);
     expect(e!.text).toMatch(/try again/i);

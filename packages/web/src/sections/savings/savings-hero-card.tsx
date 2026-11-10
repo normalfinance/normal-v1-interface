@@ -2,13 +2,7 @@
 
 import Typography from '@mui/material/Typography';
 
-import {
-  FIGURES,
-  AppBlock,
-  Headline,
-  formatUsd,
-  SummaryBlock,
-} from '@/components/_common/app-ui';
+import { FIGURES, AppBlock, Headline, formatUsd, SummaryBlock } from '@/components/_common/app-ui';
 
 import { SavingsChart } from './savings-chart';
 
@@ -54,7 +48,11 @@ export function SavingsHeroCard({
         },
         ...(yearly !== null
           ? [
-              { key: 'month', label: "A month at today's rate", value: `~${formatUsd(yearly / 12)}` },
+              {
+                key: 'month',
+                label: "A month at today's rate",
+                value: `~${formatUsd(yearly / 12)}`,
+              },
               { key: 'year', label: "A year at today's rate", value: `~${formatUsd(yearly)}` },
             ]
           : []),

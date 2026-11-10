@@ -20,7 +20,12 @@ import {
   completeStep,
 } from '@/lib/flow/run';
 
-import { baseTxLink, chainTxLink, lifiTrackLink, stellarTxLink } from '@/components/_common/flow/flow-links';
+import {
+  baseTxLink,
+  chainTxLink,
+  lifiTrackLink,
+  stellarTxLink,
+} from '@/components/_common/flow/flow-links';
 
 import { bannerPhase } from './cctp-phase';
 
@@ -130,12 +135,20 @@ export function transferJourney(
 
   if (kind === 'in') {
     const srcLinks = row.srcSwapTxHash
-      ? [chainTxLink(t, CHAIN_OF[row.srcAsset] ?? 'ethereum', row.srcSwapTxHash), lifiTrackLink(t, row.srcSwapTxHash)]
+      ? [
+          chainTxLink(t, CHAIN_OF[row.srcAsset] ?? 'ethereum', row.srcSwapTxHash),
+          lifiTrackLink(t, row.srcSwapTxHash),
+        ]
       : undefined;
     if (ending?.kind === 'sent-back') {
       // The exchange returned the coin: the journey goes back where it came
       // from, as the live page rewrites it (refundedPlan).
-      plan = refundedPlan(plan, { t, fromStepId: 'bridge-send', tool: words.tool, coin: row.srcAsset });
+      plan = refundedPlan(plan, {
+        t,
+        fromStepId: 'bridge-send',
+        tool: words.tool,
+        coin: row.srcAsset,
+      });
       done('send', srcLinks);
       done(REFUND_STEP.arrived);
       return { kind, plan, run: stopRun(run, plan, ending.text, last), standing: 'ended', ending };
@@ -159,14 +172,14 @@ export function transferJourney(
 
   if (attested) done(kind === 'back' ? 'refund-attest' : 'attest');
   if (minted && row.mintTxHash) {
-    done(
-      kind === 'back' ? 'refund-mint' : 'mint',
-      [kind === 'out' ? baseTxLink(t, row.mintTxHash) : stellarTxLink(t, row.mintTxHash)]
-    );
+    done(kind === 'back' ? 'refund-mint' : 'mint', [
+      kind === 'out' ? baseTxLink(t, row.mintTxHash) : stellarTxLink(t, row.mintTxHash),
+    ]);
   } else if (minted) {
     done(kind === 'back' ? 'refund-mint' : 'mint');
   }
-  if (kind === 'out' && row.dstSwapTxHash) done('pivot-send', [lifiTrackLink(t, row.dstSwapTxHash)]);
+  if (kind === 'out' && row.dstSwapTxHash)
+    done('pivot-send', [lifiTrackLink(t, row.dstSwapTxHash)]);
 
   if (ending?.kind === 'failed') {
     return { kind, plan, run: failRun(run, plan, ending.text, last), standing: 'failed', ending };
@@ -178,8 +191,7 @@ export function transferJourney(
     return { kind, plan, run: stopRun(run, plan, ending.text, last), standing: 'ended', ending };
   }
 
-  const complete =
-    row.status === 'COMPLETED' && (kind !== 'out' || !!row.dstSwapTxHash);
+  const complete = row.status === 'COMPLETED' && (kind !== 'out' || !!row.dstSwapTxHash);
   if (complete) return { kind, plan, run: finishRun(run, plan, last), standing: 'done', ending };
 
   // Still going: the first step the row has not reached is where it is now.

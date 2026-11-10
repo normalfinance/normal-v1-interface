@@ -100,7 +100,9 @@ describe('friendlyAppError — dumps collapse, human text survives', () => {
     ).toMatch(/Not enough SOL/);
     expect(
       friendlyAppError(
-        new Error('Transaction simulation failed: Transaction results in an account (1) with insufficient funds for rent')
+        new Error(
+          'Transaction simulation failed: Transaction results in an account (1) with insufficient funds for rent'
+        )
       )
     ).toMatch(/minimum balance/);
     expect(

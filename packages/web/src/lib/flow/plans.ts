@@ -1216,9 +1216,12 @@ export function refundedPlan(
       step({
         id: REFUND_STEP.arrived,
         title: t('Back in your wallet'),
-        detail: t('Your {{coin}} is in your wallet again, less any network fees. Nothing was lost.', {
-          coin,
-        }),
+        detail: t(
+          'Your {{coin}} is in your wallet again, less any network fees. Nothing was lost.',
+          {
+            coin,
+          }
+        ),
         // The wallet's own network, from the registry (never read from its
         // label: a connected wallet is called by its own name, "Lobstr").
         actor:

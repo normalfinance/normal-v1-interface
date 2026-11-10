@@ -50,5 +50,9 @@ function subscribe(listener: () => void) {
 }
 
 export function useInProgress(): InProgressState {
-  return useSyncExternalStore(subscribe, () => state, () => EMPTY);
+  return useSyncExternalStore(
+    subscribe,
+    () => state,
+    () => EMPTY
+  );
 }

@@ -63,7 +63,9 @@ describe('purchase', () => {
   };
   it('is ready for its legs only once Circle has minted on Base', () => {
     expect(purchaseReadyForLegs(row)).toBe(true);
-    expect(purchaseReadyForLegs({ ...row, status: 'MINT_SUBMITTED', mintTxHash: null })).toBe(false);
+    expect(purchaseReadyForLegs({ ...row, status: 'MINT_SUBMITTED', mintTxHash: null })).toBe(
+      false
+    );
     // a mint someone else ran: COMPLETED with no mint hash of ours, USDC on Base all the same
     expect(purchaseReadyForLegs({ ...row, mintTxHash: null })).toBe(true);
     expect(purchaseReadyForLegs({ ...row, burnTxHash: null })).toBe(false);

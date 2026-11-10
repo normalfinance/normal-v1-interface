@@ -30,7 +30,10 @@ export interface StellarTxFacts {
 
 export type StellarBurnVerdict = 'failed' | 'never-landed' | 'keep';
 
-export function stellarBurnVerdict(facts: StellarTxFacts, rowCreatedAtMs: number): StellarBurnVerdict {
+export function stellarBurnVerdict(
+  facts: StellarTxFacts,
+  rowCreatedAtMs: number
+): StellarBurnVerdict {
   if (facts.status === 'FAILED') return 'failed';
   if (facts.status !== 'NOT_FOUND') return 'keep';
 

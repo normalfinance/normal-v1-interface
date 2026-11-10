@@ -515,7 +515,9 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
     } catch (err: any) {
       logger.error('[OnboardingWizard] Turnkey wallet creation failed:', err);
       setWalletCreateError(
-        friendlyAppError(err?.message || t('Your wallet could not be created. Try again in a moment.'))
+        friendlyAppError(
+          err?.message || t('Your wallet could not be created. Try again in a moment.')
+        )
       );
     } finally {
       setIsCreatingWallet(false);

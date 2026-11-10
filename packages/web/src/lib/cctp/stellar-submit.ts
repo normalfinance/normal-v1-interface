@@ -96,7 +96,9 @@ export async function submitStellarLeg(opts: {
   }
   if (!sent) {
     // Shown as it is (utils/errors friendlyAppError), so no internal names.
-    throw new Error('Stellar is busy and did not take it. Nothing was sent. Try again in a moment.');
+    throw new Error(
+      'Stellar is busy and did not take it. Nothing was sent. Try again in a moment.'
+    );
   }
 
   opts.onSubmitted?.(hash);

@@ -337,7 +337,10 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         });
         const depositData = await depositResponse.json();
         if (!depositData.success) {
-          throw new Error(depositData.error || 'The deposit could not be prepared, so nothing moved. Try again in a moment.');
+          throw new Error(
+            depositData.error ||
+              'The deposit could not be prepared, so nothing moved. Try again in a moment.'
+          );
         }
         if (!depositData.xdr) {
           throw new Error('No transaction XDR returned from DeFindex');
@@ -589,7 +592,10 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         });
         const withdrawData = await withdrawResponse.json();
         if (!withdrawData.success) {
-          throw new Error(withdrawData.error || 'The withdrawal could not be prepared, so nothing moved. Try again in a moment.');
+          throw new Error(
+            withdrawData.error ||
+              'The withdrawal could not be prepared, so nothing moved. Try again in a moment.'
+          );
         }
         if (!withdrawData.xdr) {
           throw new Error('No transaction XDR returned from DeFindex');

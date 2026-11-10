@@ -10,17 +10,26 @@ const DEPTH = EVM_REVERT_FINAL_DEPTH.base;
 
 describe('evmBurnRevertedForGood', () => {
   it('a revert buried deep enough is final', () => {
-    const facts = { receipt: { status: 'reverted' as const, blockNumber: 1_000n }, latestBlock: 1_000n + BigInt(DEPTH) };
+    const facts = {
+      receipt: { status: 'reverted' as const, blockNumber: 1_000n },
+      latestBlock: 1_000n + BigInt(DEPTH),
+    };
     expect(evmBurnRevertedForGood(facts, DEPTH)).toBe(true);
   });
 
   it('a fresh revert is not final yet', () => {
-    const facts = { receipt: { status: 'reverted' as const, blockNumber: 1_000n }, latestBlock: 1_000n + BigInt(DEPTH - 1) };
+    const facts = {
+      receipt: { status: 'reverted' as const, blockNumber: 1_000n },
+      latestBlock: 1_000n + BigInt(DEPTH - 1),
+    };
     expect(evmBurnRevertedForGood(facts, DEPTH)).toBe(false);
   });
 
   it('a burn that landed is never handed back', () => {
-    const facts = { receipt: { status: 'success' as const, blockNumber: 1n }, latestBlock: 1_000_000n };
+    const facts = {
+      receipt: { status: 'success' as const, blockNumber: 1n },
+      latestBlock: 1_000_000n,
+    };
     expect(evmBurnRevertedForGood(facts, DEPTH)).toBe(false);
   });
 

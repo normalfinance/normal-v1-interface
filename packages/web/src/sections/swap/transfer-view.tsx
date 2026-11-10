@@ -116,7 +116,12 @@ export function TransferView({ id }: { id: string }) {
     const loop = async () => {
       const next = await read();
       if (stop) return;
-      const ended = next && ENDED.includes(next.status) && (next.status !== 'COMPLETED' || next.direction !== 'stellar_to_crosschain' || !!next.dstSwapTxHash);
+      const ended =
+        next &&
+        ENDED.includes(next.status) &&
+        (next.status !== 'COMPLETED' ||
+          next.direction !== 'stellar_to_crosschain' ||
+          !!next.dstSwapTxHash);
       if (!ended) timer = setTimeout(loop, 15_000);
     };
     loop();
@@ -195,7 +200,8 @@ export function TransferView({ id }: { id: string }) {
     // Seen at Base by the keeper, or proved by the mint of a swap out.
     onBase:
       (items.find((i) => i.id === row.id)?.onBase ?? false) ||
-      (row.direction === 'stellar_to_crosschain' && (!!row.mintTxHash || row.status === 'COMPLETED')),
+      (row.direction === 'stellar_to_crosschain' &&
+        (!!row.mintTxHash || row.status === 'COMPLETED')),
   };
   const journey = transferJourney(t, row, words);
   const coin = assetName(journey.kind === 'out' ? row.dstAsset : row.srcAsset);
@@ -208,14 +214,28 @@ export function TransferView({ id }: { id: string }) {
     journey.standing === 'needs-you'
       ? words.onBase
         ? journey.kind === 'out'
-          ? t('Your digital dollars are at your own Base address. Finish the swap to {{coin}}, or bring them back to your Stellar wallet as digital dollars.', { coin })
-          : t('Your digital dollars are at your own Base address. Finish the swap to send them on to your Stellar wallet.')
-        : t('Your digital dollars are on their way to your own Base address. Finish the swap once they arrive.')
+          ? t(
+              'Your digital dollars are at your own Base address. Finish the swap to {{coin}}, or bring them back to your Stellar wallet as digital dollars.',
+              { coin }
+            )
+          : t(
+              'Your digital dollars are at your own Base address. Finish the swap to send them on to your Stellar wallet.'
+            )
+        : t(
+            'Your digital dollars are on their way to your own Base address. Finish the swap once they arrive.'
+          )
       : journey.kind === 'out'
         ? row.dstSwapTxHash
-          ? t('The exchange is sending your {{coin}} to your wallet. It finishes on its own.', { coin })
-          : t('Circle is moving your digital dollars to your Base address. The swap to {{coin}} follows when they arrive.', { coin })
-        : t('Circle is moving your digital dollars to your Stellar wallet. Normal finishes it on its own, usually within 20 minutes. You can leave this page.');
+          ? t('The exchange is sending your {{coin}} to your wallet. It finishes on its own.', {
+              coin,
+            })
+          : t(
+              'Circle is moving your digital dollars to your Base address. The swap to {{coin}} follows when they arrive.',
+              { coin }
+            )
+        : t(
+            'Circle is moving your digital dollars to your Stellar wallet. Normal finishes it on its own, usually within 20 minutes. You can leave this page.'
+          );
   const run =
     journey.standing === 'needs-you' || journey.standing === 'on-its-way'
       ? handOffRun(journey.run, handOff, Date.parse(row.updatedAt) || Date.now())
@@ -261,7 +281,12 @@ export function TransferView({ id }: { id: string }) {
   const summaryRows: FlowSummaryRow[] =
     journey.kind === 'back'
       ? [
-          { key: 'amount', label: t('Coming back'), value: words.amountUsdc, detail: t('Digital dollars to your Stellar wallet') },
+          {
+            key: 'amount',
+            label: t('Coming back'),
+            value: words.amountUsdc,
+            detail: t('Digital dollars to your Stellar wallet'),
+          },
           { key: 'started', label: t('Started'), value: started },
         ]
       : [
@@ -274,7 +299,10 @@ export function TransferView({ id }: { id: string }) {
             key: 'receive',
             label: t('You receive'),
             value: journey.kind === 'out' ? words.amountOut : words.usdcOut,
-            detail: journey.kind === 'out' ? t('In your {{coin}} wallet', { coin }) : t('In your Stellar wallet'),
+            detail:
+              journey.kind === 'out'
+                ? t('In your {{coin}} wallet', { coin })
+                : t('In your Stellar wallet'),
           },
           { key: 'exchange', label: t('Exchange'), value: tool, detail: t('Picked by LI.FI') },
           { key: 'started', label: t('Started'), value: started },
@@ -284,8 +312,16 @@ export function TransferView({ id }: { id: string }) {
     journey.kind === 'back'
       ? t('{{amount}} back to your Stellar wallet.', { amount: words.amountUsdc })
       : journey.kind === 'out'
-        ? t('{{pay}} for about {{get}}, through {{tool}}.', { pay: words.amountUsdc, get: words.amountOut.replace(/^≈ /, ''), tool })
-        : t('{{pay}} for about {{get}} in your Stellar wallet, through {{tool}}.', { pay: words.amountIn, get: words.usdcOut.replace(/^≈ /, ''), tool });
+        ? t('{{pay}} for about {{get}}, through {{tool}}.', {
+            pay: words.amountUsdc,
+            get: words.amountOut.replace(/^≈ /, ''),
+            tool,
+          })
+        : t('{{pay}} for about {{get}} in your Stellar wallet, through {{tool}}.', {
+            pay: words.amountIn,
+            get: words.usdcOut.replace(/^≈ /, ''),
+            tool,
+          });
 
   return (
     <DashboardContent>
@@ -300,7 +336,8 @@ export function TransferView({ id }: { id: string }) {
           done: t('Swap complete'),
           failed: t('Swap stopped'),
           stopped: t('Swap ended'),
-          'handed-off': journey.standing === 'needs-you' ? t('Your swap needs you') : t('Swap on its way'),
+          'handed-off':
+            journey.standing === 'needs-you' ? t('Your swap needs you') : t('Swap on its way'),
         }}
         handOffTitle={journey.standing === 'needs-you' ? t('Needs you') : undefined}
         lede={lede}
