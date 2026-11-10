@@ -83,7 +83,17 @@ const CHAIN_OF_SYMBOL: Partial<Record<SwapSymbol, ChainId>> = {
   SOL: 'solana',
 };
 
-export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
+export default function SwapCard({
+  initial,
+  onLeaveRunning,
+}: {
+  initial?: SwapSymbol;
+  /**
+   * Leave a swap that runs on without the page: the swap page mounts a fresh
+   * card, so this one stops following it (as closing the page would).
+   */
+  onLeaveRunning?: () => void;
+}) {
   const { t } = useTranslate();
   // 'flow': the review page (and then the live journey) fills the page in
   // place of this card. The card stays mounted underneath: it owns the
@@ -689,24 +699,37 @@ export default function SwapCard({ initial }: { initial?: SwapSymbol }) {
     }
   }, []);
   const exitFlow = useCallback(() => {
-    flowRef.current?.reset();
-    setView('form');
+    const running = flowRef.current?.run.phase === 'running';
+    if (running && onLeaveRunning) {
+      // It finishes on its own (the link only shows then): a fresh card, not a
+      // reset of a run that is still being followed here.
+      onLeaveRunning();
+    } else {
+      flowRef.current?.reset();
+      setView('form');
+    }
     if ((window.history.state as { nfFlow?: boolean } | null)?.nfFlow) window.history.back();
-  }, []);
+  }, [onLeaveRunning]);
   useEffect(() => {
     if (view !== 'flow') return undefined;
     const onPop = () => {
-      if (flowRef.current?.run.phase === 'running') {
-        // The page follows a swap that is running: stay, and put the entry back.
+      const current = flowRef.current;
+      if (current?.run.phase === 'running') {
+        if (current.leave.safe && onLeaveRunning) {
+          // It finishes on its own: Back leaves, as the page's own link does.
+          onLeaveRunning();
+          return;
+        }
+        // The page follows a swap that still needs it: stay, put the entry back.
         window.history.pushState({ nfFlow: true }, '');
         return;
       }
-      flowRef.current?.reset();
+      current?.reset();
       setView('form');
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, [view]);
+  }, [view, onLeaveRunning]);
   // The quote behind an open review went away (it failed to refresh):
   // back to the card, which says why.
   useEffect(() => {

@@ -301,6 +301,9 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   const phaseRef = useRef(flowState.phase);
   phaseRef.current = flowState.phase;
   const leaveFlow = useCallback(() => {
+    // Leaving while it runs (it finishes on its own, the only time Back shows
+    // then): stop following it here, as closing the page would.
+    if (phaseRef.current === 'running') cancelled.current = true;
     flow.reset();
     setFrozen(null);
     setHeld(null);

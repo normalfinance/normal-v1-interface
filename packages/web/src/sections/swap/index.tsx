@@ -48,6 +48,10 @@ export default function SwapView() {
   const { companionStellar } = useWalletBalances(!!user);
   const isExternalWallet = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
   const [setupOpen, setSetupOpen] = useState(false);
+  // Leaving a running swap (it finishes on its own) mounts a fresh card, as
+  // leaving the page and coming back would: the old one stops following it,
+  // and In progress beside the card follows it instead.
+  const [cardKey, setCardKey] = useState(0);
   // Any wallet (Stellar or a Turnkey chain wallet); null = still checking.
   const { hasWallet: hasTurnkeyWallet } = useTurnkeyWallet(!!user);
   const hasAnyWallet = !!wallet.address || hasTurnkeyWallet === true;
@@ -222,7 +226,11 @@ export default function SwapView() {
             alignItems: 'start',
           }}
         >
-          <SwapCard initial={initial} />
+          <SwapCard
+            key={cardKey}
+            initial={initial}
+            onLeaveRunning={() => setCardKey((k) => k + 1)}
+          />
           {/* Swaps still under way sit beside the card, not above it (Niko
               2026-11-09); each opens its own page with every step. */}
           <Box sx={{ display: 'grid', gap: 2, minWidth: 0 }}>
