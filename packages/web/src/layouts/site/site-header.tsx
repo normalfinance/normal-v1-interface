@@ -25,7 +25,7 @@ import {
   OUTLINED_BUTTON_SX,
 } from '@/components/_common/brand';
 
-import { NAV_LINKS, NAV_MENUS } from './site-nav';
+import { menusFor, NAV_LINKS } from './site-nav';
 import { ThemeToggleButton } from './theme-toggle';
 import { useSessionHint } from './use-session-hint';
 
@@ -99,7 +99,16 @@ function MenuLinkRow({ link, onNavigate }: { link: NavMenuLink; onNavigate: () =
   );
 }
 
+/**
+ * The dropdown's foot: a dark block, never plain white or grey (Niko
+ * 2026-11-10: "maybe the blocks in dropdown should just be dark"). Ink with
+ * page-coloured words and a page-coloured button; the tokens swap in dark
+ * mode, so it stays the strongest thing in the dropdown there too.
+ */
 function MenuBanner({ banner, onNavigate }: { banner: NavMenu['banner']; onNavigate: () => void }) {
+  const surface = INK;
+  const words = PAPER;
+
   if (banner.image) {
     return (
       <Box
@@ -111,10 +120,11 @@ function MenuBanner({ banner, onNavigate }: { banner: NavMenu['banner']; onNavig
           alignItems: 'center',
           gap: '12px',
           p: '12px 14px',
-          color: 'inherit',
+          color: words,
+          bgcolor: surface,
           textDecoration: 'none',
           borderTop: HAIRLINE,
-          '&:hover': { bgcolor: HOVER },
+          '&:hover .nf-banner-title': { textDecoration: 'underline' },
         }}
       >
         <Box
@@ -130,11 +140,14 @@ function MenuBanner({ banner, onNavigate }: { banner: NavMenu['banner']; onNavig
           }}
         />
         <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: 13.5, fontWeight: 500, color: INK }}>
+          <Typography
+            className="nf-banner-title"
+            sx={{ fontSize: 13.5, fontWeight: 500, color: 'inherit' }}
+          >
             {banner.title}
           </Typography>
           {banner.meta && (
-            <Typography sx={{ fontSize: 12, color: MUTED }}>{banner.meta}</Typography>
+            <Typography sx={{ fontSize: 12, color: 'inherit' }}>{banner.meta}</Typography>
           )}
         </Box>
       </Box>
@@ -149,13 +162,16 @@ function MenuBanner({ banner, onNavigate }: { banner: NavMenu['banner']; onNavig
         gap: 2,
         p: '14px 16px',
         borderTop: HAIRLINE,
-        bgcolor: CANVAS,
+        color: words,
+        bgcolor: surface,
       }}
     >
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-        <Typography sx={{ fontSize: 14, fontWeight: 500, color: INK }}>{banner.title}</Typography>
+        <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'inherit' }}>
+          {banner.title}
+        </Typography>
         {banner.subtitle && (
-          <Typography sx={{ fontSize: 12.5, color: MUTED }}>{banner.subtitle}</Typography>
+          <Typography sx={{ fontSize: 12.5, color: 'inherit' }}>{banner.subtitle}</Typography>
         )}
       </Box>
       <Button
@@ -163,7 +179,11 @@ function MenuBanner({ banner, onNavigate }: { banner: NavMenu['banner']; onNavig
         onClick={onNavigate}
         variant="contained"
         size="small"
-        sx={INK_BUTTON_SX}
+        sx={[
+          INK_BUTTON_SX,
+          // On the dark block: a page-coloured button with an ink word.
+          { color: surface, bgcolor: words, '&:hover': { bgcolor: words, opacity: 0.88 } },
+        ]}
       >
         {banner.label}
       </Button>
@@ -266,6 +286,7 @@ export function SiteHeader() {
   const headerRef = useRef<HTMLElement>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menus = menusFor(session.signedIn);
 
   const closeAll = () => {
     setOpenMenu(null);
@@ -346,7 +367,7 @@ export function SiteHeader() {
           aria-label="Main"
           sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.5 }}
         >
-          {NAV_MENUS.map((menu) => {
+          {menus.map((menu) => {
             const open = openMenu === menu.label;
             return (
               <Box key={menu.label} sx={{ position: 'relative' }}>
@@ -416,7 +437,7 @@ export function SiteHeader() {
         >
           <FrameLines />
           <Box sx={COLUMN_SX}>
-            {NAV_MENUS.map((menu) => (
+            {menus.map((menu) => (
               <MenuGroups key={menu.label} menu={menu} onNavigate={closeAll} />
             ))}
             <Box sx={{ display: 'grid', gap: 1, px: 2, pt: 1, borderTop: HAIRLINE }}>

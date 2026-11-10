@@ -18,6 +18,7 @@ import { AppLoadingProgress } from '@/components/template/progress-bar/app-loadi
 
 import { AppTopBar } from './app-top-bar';
 import { AppSidebar } from './app-sidebar';
+import { ActionFromUrl } from './action-from-url';
 import { AppBottomNav, BOTTOM_NAV_HEIGHT } from './app-bottom-nav';
 
 // ----------------------------------------------------------------------
@@ -66,6 +67,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: PAPER }}>
       <AppLoadingProgress />
+      {signedIn && <ActionFromUrl />}
       <AppSidebar />
 
       <Box sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column', minWidth: 0 }}>

@@ -340,9 +340,10 @@ describe.each(MODES)('%s mode stays readable (WCAG AA)', (mode) => {
   });
 
   it('the statement colours as display words on the page', () => {
-    // The logo's gradient in customer.io's tones; the light gold is 2.2:1 on
-    // white. So they are only ever display-size words on the page (the home
-    // statement), never body text and never on a tint.
+    // The logo's gradient in bright tones, as bright as the blocks at the foot
+    // of the page; the light gold is 2.0:1 on white. So they are only ever
+    // display-size words on the page (the home statement), never body text
+    // and never on a tint.
     expect(STATEMENT_PALETTE[mode]).toHaveLength(6);
     STATEMENT_PALETTE[mode].forEach((color) => {
       expect(contrast(color, page.paper)).toBeGreaterThanOrEqual(mode === 'light' ? 2 : 3);

@@ -120,13 +120,15 @@ export const HUE_PALETTE: Record<BrandHue, { fill: string } & Record<Mode, Tones
 /**
  * The home statement's six coloured phrases, in order: the logo's gradient
  * read from light blue through purple, magenta and raspberry to orange and
- * gold. Purple, raspberry, orange and gold are customer.io's statement tones;
- * the light blue and the magenta are made at the same lightness to sit between
- * them. Display-size words on the page only (DESIGN.md): the gold is 2.2:1 on
- * white.
+ * gold. Both modes take the bright tones, as bright as the coloured blocks at
+ * the foot of the page (Niko 2026-11-10: "the highlighted texts should match
+ * the brightness of the cta blocks"); the blocks' own pastels are too faint as
+ * words on white (1.2 to 2.1:1). The light gold is the bright gold 6% darker,
+ * to keep the 2:1 floor. Display-size words on the page only (DESIGN.md):
+ * 2.0 to 3.2:1 on white.
  */
 export const STATEMENT_PALETTE: Record<Mode, readonly string[]> = {
-  light: ['#058AC5', '#6E3EBE', '#991BAB', '#B52473', '#EB7133', '#E1A70E'],
+  light: ['#41B6F8', '#A37EF4', '#CD69DC', '#ED6BA2', '#FD9156', '#E5AE38'],
   dark: ['#41B6F8', '#A37EF4', '#CD69DC', '#ED6BA2', '#FD9156', '#F4B93C'],
 };
 

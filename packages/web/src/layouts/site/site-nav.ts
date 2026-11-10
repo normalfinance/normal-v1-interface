@@ -2,6 +2,8 @@ import type { SvgIconComponent } from '@mui/icons-material';
 
 import { cdn } from '@/utils/cdn';
 import { paths } from '@/routes/paths';
+import { authHref } from '@/lib/auth/auth-routes';
+import { appActionHref } from '@/lib/app-action-url';
 
 import FlagOutlined from '@mui/icons-material/FlagOutlined';
 import FeedOutlined from '@mui/icons-material/FeedOutlined';
@@ -18,13 +20,27 @@ import HelpOutlineOutlined from '@mui/icons-material/HelpOutlineOutlined';
 
 export type SiteLink = { label: string; href: string; external?: boolean };
 
-export type NavMenuLink = SiteLink & { description: string; icon: SvgIconComponent };
+export type NavMenuLink = SiteLink & {
+  description: string;
+  icon: SvgIconComponent;
+  /** A page of the app: signed out, the link goes through login and back (`menusFor`). */
+  app?: boolean;
+};
 
 export type NavMenu = {
   label: string;
   groups: { title: string; links: NavMenuLink[] }[];
-  /** The card at the bottom of the dropdown: an ask, or a post with its picture. */
-  banner: SiteLink & { title: string; subtitle?: string; image?: string; meta?: string };
+  /**
+   * The strip at the bottom of the dropdown: an ask, or a post with its
+   * picture, on a dark block (Niko 2026-11-10: not plain white or grey, then
+   * "just dark").
+   */
+  banner: SiteLink & {
+    title: string;
+    subtitle?: string;
+    image?: string;
+    meta?: string;
+  };
 };
 
 /** The header's dropdowns. */
@@ -38,14 +54,16 @@ export const NAV_MENUS: NavMenu[] = [
           {
             label: 'Savings',
             description: 'Earn on your digital dollars.',
-            href: paths.site.savings,
+            href: paths.savings,
             icon: SavingsOutlined,
+            app: true,
           },
           {
             label: 'Add money',
             description: 'Buy with your card or bank.',
-            href: paths.site.buy,
+            href: appActionHref(paths.portfolio, 'buy'),
             icon: AddCardOutlined,
+            app: true,
           },
         ],
       },
@@ -55,14 +73,16 @@ export const NAV_MENUS: NavMenu[] = [
           {
             label: 'Swap',
             description: 'Switch between assets.',
-            href: paths.site.swap,
+            href: paths.swap,
             icon: SwapHorizOutlined,
+            app: true,
           },
           {
             label: 'Send',
             description: 'Pay anyone, anywhere.',
-            href: paths.site.wallet,
+            href: appActionHref(paths.portfolio, 'send'),
             icon: NorthEastOutlined,
+            app: true,
           },
         ],
       },
@@ -137,6 +157,24 @@ export const NAV_MENUS: NavMenu[] = [
     },
   },
 ];
+
+/**
+ * The menus for the visitor: the Product links open the app's own pages (Niko
+ * 2026-11-10), straight there when signed in, through login and back when not
+ * (login's `next`; AppShell does the same for anyone who lands on /app).
+ */
+export function menusFor(signedIn: boolean): NavMenu[] {
+  if (signedIn) return NAV_MENUS;
+  return NAV_MENUS.map((menu) => ({
+    ...menu,
+    groups: menu.groups.map((group) => ({
+      ...group,
+      links: group.links.map((link) =>
+        link.app ? { ...link, href: authHref('login', link.href) } : link
+      ),
+    })),
+  }));
+}
 
 /** Plain links beside the dropdowns. */
 export const NAV_LINKS: SiteLink[] = [
