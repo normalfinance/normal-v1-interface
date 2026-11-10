@@ -747,10 +747,14 @@ export function SwapDetailModal({
           )}
           {/* The swap's own page: its whole journey, where the money is, and
               the way forward when it waits (Niko 2026-11-09). */}
-          {transferId && transfer.direction !== INDEX_DIRECTION && !resumable && (
+          {transferId && !resumable && (
             <Link
               component={RouterLink}
-              href={paths.swapTransfer(transferId)}
+              href={
+                transfer.direction === INDEX_DIRECTION
+                  ? paths.indexes.purchase(transferId)
+                  : paths.swapTransfer(transferId)
+              }
               onClick={onClose}
               sx={{
                 display: 'block',

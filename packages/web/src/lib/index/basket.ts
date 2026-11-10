@@ -12,38 +12,35 @@
 //      swap per coin, each delivering to the person's own address on that
 //      coin's chain.
 //
-// This file is pure: the basket's definition, the exact split of an amount,
-// and the minimum that keeps every slice above the bridges' fixed costs. Every
-// amount is integer USDC wire units (6 decimals), never a float.
+// Weighted by market size (Niko 2026-11-10: "it should look at market caps of
+// assets and give percentage to each"): each coin's share is its share of the
+// coins' combined market cap, as a market-cap index is. The page shows the
+// shares from the same market data the server splits by (api/prices/markets),
+// and a purchase carries the shares the person reviewed (weightsWithin).
+//
+// This file is pure: the shares, the exact split of an amount, and the
+// minimum that keeps every slice above the bridges' fixed costs. Every amount
+// is integer USDC wire units (6 decimals), never a float.
 // ---------------------------------------------------------------------------
 
 export type IndexCoin = 'BTC' | 'ETH' | 'SOL';
 
-export interface IndexLegDef {
+export interface IndexDef {
+  id: string;
+  /** The coins it holds. Their shares follow their market sizes (marketWeights). */
+  coins: IndexCoin[];
+}
+
+/** One coin's share of a purchase, in basis points. */
+export interface IndexWeight {
   symbol: IndexCoin;
-  /** Share of the purchase in basis points (all legs sum to 10,000). */
   weightBps: number;
 }
 
-export interface IndexDef {
-  id: string;
-  /** Biggest slice first: the order the legs are bought and shown in. */
-  legs: IndexLegDef[];
-}
-
-/**
- * The first index. Fixed weights with Bitcoin the biggest slice (Niko's
- * brief). By market size alone Bitcoin would be about 82% and Solana under 3%
- * (CoinGecko, 2026-11-08), which makes Solana's slice too small to be worth a
- * bridge on an everyday purchase; fixed weights keep every slice meaningful.
- */
+/** The first index: the three largest coins we hold, weighted by market size. */
 export const CRYPTO_INDEX: IndexDef = {
   id: 'crypto-3',
-  legs: [
-    { symbol: 'BTC', weightBps: 6000 },
-    { symbol: 'ETH', weightBps: 2500 },
-    { symbol: 'SOL', weightBps: 1500 },
-  ],
+  coins: ['BTC', 'ETH', 'SOL'],
 };
 
 const BPS = 10_000n;
@@ -55,20 +52,99 @@ const WIRE_PER_USD = 1_000_000n;
  */
 export const INDEX_MIN_SLICE_USD = 10;
 
-/** Weights must be whole, positive and sum to exactly 100%. */
-export function assertIndexDef(def: IndexDef): void {
-  if (!def.legs.length) throw new Error('An index needs at least one coin');
+/**
+ * How far the shares a person reviewed may be from the server's own reading
+ * when the purchase is saved: one percentage point per coin. Market sizes are
+ * read from one five-minute cache on both sides, so a review and its purchase
+ * normally agree exactly; a move this large means the person should look again.
+ */
+export const WEIGHT_TOLERANCE_BPS = 100;
+
+/**
+ * Each coin's share of the coins' combined market cap, in whole basis points
+ * summing to exactly 10,000 (the points rounding leaves over go to the largest
+ * remainders), biggest first. Null when a coin's market cap is unknown: a
+ * share is never guessed.
+ */
+export function marketWeights(
+  def: IndexDef,
+  capOf: (symbol: IndexCoin) => number | null | undefined
+): IndexWeight[] | null {
+  const caps = def.coins.map((symbol) => ({ symbol, cap: capOf(symbol) }));
+  if (!caps.length) return null;
+  if (caps.some((c) => typeof c.cap !== 'number' || !Number.isFinite(c.cap) || c.cap <= 0)) {
+    return null;
+  }
+  const total = caps.reduce((sum, c) => sum + (c.cap as number), 0);
+  const shares = caps.map((c) => {
+    const exact = ((c.cap as number) / total) * 10_000;
+    // Every coin the index holds is bought: at least one point each.
+    const weightBps = Math.max(1, Math.floor(exact));
+    return { symbol: c.symbol, weightBps, rest: exact - Math.floor(exact) };
+  });
+  let left = 10_000 - shares.reduce((sum, s) => sum + s.weightBps, 0);
+  if (left > 0) {
+    // Rounding down leaves a point or two over (at most one per coin): they
+    // go to the largest remainders, ties to the bigger coin.
+    const byRest = [...shares].sort((a, b) => b.rest - a.rest || b.weightBps - a.weightBps);
+    for (let i = 0; left > 0; i = (i + 1) % byRest.length) {
+      byRest[i].weightBps += 1;
+      left -= 1;
+    }
+  } else if (left < 0) {
+    // A dust coin's one point came from nowhere: the biggest gives it back.
+    shares.reduce((a, b) => (b.weightBps > a.weightBps ? b : a)).weightBps += left;
+  }
+  return shares
+    .map(({ symbol, weightBps }) => ({ symbol, weightBps }))
+    .sort((a, b) => b.weightBps - a.weightBps);
+}
+
+/** Shares must be whole, positive, each coin once, and sum to exactly 100%. */
+export function assertIndexWeights(weights: IndexWeight[]): void {
+  if (!weights.length) throw new Error('An index needs at least one coin');
   const seen = new Set<string>();
   let sum = 0;
-  for (const leg of def.legs) {
-    if (!Number.isInteger(leg.weightBps) || leg.weightBps <= 0) {
-      throw new Error(`Weight for ${leg.symbol} must be a positive whole number of basis points`);
+  for (const w of weights) {
+    if (!Number.isInteger(w.weightBps) || w.weightBps <= 0) {
+      throw new Error(`Weight for ${w.symbol} must be a positive whole number of basis points`);
     }
-    if (seen.has(leg.symbol)) throw new Error(`${leg.symbol} appears twice`);
-    seen.add(leg.symbol);
-    sum += leg.weightBps;
+    if (seen.has(w.symbol)) throw new Error(`${w.symbol} appears twice`);
+    seen.add(w.symbol);
+    sum += w.weightBps;
   }
   if (sum !== 10_000) throw new Error(`Weights sum to ${sum} basis points, not 10,000`);
+}
+
+/**
+ * Shares a client sent, read strictly: the index's own coins, each once, whole
+ * positive points summing to 10,000. Null for anything else.
+ */
+export function parseWeights(def: IndexDef, raw: unknown): IndexWeight[] | null {
+  if (!Array.isArray(raw) || raw.length !== def.coins.length) return null;
+  const weights: IndexWeight[] = [];
+  for (const item of raw) {
+    const symbol = (item as { symbol?: unknown })?.symbol;
+    const weightBps = (item as { weightBps?: unknown })?.weightBps;
+    if (typeof symbol !== 'string' || !def.coins.includes(symbol as IndexCoin)) return null;
+    if (typeof weightBps !== 'number') return null;
+    weights.push({ symbol: symbol as IndexCoin, weightBps });
+  }
+  try {
+    assertIndexWeights(weights);
+  } catch {
+    return null;
+  }
+  return weights.sort((a, b) => b.weightBps - a.weightBps);
+}
+
+/** The same coins, each share within `toleranceBps` of the other's. */
+export function weightsWithin(a: IndexWeight[], b: IndexWeight[], toleranceBps: number): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((wa) => {
+    const wb = b.find((x) => x.symbol === wa.symbol);
+    return !!wb && Math.abs(wa.weightBps - wb.weightBps) <= toleranceBps;
+  });
 }
 
 export interface IndexSlice {
@@ -82,13 +158,13 @@ export interface IndexSlice {
  * few units rounding leaves over go to the biggest slice, so the slices
  * always add up to the purchase to the last unit.
  */
-export function splitPurchase(totalWire: bigint, def: IndexDef = CRYPTO_INDEX): IndexSlice[] {
-  assertIndexDef(def);
+export function splitPurchase(totalWire: bigint, weights: IndexWeight[]): IndexSlice[] {
+  assertIndexWeights(weights);
   if (totalWire <= 0n) throw new Error('A purchase must be more than zero');
-  const slices = def.legs.map((leg) => ({
-    symbol: leg.symbol,
-    weightBps: leg.weightBps,
-    amountWire: (totalWire * BigInt(leg.weightBps)) / BPS,
+  const slices = weights.map((w) => ({
+    symbol: w.symbol,
+    weightBps: w.weightBps,
+    amountWire: (totalWire * BigInt(w.weightBps)) / BPS,
   }));
   const used = slices.reduce((sum, s) => sum + s.amountWire, 0n);
   const biggest = slices.reduce((a, b) => (b.weightBps > a.weightBps ? b : a));
@@ -98,11 +174,12 @@ export function splitPurchase(totalWire: bigint, def: IndexDef = CRYPTO_INDEX): 
 
 /**
  * The smallest purchase whose every slice reaches INDEX_MIN_SLICE_USD,
- * rounded up to whole dollars: $67 for 60/25/15 (the 15% slice needs $10).
+ * rounded up to whole dollars: the smallest coin sets it ($67 when it holds
+ * 15%, $250 when it holds 4%).
  */
-export function minimumPurchaseWire(def: IndexDef = CRYPTO_INDEX): bigint {
-  assertIndexDef(def);
-  const smallest = def.legs.reduce((a, b) => (b.weightBps < a.weightBps ? b : a)).weightBps;
+export function minimumPurchaseWire(weights: IndexWeight[]): bigint {
+  assertIndexWeights(weights);
+  const smallest = weights.reduce((a, b) => (b.weightBps < a.weightBps ? b : a)).weightBps;
   const sliceWire = BigInt(INDEX_MIN_SLICE_USD) * WIRE_PER_USD;
   // ceil(slice / weight), in whole dollars
   const neededWire = (sliceWire * BPS + BigInt(smallest) - 1n) / BigInt(smallest);
@@ -116,23 +193,23 @@ export type PurchaseVerdict =
   | { ok: false; reason: 'too-large'; maximumWire: bigint };
 
 /**
- * Can this amount be bought? `maximumWire` is the pilot cap when one is set
- * (CCTP_PILOT_MAX_USD on the server), null for none.
+ * Can this amount be bought at these shares? `maximumWire` is the pilot cap
+ * when one is set (CCTP_PILOT_MAX_USD on the server), null for none.
  */
 export function purchaseVerdict(
   totalWire: bigint,
   maximumWire: bigint | null,
-  def: IndexDef = CRYPTO_INDEX
+  weights: IndexWeight[]
 ): PurchaseVerdict {
-  const minimumWire = minimumPurchaseWire(def);
+  const minimumWire = minimumPurchaseWire(weights);
   if (totalWire < minimumWire) return { ok: false, reason: 'too-small', minimumWire };
   if (maximumWire !== null && totalWire > maximumWire) {
     return { ok: false, reason: 'too-large', maximumWire };
   }
-  return { ok: true, slices: splitPurchase(totalWire, def) };
+  return { ok: true, slices: splitPurchase(totalWire, weights) };
 }
 
-/** "60%" from basis points, for the page. */
+/** "82.5%" from basis points, for the page: whole points drop the decimal. */
 export const weightLabel = (weightBps: number) =>
   `${Number.isInteger(weightBps / 100) ? weightBps / 100 : (weightBps / 100).toFixed(1)}%`;
 

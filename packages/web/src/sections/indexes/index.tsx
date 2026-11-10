@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography';
 import { AppPageHeader } from '@/components/_common/brand';
 
 import { IndexCard, IndexComingCard } from './index-card';
+import { IndexPurchasesInProgress } from './purchases-in-progress';
 
 /** /app/indexes: every index as a card to pick, then the place for the next. */
 export function IndexesView() {
@@ -27,6 +28,8 @@ export function IndexesView() {
           </Typography>
         }
       />
+      {/* Purchases still under way, each opening its own page (Niko 2026-11-10). */}
+      <IndexPurchasesInProgress sx={{ mb: { xs: 4, md: 5 } }} />
       <Box
         sx={{
           display: 'grid',

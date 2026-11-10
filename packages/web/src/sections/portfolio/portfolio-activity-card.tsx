@@ -195,7 +195,7 @@ function describe(a: Activity): Described {
           icon: <DonutSmallOutlined />,
           title: index ? `Bought the ${index.name} index` : 'Bought an index',
           subtitle: index
-            ? index.def.legs.map((leg) => assetName(leg.symbol)).join(', ')
+            ? index.def.coins.map((symbol) => assetName(symbol)).join(', ')
             : undefined,
           value: `−${amountOf(a.tokenIn.amount, a.tokenIn.symbol)}`,
           status: a.failed

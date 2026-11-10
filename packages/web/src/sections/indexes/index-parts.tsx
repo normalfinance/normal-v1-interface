@@ -1,12 +1,13 @@
 'use client';
 
-import type { IndexDef } from '@/lib/index/basket';
+import type { IndexWeight } from '@/lib/index/basket';
 
 import { weightLabel } from '@/lib/index/basket';
 import { assetColor, assetDisplay } from '@/lib/portfolio/display';
 import { INK, MUTED, PAPER, HAIRLINE_COLOR } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
+import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
 
 import { FIGURES, assetName } from '@/components/_common/app-ui';
@@ -56,23 +57,41 @@ export function CoinStack({ symbols, size = 36 }: { symbols: string[]; size?: nu
   );
 }
 
-/** An index's weights: one bar, each coin its share in its own colour, then the words. */
-export function WeightBar({ def, height = 6 }: { def: IndexDef; height?: number }) {
+/**
+ * An index's shares by market size: one bar, each coin its share in its own
+ * colour, then the words. While the market sizes load, a quiet placeholder of
+ * the same height, so nothing jumps when they arrive.
+ */
+export function WeightBar({
+  weights,
+  height = 6,
+}: {
+  weights: IndexWeight[] | null;
+  height?: number;
+}) {
+  if (!weights) {
+    return (
+      <Box>
+        <Skeleton variant="rectangular" sx={{ height }} />
+        <Skeleton variant="text" sx={{ mt: 1, width: 240, fontSize: 13 }} />
+      </Box>
+    );
+  }
   return (
     <Box>
       <Box sx={{ display: 'flex', gap: '2px', height }} aria-hidden="true">
-        {def.legs.map((leg) => (
-          <Box key={leg.symbol} sx={{ flexGrow: leg.weightBps, bgcolor: assetColor(leg.symbol) }} />
+        {weights.map((w) => (
+          <Box key={w.symbol} sx={{ flexGrow: w.weightBps, bgcolor: assetColor(w.symbol) }} />
         ))}
       </Box>
       <Box sx={{ mt: 1.25, display: 'flex', flexWrap: 'wrap', columnGap: 2, rowGap: 0.5 }}>
-        {def.legs.map((leg) => (
-          <Typography key={leg.symbol} sx={{ fontSize: 13, color: MUTED }}>
+        {weights.map((w) => (
+          <Typography key={w.symbol} sx={{ fontSize: 13, color: MUTED }}>
             <Box component="span" sx={{ color: INK, fontWeight: 500 }}>
-              {assetName(leg.symbol)}
+              {assetName(w.symbol)}
             </Box>{' '}
             <Box component="span" sx={FIGURES}>
-              {weightLabel(leg.weightBps)}
+              {weightLabel(w.weightBps)}
             </Box>
           </Typography>
         ))}

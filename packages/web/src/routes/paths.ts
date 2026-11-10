@@ -45,6 +45,8 @@ export const paths = {
   indexes: {
     root: '/app/indexes',
     details: (slug: string) => `/app/indexes/${slug}`,
+    /** One purchase, followed after its page closed (Niko 2026-11-10). */
+    purchase: (id: string) => `/app/indexes/purchases/${id}`,
   },
   activity: '/app/activity',
   assets: {

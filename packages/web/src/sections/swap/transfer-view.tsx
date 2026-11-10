@@ -158,19 +158,21 @@ export function TransferView({ id }: { id: string }) {
     };
   }, [user]);
 
+  // An index purchase opened here (an old link) goes to its own page.
+  const indexPurchase = row?.direction === 'stellar_to_index';
+  useEffect(() => {
+    if (indexPurchase) router.replace(paths.indexes.purchase(id));
+  }, [indexPurchase, id, router]);
+
   const keeper = <CctpRecoveryBanner addresses={addresses} />;
 
-  if (missing || row?.direction === 'stellar_to_index') {
+  if (missing) {
     return (
       <DashboardContent>
         {keeper}
         <AppPageHeader
           title={t('Swap not found')}
-          subtitle={
-            row?.direction === 'stellar_to_index'
-              ? t('This is an index purchase. Follow it in Activity.')
-              : t('This swap is not on your account. Your swaps are all in Activity.')
-          }
+          subtitle={t('This swap is not on your account. Your swaps are all in Activity.')}
         />
         <Typography sx={{ fontSize: 14, color: MUTED }}>
           <Box component="a" href={paths.activity} sx={{ color: 'inherit' }}>
@@ -181,7 +183,8 @@ export function TransferView({ id }: { id: string }) {
     );
   }
 
-  if (!row) {
+  // An index purchase has its own page, with its coins' steps.
+  if (!row || row.direction === 'stellar_to_index') {
     return (
       <DashboardContent>
         {keeper}

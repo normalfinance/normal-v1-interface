@@ -12,6 +12,15 @@ import { purchasePhase, INDEX_DIRECTION } from '@/lib/index/legs';
 
 export const dynamic = 'force-dynamic';
 
+const indexIdOf = (quoteJson: string | null) => {
+  try {
+    const id = quoteJson ? JSON.parse(quoteJson)?.index : null;
+    return typeof id === 'string' ? id : null;
+  } catch {
+    return null;
+  }
+};
+
 export const GET = withAuth(async (_req, { user, params }) => {
   const row = await prisma.cctpTransfer.findUnique({ where: { id: params.id } });
   if (!row || row.userId !== user.id || row.direction !== INDEX_DIRECTION) {
@@ -34,7 +43,11 @@ export const GET = withAuth(async (_req, { user, params }) => {
       destAddress: purchase.destAddress,
       errorDetail: purchase.errorDetail,
       createdAt: purchase.createdAt,
+      // When it last changed: the purchase's own page times its open step from it.
+      updatedAt: purchase.updatedAt,
     },
+    // Which index it bought (its page's name and coins).
+    indexId: indexIdOf(row.quoteJson),
     phase: purchasePhase(purchase, legs),
     legs: legs.map((l) => ({
       id: l.id,

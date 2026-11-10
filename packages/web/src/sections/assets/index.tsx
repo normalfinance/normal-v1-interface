@@ -19,11 +19,13 @@ import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 import { assetColor, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
+import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
 import { AppPageHeader } from '@/components/_common/brand';
 import { AssetAvatar } from '@/components/_common/asset-avatar';
 import { HoldingsTable } from '@/components/_common/holdings-table';
+import { AllocationPanel } from '@/components/_common/allocation-donut';
 import {
   AppBlock,
   Headline,
@@ -281,7 +283,28 @@ export default function AssetsView() {
               : undefined,
         }))}
       >
-        <Headline label={t('Total')} value={formatUsd(totalValue)} />
+        {/* The total, and what it is made of as a ring with its legend beside
+            it (Niko 2026-11-10); under the total on a phone. */}
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            columnGap: 4,
+            rowGap: 3,
+          }}
+        >
+          <Headline label={t('Total')} value={formatUsd(totalValue)} />
+          <AllocationPanel
+            loading={globalIsLoading}
+            parts={displayTokens.map((token) => ({
+              symbol: isSavings(token) ? 'Savings' : token.symbol,
+              label: isSavings(token) ? t('Savings') : assetName(token.symbol),
+              value: valueOf(token),
+            }))}
+          />
+        </Box>
       </SummaryBlock>
 
       <AppBlock

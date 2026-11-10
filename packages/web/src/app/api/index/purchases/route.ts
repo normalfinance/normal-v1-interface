@@ -1,13 +1,22 @@
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { readMarkets } from '@/server/markets';
 import { indexEnabled } from '@/lib/index/flag';
 import { CCTP_DOMAIN } from '@/lib/cctp/config';
 import { networkFromCookie } from '@/server/network-cookie';
 import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 import { autopilotStatusFor } from '@/server/autopilot-status';
 import { INDEX_DIRECTION, INDEX_DST_ASSET } from '@/lib/index/legs';
-import { CRYPTO_INDEX, purchaseVerdict, wireToUsdNumber } from '@/lib/index/basket';
+import {
+  CRYPTO_INDEX,
+  parseWeights,
+  marketWeights,
+  weightsWithin,
+  purchaseVerdict,
+  wireToUsdNumber,
+  WEIGHT_TOLERANCE_BPS,
+} from '@/lib/index/basket';
 
 // ---------------------------------------------------------------------------
 // POST /api/index/purchases: record a crypto index purchase BEFORE anything is
@@ -17,7 +26,10 @@ import { CRYPTO_INDEX, purchaseVerdict, wireToUsdNumber } from '@/lib/index/bask
 //
 // The server decides every address that money moves to: the mint goes to the
 // person's own Base address and each coin to their own address on its chain,
-// all read from their wallet row. The request only says how much.
+// all read from their wallet row. The request says how much, and the shares
+// the person reviewed: the index is weighted by market size (lib/index/basket),
+// so the server reads the same market data the page did and takes the
+// reviewed shares only when they agree with it (WEIGHT_TOLERANCE_BPS).
 // ---------------------------------------------------------------------------
 
 export const dynamic = 'force-dynamic';
@@ -39,6 +51,47 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
     );
   }
 
+  // The shares: market sizes from the cache the page read them from.
+  const read = await readMarkets();
+  const current = read
+    ? marketWeights(
+        CRYPTO_INDEX,
+        (symbol) => read.markets.find((m) => m.symbol === symbol)?.marketCap
+      )
+    : null;
+  if (!current) {
+    return NextResponse.json(
+      {
+        error:
+          'Market sizes are unavailable right now, so the split can’t be set. Please try again in a few minutes.',
+      },
+      { status: 503 }
+    );
+  }
+  let weights = current;
+  // The shares the person reviewed, when the page sends them (a client that
+  // doesn't is split by the server's own reading).
+  if (body?.weights !== undefined) {
+    const reviewed = parseWeights(CRYPTO_INDEX, body.weights);
+    if (!reviewed) {
+      return NextResponse.json(
+        { error: 'weights must be the index’s coins in whole basis points summing to 10,000' },
+        { status: 400 }
+      );
+    }
+    if (!weightsWithin(reviewed, current, WEIGHT_TOLERANCE_BPS)) {
+      return NextResponse.json(
+        {
+          error: 'The coins’ market sizes moved since you looked. Go back to see the new split.',
+          code: 'weights-changed',
+          weights: current,
+        },
+        { status: 409 }
+      );
+    }
+    weights = reviewed;
+  }
+
   const cookieStore = await cookies();
   const network = networkFromCookie(cookieStore);
   const capUsd = Number(process.env.CCTP_PILOT_MAX_USD);
@@ -46,7 +99,7 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
     network === 'mainnet' && Number.isFinite(capUsd) && capUsd > 0
       ? BigInt(Math.round(capUsd * 1_000_000))
       : null;
-  const verdict = purchaseVerdict(BigInt(amountWire), maximumWire);
+  const verdict = purchaseVerdict(BigInt(amountWire), maximumWire, weights);
   if (!verdict.ok) {
     return NextResponse.json(
       verdict.reason === 'too-small'
@@ -60,17 +113,17 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
   if (!wallet?.stellarAddress || !wallet.ethereumAddress) {
     return NextResponse.json({ error: 'Set up your wallet first' }, { status: 409 });
   }
-  const missing = CRYPTO_INDEX.legs.filter(
-    (leg) =>
-      (leg.symbol === 'BTC' && !wallet.bitcoinAddress) ||
-      (leg.symbol === 'ETH' && !wallet.ethereumAddress) ||
-      (leg.symbol === 'SOL' && !wallet.solanaAddress)
+  const missing = CRYPTO_INDEX.coins.filter(
+    (symbol) =>
+      (symbol === 'BTC' && !wallet.bitcoinAddress) ||
+      (symbol === 'ETH' && !wallet.ethereumAddress) ||
+      (symbol === 'SOL' && !wallet.solanaAddress)
   );
   if (missing.length) {
     return NextResponse.json(
       {
         error: 'Add these coins to your wallet first',
-        missing: missing.map((l) => l.symbol),
+        missing,
       },
       { status: 409 }
     );
@@ -102,6 +155,7 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
         destAddress: wallet.ethereumAddress!,
         quoteJson: JSON.stringify({
           index: CRYPTO_INDEX.id,
+          weighting: 'market-cap',
           legs: verdict.slices.map((sl) => ({ ...sl, amountWire: sl.amountWire.toString() })),
         }),
       },
