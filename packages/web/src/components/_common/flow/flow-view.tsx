@@ -165,10 +165,9 @@ function PositionBox({ plan, run }: { plan: FlowPlan; run: RunState }) {
       aria-live="polite"
       aria-label={t('Where your money is')}
       sx={{
-        border: HAIRLINE,
         bgcolor: PAPER,
-        px: BOX_PX,
-        py: { xs: 2, md: 2.5 },
+        pb: { xs: 2, md: 2.5 },
+        borderBottom: HAIRLINE,
         display: 'grid',
         gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) minmax(220px, 280px)' },
         alignItems: 'center',
@@ -309,7 +308,7 @@ export function FlowNotice({
   return (
     <Box
       sx={{
-        px: BOX_PX,
+        px: 2.5,
         py: 2,
         border: `1px solid ${HAIRLINE_STRONG}`,
         bgcolor: CANVAS,
@@ -575,6 +574,7 @@ export function FlowView({
         <AppBlock
           title={t('Summary')}
           flush
+          framed
           sx={{ order: { xs: phase === 'review' ? 1 : 2, lg: 2 } }}
         >
           <SummaryRows summary={summary} />

@@ -101,16 +101,7 @@ export default function SwapView() {
       return (
         <DashboardContent>
           <Box sx={{ display: 'flex', justifyContent: 'center', pt: { xs: 4, md: 7 } }}>
-            <Box
-              sx={{
-                width: '100%',
-                maxWidth: 460,
-                p: { xs: '20px', md: '24px' },
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid rgba(10,10,15,0.08)',
-                bgcolor: '#fff',
-              }}
-            >
+            <Box sx={{ width: '100%', maxWidth: 460, bgcolor: '#fff' }}>
               <GetStartedPicker />
             </Box>
           </Box>

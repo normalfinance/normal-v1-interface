@@ -8,7 +8,6 @@ import {
   INK,
   MUTED,
   PAPER,
-  CANVAS,
   INK_SOFT,
   BRAND_COLORS,
   HAIRLINE_STRONG,
@@ -190,7 +189,8 @@ function PlaceRow({
         gap: 1.5,
         px: BOX_PX,
         py: 1.5,
-        bgcolor: CANVAS,
+        // A place is a plain heading on the page with its lines, like a
+        // group in Holdings (Niko 2026-11-10: no boxes, no grey bands).
         borderTop: HAIRLINE,
         borderBottom: HAIRLINE,
         '&:first-of-type': { borderTop: 'none' },
@@ -389,7 +389,7 @@ function StepRow({
           top: 0,
           // Marker centre: 12px row padding + 1px + half of 22px.
           ...(last ? { height: '24px' } : { bottom: 0 }),
-          left: { xs: `calc(20px + ${RAIL_X}px)`, md: `calc(24px + ${RAIL_X}px)` },
+          left: { xs: `calc(${BOX_PX.xs} + ${RAIL_X}px)`, md: `calc(${BOX_PX.md} + ${RAIL_X}px)` },
           width: '1px',
           bgcolor: HAIRLINE_STRONG,
         },

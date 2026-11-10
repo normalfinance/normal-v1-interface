@@ -256,7 +256,7 @@ export default function SavingsView() {
             explainer above the onramp card, the user's own order: "can I
             transact?" before "how do I add money?". */}
           <Stack spacing={2} sx={{ minWidth: 0, order: { xs: 1, lg: 2 } }}>
-            <AppBlock title="Deposit or withdraw">
+            <AppBlock framed title="Deposit or withdraw">
               <SavingsCard hideHeader sx={{ p: { xs: 0, md: 0 }, border: 'none' }} />
             </AppBlock>
             <SavingsXlmFeesCard />

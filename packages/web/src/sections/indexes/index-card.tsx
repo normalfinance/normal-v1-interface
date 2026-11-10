@@ -26,13 +26,7 @@ import Typography from '@mui/material/Typography';
 import EastRounded from '@mui/icons-material/EastRounded';
 import DonutSmallOutlined from '@mui/icons-material/DonutSmallOutlined';
 
-import {
-  BOX_PX,
-  Change,
-  FIGURES,
-  Sparkline,
-  formatUsd,
-} from '@/components/_common/app-ui';
+import { BOX_PX, FRAMED, Change, FIGURES, Sparkline, formatUsd } from '@/components/_common/app-ui';
 
 import { CoinStack, WeightBar } from './index-parts';
 
@@ -50,7 +44,15 @@ import { CoinStack, WeightBar } from './index-parts';
 const COIN = 40;
 
 /** One cell of the card's factsheet strip: a grey label over a figure. */
-function Fact({ label, first = false, children }: { label: string; first?: boolean; children: ReactNode }) {
+function Fact({
+  label,
+  first = false,
+  children,
+}: {
+  label: string;
+  first?: boolean;
+  children: ReactNode;
+}) {
   return (
     <Box
       sx={{
@@ -63,7 +65,14 @@ function Fact({ label, first = false, children }: { label: string; first?: boole
       <Typography sx={{ fontSize: 12.5, color: MUTED }}>{label}</Typography>
       <Typography
         component="div"
-        sx={{ ...FIGURES, mt: 0.5, fontSize: 16, fontWeight: 500, color: INK, whiteSpace: 'nowrap' }}
+        sx={{
+          ...FIGURES,
+          mt: 0.5,
+          fontSize: 16,
+          fontWeight: 500,
+          color: INK,
+          whiteSpace: 'nowrap',
+        }}
       >
         {children}
       </Typography>
@@ -90,6 +99,8 @@ export function IndexCard({ meta }: { meta: IndexMeta }) {
         height: '100%',
         textAlign: 'left',
         bgcolor: PAPER,
+        // A card you pick keeps its frame, its padding inside (Niko 2026-11-10).
+        ...FRAMED,
         border: `1px solid ${HAIRLINE_STRONG}`,
         transition: 'border-color 150ms',
         '& .nf-index-go': { transition: 'background-color 150ms' },
@@ -144,12 +155,8 @@ export function IndexCard({ meta }: { meta: IndexMeta }) {
           <Fact first label={t('Today')}>
             {today === null ? '' : <Change pct={today} />}
           </Fact>
-          <Fact label={t('Holds')}>
-            {t('{{count}} coins', { count: meta.def.legs.length })}
-          </Fact>
-          <Fact label={t('From')}>
-            {formatUsd(wireToUsdNumber(minimumPurchaseWire(meta.def)))}
-          </Fact>
+          <Fact label={t('Holds')}>{t('{{count}} coins', { count: meta.def.legs.length })}</Fact>
+          <Fact label={t('From')}>{formatUsd(wireToUsdNumber(minimumPurchaseWire(meta.def)))}</Fact>
         </Box>
         <Box
           className="nf-index-go"
@@ -183,6 +190,7 @@ export function IndexComingCard() {
       sx={{
         height: '100%',
         minHeight: 200,
+        ...FRAMED,
         p: BOX_PX,
         border: `1px dashed ${HAIRLINE_STRONG}`,
         display: 'flex',

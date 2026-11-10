@@ -286,6 +286,7 @@ export default function AssetsView() {
 
       <AppBlock
         flush
+        open
         title={t('Holdings')}
         action={
           // CoinGecko's free data asks to be credited where it is shown.

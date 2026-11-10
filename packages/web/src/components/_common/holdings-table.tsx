@@ -9,7 +9,6 @@ import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
 
-import { HAIRLINE } from './brand';
 import {
   BOX_PX,
   Change,
@@ -115,6 +114,7 @@ function HeaderRow({ variant }: { variant: Variant }) {
   return (
     <Box
       aria-hidden="true"
+      className="nf-row"
       sx={{
         ...rowGrid(variant),
         py: 1.25,
@@ -142,6 +142,7 @@ function HeaderRow({ variant }: { variant: Variant }) {
 function GroupRow({ group }: { group: HoldingGroup }) {
   return (
     <Box
+      className="nf-group"
       sx={{
         display: 'flex',
         alignItems: 'baseline',
@@ -177,10 +178,9 @@ function HoldingRow({ row, variant }: { row: Holding; variant: Variant }) {
     <ButtonBase
       component={RouterLink}
       href={row.href}
+      className="nf-row"
       sx={{
         ...rowGrid(variant),
-        // Home on a phone sits on the page: the coin lines up with the balance.
-        ...(variant === 'home' && { px: { xs: 0, md: BOX_PX.md } }),
         width: '100%',
         // Home on a phone: a 40px coin with 10px above and below, so more of
         // the list fits on the first screen.
@@ -290,9 +290,11 @@ function HoldingRow({ row, variant }: { row: Holding; variant: Variant }) {
 }
 
 /**
- * The holdings, as rows in a hairline box. `groups` puts a grey band over each
- * group (digital dollars, crypto, savings) with its total; `rows` is one plain
- * list. The full table has a header row; the compact one (Home) does not.
+ * The holdings, one row each. `groups` puts a heading over each group (digital
+ * dollars, crypto, savings) with its total; `rows` is one plain list. The full
+ * table has a header row; the compact one does not, nor Home on a phone. Inside
+ * an open AppBlock (every page's lists) the rows sit on the page, a line under
+ * each, and the headings are plain words; inside a box, a grey band.
  */
 export function HoldingsTable({
   variant = 'full',
@@ -309,22 +311,7 @@ export function HoldingsTable({
     rows = rows.map((r) => ({ ...r, share: total > 0 ? r.value / total : undefined }));
   }
   return (
-    <Box
-      sx={[
-        ROW_LINES,
-        // Home on a phone: no box (AppBlock openOnPhone) and no header row, so
-        // each holding draws the line under itself, as the phone mockup does;
-        // from tablets up, the boxed table with lines between rows. The
-        // :nth-child(n) outranks ButtonBase's own border reset.
-        variant === 'home' && {
-          '& > :nth-child(n)': {
-            borderTop: { xs: 'none', md: HAIRLINE },
-            borderBottom: { xs: HAIRLINE, md: 'none' },
-          },
-          '& > :first-child': { borderTop: 'none' },
-        },
-      ]}
-    >
+    <Box sx={ROW_LINES}>
       {tabled(variant) && <HeaderRow variant={variant} />}
       {groups
         ? groups.flatMap((group) => [

@@ -93,10 +93,10 @@ export function SettingsGeneral() {
 
   return (
     <Stack spacing={2}>
-      {/* Profile */}
-      <AppBlock title={t('Profile')}>
-        {/* Avatar + name */}
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: '20px' }}>
+      {/* Profile: an open list, the person first, then their details (each
+          row draws the line under itself, as every list in the app). */}
+      <AppBlock flush open title={t('Profile')}>
+        <Stack className="nf-row" direction="row" spacing={2} alignItems="center" sx={{ py: 2 }}>
           <Avatar src={userAvatar} alt={displayName} sx={{ width: 64, height: 64 }} />
           <Box>
             <Typography
@@ -104,20 +104,16 @@ export function SettingsGeneral() {
             >
               {displayName}
             </Typography>
-            <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '2px' }}>
-              {userEmail}
-            </Typography>
+            {/* Without a name the email is already the line above: say it once. */}
+            {userEmail && userEmail !== displayName && (
+              <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '2px' }}>
+                {userEmail}
+              </Typography>
+            )}
           </Box>
         </Stack>
 
-        {/* Details rows */}
-        <RowList
-          sx={{
-            mx: { xs: '-20px', md: '-24px' },
-            mb: { xs: '-20px', md: '-24px' },
-            borderTop: '1px solid rgba(10,10,15,0.08)',
-          }}
-        >
+        <RowList>
           <InfoRow label={t('Display name')} value={displayName} />
           <InfoRow label={t('Email')} value={userEmail} />
           <InfoRow label={t('Account created')} value={createdAt} />
@@ -129,13 +125,15 @@ export function SettingsGeneral() {
       </AppBlock>
 
       {/* Emails */}
-      <AppBlock title={t('Emails')}>
+      <AppBlock flush open title={t('Emails')}>
         <Box
+          className="nf-row"
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '12px',
+            py: 1.75,
           }}
         >
           <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
@@ -189,6 +187,9 @@ export function SettingsGeneral() {
               disabled={isSaving}
               sx={{
                 flexShrink: 0,
+                // MUI pads the switch by 12px; pull it out so the track lines up
+                // with the values above (the right edge of the list).
+                mr: '-12px',
                 '& .MuiSwitch-switchBase.Mui-checked': {
                   color: '#0A0A0F',
                   '& + .MuiSwitch-track': { bgcolor: '#0A0A0F' },
@@ -205,6 +206,7 @@ export function SettingsGeneral() {
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <Box
+      className="nf-row"
       sx={{
         display: 'flex',
         justifyContent: 'space-between',

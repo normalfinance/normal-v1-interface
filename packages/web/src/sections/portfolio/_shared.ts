@@ -1,6 +1,6 @@
 import type { Token } from '@normalfinance/types';
 
-import { BLOCK_SX } from '@/components/_common/brand';
+import { FRAME_SX } from '@/components/_common/brand';
 
 export const MONO = {
   fontFamily: '"Geist Mono", ui-monospace, monospace',
@@ -8,7 +8,8 @@ export const MONO = {
   fontVariantNumeric: 'tabular-nums',
 } as const;
 
-export const CARD_SX = BLOCK_SX;
+/** The swap card: a tool used as one unit, so it keeps its frame (Niko 2026-11-10). */
+export const CARD_SX = FRAME_SX;
 
 export interface HoldingData {
   token: Token;

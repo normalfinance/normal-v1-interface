@@ -25,10 +25,10 @@ export default function Loading() {
             spacing={3}
             textAlign="center"
             sx={{
+              // As the page it stands in for: no box, a line under it.
               bgcolor: 'common.white',
-              border: '1px solid rgba(10,10,15,0.08)',
+              borderBottom: '1px solid rgba(10,10,15,0.08)',
               p: { xs: 3, md: 5 },
-              borderRadius: 'var(--radius-lg)',
               maxWidth: 520,
               width: '100%',
             }}

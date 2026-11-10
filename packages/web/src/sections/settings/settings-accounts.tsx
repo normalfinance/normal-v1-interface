@@ -211,12 +211,7 @@ export function SettingsAccounts() {
         {[1, 2].map((index) => (
           <Box
             key={index}
-            sx={{
-              p: { xs: '20px', md: '24px' },
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid rgba(10,10,15,0.08)',
-              bgcolor: '#FFFFFF',
-            }}
+            sx={{ pb: '24px', borderBottom: '1px solid rgba(10,10,15,0.08)', bgcolor: '#FFFFFF' }}
           >
             <Skeleton variant="text" width={160} height={24} sx={{ mb: '16px' }} />
             <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mb: '16px' }} />
@@ -312,9 +307,8 @@ export function SettingsAccounts() {
       {wallets.length === 0 && (
         <Box
           sx={{
-            p: '40px 24px',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid rgba(10,10,15,0.08)',
+            py: '40px',
+            borderBottom: '1px solid rgba(10,10,15,0.08)',
             bgcolor: '#FFFFFF',
             textAlign: 'center',
           }}
@@ -328,9 +322,8 @@ export function SettingsAccounts() {
       {wallets.length > 0 && filteredWallets.length === 0 && (
         <Box
           sx={{
-            p: '40px 24px',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid rgba(10,10,15,0.08)',
+            py: '40px',
+            borderBottom: '1px solid rgba(10,10,15,0.08)',
             bgcolor: '#FFFFFF',
             textAlign: 'center',
           }}
@@ -341,16 +334,11 @@ export function SettingsAccounts() {
         </Box>
       )}
 
-      {/* Wallet cards */}
+      {/* Each wallet: on the page with a line under it, no card (Niko 2026-11-10). */}
       {filteredWallets.map((wallet) => (
         <Box
           key={wallet.id}
-          sx={{
-            p: { xs: '20px', md: '24px' },
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid rgba(10,10,15,0.08)',
-            bgcolor: '#FFFFFF',
-          }}
+          sx={{ pb: '24px', borderBottom: '1px solid rgba(10,10,15,0.08)', bgcolor: '#FFFFFF' }}
         >
           {/* Header: name + edit */}
           {editingWallet === wallet.walletAddress ? (
@@ -580,10 +568,10 @@ export function SettingsAccounts() {
                 gap: '8px',
                 width: '100%',
                 mb: '16px',
-                px: '14px',
-                py: '11px',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(10,10,15,0.14)',
+                px: 0,
+                py: '14px',
+                border: 'none',
+                borderBottom: '1px solid rgba(10,10,15,0.08)',
                 bgcolor: 'transparent',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
@@ -789,12 +777,7 @@ export function SettingsAccounts() {
           so the common path is untouched. */}
       {seeds.length > 1 && (
         <Box
-          sx={{
-            border: '1px solid rgba(10,10,15,0.08)',
-            borderRadius: 'var(--radius-lg)',
-            p: '18px',
-            mt: '16px',
-          }}
+          sx={{ pt: '18px', pb: '24px', mt: '16px', borderBottom: '1px solid rgba(10,10,15,0.08)' }}
         >
           <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
             {t('Your Normal wallets')}

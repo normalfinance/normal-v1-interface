@@ -332,7 +332,10 @@ function Pager({
   });
 
   return (
+    // In an open list the last row already draws the line above the pager,
+    // so `nf-label` drops this one (it doubled up) and lines it up with the rows.
     <Box
+      className="nf-label"
       sx={{
         display: 'flex',
         alignItems: 'center',
@@ -545,6 +548,7 @@ export function ActivityCard({
   return (
     <AppBlock
       flush
+      open
       title={title === null ? undefined : (title ?? t('Activity'))}
       action={
         limit ? (
@@ -565,6 +569,7 @@ export function ActivityCard({
           {groupByDay(shown).map((group) => (
             <Box key={group.key}>
               <Typography
+                className="nf-label"
                 sx={{
                   px: BOX_PX,
                   pt: 1.75,

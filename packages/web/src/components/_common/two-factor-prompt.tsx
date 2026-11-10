@@ -54,7 +54,7 @@ export function TwoFactorPrompt({ hasFunds }: { hasFunds: boolean }) {
     <Box
       sx={{
         ...BLOCK_SX,
-        p: '14px 16px',
+        py: '14px',
         mb: 2,
         display: 'flex',
         alignItems: 'center',

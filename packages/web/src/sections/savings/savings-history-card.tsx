@@ -71,6 +71,7 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
   return (
     <AppBlock
       flush
+      open
       title="History"
       action={
         historyFailed ? (
@@ -115,6 +116,7 @@ export function SavingsHistoryCard({ walletAddress }: SavingsHistoryCardProps) {
 
       {totalPages > 1 && (
         <Box
+          className="nf-label"
           sx={{
             display: 'flex',
             alignItems: 'center',

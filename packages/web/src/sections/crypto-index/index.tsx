@@ -720,7 +720,12 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.25 }}>
                 <Typography
                   component="div"
-                  sx={{ ...FIGURES, fontSize: { xs: 26, md: 30 }, fontWeight: 500, lineHeight: 1.1 }}
+                  sx={{
+                    ...FIGURES,
+                    fontSize: { xs: 26, md: 30 },
+                    fontWeight: 500,
+                    lineHeight: 1.1,
+                  }}
                 >
                   {today === null ? null : <Change pct={today} />}
                 </Typography>
@@ -741,7 +746,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
               <WeightBar def={meta.def} height={8} />
             </AppBlock>
 
-            <AppBlock flush title={t('What you buy')}>
+            <AppBlock flush open title={t('What you buy')}>
               <RowList>
                 {CRYPTO_INDEX.legs.map((leg) => {
                   const m = markets[leg.symbol];
@@ -770,7 +775,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
             </AppBlock>
 
             {/* Three numbered steps, drawn like the journey's own steps. */}
-            <AppBlock flush title={t('How it works')}>
+            <AppBlock flush open title={t('How it works')}>
               <Box component="ol" sx={{ m: 0, p: 0, listStyle: 'none', ...ROW_LINES }}>
                 {[
                   {
@@ -795,6 +800,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                   <Box
                     component="li"
                     key={item.title}
+                    className="nf-row"
                     sx={{ display: 'flex', gap: 1.75, px: BOX_PX, py: 2 }}
                   >
                     <Box
@@ -831,7 +837,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
           </Box>
 
           <Box sx={{ minWidth: 0, order: { xs: 1, lg: 2 } }}>
-            <AppBlock title={t('Buy')}>
+            <AppBlock framed title={t('Buy')}>
               <Box sx={{ bgcolor: CANVAS, px: 2, py: 1.75 }}>
                 <Box
                   sx={{
@@ -849,7 +855,9 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                     {t('Amount in digital dollars')}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
-                    <Typography sx={{ ...FIGURES, fontSize: 12, color: FAINT, whiteSpace: 'nowrap' }}>
+                    <Typography
+                      sx={{ ...FIGURES, fontSize: 12, color: FAINT, whiteSpace: 'nowrap' }}
+                    >
                       {t('In your wallet: {{amount}}', { amount: formatUsd(usdcBalance) })}
                     </Typography>
                     <Button

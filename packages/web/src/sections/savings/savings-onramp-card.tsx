@@ -23,8 +23,11 @@ export function SavingsOnrampCard() {
   const { startAction } = useAssetActionsContext();
 
   return (
-    <AppBlock flush title={t('Need USDC?')}>
-      <Typography sx={{ px: BOX_PX, pt: 1.75, pb: 0.25, fontSize: 13.5, color: MUTED }}>
+    <AppBlock flush open title={t('Need USDC?')}>
+      <Typography
+        className="nf-label"
+        sx={{ px: BOX_PX, pt: 1.75, pb: 0.25, fontSize: 13.5, color: MUTED }}
+      >
         {t('Add funds to start earning.')}
       </Typography>
       <RowList>

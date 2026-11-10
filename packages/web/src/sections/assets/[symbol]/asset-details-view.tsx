@@ -532,11 +532,12 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
       >
         <AssetAbout symbol={token.symbol} explorer={explorer} />
 
-        <AppBlock flush title={t('Details')}>
+        <AppBlock flush open title={t('Details')}>
           <RowList>
             {infoRows.map((row) => (
               <Box
                 key={row.label}
+                className="nf-row"
                 sx={{
                   display: 'flex',
                   alignItems: 'center',

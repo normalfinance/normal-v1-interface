@@ -66,9 +66,9 @@ export function BalanceBlock({ total, change, loading, error, onRetry }: Balance
         alignItems: 'end',
         gap: { xs: 2.5, md: 3 },
         bgcolor: PAPER,
-        border: { xs: 'none', md: HAIRLINE },
-        px: { xs: 0, md: '24px' },
-        py: { xs: 0, md: '28px' },
+        // On the page with a line under it, at every width (Niko 2026-11-10).
+        pb: { xs: 2.5, md: 3 },
+        borderBottom: HAIRLINE,
       }}
     >
       <Headline label="Total balance" value={formatUsd(total)} note={note} loading={loading} />

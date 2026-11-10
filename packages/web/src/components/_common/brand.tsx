@@ -55,12 +55,22 @@ export const VISUALLY_HIDDEN_SX = {
   border: 0,
 } as const;
 
-/** A white block (dark in dark mode). Hover changes the border, never the depth. */
-export const BLOCK_SX = {
+/**
+ * A tool used as one unit (the swap card): framed with a hairline, padded
+ * inside. Only tools keep a frame; everything else is `BLOCK_SX`.
+ */
+export const FRAME_SX = {
   bgcolor: PAPER,
   border: HAIRLINE,
-  borderRadius: 'var(--radius-lg)',
   p: { xs: '20px', md: '24px' },
+} as const;
+
+/** A panel on the page (dark in dark mode) with one line under it: no box (Niko 2026-11-10). */
+export const BLOCK_SX = {
+  bgcolor: PAPER,
+  borderBottom: HAIRLINE,
+  pt: 0.5,
+  pb: 3,
 } as const;
 
 type Tone = 'light' | 'dark';

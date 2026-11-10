@@ -65,7 +65,7 @@ export function InProgressBlock() {
   if (!items.length) return null;
 
   return (
-    <AppBlock flush title={t('In progress')}>
+    <AppBlock flush open title={t('In progress')}>
       <RowList>
         {items.map((item) => (
           <ListRow

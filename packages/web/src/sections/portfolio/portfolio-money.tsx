@@ -95,51 +95,51 @@ export function MoneyBlock({
 
   return (
     <Box>
-    <AppBlock
+      <AppBlock
         flush
-        openOnPhone
+        open
         title="Your money"
         action={<SeeAll href={paths.assets.root}>All assets</SeeAll>}
       >
-      {loading ? (
-        <RowsSkeleton rows={4} />
-      ) : (
-        <>
-          {sections && (
-            <Box sx={{ px: BOX_PX, py: 1.5, borderBottom: HAIRLINE }}>
-              <SegmentedControl
-                value={section}
-                onChange={setSection}
-                options={sections.map((s) => ({ value: s.label, label: s.label }))}
-              />
-            </Box>
-          )}
-          {error && (
-            <Typography
-              sx={{ px: BOX_PX, py: 1.5, fontSize: 13, color: MUTED, borderBottom: HAIRLINE }}
-            >
-              Some balances didn&apos;t load.{' '}
-              <ButtonBase
-                onClick={onRetry}
-                sx={{ font: 'inherit', fontWeight: 500, textDecoration: 'underline' }}
+        {loading ? (
+          <RowsSkeleton rows={4} />
+        ) : (
+          <>
+            {sections && (
+              <Box sx={{ px: BOX_PX, py: 1.5, borderBottom: HAIRLINE }}>
+                <SegmentedControl
+                  value={section}
+                  onChange={setSection}
+                  options={sections.map((s) => ({ value: s.label, label: s.label }))}
+                />
+              </Box>
+            )}
+            {error && (
+              <Typography
+                sx={{ px: BOX_PX, py: 1.5, fontSize: 13, color: MUTED, borderBottom: HAIRLINE }}
               >
-                Try again
-              </ButtonBase>
-            </Typography>
-          )}
-          {shown.length ? (
-            <HoldingsTable
-              variant="home"
-              rows={shown.map((holding) => toHolding(holding, changes, markets))}
-            />
-          ) : (
-            <Typography sx={{ py: 5, fontSize: 14, textAlign: 'center', color: MUTED }}>
-              Nothing here yet
-            </Typography>
-          )}
-        </>
-      )}
-    </AppBlock>
+                Some balances didn&apos;t load.{' '}
+                <ButtonBase
+                  onClick={onRetry}
+                  sx={{ font: 'inherit', fontWeight: 500, textDecoration: 'underline' }}
+                >
+                  Try again
+                </ButtonBase>
+              </Typography>
+            )}
+            {shown.length ? (
+              <HoldingsTable
+                variant="home"
+                rows={shown.map((holding) => toHolding(holding, changes, markets))}
+              />
+            ) : (
+              <Typography sx={{ py: 5, fontSize: 14, textAlign: 'center', color: MUTED }}>
+                Nothing here yet
+              </Typography>
+            )}
+          </>
+        )}
+      </AppBlock>
       {/* CoinGecko's free data asks to be credited where it is shown, and
           Home's prices and daily changes come from it too (aggregate.ts).
           Under the list, so the title row stays short on a phone. */}

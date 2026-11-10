@@ -78,11 +78,9 @@ export default function AutopilotCard() {
   return (
     <Box
       sx={{
-        p: { xs: '20px', md: '24px' },
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid rgba(10,10,15,0.08)',
-        bgcolor: '#FAFAFB',
-        mb: '16px',
+        // A setting on the page with a line under it: no grey card (Niko 2026-11-10).
+        py: '16px',
+        borderBottom: '1px solid rgba(10,10,15,0.08)',
       }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '6px' }}>

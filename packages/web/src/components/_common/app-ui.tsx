@@ -28,15 +28,30 @@ import { HAIRLINE } from './brand';
 
 // ----------------------------------------------------------------------
 
-// The signed-in app's shared parts, in a bank's language: a white page, square
-// boxes drawn with a hairline, ink words, and colour only where it means
-// something (a rise, a failure, "pending"). The coins bring the rest.
+// The signed-in app's shared parts, in a bank's language: a white page with no
+// boxes (every section sits on the page with a line under it), ink words, and
+// colour only where it means something (a rise, a failure, "pending"). The
+// coins bring the rest.
 // Rules: packages/web/DESIGN.md.
 
 const sxList = (sx?: SxProps<Theme>) => (Array.isArray(sx) ? sx : [sx]);
 
-/** The side padding inside a box: 20px on phones, 24px from tablets up. */
-export const BOX_PX = { xs: '20px', md: '24px' } as const;
+/**
+ * The side padding a part had inside a box: 20px on phones, 24px from tablets
+ * up. The app has no boxes now (Niko 2026-11-10: "just a border bottom"), so
+ * an app page sets `--nf-box-px` to 0 (DashboardContent) and every part lines
+ * up with the page; a dialog, outside the page, keeps the padding.
+ */
+export const BOX_PX = { xs: 'var(--nf-box-px, 20px)', md: 'var(--nf-box-px, 24px)' } as const;
+
+/**
+ * What keeps a frame: a tool used as one unit (the swap card, a deposit or
+ * withdraw form, an index's Buy, a review's Summary with its Confirm) and a
+ * card you pick (an index). Spread into its sx: the box padding comes back
+ * inside it, so `BOX_PX` pads its parts again (Niko 2026-11-10: "the swap
+ * block and the index block worked better with borders").
+ */
+export const FRAMED = { '--nf-box-px': { xs: '20px', md: '24px' } } as const;
 
 /** Money as people read it, two decimals: $1,240.18. */
 export const formatUsd = (value: number) => fCurrencyTwoDecimals(value);
@@ -116,27 +131,37 @@ type AppBlockProps = {
   title?: ReactNode;
   /** On the right of the title: "See all", a filter, a total. */
   action?: ReactNode;
-  /** Rows run edge to edge: the box has no padding of its own. */
+  /** The part inside brings its own spacing: no space above or below it. */
   flush?: boolean;
   /**
-   * On phones the list sits on the page with no box, a line under each row
-   * (Home's assets, Niko 2026-11-09, after the phone mockup). Boxed from tablets up.
+   * A list or a table: each row draws the line under itself (Niko 2026-11-09:
+   * "consistent everywhere", after the phone mockup), so the section draws
+   * none of its own. Anything else (a form, a chart, figures, words) is a
+   * panel: it sits on the page too, with one line under it.
    */
-  openOnPhone?: boolean;
+  open?: boolean;
+  /**
+   * A tool used as one unit (a form that moves money, a review's Summary):
+   * a hairline frame with the padding inside it, not a line under (`FRAMED`).
+   */
+  framed?: boolean;
   children: ReactNode;
   sx?: SxProps<Theme>;
   'aria-label'?: string;
 };
 
 /**
- * A section of a page: its title above, then a square box drawn with a
- * hairline on the white page. No fill, no shadow: the line is the box.
+ * A section of a page: its title above, then what it holds on the page, with
+ * no box. A list's rows each draw a line under themselves (`open`); a panel
+ * draws one line under itself (Niko 2026-11-10: "just a border bottom"); a
+ * tool used as one unit keeps its frame (`framed`).
  */
 export function AppBlock({
   title,
   action,
   flush = false,
-  openOnPhone = false,
+  open = false,
+  framed = false,
   children,
   sx,
   ...other
@@ -165,9 +190,12 @@ export function AppBlock({
       )}
       <Box
         sx={{
-          border: openOnPhone ? { xs: 'none', md: HAIRLINE } : HAIRLINE,
           bgcolor: PAPER,
-          ...(!flush && { px: BOX_PX, py: BOX_PX }),
+          ...(framed
+            ? { border: HAIRLINE, ...FRAMED, ...(!flush && { px: BOX_PX, py: BOX_PX }) }
+            : open
+              ? OPEN_LIST
+              : { borderBottom: HAIRLINE, ...(!flush && { pt: 0.5, pb: 3 }) }),
         }}
       >
         {children}
@@ -205,7 +233,24 @@ export function SeeAll({ href, children = 'See all' }: { href: string; children?
  * resets its border to 0, and a plain `* + *` lost to that, so linked rows
  * had no lines between them.
  */
-export const ROW_LINES = { '& > :not(:first-child)': { borderTop: HAIRLINE } } as const;
+export const ROW_LINES = {
+  '& > :not(:first-child)': { borderTop: `var(--nf-row-line, ${HAIRLINE})` },
+} as const;
+
+/**
+ * Inside an open list (AppBlock open): no lines between rows; every row
+ * (`nf-row`) draws the line under itself, the last one too, and loses its
+ * side padding; labels (`nf-label`: a day, a note, a page footer) line up
+ * with the rows; a group's heading (`nf-group`) is plain words on the page
+ * with its line under. Doubled class names outrank a row's own styles and
+ * ButtonBase's border reset.
+ */
+export const OPEN_LIST = {
+  '--nf-row-line': 'none',
+  '& .nf-row.nf-row': { px: 0, borderTop: 'none', borderBottom: HAIRLINE },
+  '& .nf-label.nf-label': { px: 0, borderTop: 'none' },
+  '& .nf-group.nf-group': { px: 0, pt: 2.5, bgcolor: 'transparent', borderBottom: HAIRLINE },
+} as const;
 
 export function RowList({ children, sx }: { children: ReactNode; sx?: SxProps<Theme> }) {
   return <Box sx={[ROW_LINES, ...sxList(sx)]}>{children}</Box>;
@@ -326,11 +371,13 @@ export function ListRow({
   } as const;
 
   return clickable ? (
-    <ButtonBase {...link} sx={{ ...rowSx, '&:hover': { bgcolor: HOVER } }}>
+    <ButtonBase {...link} className="nf-row" sx={{ ...rowSx, '&:hover': { bgcolor: HOVER } }}>
       {body}
     </ButtonBase>
   ) : (
-    <Box sx={rowSx}>{body}</Box>
+    <Box className="nf-row" sx={rowSx}>
+      {body}
+    </Box>
   );
 }
 
@@ -586,8 +633,9 @@ export function ActionTiles({ children }: { children: ReactNode }) {
 export type Stat = { key: string; label: string; value: ReactNode; note?: ReactNode };
 
 /**
- * Figures side by side across a box, divided by hairlines: where the money
- * is, what Savings pays. Two to a row on phones; an odd last one takes the row.
+ * Figures side by side, a line under each row of them: where the money is,
+ * what Savings pays. Two to a row on phones; an odd last one takes the row.
+ * No lines between them and no box (Niko 2026-11-10).
  */
 export function StatStrip({ items, loading = false }: { items: Stat[]; loading?: boolean }) {
   const odd = items.length % 2 === 1;
@@ -608,14 +656,10 @@ export function StatStrip({ items, loading = false }: { items: Stat[]; loading?:
           key={item.key}
           sx={{
             minWidth: 0,
-            px: BOX_PX,
             py: 2,
+            pr: 2,
             gridColumn: { xs: odd && index === items.length - 1 ? '1 / -1' : 'auto', md: 'auto' },
-            borderTop: { xs: index > 1 ? HAIRLINE : 'none', md: 'none' },
-            borderLeft: {
-              xs: index % 2 === 1 ? HAIRLINE : 'none',
-              md: index > 0 ? HAIRLINE : 'none',
-            },
+            borderBottom: HAIRLINE,
           }}
         >
           <Typography component="dt" sx={{ fontSize: 13.5, color: MUTED }}>
@@ -642,8 +686,9 @@ export function StatStrip({ items, loading = false }: { items: Stat[]; loading?:
 }
 
 /**
- * The box at the top of a page: its main figure (`Headline`) with the page's
- * actions beside it, then under a hairline the figures that break it down.
+ * The top of a page: its main figure (`Headline`) with the page's actions
+ * beside it and a line under them, then the figures that break it down, a
+ * line under each row of them. On the page, no box (Niko 2026-11-10).
  */
 export function SummaryBlock({
   children,
@@ -659,7 +704,7 @@ export function SummaryBlock({
   'aria-label'?: string;
 }) {
   return (
-    <Box component="section" aria-label={ariaLabel} sx={{ border: HAIRLINE, bgcolor: PAPER }}>
+    <Box component="section" aria-label={ariaLabel} sx={{ bgcolor: PAPER }}>
       <Box
         sx={{
           display: 'grid',
@@ -669,18 +714,14 @@ export function SummaryBlock({
           },
           alignItems: 'end',
           gap: 3,
-          px: BOX_PX,
-          py: { xs: '20px', md: '28px' },
+          pb: { xs: 2.5, md: 3 },
+          borderBottom: HAIRLINE,
         }}
       >
         <Box sx={{ minWidth: 0 }}>{children}</Box>
         {actions}
       </Box>
-      {!!stats?.length && (
-        <Box sx={{ borderTop: HAIRLINE }}>
-          <StatStrip items={stats} loading={loading} />
-        </Box>
-      )}
+      {!!stats?.length && <StatStrip items={stats} loading={loading} />}
     </Box>
   );
 }
@@ -764,7 +805,7 @@ export function moveLabel(points: number[], span = 'in the last 24 hours') {
 /** Rows that stand in for a list while it loads. */
 export function RowsSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <Box sx={{ px: BOX_PX, py: 1 }}>
+    <Box className="nf-label" sx={{ px: BOX_PX, py: 1 }}>
       {Array.from({ length: rows }, (_, i) => (
         <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.75, py: 1.5 }}>
           <Skeleton variant="circular" width={40} height={40} />
