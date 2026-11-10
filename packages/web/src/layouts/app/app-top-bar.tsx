@@ -9,15 +9,18 @@ import { Logo } from '@/components/template/logo';
 import { HAIRLINE } from '@/components/_common/brand';
 
 import { MoveMoneyMenu } from './move-money-menu';
+import { ThemeToggleButton } from '../site/theme-toggle';
 import { AccountDrawer } from '../components/account-drawer';
 import { NetworkToggle, NETWORK_SWITCH_ENABLED } from '../components/network-toggle';
 
 // ----------------------------------------------------------------------
 
 /**
- * White, over the white page, with a hairline under it. Desktop: the primary
- * action and the account. Phones: the logo, Move money as an outlined button
- * (the bottom tabs are places only, Niko 2026-11-09), and the account.
+ * White, over the white page, with a hairline under it. Desktop: the light and
+ * dark switch, the primary action and the account. Phones: the logo, the
+ * switch, Move money as an outlined button (the bottom tabs are places only,
+ * Niko 2026-11-09), and the account. The switch is the landing page's own
+ * (Niko 2026-11-10), as tall as Move money beside it: 40px, 36px on phones.
  */
 export function AppTopBar() {
   return (
@@ -47,6 +50,8 @@ export function AppTopBar() {
         <Box sx={{ flexGrow: 1 }} />
 
         {NETWORK_SWITCH_ENABLED && <NetworkToggle />}
+
+        <ThemeToggleButton sx={{ width: { xs: 36, md: 40 }, height: { xs: 36, md: 40 } }} />
 
         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
           <MoveMoneyMenu />

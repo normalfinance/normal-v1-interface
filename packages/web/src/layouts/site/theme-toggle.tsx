@@ -1,5 +1,7 @@
 'use client';
 
+import type { Theme, SxProps } from '@mui/material/styles';
+
 import { INK, HOVER, HAIRLINE_COLOR } from '@/theme/brand-colors';
 
 import IconButton from '@mui/material/IconButton';
@@ -17,11 +19,11 @@ export function SiteThemeScope() {
 }
 
 /**
- * The header's switch, the site's only one: one tap between light and dark.
- * Until it is used the site follows the system setting. 40px square, the
- * height of the button beside it.
+ * The header's switch: one tap between light and dark. Until it is used the
+ * site follows the system setting. 40px square, the height of the button
+ * beside it; the app's top bar sizes it to its own buttons (`sx`).
  */
-export function ThemeToggleButton() {
+export function ThemeToggleButton({ sx }: { sx?: SxProps<Theme> }) {
   const { mode, setChoice } = useSiteTheme();
   const next = mode === 'dark' ? 'light' : 'dark';
 
@@ -30,14 +32,17 @@ export function ThemeToggleButton() {
       aria-label={`Switch to ${next} mode`}
       title={`Switch to ${next} mode`}
       onClick={() => setChoice(next)}
-      sx={{
-        width: 40,
-        height: 40,
-        color: INK,
-        border: `1px solid ${HAIRLINE_COLOR}`,
-        borderRadius: 'var(--radius-md)',
-        '&:hover': { bgcolor: HOVER },
-      }}
+      sx={[
+        {
+          width: 40,
+          height: 40,
+          color: INK,
+          border: `1px solid ${HAIRLINE_COLOR}`,
+          borderRadius: 'var(--radius-md)',
+          '&:hover': { bgcolor: HOVER },
+        },
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
     >
       {mode === 'dark' ? (
         <LightModeOutlined fontSize="small" />

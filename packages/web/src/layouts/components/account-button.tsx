@@ -1,11 +1,12 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
+import { PAPER } from '@/theme/brand-colors';
+
 import Box from '@mui/material/Box';
 import NoSsr from '@mui/material/NoSsr';
 import Avatar from '@mui/material/Avatar';
 import SvgIcon from '@mui/material/SvgIcon';
 import IconButton from '@mui/material/IconButton';
-
 // ----------------------------------------------------------------------
 
 export type AccountButtonProps = IconButtonProps & {
@@ -48,8 +49,8 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
             borderRadius: '50%',
             width: 40,
             height: 40,
-            background: '#FFFFFF',
-            border: '1px solid rgba(10,10,15,0.08)',
+            background: PAPER,
+            border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
           }}
         >
           <Avatar src={photoURL} alt={displayName} sx={{ width: 1, height: 1 }}>

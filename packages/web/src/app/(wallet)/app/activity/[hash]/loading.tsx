@@ -2,6 +2,7 @@
 
 import 'react-loading-skeleton/dist/skeleton.css';
 
+import { PAPER } from '@/theme/brand-colors';
 import Skeleton from 'react-loading-skeleton';
 import { DashboardContent } from '@/layouts/dashboard';
 
@@ -26,8 +27,8 @@ export default function Loading() {
             textAlign="center"
             sx={{
               // As the page it stands in for: no box, a line under it.
-              bgcolor: 'common.white',
-              borderBottom: '1px solid rgba(10,10,15,0.08)',
+              bgcolor: PAPER,
+              borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
               p: { xs: 3, md: 5 },
               maxWidth: 520,
               width: '100%',

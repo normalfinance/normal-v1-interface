@@ -43,18 +43,16 @@ const COLUMNS = { xs: 1, sm: 2, md: 3 } as const;
 // coloured): its header row a block of the colour, as strong as the asks at
 // the foot of the home page, its cards the same colour's pale wash, its empty
 // cells hatched tone on tone. Words in the colour's deep shade throughout.
-// Three colours next to each other in the logo, in its order (Niko 2026-11-10):
-// calm violet for what is done, the biggest chapter; magenta, the most vivid,
-// for what is being built now; warm coral for what is ahead. Tried and
-// dropped: sky, violet, magenta (ended on a heavy pink); magenta, coral,
-// yellow (the past all pink, the yellow repeating the promise below).
+// Blue, pink and yellow: the logo's first, middle and last colours, in its
+// order (Niko 2026-11-10): the wallet's blue for what is done, magenta for
+// what is being built now, yellow for what is ahead.
 const CHAPTERS: Record<
   MilestoneStatus,
   { title: string; count: (n: number) => string; hue: BrandHue }
 > = {
-  shipped: { title: 'The road behind', count: (n) => `${n} shipped`, hue: 'violet' },
+  shipped: { title: 'The road behind', count: (n) => `${n} shipped`, hue: 'sky' },
   'in-progress': { title: 'Building now', count: (n) => `${n} in progress`, hue: 'magenta' },
-  planned: { title: 'The road ahead', count: (n) => `${n} planned`, hue: 'coral' },
+  planned: { title: 'The road ahead', count: (n) => `${n} planned`, hue: 'yellow' },
 };
 
 /** A chapter's colours: the block for its header, the wash for its cards. */

@@ -20,6 +20,7 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { clearLoginIntent, consumeLoginIntent } from '@/lib/loginIntent';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { INK, MUTED, FAINT, PAPER, INK_SOFT } from '@/theme/brand-colors';
 import { useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 import { CHAINS, CHAIN_IDS, getChainAddress, availableChains } from '@/lib/chains/registry';
@@ -608,8 +609,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
           onClick={handleMainButtonClick}
           data-testid="connect-wallet-button"
           sx={{
-            bgcolor: '#0A0A0F',
-            color: '#fff',
+            bgcolor: INK,
+            color: PAPER,
             borderRadius: 'var(--radius-md)',
             textTransform: 'none',
             fontWeight: 500,
@@ -618,7 +619,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
             fontSize: '14px',
             minWidth: 'unset',
             boxShadow: 'none',
-            '&:hover': { bgcolor: '#2A2A33', boxShadow: 'none' },
+            '&:hover': { bgcolor: INK_SOFT, boxShadow: 'none' },
           }}
         >
           {t('Login')}
@@ -632,7 +633,7 @@ export function AccountDrawer(props: AccountDrawerProps) {
         PaperProps={{
           sx: {
             width: { xs: '100%', sm: 420 },
-            bgcolor: '#ffffff',
+            bgcolor: PAPER,
             backgroundImage: 'none',
             backdropFilter: 'none',
             WebkitBackdropFilter: 'none',
@@ -657,9 +658,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
               onClick={onClose}
               data-testid="close-drawer-button"
               sx={{
-                color: '#6B6B76',
+                color: MUTED,
                 borderRadius: 'var(--radius-md)',
-                '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
+                '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.04)', color: INK },
               }}
             >
               <CloseOutlined sx={{ fontSize: 20 }} />
@@ -680,9 +681,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                       onClose();
                     }}
                     sx={{
-                      color: '#6B6B76',
+                      color: MUTED,
                       borderRadius: 'var(--radius-md)',
-                      '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
+                      '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.04)', color: INK },
                     }}
                   >
                     {isNavigatingToSettings ? (
@@ -715,9 +716,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                     onClose();
                   }}
                   sx={{
-                    color: '#6B6B76',
+                    color: MUTED,
                     borderRadius: 'var(--radius-md)',
-                    '&:hover': { bgcolor: 'rgba(10,10,15,0.04)', color: '#0A0A0F' },
+                    '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.04)', color: INK },
                   }}
                 >
                   <AddOutlined sx={{ fontSize: 20 }} />
@@ -740,8 +741,8 @@ export function AccountDrawer(props: AccountDrawerProps) {
                 disabled={isDisconnecting}
                 data-testid="logout-button"
                 sx={{
-                  bgcolor: '#0A0A0F',
-                  color: '#fff',
+                  bgcolor: INK,
+                  color: PAPER,
                   borderRadius: 'var(--radius-md)',
                   textTransform: 'none',
                   fontWeight: 500,
@@ -750,10 +751,10 @@ export function AccountDrawer(props: AccountDrawerProps) {
                   py: '7px',
                   minWidth: 'unset',
                   boxShadow: 'none',
-                  '&:hover': { bgcolor: '#2A2A33', boxShadow: 'none' },
+                  '&:hover': { bgcolor: INK_SOFT, boxShadow: 'none' },
                   '&.Mui-disabled': {
-                    bgcolor: 'rgba(10,10,15,0.08)',
-                    color: '#9A9AA3',
+                    bgcolor: 'rgba(var(--nf-ink-rgb),0.08)',
+                    color: FAINT,
                   },
                 }}
               >
@@ -778,12 +779,12 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         fontSize: '15px',
                         fontWeight: 500,
                         letterSpacing: '-0.01em',
-                        color: '#0A0A0F',
+                        color: INK,
                       }}
                     >
                       {displayName}
                     </Typography>
-                    <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '1px' }}>
+                    <Typography sx={{ fontSize: '13px', color: MUTED, mt: '1px' }}>
                       {userEmail}
                     </Typography>
                   </Box>
@@ -812,9 +813,9 @@ export function AccountDrawer(props: AccountDrawerProps) {
                         gap: '6px',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
-                        color: '#6B6B76',
+                        color: MUTED,
                         fontSize: '11.5px',
-                        '&:hover': { color: '#2A2A33' },
+                        '&:hover': { color: INK_SOFT },
                       }}
                     >
                       <Box
@@ -848,16 +849,14 @@ export function AccountDrawer(props: AccountDrawerProps) {
                                 flexShrink: 0,
                               }}
                             />
-                            <Box
-                              sx={{ fontSize: '11px', color: '#6B6B76', width: 40, flexShrink: 0 }}
-                            >
+                            <Box sx={{ fontSize: '11px', color: MUTED, width: 40, flexShrink: 0 }}>
                               {name}
                             </Box>
                             <Box
                               sx={{
                                 fontFamily: '"Geist Mono", ui-monospace, monospace',
                                 fontSize: '11.5px',
-                                color: '#2A2A33',
+                                color: INK_SOFT,
                                 letterSpacing: '-0.01em',
                                 flex: 1,
                                 minWidth: 0,
@@ -970,11 +969,11 @@ export function AccountDrawer(props: AccountDrawerProps) {
                             setShowLoginModal(true);
                           }}
                           sx={{
-                            bgcolor: '#0A0A0F',
-                            color: '#fff',
+                            bgcolor: INK,
+                            color: PAPER,
                             borderRadius: 'var(--radius-md)',
                             px: 3,
-                            '&:hover': { bgcolor: '#2A2A33' },
+                            '&:hover': { bgcolor: INK_SOFT },
                           }}
                         >
                           {t('Pick an asset')}
