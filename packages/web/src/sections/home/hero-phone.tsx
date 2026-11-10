@@ -9,16 +9,17 @@ import { useRef, useState, useEffect } from 'react';
 import { FIXED, HUE_PALETTE } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
+import HomeIcon from '@mui/icons-material/Home';
 import Typography from '@mui/material/Typography';
 import AddRounded from '@mui/icons-material/AddRounded';
-import HomeOutlined from '@mui/icons-material/HomeOutlined';
 import SyncAltRounded from '@mui/icons-material/SyncAltRounded';
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
 import NorthEastRounded from '@mui/icons-material/NorthEastRounded';
 import SouthWestRounded from '@mui/icons-material/SouthWestRounded';
 import SwapHorizRounded from '@mui/icons-material/SwapHorizRounded';
+import DonutSmallOutlined from '@mui/icons-material/DonutSmallOutlined';
+import ChevronRightRounded from '@mui/icons-material/ChevronRightRounded';
 import ReceiptLongOutlined from '@mui/icons-material/ReceiptLongOutlined';
-import NotificationsNoneRounded from '@mui/icons-material/NotificationsNoneRounded';
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 
 import { MarketingPhoto } from '@/components/_common/marketing-photo';
@@ -48,10 +49,12 @@ export const SCREEN = { width: 390, height: 844 };
 // phone in a photo, not part of the page.
 const {
   ink: INK,
+  inkSoft: INK_SOFT,
   muted: MUTED,
   paper: PAPER,
   canvas: CANVAS,
   hairline: HAIRLINE_COLOR,
+  hairlineStrong: HAIRLINE_STRONG,
 } = FIXED.app;
 const MINT = HUE_PALETTE.mint;
 
@@ -63,37 +66,66 @@ const money = (n: number) =>
   `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const ACTIONS = [
-  { label: 'Add', icon: <AddRounded /> },
+  { label: 'Add money', icon: <AddRounded /> },
   { label: 'Send', icon: <NorthEastRounded /> },
-  { label: 'Swap', icon: <SwapHorizRounded /> },
   { label: 'Receive', icon: <SouthWestRounded /> },
+  { label: 'Swap', icon: <SwapHorizRounded /> },
 ];
 
-const ASSETS = [
-  { name: 'Bitcoin', icon: cdn('tokens/bitcoin.webp'), amount: '0.0142 BTC', value: '$1,240.18' },
-  { name: 'Ethereum', icon: cdn('tokens/ethereum.webp'), amount: '0.13 ETH', value: '$330.32' },
-  { name: 'Solana', icon: cdn('tokens/solana.webp'), amount: '1.40 SOL', value: '$210.00' },
+// Home's "Your money", as the app lists it: Savings first, then the coins, a
+// line under each. The digital dollars arrive with Ana's payment.
+const HOLDINGS = [
+  {
+    name: 'Savings',
+    icon: cdn('logo/logo-single.svg'),
+    sub: 'Earning every day',
+    value: '$2,500.00',
+  },
+  {
+    name: 'Bitcoin',
+    icon: cdn('tokens/bitcoin.webp'),
+    sub: '0.0142 BTC',
+    value: '$1,240.18',
+    change: -0.8,
+  },
+  {
+    name: 'Ethereum',
+    icon: cdn('tokens/ethereum.webp'),
+    sub: '0.13 ETH',
+    value: '$330.32',
+    change: 0.5,
+  },
+  {
+    name: 'Solana',
+    icon: cdn('tokens/solana.webp'),
+    sub: '1.4 SOL',
+    value: '$210.00',
+    change: 2.1,
+  },
 ];
 
+// The phone's tabs: places only, the current one filled (no black button).
 const TABS = [
-  { label: 'Home', icon: <HomeOutlined /> },
+  { label: 'Home', icon: <HomeIcon /> },
   { label: 'Assets', icon: <AccountBalanceWalletOutlined /> },
-  { label: 'Move', icon: <SyncAltRounded /> },
+  { label: 'Indexes', icon: <DonutSmallOutlined /> },
   { label: 'Savings', icon: <SavingsOutlined /> },
   { label: 'Activity', icon: <ReceiptLongOutlined /> },
 ];
 
-function AssetRow({
+function HoldingRow({
   icon,
   name,
-  amount,
+  sub,
   value,
+  change,
   sx,
 }: {
   icon: string;
   name: string;
-  amount: string;
+  sub: string;
   value: string;
+  change?: number;
   sx?: object;
 }) {
   return (
@@ -101,18 +133,28 @@ function AssetRow({
       sx={{
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
-        py: '9px',
-        borderTop: `1px solid ${HAIRLINE_COLOR}`,
+        gap: '14px',
+        minHeight: 60,
+        py: '10px',
+        borderBottom: `1px solid ${HAIRLINE_COLOR}`,
         ...sx,
       }}
     >
-      <Box component="img" src={icon} alt="" sx={{ width: 38, height: 38, borderRadius: '50%' }} />
+      <Box component="img" src={icon} alt="" sx={{ width: 40, height: 40, borderRadius: '50%' }} />
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-        <Typography sx={{ fontSize: 16, fontWeight: 500, color: INK }}>{name}</Typography>
-        <Typography sx={{ fontSize: 13, color: MUTED }}>{amount}</Typography>
+        <Typography sx={{ fontSize: 15, fontWeight: 500, color: INK }}>{name}</Typography>
+        <Typography sx={{ mt: '2px', fontSize: 13.5, color: MUTED }}>{sub}</Typography>
       </Box>
-      <Typography sx={{ fontSize: 16, fontWeight: 500, color: INK }}>{value}</Typography>
+      <Box sx={{ textAlign: 'right' }}>
+        <Typography sx={{ fontSize: 15, fontWeight: 500, color: INK }}>{value}</Typography>
+        {change !== undefined && (
+          <Typography
+            sx={{ mt: '2px', fontSize: 13.5, color: change > 0 ? MINT.light.deep : MUTED }}
+          >
+            {`${change > 0 ? '+' : '−'}${Math.abs(change).toFixed(2)}%`}
+          </Typography>
+        )}
+      </Box>
     </Box>
   );
 }
@@ -157,7 +199,12 @@ export function PhoneStatusBar() {
   );
 }
 
-/** The app's Home, at phone size (390 × 844). Also drawn in the closing carousel (HomeCta). */
+/**
+ * The app's Home, at phone size (390 × 844), as it looks today: the top bar
+ * (the mark, Move money, the account), the balance and its four tiles with a
+ * line under them, "Your money" as an open list, and the tabs. Also drawn in
+ * the closing carousel (HomeCta) and on the sign-in page.
+ */
 export function PhoneHomeScreen({
   balance,
   showToast,
@@ -177,8 +224,8 @@ export function PhoneHomeScreen({
         width: SCREEN.width,
         height: SCREEN.height,
         overflow: 'hidden',
-        px: '22px',
-        pt: '58px',
+        px: '16px',
+        pt: '50px',
         color: INK,
         bgcolor: PAPER,
       }}
@@ -189,6 +236,7 @@ export function PhoneHomeScreen({
       <Box
         sx={{
           position: 'absolute',
+          zIndex: 1,
           top: 50,
           left: 14,
           right: 14,
@@ -224,7 +272,41 @@ export function PhoneHomeScreen({
         </Box>
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px', mt: '6px', mb: '22px' }}>
+      {/* The app's top bar on a phone: the mark, Move money, the account */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          height: 60,
+          mx: '-16px',
+          px: '16px',
+          borderBottom: `1px solid ${HAIRLINE_COLOR}`,
+        }}
+      >
+        <Box
+          component="img"
+          src={cdn('logo/logo-single.svg')}
+          alt=""
+          sx={{ width: 28, height: 28 }}
+        />
+        <Box sx={{ flexGrow: 1 }} />
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            height: 34,
+            px: '11px',
+            fontSize: 13.5,
+            fontWeight: 500,
+            border: `1px solid ${HAIRLINE_STRONG}`,
+            '& svg': { fontSize: 17 },
+          }}
+        >
+          <SyncAltRounded />
+          Move money
+        </Box>
         <Box
           sx={{
             display: 'flex',
@@ -233,74 +315,72 @@ export function PhoneHomeScreen({
             width: 36,
             height: 36,
             borderRadius: '50%',
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: 500,
-            color: PAPER,
-            bgcolor: INK,
+            border: `1px solid ${HAIRLINE_COLOR}`,
           }}
         >
           M
         </Box>
-        <Typography sx={{ flexGrow: 1, fontSize: 16, fontWeight: 500 }}>Hi, Maya</Typography>
-        <NotificationsNoneRounded sx={{ fontSize: 24 }} />
       </Box>
 
-      <Typography sx={{ fontSize: 14, color: MUTED }}>Total balance</Typography>
-      <Typography sx={{ mt: '4px', fontSize: 42, fontWeight: 500, letterSpacing: '-0.035em' }}>
-        {money(balance)}
-      </Typography>
-      <Typography sx={{ mt: '2px', fontSize: 14, color: MINT.light.deep }}>
-        +$12.40 today
-      </Typography>
-
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', my: '18px' }}>
-        {ACTIONS.map((action) => (
-          <Box
-            key={action.label}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '6px',
-              py: '10px',
-              borderRadius: 'var(--radius-md)',
-              bgcolor: CANVAS,
-              '& svg': { fontSize: 22 },
-            }}
-          >
-            {action.icon}
-            <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 500 }}>
-              {action.label}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-
-      <Box sx={{ p: '16px', borderRadius: 'var(--radius-lg)', color: PAPER, bgcolor: INK }}>
-        <Typography sx={{ fontSize: 14, color: 'rgba(255,255,255,0.72)' }}>Savings</Typography>
-        <Typography sx={{ my: '4px', fontSize: 28, fontWeight: 500, letterSpacing: '-0.02em' }}>
-          $2,500.00
+      {/* The balance and its four tiles, a line under them */}
+      <Box sx={{ pt: '22px', pb: '20px', borderBottom: `1px solid ${HAIRLINE_COLOR}` }}>
+        <Typography sx={{ fontSize: 14, color: MUTED }}>Total balance</Typography>
+        <Typography sx={{ mt: '4px', fontSize: 40, fontWeight: 500, letterSpacing: '-0.035em' }}>
+          {money(balance)}
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: MINT.fill }} />
-          <Typography sx={{ fontSize: 14, color: 'rgba(255,255,255,0.72)' }}>
-            Earning daily
-          </Typography>
+        <Typography sx={{ mt: '2px', fontSize: 14, color: MUTED }}>
+          +$12.40 in the last 24 hours
+        </Typography>
+        <Box
+          sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', mt: '18px' }}
+        >
+          {ACTIONS.map((action) => (
+            <Box
+              key={action.label}
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '6px',
+                py: '12px',
+                bgcolor: CANVAS,
+                '& svg': { fontSize: 21 },
+              }}
+            >
+              {action.icon}
+              <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 500 }}>
+                {action.label}
+              </Typography>
+            </Box>
+          ))}
         </Box>
       </Box>
 
-      <Typography sx={{ mt: '16px', mb: '2px', fontSize: 14, color: MUTED }}>Assets</Typography>
-      {ASSETS.map((asset, index) => (
-        <AssetRow
-          key={asset.name}
-          {...asset}
-          sx={index === 0 ? { borderTop: 'none' } : undefined}
-        />
+      {/* Your money: an open list, a line under each row */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 40,
+          mt: '12px',
+        }}
+      >
+        <Typography sx={{ fontSize: 15, fontWeight: 500, color: INK_SOFT }}>Your money</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', fontSize: 14, fontWeight: 500 }}>
+          All assets
+          <ChevronRightRounded sx={{ fontSize: 18 }} />
+        </Box>
+      </Box>
+      {HOLDINGS.map((holding) => (
+        <HoldingRow key={holding.name} {...holding} />
       ))}
-      <AssetRow
+      <HoldingRow
         icon={cdn('tokens/USDC.webp')}
         name="Digital dollars"
-        amount="50.00 USDC"
+        sub="50 USDC"
         value="$50.00"
         sx={{ opacity: showPayment ? 1 : 0, transition: 'opacity 600ms ease' }}
       />
@@ -334,25 +414,7 @@ export function PhoneHomeScreen({
               '& svg': { fontSize: 22 },
             }}
           >
-            {tab.label === 'Move' ? (
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 44,
-                  height: 30,
-                  borderRadius: 'var(--radius-md)',
-                  color: PAPER,
-                  bgcolor: INK,
-                  '& svg': { fontSize: 20 },
-                }}
-              >
-                {tab.icon}
-              </Box>
-            ) : (
-              tab.icon
-            )}
+            {tab.icon}
             {tab.label}
           </Box>
         ))}
@@ -364,9 +426,15 @@ export function PhoneHomeScreen({
 /**
  * The hero photo with the live Home screen laid over the phone in it. Fills
  * its box, reads where the page's crop puts the photo, and maps the screen onto
- * the phone's corners.
+ * the phone's corners. `focus` sets the crop for another box: the sign-in
+ * page's panel is portrait, so it keeps the phone in the middle (Niko
+ * 2026-11-10: real people using the phone app, not the laptop mockup).
  */
-export function HeroPhone(): ReactNode {
+export function HeroPhone({
+  focus = HERO_FOCUS,
+}: {
+  focus?: string | Record<string, string>;
+} = {}): ReactNode {
   const ref = useRef<HTMLDivElement>(null);
   const [transform, setTransform] = useState<string | null>(null);
   const [stage, setStage] = useState(0);
@@ -429,10 +497,7 @@ export function HeroPhone(): ReactNode {
 
   return (
     <Box ref={ref} sx={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-      <MarketingPhoto
-        slot="hero"
-        sx={{ position: 'absolute', inset: 0, objectPosition: HERO_FOCUS }}
-      />
+      <MarketingPhoto slot="hero" sx={{ position: 'absolute', inset: 0, objectPosition: focus }} />
       <Box
         aria-hidden="true"
         style={{ transform: transform ?? undefined }}

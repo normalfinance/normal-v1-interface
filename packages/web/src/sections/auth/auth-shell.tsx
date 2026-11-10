@@ -6,11 +6,10 @@ import NextLink from 'next/link';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
+import { HeroPhone } from '@/sections/home/hero-phone';
 import { INK, BAND, PAPER } from '@/theme/brand-colors';
 
 import { Box, Stack, Link as MuiLink } from '@mui/material';
-
-const PORTFOLIO_MOCKUP = cdn('mockups/portfolio.webp');
 
 // The frame around every sign-in step. Google and email links land on a different
 // route, so that page wears this too: coming back shouldn't look like arriving
@@ -63,8 +62,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
 }
 
 function AuthVisual() {
-  const { t } = useTranslate();
-
   return (
     <Box
       sx={{
@@ -82,26 +79,15 @@ function AuthVisual() {
           height: '100%',
           overflow: 'hidden',
           borderRadius: 'var(--radius-lg)',
-          // A dark brand panel in both modes (the band token: ink on the light
-          // page, a raised near-black on the dark one); the mockup blends into it.
+          // Dark behind the photo while it loads, in both modes (the band).
           bgcolor: BAND,
           isolation: 'isolate',
         }}
       >
-        <Box
-          component="img"
-          src={PORTFOLIO_MOCKUP}
-          alt={t('The Normal portfolio open on a laptop')}
-          sx={{
-            position: 'absolute',
-            bottom: '-5%',
-            left: '50%',
-            width: 'min(142%, 128vh)',
-            maxWidth: 'none',
-            transform: 'translateX(-45.5%)',
-            mixBlendMode: 'lighten',
-          }}
-        />
+        {/* A real person with the app on their phone, the home page's own
+            photo and live Home screen (Niko 2026-11-10: not the old laptop
+            mockup). The panel is portrait: the crop keeps the phone centred. */}
+        <HeroPhone focus="72% 50%" />
       </Box>
     </Box>
   );

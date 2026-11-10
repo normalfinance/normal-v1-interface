@@ -6,6 +6,7 @@ import { clearLoginIntent } from '@/lib/loginIntent';
 import { supabase } from '@/lib/createSupabaseClient';
 import { MFA_REQUIRED_EVENT } from '@/utils/authed-fetch';
 import { needsSecondFactor } from '@/lib/auth/two-factor';
+import { clearStoredSession } from '@/lib/supabase-config';
 import { isAuthPage, loginHrefFrom } from '@/lib/auth/auth-routes';
 import {
   useMemo,
@@ -106,7 +107,15 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
     // deletes every session the user has — logging out on one device killed
     // prod/localhost/mobile sessions everywhere, and tabs holding the dead
     // token then 401'd on every API call.
-    await supabase.auth.signOut({ scope: 'local' });
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    if (error) {
+      // The logout request failed (offline, a server error): supabase-js then
+      // keeps the session, and the next page would sign straight back in.
+      // Logging out must log this browser out, so stop the token refresh and
+      // drop the stored session here.
+      await supabase.auth.stopAutoRefresh();
+      clearStoredSession();
+    }
     clearLoginIntent();
   }, []);
 

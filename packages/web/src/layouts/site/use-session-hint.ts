@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabaseStorageKey } from '@/lib/supabase-config';
 
 // ----------------------------------------------------------------------
 
 // supabase-js keeps the session in localStorage as `sb-<project>-auth-token`.
 // The marketing site doesn't load the auth client, so it reads that entry to
 // choose the header's buttons and draw the avatar. /app checks the session for
-// real and sends an expired one to sign-in.
-const SESSION_KEY = /^sb-.+-auth-token$/;
+// real and sends an expired one to sign-in. Only this build's project counts:
+// a session left from the other one (testnet or mainnet) showed "Dashboard"
+// after logging out (Niko 2026-11-10).
 
 export type SessionHint = {
   signedIn: boolean;
@@ -24,7 +26,7 @@ export function useSessionHint(): SessionHint {
 
   useEffect(() => {
     try {
-      const key = Object.keys(window.localStorage).find((k) => SESSION_KEY.test(k));
+      const key = supabaseStorageKey();
       if (!key) return;
       const session = JSON.parse(window.localStorage.getItem(key) ?? 'null');
       const user = session?.user;
