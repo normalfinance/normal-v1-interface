@@ -23,6 +23,8 @@ const PUBLIC_ROUTES: Record<string, string> = {
   'lifi/quote': 'prices shown before a wallet is connected (decision); IP rate-limited',
   'swap/quote': 'prices shown before a wallet is connected (decision); IP rate-limited',
   'prices/history': 'public market data; rate-limited',
+  'prices/markets':
+    'public market data, no user data; one shared copy (Redis, 5 min) behind a 60s edge cache, so CoinGecko sees one call per 5 min',
   'savings/user-position': 'address-keyed on-chain read; rate-limited (Block C #2 scoping pending)',
   'savings/earnings-history':
     'address-keyed append-only vault history; same exposure class as user-position (Block C #2)',
@@ -60,6 +62,7 @@ const PARTIAL_LOGIN_ROUTES: Record<string, string> = {
 const ACTION_CODE_ROUTES = [
   'cctp/transfers',
   'fees/execute-pair',
+  'index/purchases',
   'savings/deposit',
   'savings/withdraw',
   'send/execute',

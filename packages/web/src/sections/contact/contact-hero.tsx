@@ -1,151 +1,128 @@
 'use client';
 
-import React, { useState } from 'react';
+import type { PageFact } from '@/components/_common/page-hero';
 
-import { Box, Tooltip } from '@mui/material';
-import CheckIcon from '@mui/icons-material/Check';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { TYPE } from '@/theme/type-scale';
+import { BRAND_COLORS } from '@/theme/brand-colors';
+import { useRef, useState, useEffect } from 'react';
 
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import CheckRounded from '@mui/icons-material/CheckRounded';
+import ContentCopyRounded from '@mui/icons-material/ContentCopyRounded';
+import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded';
+
+import { PageHero } from '@/components/_common/page-hero';
 import {
   Eyebrow,
-  LiveDot,
-  HeroLede,
-  MetaItem,
-  HeroBadge,
-  HeroTitle,
+  GUTTER_SX,
   MONO_FONT,
   BrandButton,
-  PageSection,
-  GradientText,
-  HAIRLINE_ON_DARK,
-  BLOCK_ON_DARK_SX,
+  VISUALLY_HIDDEN_SX,
 } from '@/components/_common/brand';
+
+// ----------------------------------------------------------------------
 
 const EMAIL = 'hello@normalfinance.io';
 
-const META = [
+// Both are typed in, not measured.
+const FACTS: PageFact[] = [
   { label: 'Avg. response', value: '8 hours' },
   { label: 'Based in', value: 'Chicago, USA' },
 ];
 
-export const ContactHero: React.FC = () => {
+/**
+ * The page's one focal point: the address on the sky wash, filling the hero's
+ * right-hand cell between the hairlines. Every word on the wash is the deep
+ * shade, as on the Savings card.
+ */
+function EmailCard() {
+  const sky = BRAND_COLORS.sky;
   const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(EMAIL);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(EMAIL);
+      setCopied(true);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // No clipboard (an insecure page, a refused permission): the address is
+      // on screen to copy by hand.
+    }
   };
 
   return (
-    <PageSection tone="dark">
+    <Box
+      sx={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        ...GUTTER_SX,
+        py: 'var(--section-y)',
+        color: sky.deep,
+        bgcolor: sky.tint,
+      }}
+    >
+      <Eyebrow sx={{ color: 'inherit' }}>Drop us a line</Eyebrow>
       <Box
+        component="a"
+        href={`mailto:${EMAIL}`}
         sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' },
-          gap: { xs: 5, md: 10 },
-          alignItems: 'center',
+          ...TYPE.h3,
+          mt: 2,
+          fontFamily: MONO_FONT,
+          fontWeight: 400,
+          letterSpacing: '-0.02em',
+          color: 'inherit',
+          textDecoration: 'none',
+          overflowWrap: 'anywhere',
+          '&:hover': {
+            textDecoration: 'underline',
+            textDecorationThickness: '1px',
+            textUnderlineOffset: '0.18em',
+          },
         }}
       >
-        {/* Left: text */}
-        <Box>
-          <HeroBadge tone="dark">
-            <LiveDot tone="dark" />
-            We reply fast
-          </HeroBadge>
-
-          <HeroTitle tone="dark">
-            {"Let's "}
-            <GradientText>talk.</GradientText>
-          </HeroTitle>
-
-          <HeroLede tone="dark">
-            Whether you have a question about savings, want to report a bug, or are interested in
-            partnering — drop us a line and a real human will respond.
-          </HeroLede>
-
-          {/* Meta row */}
-          <Box
-            sx={{
-              display: 'flex',
-              gap: { xs: 3, sm: 5 },
-              mt: 5,
-              pt: 3,
-              borderTop: HAIRLINE_ON_DARK,
-              flexWrap: 'wrap',
-            }}
-          >
-            {META.map((item) => (
-              <MetaItem key={item.label} tone="dark" label={item.label} value={item.value} />
-            ))}
-          </Box>
-        </Box>
-
-        {/* Right: email card */}
-        <Box sx={{ ...BLOCK_ON_DARK_SX, p: { xs: '24px', md: '32px' } }}>
-          <Eyebrow tone="dark" sx={{ mb: 2 }}>
-            Drop us a line
-          </Eyebrow>
-
-          <Box
-            component="a"
-            href={`mailto:${EMAIL}`}
-            sx={{
-              display: 'block',
-              fontSize: { xs: '18px', md: '22px' },
-              fontWeight: 400,
-              fontFamily: MONO_FONT,
-              letterSpacing: '-0.02em',
-              color: '#FFFFFF',
-              textDecoration: 'none',
-              mb: 3,
-              overflowWrap: 'anywhere',
-              '&:hover': { opacity: 0.8 },
-            }}
-          >
-            {EMAIL}
-          </Box>
-
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', sm: 'row' },
-              alignItems: { xs: 'stretch', sm: 'center' },
-              gap: 1.5,
-              pt: 3,
-              borderTop: HAIRLINE_ON_DARK,
-            }}
-          >
-            <Tooltip title={copied ? 'Copied!' : 'Copy email'} placement="top">
-              <BrandButton
-                tone="dark"
-                emphasis="secondary"
-                onClick={handleCopy}
-                startIcon={
-                  copied ? (
-                    <CheckIcon sx={{ fontSize: 16, color: '#4ADE80' }} />
-                  ) : (
-                    <ContentCopyIcon sx={{ fontSize: 16 }} />
-                  )
-                }
-              >
-                {copied ? 'Copied!' : 'Copy address'}
-              </BrandButton>
-            </Tooltip>
-
-            <BrandButton
-              tone="dark"
-              href={`mailto:${EMAIL}`}
-              endIcon={<ArrowForwardIcon sx={{ fontSize: 16 }} />}
-            >
-              Open messaging app
-            </BrandButton>
-          </Box>
-        </Box>
+        {/* Where a narrow cell has to break the address, it breaks after the @. */}
+        hello@
+        <wbr />
+        normalfinance.io
       </Box>
-    </PageSection>
-  );
-};
 
-export default ContactHero;
+      <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} sx={{ mt: 'auto', pt: 5 }}>
+        <BrandButton href={`mailto:${EMAIL}`} endIcon={<ArrowForwardRounded />}>
+          Open messaging app
+        </BrandButton>
+        <BrandButton
+          emphasis="secondary"
+          onClick={handleCopy}
+          startIcon={copied ? <CheckRounded /> : <ContentCopyRounded />}
+          sx={{ bgcolor: 'transparent' }}
+        >
+          {copied ? 'Copied!' : 'Copy address'}
+        </BrandButton>
+      </Stack>
+      <Box role="status" sx={VISUALLY_HIDDEN_SX}>
+        {copied ? 'Email address copied' : ''}
+      </Box>
+    </Box>
+  );
+}
+
+/** The facts sit on the hero's 7:5 split, so the line beside the card runs on through them. */
+export function ContactHero() {
+  return (
+    <PageHero
+      id="contact-title"
+      eyebrow="We reply fast"
+      title="Let's talk."
+      lede="Whether you have a question about savings, want to report a bug, or are interested in partnering, drop us a line and a real human will respond."
+      aside={<EmailCard />}
+      facts={FACTS}
+    />
+  );
+}

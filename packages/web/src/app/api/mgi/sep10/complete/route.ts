@@ -67,7 +67,7 @@ export const POST = withAuth(async (req: Request, { user }) => {
     if (!r.ok) {
       return NextResponse.json(
         {
-          error: 'MoneyGram sign-in failed — please try again.',
+          error: 'MoneyGram sign-in failed. Please try again.',
           status: r.status,
         },
         { status: r.status }
@@ -77,7 +77,7 @@ export const POST = withAuth(async (req: Request, { user }) => {
     const token = data?.token ?? data?.access_token ?? data;
     if (!token) {
       return NextResponse.json(
-        { error: 'MoneyGram sign-in failed — please try again.' },
+        { error: 'MoneyGram sign-in failed. Please try again.' },
         { status: 502 }
       );
     }
@@ -86,7 +86,7 @@ export const POST = withAuth(async (req: Request, { user }) => {
   } catch (e: any) {
     console.error('[MGI] /api/mgi/sep10/complete crashed:', e);
     return NextResponse.json(
-      { error: 'MoneyGram is temporarily unavailable — please try again.' },
+      { error: 'MoneyGram is temporarily unavailable. Please try again.' },
       { status: 500 }
     );
   }

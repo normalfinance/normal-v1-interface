@@ -4,6 +4,7 @@ import NextLink from 'next/link';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
+import { INK, MUTED, FAINT, PAPER } from '@/theme/brand-colors';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { hasVerifiedFactor, TWO_FACTOR_ENABLED } from '@/lib/auth/two-factor';
 
@@ -54,7 +55,7 @@ export function TwoFactorPrompt({ hasFunds }: { hasFunds: boolean }) {
     <Box
       sx={{
         ...BLOCK_SX,
-        p: '14px 16px',
+        py: '14px',
         mb: 2,
         display: 'flex',
         alignItems: 'center',
@@ -70,17 +71,17 @@ export function TwoFactorPrompt({ hasFunds }: { hasFunds: boolean }) {
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: 'var(--radius-md)',
-          bgcolor: '#0A0A0F',
+          bgcolor: INK,
         }}
       >
-        <VerifiedUserOutlinedIcon sx={{ fontSize: 20, color: '#FFFFFF' }} />
+        <VerifiedUserOutlinedIcon sx={{ fontSize: 20, color: PAPER }} />
       </Box>
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: INK }}>
           {t('Protect your account')}
         </Typography>
-        <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.45 }}>
+        <Typography sx={{ fontSize: '13px', color: MUTED, lineHeight: 1.45 }}>
           {t('Turn on two-factor authentication so your email alone is never enough.')}
         </Typography>
       </Box>
@@ -102,7 +103,7 @@ export function TwoFactorPrompt({ hasFunds }: { hasFunds: boolean }) {
           rememberDismissed(user.id);
           setHidden(true);
         }}
-        sx={{ flexShrink: 0, color: '#9A9AA3' }}
+        sx={{ flexShrink: 0, color: FAINT }}
       >
         <Iconify icon="mingcute:close-line" width={16} />
       </IconButton>

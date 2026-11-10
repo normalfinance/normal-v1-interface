@@ -148,7 +148,7 @@ export function createBitcoinAdapter(
         );
 
         const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
-        if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
+        if (!signedTx) throw new Error('Signing failed: no signed transaction returned');
 
         // Step 3 — broadcast via our server (avoids CORS issues with mempool.space)
         const txid = await broadcastBtcTransaction(signedTx);

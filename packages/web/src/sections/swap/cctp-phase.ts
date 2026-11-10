@@ -28,6 +28,9 @@ export function bannerPhase(tr: PhaseFields): Phase {
   // was the missing line: hiding only REFUNDED made every retired row a
   // permanent "finish once it arrives" ghost.
   if (tr.status === 'REFUNDED' || tr.status === 'FAILED') return 'hidden';
+  // A crypto index purchase is followed by its own page and finished by the
+  // cron (server/index-legs.ts): it has no swap to resume here.
+  if (tr.direction === 'stellar_to_index') return 'hidden';
   const outbound = tr.direction === 'stellar_to_crosschain';
   if (outbound) {
     if (tr.dstSwapTxHash) return 'hidden'; // pivot done → settled

@@ -9,6 +9,17 @@ import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 import { runWebauthnCeremony } from '@/lib/turnkey/webauthn-guard';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
+// A tiny module with no imports of its own: loaded with the page (the engines'
+// error handlers read it too, and an on-demand load can fail mid-swap).
+import { GasShortfallError, computeAffordability } from '@/lib/lifi/gas-shortfall';
+import { freshBlockhash, canRefreshBlockhash } from '@/lib/chains/solana-blockhash';
+import {
+  base58,
+  sendVerdict,
+  errorMessage,
+  settleUncertainSend,
+  BroadcastUncertainError,
+} from '@/lib/chains/broadcast-safety';
 
 // ---------------------------------------------------------------------------
 // Executes a LI.FI quote's transactionRequest on the source chain, signed by
@@ -81,14 +92,23 @@ function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * Progress for the review page: 'sign' fires right before the passkey prompt
+ * appears, 'broadcast' once the signature is in and the transaction goes out.
+ */
+export type LifiExecStage = 'sign' | 'broadcast';
+type OnStage = ((stage: LifiExecStage) => void) | undefined;
+
 // --- Ethereum source ---------------------------------------------------------
 
 async function executeEvm(
   quote: LifiQuote,
   ethereumAddress: string,
-  subOrgId: string
+  subOrgId: string,
+  onStage: OnStage
 ): Promise<string> {
   const { createPublicClient, serializeTransaction } = await import('viem');
+  const { sendSignedEvmTransaction } = await import('@/lib/chains/evm-send');
   const { mainnet } = await import('viem/chains');
 
   const tx = quote.transactionRequest;
@@ -144,7 +164,7 @@ async function executeEvm(
   // anything to react to. Refuse instead, and say which side is missing.
   if (!legacyPrice && maxFeePerGas === 0n) {
     throw new Error(
-      'Could not determine a network fee for this swap — the network did not respond with a gas price. Nothing was signed; please try again.'
+      'Could not work out a network fee for this swap: the network did not answer with a gas price. Nothing was signed; please try again.'
     );
   }
 
@@ -155,7 +175,6 @@ async function executeEvm(
   // raises a structured shortfall BEFORE anything signs, and the engines
   // offer the affordable amount instead of an error. Balance-read failure
   // skips the check (the node still enforces it — this is UX, not custody).
-  const { computeAffordability, GasShortfallError } = await import('@/lib/lifi/gas-shortfall');
   // Doc 95 Wave 6: one failed read used to skip the whole check, so a gas
   // spike surfaced as the node's raw "insufficient funds" dump AFTER the
   // passkey. The transport is already a fallback pool (Wave 4), so a second
@@ -224,6 +243,7 @@ async function executeEvm(
     // Serialized + fast-fail-retried like every other passkey ceremony (#51 —
     // this path was missed in the original guard rollout and failed live with
     // WebAuthn NotAllowedError, 2026-08-14).
+    onStage?.('sign');
     const signResult = await runWebauthnCeremony(() =>
       turnkey.signTransaction({
         type: 'ACTIVITY_TYPE_SIGN_TRANSACTION_V2',
@@ -237,28 +257,24 @@ async function executeEvm(
       })
     );
     const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
-    if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
+    if (!signedTx) throw new Error('Signing did not complete: no signed transaction came back');
 
+    onStage?.('broadcast');
     log('ETH: broadcasting');
-    // Return as soon as the tx is broadcast — the status modal tracks the
-    // receipt + bridge non-blockingly (a dropped/underpriced tx surfaces there
-    // as "Failed", not as a frozen button).
-    try {
-      hash = await client.sendRawTransaction({
-        serializedTransaction: (signedTx.startsWith('0x')
-          ? signedTx
-          : `0x${signedTx}`) as `0x${string}`,
-      });
-    } catch (sendErr: any) {
-      const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
-      if (
-        attempt === 0 &&
-        /nonce too low|already known|replacement transaction underpriced/i.test(m)
-      ) {
-        continue;
-      }
-      throw sendErr;
-    }
+    // Return as soon as the tx is broadcast: the page tracks the receipt and
+    // the bridge without blocking (a dropped tx surfaces there as failed).
+    // The send itself never re-signs (lib/chains/evm-send.ts): "already
+    // known" is our own transaction, a nonce race re-signs only when the
+    // chain shows the nonce holder is not ours, and an unclear error is
+    // settled from the chain or ends as "not sure", never as a second swap.
+    const result = await sendSignedEvmTransaction(
+      client,
+      (signedTx.startsWith('0x') ? signedTx : `0x${signedTx}`) as `0x${string}`,
+      { chainLabel: 'ethereum' }
+    );
+    if (result.sent) hash = result.hash;
+    else if (attempt === 0) continue;
+    else throw result.error;
   }
   log('ETH: broadcast hash', hash);
   return hash;
@@ -290,13 +306,14 @@ function psbtToHex(data: string): string {
     return hex;
   }
 
-  throw new Error('Unrecognised PSBT encoding from LI.FI — expected hex or base64');
+  throw new Error('Unrecognised PSBT encoding from LI.FI: expected hex or base64');
 }
 
 async function executeBtc(
   quote: LifiQuote,
   bitcoinAddress: string,
-  subOrgId: string
+  subOrgId: string,
+  onStage: OnStage
 ): Promise<string> {
   // The PSBT from LI.FI — re-encoded if needed, but never rebuilt or reordered.
   const psbtHex = psbtToHex(quote.transactionRequest.data);
@@ -347,6 +364,7 @@ async function executeBtc(
   try {
     const { signLifiBtcPsbt } = await import('@/lib/lifi/btc-sign');
     // One ceremony (batched raw-payload signing) — guarded like all others (#51).
+    onStage?.('sign');
     signedTx = await runWebauthnCeremony(() =>
       signLifiBtcPsbt(
         psbtHex,
@@ -381,23 +399,55 @@ async function executeBtc(
     // Keep the decode attached: any Bitcoin signing failure should say what was
     // in the PSBT, or it can't be acted on or reported upstream.
     const msg = err?.shortMessage ?? err?.message ?? String(err);
-    throw new Error(`${msg} — PSBT: ${psbtDescription}`);
+    throw new Error(`${msg}. PSBT: ${psbtDescription}`);
   }
 
+  onStage?.('broadcast');
   log('BTC: broadcasting');
   const { buildAuthHeaders } = await import('@/utils/http');
-  const res = await fetch('/api/turnkey/broadcast-btc', {
-    method: 'POST',
-    headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ signedTxHex: signedTx }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? `Broadcast failed (${res.status})`);
+  // Our route is safe to call again with the SAME signed transaction: it
+  // checks the mempool for this very txid before and after relaying, and
+  // answers success when the transaction is already there. So an unclear
+  // failure (a dropped connection, a 5xx) is settled by sending the same
+  // bytes again, never by signing anything new.
+  const post = async (): Promise<string> => {
+    const res = await fetch('/api/turnkey/broadcast-btc', {
+      method: 'POST',
+      headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signedTxHex: signedTx }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw Object.assign(new Error(body.error ?? `Broadcast failed (${res.status})`), {
+        httpStatus: res.status,
+      });
+    }
+    const data = await res.json();
+    return data.txid as string;
+  };
+  const verdictOf = (e: unknown) =>
+    sendVerdict('bitcoin', errorMessage(e), (e as { httpStatus?: number })?.httpStatus);
+
+  try {
+    const txid = await post();
+    log('BTC: broadcast txid', txid);
+    return txid;
+  } catch (err) {
+    if (verdictOf(err) === 'rejected') throw err;
+    // Looking it up IS sending it again here: the route answers with the
+    // txid whether it relays the transaction or finds it already relayed.
+    let txid: string | null = null;
+    const again = async () => {
+      txid = await post();
+      return true;
+    };
+    const settled = await settleUncertainSend({ lookup: again, resend: again, verdictOf });
+    if (settled.sent && txid) {
+      log('BTC: broadcast txid (after sending the same transaction again)', txid);
+      return txid;
+    }
+    throw new BroadcastUncertainError('bitcoin', null);
   }
-  const data = await res.json();
-  log('BTC: broadcast txid', data.txid);
-  return data.txid as string;
 }
 
 // --- Solana source -----------------------------------------------------------
@@ -405,7 +455,8 @@ async function executeBtc(
 async function executeSol(
   quote: LifiQuote,
   solanaAddress: string,
-  subOrgId: string
+  subOrgId: string,
+  onStage: OnStage
 ): Promise<string> {
   const { PublicKey, Connection, VersionedTransaction } = await import('@solana/web3.js');
 
@@ -422,7 +473,24 @@ async function executeSol(
 
   // Sign the serialized message bytes (ed25519, no pre-hash) with Turnkey.
   const turnkey = await getTurnkeyClient();
+
+  // The blockhash LI.FI put in expires about a minute after the price was
+  // fetched, and the review page can be open longer than that ("Blockhash not
+  // found", nothing sent). Take a fresh one from the node we send through,
+  // when that cannot break anything (see lib/chains/solana-blockhash.ts), as
+  // the LAST thing before the prompt: after the client setup above, so no
+  // other wait sits between it and the signature. freshBlockhash retries once
+  // and bounds each read at 5 s; if the node does not answer, the quote's own
+  // blockhash stays and the send below gives the real answer (an expired one
+  // marks the quote stale in the engines).
+  if (canRefreshBlockhash(vtx, userKey)) {
+    const latest = await freshBlockhash(() => connection.getLatestBlockhash('confirmed'));
+    if (latest) vtx.message.recentBlockhash = latest;
+    else log('SOL: no fresh blockhash, keeping the quote’s own');
+  }
+
   log('SOL: requesting passkey signature');
+  onStage?.('sign');
   const signResult = await runWebauthnCeremony(() =>
     turnkey.signRawPayload({
       type: 'ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2',
@@ -437,17 +505,48 @@ async function executeSol(
     })
   );
   const result = signResult?.activity?.result?.signRawPayloadResult;
-  if (!result?.r || !result?.s) throw new Error('Signing failed — no signature returned');
+  if (!result?.r || !result?.s) throw new Error('Signing did not complete: no signature came back');
 
   const signature = new Uint8Array(64);
   signature.set(hexToBytes(result.r.padStart(64, '0')), 0);
   signature.set(hexToBytes(result.s.padStart(64, '0')), 32);
   vtx.signatures[signerIndex] = signature;
 
+  onStage?.('broadcast');
   log('SOL: broadcasting');
-  const sig = await connection.sendRawTransaction(vtx.serialize(), { skipPreflight: false });
-  log('SOL: broadcast signature', sig);
-  return sig;
+  // A Solana transaction's id is its first signature, known before it is
+  // sent; the same signed bytes can be sent again without making a second
+  // transaction. So an unclear send error is settled from the chain.
+  const bytes = vtx.serialize();
+  const ours = base58(vtx.signatures[0]);
+  const send = () => connection.sendRawTransaction(bytes, { skipPreflight: false });
+  const verdictOf = (e: unknown) => sendVerdict('solana', errorMessage(e));
+  try {
+    const sig = await send();
+    log('SOL: broadcast signature', sig);
+    return sig;
+  } catch (err) {
+    const verdict = verdictOf(err);
+    if (verdict === 'sent') return ours;
+    if (verdict === 'rejected') throw err;
+    const settled = await settleUncertainSend({
+      lookup: async () => {
+        const { value } = await connection.getSignatureStatuses([ours], {
+          searchTransactionHistory: true,
+        });
+        // Landed, even if it failed on chain: it was sent, and the tracker
+        // reports how it ended.
+        return value[0] != null;
+      },
+      resend: send,
+      verdictOf,
+    });
+    if (settled.sent) {
+      log('SOL: broadcast signature (settled from the chain)', ours);
+      return ours;
+    }
+    throw new BroadcastUncertainError('solana', ours);
+  }
 }
 
 // --- Entry -------------------------------------------------------------------
@@ -457,7 +556,8 @@ export async function executeLifiSwap(
   // One object from the registry rather than a field per chain, so a new chain
   // doesn't change this signature. The per-chain signers below stay separate —
   // each one speaks a different protocol.
-  addresses: ChainAddresses
+  addresses: ChainAddresses,
+  opts: { onStage?: (stage: LifiExecStage) => void } = {}
 ): Promise<string> {
   const info = await getTurnkeyWalletInfo();
   if (!info?.subOrgId) throw new Error('Turnkey wallet not found');
@@ -465,13 +565,13 @@ export async function executeLifiSwap(
   switch (quote.action.fromChainId) {
     case LIFI_CHAIN_IDS.ETH:
       if (!addresses.ethereumAddress) throw new Error('Missing Ethereum address');
-      return executeEvm(quote, addresses.ethereumAddress, info.subOrgId);
+      return executeEvm(quote, addresses.ethereumAddress, info.subOrgId, opts.onStage);
     case LIFI_CHAIN_IDS.BTC:
       if (!addresses.bitcoinAddress) throw new Error('Missing Bitcoin address');
-      return executeBtc(quote, addresses.bitcoinAddress, info.subOrgId);
+      return executeBtc(quote, addresses.bitcoinAddress, info.subOrgId, opts.onStage);
     case LIFI_CHAIN_IDS.SOL:
       if (!addresses.solanaAddress) throw new Error('Missing Solana address');
-      return executeSol(quote, addresses.solanaAddress, info.subOrgId);
+      return executeSol(quote, addresses.solanaAddress, info.subOrgId, opts.onStage);
     default:
       throw new Error(`Unsupported source chain ${quote.action.fromChainId}`);
   }

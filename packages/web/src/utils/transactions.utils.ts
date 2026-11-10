@@ -74,7 +74,7 @@ export const createStellarExpertUrl = (type: StellarExpertResourceType, id: stri
 
 const OP_CODE_MESSAGES: Record<string, string> = {
   op_underfunded: 'Insufficient balance to complete this transaction.',
-  op_no_trust: 'Missing trustline — you need to add a USDC trustline first.',
+  op_no_trust: 'Missing trustline: you need to add a USDC trustline first.',
   op_no_destination: 'Destination account does not exist on the Stellar network.',
   op_not_authorized: 'Asset not authorized for this account.',
   op_line_full: 'Receiving account trustline is full.',
@@ -83,12 +83,12 @@ const OP_CODE_MESSAGES: Record<string, string> = {
 };
 
 const TX_CODE_MESSAGES: Record<string, string> = {
-  tx_bad_seq: 'Transaction sequence number mismatch — please try again.',
+  tx_bad_seq: 'Transaction sequence number mismatch. Please try again.',
   tx_bad_auth: 'Transaction authorization failed.',
   tx_insufficient_fee: 'Transaction fee too low.',
   tx_no_account: 'Source account does not exist.',
   tx_too_early: 'Transaction submitted too early.',
-  tx_too_late: 'Transaction has expired — please try again.',
+  tx_too_late: 'Transaction has expired. Please try again.',
 };
 
 /**

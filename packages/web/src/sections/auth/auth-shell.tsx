@@ -6,10 +6,10 @@ import NextLink from 'next/link';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { cdn } from '@normalfinance/utils';
+import { HeroPhone } from '@/sections/home/hero-phone';
+import { INK, BAND, PAPER } from '@/theme/brand-colors';
 
 import { Box, Stack, Link as MuiLink } from '@mui/material';
-
-const PORTFOLIO_MOCKUP = cdn('mockups/portfolio.webp');
 
 // The frame around every sign-in step. Google and email links land on a different
 // route, so that page wears this too: coming back shouldn't look like arriving
@@ -22,12 +22,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
       sx={(theme) => ({
         // Brand ink, as on the marketing pages. The theme's text colour is a slate
         // that reads navy on a filled button.
-        '--auth-ink': '#0A0A0F',
-        '--auth-on-ink': '#fff',
-        ...theme.applyStyles('dark', {
-          '--auth-ink': theme.vars.palette.text.primary,
-          '--auth-on-ink': theme.vars.palette.background.paper,
-        }),
+        '--auth-ink': INK,
+        '--auth-on-ink': PAPER,
         minHeight: '100dvh',
         display: 'grid',
         gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) minmax(0, 1.08fr)' },
@@ -66,8 +62,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
 }
 
 function AuthVisual() {
-  const { t } = useTranslate();
-
   return (
     <Box
       sx={{
@@ -85,34 +79,15 @@ function AuthVisual() {
           height: '100%',
           overflow: 'hidden',
           borderRadius: 'var(--radius-lg)',
-          bgcolor: '#0A0A0F',
+          // Dark behind the photo while it loads, in both modes (the band).
+          bgcolor: BAND,
           isolation: 'isolate',
         }}
       >
-        {/* Brand-coloured light behind the laptop. The photo's black backdrop
-            blends into it through `lighten`, so there's no visible image edge. */}
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(52% 38% at 38% 66%, rgba(110,139,255,0.30), transparent 72%), radial-gradient(44% 34% at 70% 62%, rgba(255,123,197,0.20), transparent 72%)',
-          }}
-        />
-        <Box
-          component="img"
-          src={PORTFOLIO_MOCKUP}
-          alt={t('The Normal portfolio open on a laptop')}
-          sx={{
-            position: 'absolute',
-            bottom: '-5%',
-            left: '50%',
-            width: 'min(142%, 128vh)',
-            maxWidth: 'none',
-            transform: 'translateX(-45.5%)',
-            mixBlendMode: 'lighten',
-          }}
-        />
+        {/* A real person with the app on their phone, the home page's own
+            photo and live Home screen (Niko 2026-11-10: not the old laptop
+            mockup). The panel is portrait: the crop keeps the phone centred. */}
+        <HeroPhone focus="72% 50%" />
       </Box>
     </Box>
   );

@@ -5,6 +5,7 @@ import type { OwnWalletCandidate } from '@/lib/stellar/own-wallets';
 import { useTranslate } from '@/locales';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { deriveWalletReadiness } from '@/lib/stellar/wallet-readiness';
+import { INK, MUTED, FAINT, PAPER, BRAND_COLORS } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -50,7 +51,7 @@ function OwnWalletChip({
   let disabled = false;
   if (readiness === 'not-activated') {
     if (isXlm) {
-      hint = t('not active — sending XLM activates it');
+      hint = t('not active: sending XLM activates it');
     } else {
       hint = t('not active yet');
       disabled = true;
@@ -73,25 +74,30 @@ function OwnWalletChip({
         px: '10px',
         py: '5px',
         borderRadius: 'var(--radius-sm)',
-        border: selected ? '1px solid rgba(10,10,15,0.9)' : '1px solid rgba(10,10,15,0.14)',
-        bgcolor: selected ? '#0A0A0F' : 'transparent',
+        border: selected
+          ? '1px solid rgba(var(--nf-ink-rgb),0.9)'
+          : '1px solid rgba(var(--nf-ink-rgb),0.14)',
+        bgcolor: selected ? INK : 'transparent',
         cursor: disabled ? 'default' : 'pointer',
         fontFamily: 'inherit',
         opacity: disabled ? 0.5 : 1,
         transition: 'all .15s ease',
-        '&:hover': selected || disabled ? {} : { borderColor: 'rgba(10,10,15,0.3)' },
+        '&:hover': selected || disabled ? {} : { borderColor: 'rgba(var(--nf-ink-rgb),0.3)' },
       }}
     >
       <Typography
         component="span"
-        sx={{ fontSize: '11.5px', fontWeight: 500, color: selected ? '#fff' : '#6B6B76' }}
+        sx={{ fontSize: '11.5px', fontWeight: 500, color: selected ? PAPER : MUTED }}
       >
         {candidate.label}
       </Typography>
       {hint && (
         <Typography
           component="span"
-          sx={{ fontSize: '10.5px', color: selected ? 'rgba(255,255,255,0.7)' : '#B45309' }}
+          sx={{
+            fontSize: '10.5px',
+            color: selected ? 'rgba(var(--nf-paper-rgb),0.7)' : BRAND_COLORS.yellow.deep,
+          }}
         >
           {hint}
         </Typography>
@@ -119,7 +125,7 @@ export default function OwnWalletChips({
   if (candidates.length === 0) return null;
   return (
     <Box sx={{ mb: '10px' }}>
-      <Typography sx={{ fontSize: '11px', color: '#9A9AA3', mb: '6px' }}>
+      <Typography sx={{ fontSize: '11px', color: FAINT, mb: '6px' }}>
         {t('Your wallets')}
       </Typography>
       <Box sx={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>

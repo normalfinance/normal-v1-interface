@@ -169,6 +169,36 @@ model CctpTransfer {
   @@map("cctp_transfers")
 }
 
+/// One coin of a crypto index purchase (2026-11-09). The purchase itself is a
+/// CctpTransfer with direction 'stellar_to_index': ONE Stellar burn whose USDC
+/// Circle mints to the user's own Base address. Each leg then swaps its share
+/// of that USDC into one coin (LI.FI, signed by Autopilot) and delivers it to
+/// the user's own address on that coin's chain (server/index-legs.ts).
+model IndexLeg {
+  id            String   @id @default(cuid())
+  /// The CctpTransfer (direction 'stellar_to_index') this leg belongs to.
+  purchaseId    String
+  userId        String // supabase uid
+  symbol        String // 'BTC' | 'ETH' | 'SOL'
+  weightBps     Int
+  amountWire    String // this leg's share, 6-dp USDC units
+  /// PENDING (waiting for the mint or a retry) | SWAPPING (claimed, signing)
+  /// | SENT (the Base swap is out; LI.FI delivers) | HELD (gave up retrying:
+  /// the USDC stays at the user's own Base address)
+  status        String   @default("PENDING")
+  dstSwapTxHash String? // the LI.FI swap on Base
+  dstAmount     String? // the least the coin delivers (toAmountMin), human units
+  errorDetail   String?
+  retryCount    Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([purchaseId, symbol])
+  @@index([userId])
+  @@index([status])
+  @@map("index_legs")
+}
+
 // Our record of a MoneyGram SEP-24 transaction, written when our server
 // initiates it. MoneyGram stays the source of truth for status — this row is a
 // cache so the activity feed can render MGI history without a SEP-10 passkey

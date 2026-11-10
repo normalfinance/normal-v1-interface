@@ -1,9 +1,13 @@
 'use client';
 
-import { useRef } from 'react';
+import type { CustomContentProps } from 'notistack';
+
+import { useRef, forwardRef } from 'react';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { closeSnackbar, SnackbarProvider as NotistackProvider } from 'notistack';
 
 // @mui
+import Fade from '@mui/material/Fade';
 import Collapse from '@mui/material/Collapse';
 import IconButton from '@mui/material/IconButton';
 
@@ -15,6 +19,20 @@ import { useSettingsContext } from '../settings';
 import { StyledIcon, StyledNotistack } from './styles';
 
 // ----------------------------------------------------------------------
+
+/**
+ * Every error toast in the app, whoever raised it and however (notistack
+ * directly or this folder): its words pass through friendlyAppError here, so
+ * no raw library or server text reaches the screen, and each says what to do
+ * next (Niko 2026-11-09). Words that already read well pass through unchanged.
+ */
+const FriendlyErrorContent = forwardRef<HTMLDivElement, CustomContentProps>((props, ref) => (
+  <StyledNotistack
+    ref={ref}
+    {...props}
+    message={typeof props.message === 'string' ? friendlyAppError(props.message) : props.message}
+  />
+));
 
 type Props = {
   children: React.ReactNode;
@@ -33,7 +51,8 @@ export default function SnackbarProvider({ children }: Props) {
       maxSnack={5}
       preventDuplicate
       autoHideDuration={3000}
-      TransitionComponent={isRTL ? Collapse : undefined}
+      // Toasts fade in place; notistack's default slides them in (DESIGN.md: nothing moves).
+      TransitionComponent={isRTL ? Collapse : Fade}
       variant="success" // Set default variant
       anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       iconVariant={{
@@ -63,7 +82,7 @@ export default function SnackbarProvider({ children }: Props) {
         info: StyledNotistack,
         success: StyledNotistack,
         warning: StyledNotistack,
-        error: StyledNotistack,
+        error: FriendlyErrorContent,
       }}
       // with close as default
       action={(snackbarId) => (

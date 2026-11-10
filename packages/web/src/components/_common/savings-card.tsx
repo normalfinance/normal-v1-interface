@@ -1,13 +1,18 @@
 'use client';
 
 import type { BoxProps } from '@mui/material';
+import type { FlowPlan, FlowSummary } from '@/lib/flow/types';
+import type { SavingsProgress } from '@/hooks/stellar/use-defindex-savings';
 
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useRouter } from 'next/navigation';
+import { useFlowRun } from '@/hooks/use-flow-run';
 import { chainOfActivityEvent } from '@/lib/tx-events';
 import { usePersistStore } from '@normalfinance/state';
 import { useStellarTokens } from '@/hooks/use-stellar-tokens';
+import { awaitTxRecord } from '@/lib/stellar/await-tx-visible';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
@@ -15,6 +20,7 @@ import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
+import { depositPlan, withdrawPlan, shortAddress } from '@/lib/flow/plans';
 import { xlmFeeStatus, xlmAvailableForFees } from '@/utils/stellar-reserve';
 import {
   getYieldCommission,
@@ -27,9 +33,29 @@ import {
   getSavingsDepositToken,
   getSavingsDepositTokenLabel,
 } from '@/utils/token-selectors';
+import {
+  INK,
+  WELL,
+  MUTED,
+  FAINT,
+  PAPER,
+  CANVAS,
+  DANGER,
+  WARNING,
+  INK_SOFT,
+  DANGER_DEEP,
+  BRAND_COLORS,
+} from '@/theme/brand-colors';
 
-import { keyframes } from '@mui/system';
 import { Box, Stack, Button, Skeleton, Typography, CircularProgress } from '@mui/material';
+
+import { FlowView, FlowPortal } from '@/components/_common/flow';
+import { formatUsd, formatCoin } from '@/components/_common/app-ui';
+import {
+  ledgerNote,
+  stellarTxLink,
+  stellarAccountHref,
+} from '@/components/_common/flow/flow-links';
 
 import { WalletGate } from './wallet-gate';
 import { Iconify } from '../template/iconify';
@@ -39,16 +65,14 @@ import { SavingsSetupDialog } from './savings-setup-dialog';
 
 // ----------------------------------------------------------------------
 
-const txDotsAnim = keyframes`
-  0%   { width: 0; }
-  100% { width: 1.2em; }
-`;
-
-interface SavingsCardProps extends BoxProps {}
+interface SavingsCardProps extends BoxProps {
+  /** The page titles the card and shows the rate itself: no header of its own. */
+  hideHeader?: boolean;
+}
 
 // ----------------------------------------------------------------------
 
-const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
+const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = false, ...other }) => {
   const { t } = useTranslate();
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
@@ -62,7 +86,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
   // wallet, where a hybrid user's savings usually live and where every
   // action is passkey-only. EVERYTHING below — position, balances, setup
   // state, fee semaphore, deposit/withdraw signing — follows the TARGET.
-  const { companionStellar } = useWalletBalances(true);
+  const { companionStellar, refreshFresh } = useWalletBalances(true);
   const isExternalConnected = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
   const savingsHybrid = isExternalConnected && !!companionStellar;
   const [savingsWalletTab, setSavingsWalletTab] = useState<'normal' | 'connected'>('normal');
@@ -90,7 +114,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     error,
     needsTrustline,
     setNeedsTrustline,
-    txStep,
     deposit,
     withdraw,
   } = useDefindexSavings(savingsTargetAddress);
@@ -137,17 +160,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
       setAmount(truncateToSevenDecimals(parseFloat(userPosition.currentValue)));
     }
   }, [mode, savingsDepositBalance, userPosition]);
-
-  const handleAction = useCallback(async () => {
-    if (!amount || parseFloat(amount) <= 0) return;
-    const parsedAmt = parseFloat(amount);
-
-    // Nothing happened, so don't make them type it again.
-    const hash = await (mode === 'deposit' ? deposit(amount) : withdraw(amount));
-    if (!hash) return;
-    if (mode === 'deposit') setSpentOnDeposits((prev) => prev + parsedAmt);
-    setAmount('');
-  }, [mode, amount, deposit, withdraw]);
 
   const availableBalance =
     mode === 'deposit' ? savingsDepositBalance : userPosition?.currentValue || '0';
@@ -274,50 +286,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     return () => window.removeEventListener('nf:activity-updated', handler);
   }, []);
 
-  // #26 sign-both-first: both signatures are collected BEFORE anything is
-  // submitted, then the pair is submitted server-side in one phase.
-  const depositSteps = [
-    { id: 'checking', label: t('Checking balance'), sub: t('Verifying USDC on Stellar') },
-    { id: 'deposit_sign', label: t('Signing deposit'), sub: t('Approve in your wallet · 1 of 2') },
-    { id: 'fee_sign', label: t('Signing fee payment'), sub: t('Approve in your wallet · 2 of 2') },
-    {
-      id: 'deposit_broadcast',
-      label: t('Crediting savings vault'),
-      sub: `Blend USDC pool · ${vaultInfo?.apy || 0}% APY`,
-    },
-  ];
-  const hasWithdrawCommission =
-    parsedAmount > 0 ? yieldCommission > 0 : parseFloat(userPosition?.earnings || '0') > 0;
-  const withdrawSteps = hasWithdrawCommission
-    ? [
-        {
-          id: 'withdraw_sign',
-          label: t('Signing withdrawal'),
-          sub: t('Approve in your wallet · 1 of 2'),
-        },
-        {
-          id: 'commission_sign',
-          label: t('Signing yield commission'),
-          sub: t('Approve in your wallet · 2 of 2'),
-        },
-        {
-          id: 'withdraw_broadcast',
-          label: t('Processing withdrawal'),
-          sub: 'horizon.stellar.org',
-        },
-      ]
-    : [
-        { id: 'withdraw_sign', label: t('Signing withdrawal'), sub: t('Approve in your wallet') },
-        {
-          id: 'withdraw_broadcast',
-          label: t('Broadcasting to Stellar'),
-          sub: 'horizon.stellar.org',
-        },
-      ];
-  const txSteps = mode === 'deposit' ? depositSteps : withdrawSteps;
-  const activeStepIdx = txStep ? txSteps.findIndex((s) => s.id === txStep) : -1;
-  const stepsTiming = mode === 'deposit' ? '~30s' : hasWithdrawCommission ? '~20s' : '~10s';
-
   const handleAddTrustline = useCallback(async () => {
     if (!savingsUsdcIssuer) {
       enqueueSnackbar(t('USDC issuer not configured'), { variant: 'error' });
@@ -367,6 +335,272 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
     return () => clearInterval(id);
   }, [feeStatus]);
 
+  // ---- the review page and the journey (components/_common/flow) ----------
+  // The button opens a review of every step; only the confirm button there
+  // starts the deposit or withdrawal. The card stays mounted underneath and
+  // runs it, reporting each step to the page.
+  const [view, setView] = useState<'form' | 'flow'>('form');
+  const {
+    run: flowState,
+    plan: frozenPlan,
+    begin: beginRun,
+    start: startStep,
+    done: doneStep,
+    fail: failRun,
+    finish: finishRun,
+    reset: resetRun,
+  } = useFlowRun();
+  const [frozen, setFrozen] = useState<{
+    mode: 'deposit' | 'withdraw';
+    summary: FlowSummary;
+    lede: string;
+  } | null>(null);
+
+  const actingAddress = savingsTargetAddress ?? wallet.address;
+  const walletLabel = savingsTargetAddress
+    ? t('Your Normal wallet')
+    : isExternalConnected
+      ? t('Your {{wallet}} wallet', { wallet: connectedWalletLabel(wallet.walletType) })
+      : undefined;
+  const walletRef = {
+    address: actingAddress,
+    href: stellarAccountHref(actingAddress),
+    label: walletLabel,
+  };
+  const rate = vaultInfo ? `${Number(vaultInfo.apy).toFixed(2)}% ${t('a year')}` : null;
+  const commissionOwed = mode === 'withdraw' && yieldCommission > 0;
+  const withdrawNet = Math.max(parsedAmount - (commissionOwed ? yieldCommission : 0), 0);
+
+  const livePlan: FlowPlan | null =
+    parsedAmount <= 0
+      ? null
+      : mode === 'deposit'
+        ? depositPlan({
+            t,
+            amount: formatCoin(parsedAmount, 'USDC'),
+            fee: formatCoin(depositFee, 'USDC'),
+            net: formatCoin(netDepositAmount, 'USDC'),
+            wallet: walletRef,
+            rate,
+          })
+        : withdrawPlan({
+            t,
+            amount: formatCoin(parsedAmount, 'USDC'),
+            commission: commissionOwed ? formatCoin(yieldCommission, 'USDC') : null,
+            net: formatCoin(withdrawNet, 'USDC'),
+            wallet: walletRef,
+          });
+
+  const fromRow = {
+    key: 'from',
+    label: mode === 'deposit' ? t('From') : t('To'),
+    value: walletLabel ?? t('Your Stellar wallet'),
+    detail: shortAddress(actingAddress),
+  };
+  const networkRow = {
+    key: 'network',
+    label: t('Network fee'),
+    value: t('Usually 0.05 to 0.5 XLM'),
+    detail: t('Paid in XLM by your wallet'),
+  };
+  const liveSummary: FlowSummary | null =
+    parsedAmount <= 0
+      ? null
+      : mode === 'deposit'
+        ? {
+            rows: [
+              {
+                key: 'amount',
+                label: t('You deposit'),
+                value: formatCoin(parsedAmount, 'USDC'),
+                detail: formatUsd(parsedAmount),
+              },
+              {
+                key: 'fee',
+                label: t('Normal fee (0.5%)'),
+                value: formatCoin(depositFee, 'USDC'),
+              },
+              {
+                key: 'net',
+                label: t('Goes into savings'),
+                value: formatCoin(netDepositAmount, 'USDC'),
+              },
+              ...(rate
+                ? [
+                    {
+                      key: 'rate',
+                      label: t('Earns'),
+                      value: rate,
+                      detail: t('About {{usd}} a year at today’s rate', {
+                        usd: formatUsd((netDepositAmount * Number(vaultInfo?.apy ?? 0)) / 100),
+                      }),
+                    },
+                  ]
+                : []),
+              fromRow,
+              { key: 'into', label: t('Into'), value: t('Normal Savings') },
+              { key: 'signatures', label: t('Signatures'), value: t('Two') },
+              networkRow,
+              { key: 'time', label: t('Time'), value: t('About 20 seconds') },
+            ],
+            note: t('The rate moves with the market, and you can withdraw at any time.'),
+          }
+        : {
+            rows: [
+              {
+                key: 'amount',
+                label: t('You withdraw'),
+                value: formatCoin(parsedAmount, 'USDC'),
+                detail: formatUsd(parsedAmount),
+              },
+              {
+                key: 'fee',
+                label: t('Commission on earnings'),
+                value: commissionOwed ? formatCoin(yieldCommission, 'USDC') : t('None'),
+                detail: commissionOwed
+                  ? t('{{rate}}% of the earnings in this withdrawal', {
+                      rate: yieldCommissionRatePct,
+                    })
+                  : t('No earnings in this withdrawal'),
+              },
+              {
+                key: 'net',
+                label: t('You receive'),
+                value: formatCoin(withdrawNet, 'USDC'),
+              },
+              { key: 'source', label: t('From'), value: t('Normal Savings') },
+              fromRow,
+              {
+                key: 'signatures',
+                label: t('Signatures'),
+                value: commissionOwed ? t('Two') : t('One'),
+              },
+              networkRow,
+              { key: 'time', label: t('Time'), value: t('About 15 seconds') },
+            ],
+          };
+
+  const liveLede =
+    mode === 'deposit'
+      ? rate
+        ? t('{{amount}} into Normal Savings, earning {{rate}}.', {
+            amount: formatCoin(parsedAmount, 'USDC'),
+            rate,
+          })
+        : t('{{amount}} into Normal Savings.', { amount: formatCoin(parsedAmount, 'USDC') })
+      : t('{{amount}} from Normal Savings to your wallet.', {
+          amount: formatCoin(parsedAmount, 'USDC'),
+        });
+
+  const flowMode = frozen?.mode ?? mode;
+  const shownPlan = flowState.phase === 'review' ? livePlan : (frozenPlan ?? livePlan);
+  const shownSummary =
+    flowState.phase === 'review' ? liveSummary : (frozen?.summary ?? liveSummary);
+
+  const openFlow = useCallback(() => {
+    setView('flow');
+    try {
+      window.history.pushState({ nfFlow: true }, '');
+    } catch {
+      /* the page's own Back still works */
+    }
+  }, []);
+  const flowPhaseRef = useRef(flowState.phase);
+  flowPhaseRef.current = flowState.phase;
+  const leaveFlow = useCallback(() => {
+    resetRun();
+    setFrozen(null);
+    setView('form');
+  }, [resetRun]);
+  const exitFlow = useCallback(() => {
+    leaveFlow();
+    if ((window.history.state as { nfFlow?: boolean } | null)?.nfFlow) window.history.back();
+  }, [leaveFlow]);
+  useEffect(() => {
+    if (view !== 'flow') return undefined;
+    const onPop = () => {
+      if (flowPhaseRef.current === 'running') {
+        window.history.pushState({ nfFlow: true }, '');
+        return;
+      }
+      leaveFlow();
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [view, leaveFlow]);
+
+  const handleConfirm = async () => {
+    if (!livePlan || !liveSummary || parsedAmount <= 0) return;
+    const acting = mode;
+    const amountNow = amount;
+    const parsedAmt = parsedAmount;
+    setFrozen({ mode: acting, summary: liveSummary, lede: liveLede });
+    beginRun(livePlan);
+
+    const seen: {
+      submitted: Extract<SavingsProgress, { type: 'submitted' }> | null;
+      cancelled: boolean;
+      failed: boolean;
+    } = { submitted: null, cancelled: false, failed: false };
+    const onProgress = (event: SavingsProgress) => {
+      if (event.type === 'step') startStep(event.id, event.waiting ? { waiting: true } : undefined);
+      else if (event.type === 'submitted') seen.submitted = event;
+      else if (event.type === 'cancelled') seen.cancelled = true;
+      else if (event.type === 'error') {
+        seen.failed = true;
+        failRun(event.message);
+      }
+    };
+
+    const hash = await (acting === 'deposit'
+      ? deposit(amountNow, onProgress)
+      : withdraw(amountNow, onProgress));
+    if (!hash) {
+      if (seen.cancelled && !seen.failed) {
+        // No 2FA code: nothing happened, so back to the review as it was.
+        resetRun();
+        setFrozen(null);
+      } else if (!seen.failed) {
+        // It stopped before its first step (no wallet, no vault): say so
+        // rather than leave the page waiting on a step that never comes.
+        failRun(t('This could not start. Check that your wallet is connected, then try again.'));
+      }
+      return;
+    }
+    const pair = seen.submitted;
+    doneStep('submit', { links: [stellarTxLink(t, hash)] });
+    if (acting === 'deposit') setSpentOnDeposits((prev) => prev + parsedAmt);
+    setAmount('');
+
+    // Which ledger it landed in, straight from Horizon (bounded).
+    startStep('confirmed');
+    const record = await awaitTxRecord(config.HORIZON_URL, hash).catch(() => null);
+    doneStep('confirmed', { note: ledgerNote(t, record) });
+
+    const owesFee = acting === 'deposit' || !!pair?.feeHash;
+    if (owesFee) {
+      if (pair?.feeSubmitted && pair.feeHash) {
+        doneStep('fee', { links: [stellarTxLink(t, pair.feeHash, t('View the fee'))] });
+      } else {
+        doneStep('fee', {
+          note: t('Normal collects it within a few minutes, as a separate small payment.'),
+        });
+      }
+    }
+
+    // Savings already shows the new figure (the hook wrote it the moment the
+    // network confirmed); the wallet balance is refreshed here, capped so a
+    // slow read never holds up a deposit that already went through.
+    startStep('balance');
+    await Promise.race([
+      refreshFresh().catch(() => {}),
+      new Promise((r) => {
+        setTimeout(r, 15_000);
+      }),
+    ]);
+    finishRun();
+  };
+
   const isWithdrawPositionLoading = mode === 'withdraw' && positionFetching && !userPosition;
   const isActionDisabled =
     loading ||
@@ -387,8 +621,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           : isAmountMissing
             ? t('Enter amount')
             : mode === 'deposit'
-              ? t('Deposit')
-              : t('Withdraw');
+              ? t('Review deposit')
+              : t('Review withdrawal');
 
   return (
     <Box
@@ -397,85 +631,78 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           p: { xs: '20px', md: '24px' },
           borderRadius: 'var(--radius-lg)',
           textAlign: 'left',
-          background: '#FFFFFF',
-          border: '1px solid rgba(10,10,15,0.08)',
-          ...theme.applyStyles('dark', {
-            background: 'rgba(20,26,33,0.92)',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }),
+          background: PAPER,
+          border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
         }),
         ...(Array.isArray(sxProp) ? sxProp : [sxProp]),
       ]}
       {...other}
     >
       {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '18px' }}>
-        <Typography
-          sx={(theme) => ({
-            fontSize: '15px',
-            fontWeight: 500,
-            color: '#0A0A0F',
-            ...theme.applyStyles('dark', { color: '#FFFFFF' }),
-          })}
+      {!hideHeader && (
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ mb: '18px' }}
         >
-          {t('Normal Savings')}
-        </Typography>
-
-        {/* APY chip */}
-        {vaultInfo ? (
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '7px',
-              background: '#F7F7F9',
-              border: '1px solid rgba(10,10,15,0.08)',
-              borderRadius: 'var(--radius-sm)',
-              px: '10px',
-              py: '5px',
-            }}
+          <Typography
+            sx={(theme) => ({
+              fontSize: '15px',
+              fontWeight: 500,
+              color: INK,
+            })}
           >
+            {t('Normal Savings')}
+          </Typography>
+
+          {/* APY chip */}
+          {vaultInfo ? (
             <Box
               sx={{
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                bgcolor: '#1AB37D',
-                flexShrink: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '7px',
+                background: WELL,
+                border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
+                borderRadius: 'var(--radius-sm)',
+                px: '10px',
+                py: '5px',
               }}
+            >
+              <Typography
+                sx={{
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  lineHeight: 1,
+                  fontVariantNumeric: 'tabular-nums',
+                  color: INK,
+                }}
+              >
+                {Number(vaultInfo.apy).toFixed(2)}%
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  color: FAINT,
+                  lineHeight: 1,
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {t('a year')}
+              </Typography>
+            </Box>
+          ) : (
+            <Skeleton
+              variant="rounded"
+              width={80}
+              height={26}
+              sx={{ borderRadius: 'var(--radius-lg)' }}
             />
-            <Typography
-              sx={{
-                fontSize: '12px',
-                fontWeight: 500,
-                lineHeight: 1,
-                fontFamily: '"Geist Mono", ui-monospace, monospace',
-                color: '#0A0A0F',
-              }}
-            >
-              {Number(vaultInfo.apy).toFixed(2)}%
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '11px',
-                fontWeight: 500,
-                color: '#9A9AA3',
-                lineHeight: 1,
-                fontFamily: '"Geist Mono", ui-monospace, monospace',
-              }}
-            >
-              APY
-            </Typography>
-          </Box>
-        ) : (
-          <Skeleton
-            variant="rounded"
-            width={80}
-            height={26}
-            sx={{ borderRadius: 'var(--radius-lg)' }}
-          />
-        )}
-      </Stack>
+          )}
+        </Stack>
+      )}
 
       {/* #32: hybrid accounts pick the wallet this card operates on — the
           position, balances, fee light and the deposit/withdraw signing all
@@ -498,8 +725,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 sx={{
                   appearance: 'none',
                   border: selected
-                    ? '1px solid rgba(10,10,15,0.9)'
-                    : '1px solid rgba(10,10,15,0.14)',
+                    ? '1px solid rgba(var(--nf-ink-rgb),0.9)'
+                    : '1px solid rgba(var(--nf-ink-rgb),0.14)',
                   borderRadius: 'var(--radius-sm)',
                   px: '12px',
                   py: '6px',
@@ -507,10 +734,10 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   fontWeight: 500,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
-                  bgcolor: selected ? '#0A0A0F' : 'transparent',
-                  color: selected ? '#fff' : '#6B6B76',
+                  bgcolor: selected ? INK : 'transparent',
+                  color: selected ? PAPER : MUTED,
                   transition: 'all .15s ease',
-                  '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.3)' },
+                  '&:hover': selected ? {} : { borderColor: 'rgba(var(--nf-ink-rgb),0.3)' },
                 }}
               >
                 {opt.label}
@@ -526,13 +753,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           borderRadius: 'var(--radius-md)',
           p: '14px 16px',
           mb: '14px',
-          background: '#F7F7F9',
-          ...theme.applyStyles('dark', { background: 'rgba(255,255,255,0.05)' }),
+          background: WELL,
         })}
       >
         {fetching ? (
           <Box sx={{ display: 'grid', gap: '8px' }}>
-            {[t('Your Deposits'), t('Current Value'), t('Current Earnings')].map((label) => (
+            {[t('You put in'), t('Worth now'), t('Earned')].map((label) => (
               <Box
                 key={label}
                 sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
@@ -541,8 +767,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   sx={{
                     fontSize: '13.5px',
                     fontWeight: 400,
-                    fontFamily: '"Geist Mono", ui-monospace, monospace',
-                    color: '#6B6B76',
+                    fontVariantNumeric: 'tabular-nums',
+                    color: MUTED,
                   }}
                 >
                   {label}
@@ -554,9 +780,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
         ) : (
           <Box sx={{ display: 'grid', gap: '8px' }}>
             {[
-              { label: t('Your Deposits'), value: userPosition?.totalDeposited, prefix: '' },
-              { label: t('Current Value'), value: userPosition?.currentValue, prefix: '' },
-              { label: t('Current Earnings'), value: userPosition?.earnings, prefix: '+' },
+              { label: t('You put in'), value: userPosition?.totalDeposited, prefix: '' },
+              { label: t('Worth now'), value: userPosition?.currentValue, prefix: '' },
+              { label: t('Earned'), value: userPosition?.earnings, prefix: '+' },
             ].map(({ label, value, prefix }) => (
               <Box
                 key={label}
@@ -566,15 +792,15 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   sx={{
                     fontSize: '13.5px',
                     fontWeight: 400,
-                    fontFamily: '"Geist Mono", ui-monospace, monospace',
-                    color: '#6B6B76',
+                    fontVariantNumeric: 'tabular-nums',
+                    color: MUTED,
                   }}
                 >
                   {label}
                 </Typography>
                 {positionError && !userPosition ? (
-                  <Typography sx={{ fontSize: '12px', color: '#B45309' }}>
-                    {t('Unavailable — retrying…')}
+                  <Typography sx={{ fontSize: '12px', color: BRAND_COLORS.yellow.deep }}>
+                    {t('Unavailable. Retrying…')}
                   </Typography>
                 ) : !userPosition ? (
                   <Skeleton variant="text" width={80} height={18} />
@@ -583,14 +809,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                     sx={{
                       fontSize: '13.5px',
                       fontWeight: 400,
-                      fontFamily: '"Geist Mono", ui-monospace, monospace',
-                      fontFeatureSettings: '"ss01","ss02","zero"',
                       fontVariantNumeric: 'tabular-nums',
                       letterSpacing: '-0.02em',
                       color: prefix === '+' ? '#1AB37D' : 'text.primary',
                     }}
                   >
-                    {`${prefix}${parseFloat(value || '0').toLocaleString('en-US', { minimumFractionDigits: 7, maximumFractionDigits: 7 })} USDC`}
+                    {`${prefix}${formatUsd(parseFloat(value || '0'))}`}
                   </Typography>
                 )}
               </Box>
@@ -607,8 +831,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           position: 'relative',
           display: 'flex',
           mb: '14px',
-          background: '#F4F4F7',
-          ...theme.applyStyles('dark', { background: 'rgba(255,255,255,0.08)' }),
+          background: CANVAS,
         })}
       >
         {/* Sliding pill */}
@@ -617,14 +840,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             position: 'absolute',
             width: 'calc(50% - 4px)',
             height: 'calc(100% - 8px)',
-            background: '#0A0A0F',
+            background: INK,
             borderRadius: 'var(--radius-sm)',
             top: '4px',
             left: '4px',
             transform: mode === 'withdraw' ? 'translateX(calc(100% + 4px))' : 'translateX(0)',
-            transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
             pointerEvents: 'none',
-            ...theme.applyStyles('dark', { background: '#FFFFFF' }),
           })}
         />
         {(['deposit', 'withdraw'] as const).map((m) => (
@@ -634,7 +855,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             disableRipple
             sx={(theme) => ({
               flex: 1,
-              color: mode === m ? '#FFFFFF' : '#6B6B76',
+              color: mode === m ? PAPER : MUTED,
               zIndex: 1,
               fontSize: '14px',
               fontWeight: 500,
@@ -644,9 +865,6 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               textTransform: 'none',
               transition: 'color 0.28s ease',
               '&:hover': { background: 'transparent' },
-              ...theme.applyStyles('dark', {
-                color: mode === m ? '#0A0A0F' : 'rgba(255,255,255,0.45)',
-              }),
             })}
           >
             {m === 'deposit' ? t('Deposit') : t('Withdraw')}
@@ -660,17 +878,11 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           borderRadius: 'var(--radius-md)',
           p: '14px 16px',
           mb: '14px',
-          background: '#FAFAFC',
+          background: WELL,
           border: isInsufficientBalance
             ? '1px solid rgba(255,0,0,0.35)'
-            : '1px solid rgba(10,10,15,0.08)',
+            : '1px solid rgba(var(--nf-ink-rgb),0.08)',
           transition: 'border-color 0.2s ease',
-          ...theme.applyStyles('dark', {
-            background: 'rgba(255,255,255,0.05)',
-            border: isInsufficientBalance
-              ? '1px solid rgba(255,0,0,0.35)'
-              : '1px solid rgba(255,255,255,0.08)',
-          }),
         })}
       >
         {/* Top row: label + wallet balance + MAX */}
@@ -680,12 +892,12 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           alignItems="center"
           sx={{ mb: '10px' }}
         >
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED }}>
             {mode === 'deposit' ? t('Amount to deposit') : t('Amount to withdraw')}
           </Typography>
           <Stack direction="row" alignItems="center" spacing={0.75}>
-            <Typography sx={{ fontSize: '12px', color: '#9A9AA3' }}>
-              {`Wallet: ${parseFloat(availableBalance).toFixed(7)} USDC`}
+            <Typography sx={{ fontSize: '12px', color: FAINT }}>
+              {`${mode === 'deposit' ? t('In your wallet') : t('In savings')}: ${formatUsd(parseFloat(availableBalance))}`}
             </Typography>
             <Box
               component="button"
@@ -694,9 +906,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 fontSize: '10px',
                 fontWeight: 500,
                 letterSpacing: '0.04em',
-                color: '#0A0A0F',
+                color: INK,
                 background: 'transparent',
-                border: '1px solid rgba(10,10,15,0.08)',
+                border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
                 borderRadius: 'var(--radius-sm)',
                 px: '7px',
                 py: '2px',
@@ -705,19 +917,10 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 fontFamily: 'inherit',
                 transition: 'background 0.15s ease, color 0.15s ease, border-color 0.15s ease',
                 '&:hover': {
-                  background: '#0A0A0F',
-                  color: '#fff',
-                  borderColor: '#0A0A0F',
+                  background: INK,
+                  color: PAPER,
+                  borderColor: INK,
                 },
-                ...theme.applyStyles('dark', {
-                  color: '#FFFFFF',
-                  borderColor: 'rgba(255,255,255,0.15)',
-                  '&:hover': {
-                    background: '#FFFFFF',
-                    color: '#0A0A0F',
-                    borderColor: '#FFFFFF',
-                  },
-                }),
               })}
             >
               MAX
@@ -732,15 +935,11 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              background: '#FFFFFF',
-              border: '1px solid rgba(10,10,15,0.08)',
+              background: PAPER,
+              border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
               borderRadius: 'var(--radius-md)',
               p: '7px 10px 7px 7px',
               flexShrink: 0,
-              ...theme.applyStyles('dark', {
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }),
             })}
           >
             <Iconify icon="cryptocurrency-color:usdc" width={22} sx={{ flexShrink: 0 }} />
@@ -753,7 +952,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             type="number"
             value={amount}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value)}
-            placeholder="0.0000000"
+            placeholder="0.00"
             sx={(theme) => ({
               flex: 1,
               minWidth: 0,
@@ -762,20 +961,16 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               background: 'transparent',
               fontSize: '26px',
               fontWeight: 500,
-              color: '#0A0A0F',
-              fontFamily: '"Geist Mono", ui-monospace, monospace',
+              color: INK,
+              fontVariantNumeric: 'tabular-nums',
               textAlign: 'right',
               p: 0,
               appearance: 'textfield',
-              '&::placeholder': { color: 'rgba(10,10,15,0.2)' },
+              '&::placeholder': { color: 'rgba(var(--nf-ink-rgb),0.2)' },
               '&::-webkit-outer-spin-button, &::-webkit-inner-spin-button': {
                 WebkitAppearance: 'none',
                 margin: 0,
               },
-              ...theme.applyStyles('dark', {
-                color: '#FFFFFF',
-                '&::placeholder': { color: 'rgba(255,255,255,0.2)' },
-              }),
             })}
           />
         </Box>
@@ -795,8 +990,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             px: '14px',
             py: '10px',
             mb: '14px',
-            background: '#F7F7F9',
-            ...theme.applyStyles('dark', { background: 'rgba(255,255,255,0.04)' }),
+            background: WELL,
           })}
         >
           <Stack spacing={0.75}>
@@ -809,7 +1003,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   fontSize: '12px',
                   fontWeight: 500,
                   color: 'text.primary',
-                  fontFamily: '"Geist Mono", ui-monospace, monospace',
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 -{depositFee.toFixed(2)} USDC
@@ -824,7 +1018,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                   fontSize: '12px',
                   fontWeight: 500,
                   color: 'text.primary',
-                  fontFamily: '"Geist Mono", ui-monospace, monospace',
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 {netDepositAmount.toFixed(2)} USDC
@@ -847,8 +1041,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             px: '14px',
             py: '10px',
             mb: '14px',
-            background: '#F7F7F9',
-            ...theme.applyStyles('dark', { background: 'rgba(255,255,255,0.04)' }),
+            background: WELL,
           })}
         >
           <Stack direction="row" justifyContent="space-between">
@@ -860,7 +1053,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 fontSize: '12px',
                 fontWeight: 500,
                 color: 'text.primary',
-                fontFamily: '"Geist Mono", ui-monospace, monospace',
+                fontVariantNumeric: 'tabular-nums',
               }}
             >
               -{yieldCommission.toFixed(2)} USDC
@@ -880,14 +1073,9 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           (the disable logic keys on the same classifier, so the light and the
           buttons can never disagree). */}
       {!needsSetup && feeStatus === 'ok' && (
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: '12px', px: '2px' }}>
-          <Box
-            sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#1AB37D', flexShrink: 0 }}
-          />
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', lineHeight: 1.4 }}>
-            {t('XLM fee reserve healthy — deposits & withdrawals covered.')}
-          </Typography>
-        </Stack>
+        <Typography sx={{ mb: '12px', px: '2px', fontSize: '12px', color: MUTED, lineHeight: 1.4 }}>
+          {t('XLM fee reserve healthy: deposits and withdrawals are covered.')}
+        </Typography>
       )}
       {!needsSetup && (feeStatus === 'low' || feeStatus === 'blocked') && (
         <Box
@@ -901,12 +1089,10 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               ? {
                   bgcolor: 'rgba(220,38,38,0.06)',
                   border: '1px solid rgba(220,38,38,0.24)',
-                  ...theme.applyStyles('dark', { bgcolor: 'rgba(220,38,38,0.1)' }),
                 }
               : {
                   bgcolor: 'rgba(245,158,11,0.08)',
                   border: '1px solid rgba(245,158,11,0.28)',
-                  ...theme.applyStyles('dark', { bgcolor: 'rgba(245,158,11,0.12)' }),
                 }),
           })}
         >
@@ -914,7 +1100,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             icon="eva:alert-triangle-fill"
             width={18}
             sx={{
-              color: feeStatus === 'blocked' ? '#B91C1C' : '#B26A00',
+              color: feeStatus === 'blocked' ? DANGER : WARNING,
               mt: '1px',
               flexShrink: 0,
             }}
@@ -924,7 +1110,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               sx={{
                 fontSize: '13px',
                 fontWeight: 500,
-                color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
+                color: feeStatus === 'blocked' ? DANGER_DEEP : WARNING,
                 lineHeight: 1.4,
               }}
             >
@@ -937,7 +1123,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
             <Typography
               sx={{
                 fontSize: '12px',
-                color: feeStatus === 'blocked' ? '#8A3A3A' : '#8A6A2E',
+                color: feeStatus === 'blocked' ? DANGER : WARNING,
                 lineHeight: 1.5,
                 mt: '2px',
               }}
@@ -947,23 +1133,23 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                     'Savings network fees are paid in XLM. Deposits and withdrawals are paused until you add a little XLM.'
                   )
                 : t(
-                    'About {{n}} XLM left for fees — roughly one more deposit or withdrawal. Top up a little to stay safe.',
+                    'About {{n}} XLM left for fees: roughly one more deposit or withdrawal. Top up a little to stay safe.',
                     { n: feeXlmAvailable.toFixed(2) }
                   )}
             </Typography>
             <Stack direction="row" spacing={1} sx={{ mt: '10px', flexWrap: 'wrap', rowGap: 1 }}>
               <Button
-                onClick={() => router.push('/swap?from=USDC')}
+                onClick={() => router.push(`${paths.swap}?from=USDC`)}
                 sx={{
-                  bgcolor: '#0A0A0F',
-                  color: '#fff',
+                  bgcolor: INK,
+                  color: PAPER,
                   fontSize: '12px',
                   fontWeight: 500,
                   textTransform: 'none',
                   borderRadius: 'var(--radius-md)',
                   px: '12px',
                   py: '6px',
-                  '&:hover': { bgcolor: '#2A2A33' },
+                  '&:hover': { bgcolor: INK_SOFT },
                 }}
               >
                 {t('Swap USDC → XLM')}
@@ -972,7 +1158,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 onClick={() => startFlow('buy', 'XLM')}
                 sx={{
                   bgcolor: 'transparent',
-                  color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
+                  color: feeStatus === 'blocked' ? DANGER_DEEP : WARNING,
                   fontSize: '12px',
                   fontWeight: 500,
                   textTransform: 'none',
@@ -995,7 +1181,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
                 onClick={() => startFlow('receive', 'XLM')}
                 sx={{
                   bgcolor: 'transparent',
-                  color: feeStatus === 'blocked' ? '#7F1D1D' : '#7A4A00',
+                  color: feeStatus === 'blocked' ? DANGER_DEEP : WARNING,
                   fontSize: '12px',
                   fontWeight: 500,
                   textTransform: 'none',
@@ -1033,21 +1219,21 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
               }}
             >
               {accountExists
-                ? t('One quick step left — add a USDC trustline to start earning.')
+                ? t('One quick step left: add a USDC trustline to start earning.')
                 : t('Activate your account and add USDC to start earning yield.')}
             </Typography>
             <Button
               fullWidth
               onClick={() => setSetupOpen(true)}
               sx={{
-                background: '#0A0A0F',
+                background: INK,
                 borderRadius: 'var(--radius-md)',
                 padding: '14px 16px',
                 fontSize: '14px',
                 fontWeight: 500,
-                color: '#FFFFFF',
+                color: PAPER,
                 textTransform: 'none',
-                '&:hover': { background: '#2A2A33' },
+                '&:hover': { background: INK_SOFT },
               }}
             >
               {accountExists ? t('Continue setup') : t('Set up savings')}
@@ -1057,177 +1243,110 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, ...other }) => {
           <Button
             fullWidth
             disabled={isActionDisabled}
-            onClick={handleAction}
+            onClick={openFlow}
             sx={{
-              background: '#0A0A0F',
+              background: INK,
               borderRadius: 'var(--radius-md)',
               padding: '14px 16px',
               fontSize: '14px',
               fontWeight: 500,
-              color: '#FFFFFF',
+              color: PAPER,
               textTransform: 'none',
               transition: 'background 150ms ease',
               '&:hover': {
-                background: '#2A2A33',
+                background: INK_SOFT,
               },
-              '&.Mui-disabled': { background: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
+              '&.Mui-disabled': { background: 'rgba(var(--nf-ink-rgb),0.08)', color: FAINT },
             }}
           >
             <Stack direction="row" alignItems="center" spacing={1}>
-              {loading && <CircularProgress size={16} sx={{ color: '#FFFFFF' }} />}
+              {loading && <CircularProgress size={16} sx={{ color: PAPER }} />}
               <span>{actionButtonText}</span>
             </Stack>
           </Button>
         )}
       </WalletGate>
 
-      {/* TX Log */}
-      <Box
-        sx={(theme) => ({
-          mt: '14px',
-          pt: '14px',
-          borderTop: '1px dashed rgba(10,10,15,0.12)',
-          ...theme.applyStyles('dark', { borderTop: '1px dashed rgba(255,255,255,0.1)' }),
-        })}
-      >
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ mb: '10px' }}
-        >
-          <Typography
-            sx={{
-              fontSize: '11px',
-              fontWeight: 500,
-              textTransform: 'uppercase',
-              letterSpacing: '0.16em',
-              color: 'text.disabled',
+      {/* Every step is shown on the review page before anything moves. */}
+      {!needsSetup && (
+        <Typography sx={{ mt: '12px', fontSize: '12.5px', lineHeight: 1.5, color: MUTED }}>
+          {mode === 'deposit'
+            ? t('You see every step, the fee and where your money goes before you confirm.')
+            : t('You see every step and what you receive before you confirm.')}
+        </Typography>
+      )}
+
+      {view === 'flow' && shownPlan && shownSummary && (
+        <FlowPortal>
+          <FlowView
+            plan={shownPlan}
+            run={flowState}
+            summary={shownSummary}
+            titles={
+              flowMode === 'deposit'
+                ? {
+                    review: t('Review your deposit'),
+                    running: t('Depositing'),
+                    done: t('Deposit complete'),
+                    failed: t('Deposit stopped'),
+                    stopped: t('Deposit ended'),
+                    'handed-off': t('Deposit on its way'),
+                  }
+                : {
+                    review: t('Review your withdrawal'),
+                    running: t('Withdrawing'),
+                    done: t('Withdrawal complete'),
+                    failed: t('Withdrawal stopped'),
+                    stopped: t('Withdrawal ended'),
+                    'handed-off': t('Withdrawal on its way'),
+                  }
+            }
+            lede={flowState.phase === 'review' ? liveLede : (frozen?.lede ?? liveLede)}
+            confirm={{
+              label: mode === 'deposit' ? t('Confirm deposit') : t('Confirm withdrawal'),
+              onClick: handleConfirm,
+              blocked: lowXlmForSavings
+                ? t('Add a little XLM first: it pays the network fee.')
+                : isInsufficientBalance
+                  ? t('That is more than you have. Go back and change the amount.')
+                  : null,
             }}
-          >
-            {mode === 'deposit'
-              ? t('What happens when you deposit')
-              : t('What happens when you withdraw')}
-          </Typography>
-          <Typography sx={{ fontSize: '10px', color: 'text.disabled' }}>{stepsTiming}</Typography>
-        </Stack>
-
-        <Stack>
-          {txSteps.map((step, idx) => {
-            const isDone = activeStepIdx >= 0 && idx < activeStepIdx;
-            const isActive = idx === activeStepIdx;
-            const isPending = !isDone && !isActive;
-            return (
-              <Box
-                key={step.id}
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: '22px 1fr',
-                  alignItems: 'center',
-                  gap: '10px',
-                  py: '6px',
-                  opacity: isPending ? 0.4 : 1,
-                  transition: 'opacity 0.3s ease',
-                }}
-              >
-                {/* Step icon */}
-                <Box
-                  sx={(theme) => ({
-                    width: 18,
-                    height: 18,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    background: isDone ? '#1AB37D' : isActive ? '#0A0A0F' : '#F0F0F4',
-                    border: isPending ? '1px dashed rgba(10,10,15,0.2)' : 'none',
-                    transition: 'background 0.4s ease',
-                    ...theme.applyStyles('dark', {
-                      background: isDone
-                        ? '#1AB37D'
-                        : isActive
-                          ? '#FFFFFF'
-                          : 'rgba(255,255,255,0.1)',
-                      border: isPending ? '1px dashed rgba(255,255,255,0.2)' : 'none',
-                    }),
-                  })}
-                >
-                  {isDone ? (
-                    <svg width="10" height="10" viewBox="0 0 12 12" style={{ display: 'block' }}>
-                      <path
-                        d="M2 6 L5 9 L10 3"
-                        stroke="#fff"
-                        strokeWidth="2"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  ) : isActive ? (
-                    <CircularProgress
-                      size={8}
-                      sx={(theme) => ({
-                        color: '#FFFFFF',
-                        display: 'block',
-                        ...theme.applyStyles('dark', { color: '#0A0A0F' }),
-                      })}
-                    />
-                  ) : (
-                    <Box
-                      sx={{
-                        width: 5,
-                        height: 5,
-                        borderRadius: '50%',
-                        flexShrink: 0,
-                        background: 'rgba(10,10,15,0.25)',
-                      }}
-                    />
-                  )}
-                </Box>
-
-                {/* Step text */}
-                <Box>
-                  <Typography
-                    component="span"
-                    sx={(theme) => ({
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      display: 'block',
-                      color: isDone ? '#1AB37D' : isActive ? 'text.primary' : 'text.secondary',
-                      transition: 'color 0.3s ease',
-                      ...(isActive && {
-                        '&::after': {
-                          content: '"..."',
-                          display: 'inline-block',
-                          overflow: 'hidden',
-                          verticalAlign: 'bottom',
-                          width: 0,
-                          animation: `${txDotsAnim} 1.2s steps(4, end) infinite`,
-                        },
-                      }),
-                    })}
-                  >
-                    {step.label}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: '11px',
-                      color: 'text.disabled',
-                      fontFamily: '"Geist Mono", ui-monospace, monospace',
-                      letterSpacing: '-0.01em',
-                      mt: '1px',
-                      display: 'block',
-                    }}
-                  >
-                    {step.sub}
-                  </Typography>
-                </Box>
-              </Box>
-            );
-          })}
-        </Stack>
-      </Box>
+            back={{ label: t('Back to savings'), onClick: exitFlow }}
+            doneActions={[
+              { label: t('Back to savings'), primary: true, onClick: exitFlow },
+              { label: t('See it in Activity'), href: paths.activity },
+            ]}
+            doneNote={
+              flowMode === 'deposit'
+                ? t('Your digital dollars are in Normal Savings, earning from today.')
+                : t('Your digital dollars are in your wallet.')
+            }
+            failActions={[
+              {
+                label: t('Try again'),
+                primary: true,
+                onClick: () => {
+                  resetRun();
+                  setFrozen(null);
+                },
+              },
+            ]}
+            leave={
+              ['check', 'prepare', 'sign-deposit', 'sign-withdraw', 'sign-fee'].includes(
+                flowState.activeId ?? ''
+              )
+                ? {
+                    safe: false,
+                    message: t('Stay a few seconds until it is sent, so no prompt is left open.'),
+                  }
+                : {
+                    safe: true,
+                    message: t('Stellar finishes this in seconds, with or without this page.'),
+                  }
+            }
+          />
+        </FlowPortal>
+      )}
 
       <TrustlineModal
         open={needsTrustline}

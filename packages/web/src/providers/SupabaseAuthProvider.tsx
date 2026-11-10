@@ -6,6 +6,7 @@ import { clearLoginIntent } from '@/lib/loginIntent';
 import { supabase } from '@/lib/createSupabaseClient';
 import { MFA_REQUIRED_EVENT } from '@/utils/authed-fetch';
 import { needsSecondFactor } from '@/lib/auth/two-factor';
+import { clearStoredSession } from '@/lib/supabase-config';
 import { isAuthPage, loginHrefFrom } from '@/lib/auth/auth-routes';
 import {
   useMemo,
@@ -106,7 +107,23 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
     // deletes every session the user has — logging out on one device killed
     // prod/localhost/mobile sessions everywhere, and tabs holding the dead
     // token then 401'd on every API call.
-    await supabase.auth.signOut({ scope: 'local' });
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    if (error) {
+      // The logout request failed (offline, a server error): supabase-js then
+      // keeps the session, and the next page would sign straight back in.
+      // Logging out must log this browser out:
+      // 1. pause the token refresh, so a refresh landing now can't write the
+      //    session back;
+      // 2. drop the stored session;
+      // 3. sign out again: with nothing stored there is no request, and the
+      //    client drops its in-memory session and tells its listeners;
+      // 4. restart the refresh (stopping it also removed supabase-js's
+      //    visibility hook), so a sign-in on this page keeps its token fresh.
+      await supabase.auth.stopAutoRefresh();
+      clearStoredSession();
+      await supabase.auth.signOut({ scope: 'local' });
+      await supabase.auth.startAutoRefresh();
+    }
     clearLoginIntent();
   }, []);
 
@@ -149,7 +166,7 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
             fontFamily: 'inherit',
           }}
         >
-          Your session expired — please sign in again to continue.
+          Your session expired. Please sign in again to continue.
           <button
             type="button"
             onClick={() => window.location.assign('/')}

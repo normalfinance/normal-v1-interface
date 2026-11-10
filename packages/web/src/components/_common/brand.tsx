@@ -5,38 +5,72 @@ import type { ButtonProps } from '@mui/material/Button';
 import type { Theme, SxProps } from '@mui/material/styles';
 
 import { forwardRef } from 'react';
+import { TYPE } from '@/theme/type-scale';
+import { GUTTER_SX, COLUMN_SX } from '@/theme/site-grid';
+import {
+  INK,
+  BAND,
+  FIXED,
+  MUTED,
+  PAPER,
+  CANVAS,
+  INK_SOFT,
+  HAIRLINE_COLOR,
+  HAIRLINE_STRONG,
+  STATEMENT_COLORS,
+} from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+
+import { HatchFoot } from './hatch';
 
 // ----------------------------------------------------------------------
 
 // The parts every page shares, so a page can't drift from the others.
 // Rules: packages/web/DESIGN.md
 
-export const BRAND_GRADIENT =
-  'linear-gradient(90deg, #5BCFFF 0%, #6E8BFF 28%, #B17BFF 55%, #FF7BC5 78%, #FFB060 100%)';
-
 export const MONO_FONT = '"Geist Mono", ui-monospace, monospace';
 
-export const HAIRLINE = '1px solid rgba(10,10,15,0.08)';
+export const HAIRLINE = `1px solid ${HAIRLINE_COLOR}`;
+
+// The marketing grid (theme/site-grid, so server components can read it too).
+export { FRAME_MQ, FRAME_MIN, COLUMN_SX, GUTTER_SX, GRID_FRAME_SX } from '@/theme/site-grid';
 export const HAIRLINE_ON_DARK = '1px solid rgba(255,255,255,0.08)';
 
-/** A white block. Hover changes the border, never the depth. */
-export const BLOCK_SX = {
-  bgcolor: '#FFFFFF',
+/**
+ * Words for screen readers only: in the page, not on it. The sizes are strings
+ * on purpose: MUI reads a bare `width: 1` as 100%.
+ */
+export const VISUALLY_HIDDEN_SX = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  m: '-1px',
+  p: 0,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+} as const;
+
+/**
+ * A tool used as one unit (the swap card): framed with a hairline, padded
+ * inside. Only tools keep a frame; everything else is `BLOCK_SX`.
+ */
+export const FRAME_SX = {
+  bgcolor: PAPER,
   border: HAIRLINE,
-  borderRadius: 'var(--radius-lg)',
   p: { xs: '20px', md: '24px' },
 } as const;
 
-/** The same block on a dark band. */
-export const BLOCK_ON_DARK_SX = {
-  bgcolor: 'rgba(255,255,255,0.04)',
-  border: HAIRLINE_ON_DARK,
-  borderRadius: 'var(--radius-lg)',
-  p: { xs: '20px', md: '24px' },
+/** A panel on the page (dark in dark mode) with one line under it: no box (Niko 2026-11-10). */
+export const BLOCK_SX = {
+  bgcolor: PAPER,
+  borderBottom: HAIRLINE,
+  pt: 0.5,
+  pb: 3,
 } as const;
 
 type Tone = 'light' | 'dark';
@@ -47,61 +81,35 @@ const sxArray = (sx?: SxProps<Theme>) => (Array.isArray(sx) ? sx : sx ? [sx] : [
 
 // ----------------------------------------------------------------------
 
-/** The aurora and dot grid behind every dark band and panel. */
-export function BandBackdrop({ dots = true }: { dots?: boolean }) {
-  return (
-    <>
-      <Box
-        aria-hidden="true"
-        sx={{
-          position: 'absolute',
-          inset: '-10%',
-          zIndex: 0,
-          pointerEvents: 'none',
-          background: [
-            'radial-gradient(closest-side at 15% 30%, rgba(91,207,255,0.22), transparent 60%)',
-            'radial-gradient(closest-side at 85% 70%, rgba(255,176,96,0.16), transparent 60%)',
-            'radial-gradient(closest-side at 60% 15%, rgba(255,123,197,0.16), transparent 60%)',
-            'radial-gradient(closest-side at 35% 85%, rgba(177,123,255,0.22), transparent 60%)',
-          ].join(','),
-          filter: 'blur(40px)',
-          opacity: 0.85,
-        }}
-      />
-      {dots && (
-        <Box
-          aria-hidden="true"
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 0,
-            pointerEvents: 'none',
-            backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
-            backgroundSize: '20px 20px',
-            WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-            maskImage: 'radial-gradient(ellipse at 50% 50%, black 30%, transparent 75%)',
-          }}
-        />
-      )}
-    </>
-  );
-}
-
-// ----------------------------------------------------------------------
-
 type PageSectionProps = WithSx & {
   id?: string;
-  tone?: Tone;
+  /** light: white. muted: the grey canvas, to alternate with white. dark: ink. */
+  tone?: Tone | 'muted';
+  /** A hairline across the top, and full padding under it. */
+  divider?: boolean;
+  /**
+   * For a section that ends on a grid of cells: the space under the grid's
+   * last line is a hatched strip (HatchFoot), not empty padding.
+   */
+  hatchFoot?: boolean;
   children: ReactNode;
+  'aria-label'?: string;
   'aria-labelledby'?: string;
 };
 
 /**
  * One full-bleed band: the shared background, vertical rhythm and content
- * width. Dark bands bring their backdrop. Two light bands in a row share one
- * gap instead of stacking two.
+ * width. Light bands are white, muted bands the grey canvas and dark bands plain
+ * ink, nothing behind any of them. Two light bands in a row share one gap.
  */
-export function PageSection({ tone = 'light', children, sx, ...other }: PageSectionProps) {
+export function PageSection({
+  tone = 'light',
+  divider = false,
+  hatchFoot = false,
+  children,
+  sx,
+  ...other
+}: PageSectionProps) {
   const dark = tone === 'dark';
 
   return (
@@ -114,25 +122,26 @@ export function PageSection({ tone = 'light', children, sx, ...other }: PageSect
           overflow: 'hidden',
           isolation: 'isolate',
           py: 'var(--section-y)',
-          color: dark ? '#FFFFFF' : 'text.primary',
-          bgcolor: dark ? '#0A0A0F' : 'background.default',
-          '[data-tone="light"] + &[data-tone="light"]': { pt: 0 },
+          ...(hatchFoot && { pb: 0 }),
+          color: dark ? FIXED.white : INK,
+          bgcolor: dark ? BAND : tone === 'muted' ? CANVAS : PAPER,
+          ...(divider && { borderTop: HAIRLINE }),
+          '[data-tone="light"] + &[data-tone="light"]': { pt: divider ? 'var(--section-y)' : 0 },
         },
         ...sxArray(sx),
       ]}
       {...other}
     >
-      {dark && <BandBackdrop />}
       <Box
         sx={{
           position: 'relative',
           zIndex: 1,
-          mx: 'auto',
-          maxWidth: 'var(--page-max)',
-          px: { xs: 2, sm: 3 },
+          ...COLUMN_SX,
+          ...GUTTER_SX,
         }}
       >
         {children}
+        {hatchFoot && <HatchFoot />}
       </Box>
     </Box>
   );
@@ -142,14 +151,18 @@ export function PageSection({ tone = 'light', children, sx, ...other }: PageSect
 
 type TextProps = WithSx & { tone?: Tone; children: ReactNode };
 
-/** The small label above a heading. One style everywhere, and no leading dash. */
+/** The small label above a heading. One style everywhere: grey, no dash, no dot. */
 export function Eyebrow({ tone = 'light', children, sx }: TextProps) {
   return (
     <Typography
       variant="overline"
       component="p"
       sx={[
-        { display: 'block', color: tone === 'dark' ? 'rgba(255,255,255,0.55)' : 'text.secondary' },
+        {
+          ...TYPE.eyebrow,
+          display: 'block',
+          color: tone === 'dark' ? 'rgba(255,255,255,0.55)' : MUTED,
+        },
         ...sxArray(sx),
       ]}
     >
@@ -158,20 +171,14 @@ export function Eyebrow({ tone = 'light', children, sx }: TextProps) {
   );
 }
 
-export function GradientText({ children, sx }: { children: ReactNode } & WithSx) {
+/**
+ * One of a statement's coloured phrases: the logo's colours in the logo's
+ * order, light blue, purple, magenta, raspberry, orange, gold
+ * (STATEMENT_COLORS). Display text on the page, never on a wash.
+ */
+export function StatementWord({ n, children }: { n: number; children: string }) {
   return (
-    <Box
-      component="span"
-      sx={[
-        {
-          background: BRAND_GRADIENT,
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-        },
-        ...sxArray(sx),
-      ]}
-    >
+    <Box component="span" sx={{ color: STATEMENT_COLORS[n] }}>
       {children}
     </Box>
   );
@@ -217,7 +224,7 @@ export function SectionHeader({
     >
       <Box sx={{ maxWidth: 760, minWidth: 0 }}>
         {eyebrow && (
-          <Eyebrow tone={tone} sx={{ mb: 1.5 }}>
+          <Eyebrow tone={tone} sx={{ mb: 1 }}>
             {eyebrow}
           </Eyebrow>
         )}
@@ -225,11 +232,8 @@ export function SectionHeader({
           id={id}
           component="h2"
           sx={{
-            fontSize: 'clamp(32px, 4vw, 52px)',
-            fontWeight: 500,
-            lineHeight: 1.12,
-            letterSpacing: '-0.03em',
-            color: dark ? '#FFFFFF' : 'text.primary',
+            ...TYPE.h2,
+            color: dark ? FIXED.white : INK,
           }}
         >
           {title}
@@ -237,11 +241,10 @@ export function SectionHeader({
         {subtitle && (
           <Typography
             sx={{
+              ...TYPE.lead,
               mt: 2,
-              maxWidth: 520,
-              fontSize: 16,
-              lineHeight: 1.6,
-              color: dark ? 'rgba(255,255,255,0.6)' : 'text.secondary',
+              maxWidth: 600,
+              color: dark ? 'rgba(255,255,255,0.6)' : MUTED,
             }}
           >
             {subtitle}
@@ -300,148 +303,6 @@ export function AppPageHeader({
   );
 }
 
-/** The big type: a page's H1, and the closing band's heading. */
-export function HeroTitle({
-  tone = 'light',
-  component = 'h1',
-  id,
-  children,
-  sx,
-}: TextProps & { component?: 'h1' | 'h2'; id?: string }) {
-  return (
-    <Typography
-      id={id}
-      component={component}
-      sx={[
-        {
-          fontSize: 'clamp(40px, 5.6vw, 68px)',
-          fontWeight: 500,
-          lineHeight: 1.08,
-          letterSpacing: '-0.035em',
-          color: tone === 'dark' ? '#FFFFFF' : 'text.primary',
-        },
-        ...sxArray(sx),
-      ]}
-    >
-      {children}
-    </Typography>
-  );
-}
-
-/** The paragraph under the H1. */
-export function HeroLede({ tone = 'light', children, sx }: TextProps) {
-  return (
-    <Typography
-      sx={[
-        {
-          mt: 3,
-          maxWidth: 500,
-          fontSize: 17,
-          lineHeight: 1.6,
-          color: tone === 'dark' ? 'rgba(255,255,255,0.6)' : 'text.secondary',
-        },
-        ...sxArray(sx),
-      ]}
-    >
-      {children}
-    </Typography>
-  );
-}
-
-/** Label-over-value stat, as used in the hero meta rows. */
-export function MetaItem({
-  tone = 'light',
-  label,
-  value,
-}: {
-  tone?: Tone;
-  label: ReactNode;
-  value: ReactNode;
-}) {
-  return (
-    <Box sx={{ minWidth: 0 }}>
-      <Eyebrow tone={tone} sx={{ mb: 0.75 }}>
-        {label}
-      </Eyebrow>
-      <Box
-        sx={{
-          fontFamily: MONO_FONT,
-          fontSize: 20,
-          fontWeight: 400,
-          letterSpacing: '-0.02em',
-          color: tone === 'dark' ? '#FFFFFF' : 'text.primary',
-        }}
-      >
-        {value}
-      </Box>
-    </Box>
-  );
-}
-
-// ----------------------------------------------------------------------
-
-/** A small status dot. Live dots pulse with a crisp ring, never a glow. */
-export function LiveDot({
-  tone = 'light',
-  pulse = false,
-  color,
-}: {
-  tone?: Tone;
-  pulse?: boolean;
-  color?: string;
-}) {
-  return (
-    <Box
-      aria-hidden="true"
-      sx={{
-        width: 6,
-        height: 6,
-        flexShrink: 0,
-        borderRadius: '50%',
-        bgcolor: color ?? (tone === 'dark' ? '#4ADE80' : '#1AB37D'),
-        ...(pulse && {
-          boxShadow: '0 0 0 3px rgba(26,179,125,0.2)',
-          animation: 'brand-live-pulse 2s ease-in-out infinite',
-          '@keyframes brand-live-pulse': {
-            '0%, 100%': { boxShadow: '0 0 0 3px rgba(26,179,125,0.18)' },
-            '50%': { boxShadow: '0 0 0 5px rgba(26,179,125,0.08)' },
-          },
-        }),
-      }}
-    />
-  );
-}
-
-/** The label above a hero title or a band heading. */
-export function HeroBadge({ tone = 'light', children, sx }: TextProps) {
-  const dark = tone === 'dark';
-
-  return (
-    <Box
-      sx={[
-        {
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '10px',
-          height: 32,
-          px: '12px',
-          mb: 3,
-          fontSize: 13,
-          fontWeight: 500,
-          whiteSpace: 'nowrap',
-          borderRadius: 'var(--radius-md)',
-          border: dark ? '1px solid rgba(255,255,255,0.12)' : HAIRLINE,
-          bgcolor: dark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
-          color: dark ? 'rgba(255,255,255,0.85)' : 'text.secondary',
-        },
-        ...sxArray(sx),
-      ]}
-    >
-      {children}
-    </Box>
-  );
-}
-
 // ----------------------------------------------------------------------
 
 type BrandButtonProps = Omit<ButtonProps, 'variant' | 'color' | 'size'> & {
@@ -451,19 +312,38 @@ type BrandButtonProps = Omit<ButtonProps, 'variant' | 'color' | 'size'> & {
   rel?: string;
 };
 
+/**
+ * The site's two button looks in token colours, for any MUI Button on the
+ * marketing site: the theme's own contained button is a fixed dark grey, which
+ * disappears on the dark page.
+ */
+export const INK_BUTTON_SX = {
+  color: PAPER,
+  bgcolor: INK,
+  '&:hover': { bgcolor: INK_SOFT },
+} as const;
+export const OUTLINED_BUTTON_SX = {
+  color: INK,
+  bgcolor: PAPER,
+  borderColor: HAIRLINE_STRONG,
+  '&:hover': { bgcolor: CANVAS, borderColor: HAIRLINE_STRONG },
+} as const;
+
 const BUTTON_TONES = {
+  // Light tone = on the page: token colours, so the buttons invert in dark mode.
   light: {
-    primary: {},
-    secondary: { bgcolor: '#FFFFFF' },
+    primary: INK_BUTTON_SX,
+    secondary: OUTLINED_BUTTON_SX,
   },
+  // Dark tone = over a photo or an ink band: the same in both modes.
   dark: {
     primary: {
-      bgcolor: '#FFFFFF',
-      color: '#0A0A0F',
+      bgcolor: FIXED.white,
+      color: FIXED.ink,
       '&:hover': { bgcolor: 'rgba(255,255,255,0.88)' },
     },
     secondary: {
-      color: '#FFFFFF',
+      color: FIXED.white,
       bgcolor: 'rgba(255,255,255,0.08)',
       borderColor: 'rgba(255,255,255,0.14)',
       '&:hover': { bgcolor: 'rgba(255,255,255,0.14)', borderColor: 'rgba(255,255,255,0.24)' },
@@ -495,7 +375,7 @@ export function SegmentedControl<T extends string>({
           maxWidth: '100%',
           overflowX: 'auto',
           scrollbarWidth: 'none',
-          bgcolor: '#F4F4F7',
+          bgcolor: CANVAS,
           borderRadius: 'var(--radius-md)',
         },
         ...sxArray(sx),
@@ -525,9 +405,9 @@ export function SegmentedControl<T extends string>({
               whiteSpace: 'nowrap',
               borderRadius: 'var(--radius-sm)',
               transition: 'background 150ms, color 150ms',
-              bgcolor: active ? '#FFFFFF' : 'transparent',
-              color: active ? '#0A0A0F' : '#6B6B76',
-              '&:hover': { color: '#0A0A0F' },
+              bgcolor: active ? PAPER : 'transparent',
+              color: active ? INK : MUTED,
+              '&:hover': { color: INK },
             }}
           >
             {option.icon}

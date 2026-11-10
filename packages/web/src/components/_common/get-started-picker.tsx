@@ -19,8 +19,8 @@ import { Iconify } from '@/components/template/iconify';
 // ---------------------------------------------------------------------------
 
 const GET_STARTED_ASSETS: { symbol: string; name: string }[] = [
-  { symbol: 'USDC', name: 'USD Coin' },
-  { symbol: 'XLM', name: 'Stellar Lumens' },
+  { symbol: 'USDC', name: 'Digital dollars' },
+  { symbol: 'XLM', name: 'Stellar' },
   { symbol: 'BTC', name: 'Bitcoin' },
   { symbol: 'ETH', name: 'Ethereum' },
   { symbol: 'SOL', name: 'Solana' },
@@ -137,7 +137,7 @@ export function GetStartedPicker({ onBringOwnWallet }: GetStartedPickerProps) {
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {t(
-                'Pick an asset — we’ll set up your wallet for it in one tap. No seed phrase, no forms.'
+                'Pick an asset. We’ll set up your wallet for it in one tap. No seed phrase, no forms.'
               )}
             </Typography>
           </Box>

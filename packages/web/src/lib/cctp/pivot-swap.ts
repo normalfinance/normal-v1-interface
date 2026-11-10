@@ -41,15 +41,18 @@ export async function executePivotSwap(params: {
   /** DEX steps to exclude — the failure can live in the swap, not the bridge */
   denyExchanges?: string[];
   onStep?: (step: 'quote' | 'approve' | 'swap') => void;
+  /** Fires once a signed transaction is on the network, before its receipt. */
+  onSent?: (step: 'approve' | 'swap', hash: `0x${string}`) => void;
 }): Promise<PivotSwapResult> {
   const info = await getTurnkeyWalletInfo();
   if (!info?.subOrgId)
-    throw new Error('Could not load your wallet just now — check your connection and try again.');
+    throw new Error('Could not load your wallet just now. Check your connection and try again.');
 
   const { erc20Abi, createPublicClient, encodeFunctionData, serializeTransaction } = await import(
     'viem'
   );
   const { base } = await import('viem/chains');
+  const { sendSignedEvmTransaction } = await import('@/lib/chains/evm-send');
   const client = createPublicClient({ chain: base, transport: await baseFallbackTransport() });
   const from = params.evmAddress as `0x${string}`;
   const usdc = EVM_USDC.base.mainnet;
@@ -79,13 +82,14 @@ export async function executePivotSwap(params: {
     if (res?.ok && data?.success) break;
     if (attempt < 2) await new Promise((r) => setTimeout(r, 1_500 * (attempt + 1)));
   }
-  if (!data?.success) throw new Error(data?.error ?? 'No route from Base — try again shortly');
+  if (!data?.success) throw new Error(data?.error ?? 'No route from Base. Try again shortly');
   const quote = data.quote;
   const approvalAddress: `0x${string}` | undefined = quote.estimate?.approvalAddress;
   const txr = quote.transactionRequest;
   if (!txr?.to || !txr?.data) throw new Error('LI.FI returned no executable transaction');
 
   const signAndSend = async (
+    step: 'approve' | 'swap',
     to: `0x${string}`,
     dataHex: `0x${string}`,
     value: bigint,
@@ -117,19 +121,14 @@ export async function executePivotSwap(params: {
         maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
       });
       const raw = await signEvmTxWithTurnkey(unsigned, info.subOrgId!, params.evmAddress);
-      try {
-        hash = await client.sendRawTransaction({ serializedTransaction: raw });
-      } catch (sendErr: any) {
-        const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
-        if (
-          attempt === 0 &&
-          /nonce too low|already known|replacement transaction underpriced/i.test(m)
-        ) {
-          continue;
-        }
-        throw sendErr;
-      }
+      // Re-sign only when the chain shows the nonce is held by another
+      // transaction, never ours (lib/chains/evm-send.ts).
+      const result = await sendSignedEvmTransaction(client, raw, { chainLabel: 'base' });
+      if (result.sent) hash = result.hash;
+      else if (attempt === 0) continue;
+      else throw result.error;
     }
+    params.onSent?.(step, hash);
     const receipt = await client.waitForTransactionReceipt({ hash });
     if (receipt.status !== 'success') {
       // Classified failure (2026-08-26): a revert is an ON-CHAIN outcome, not
@@ -162,6 +161,7 @@ export async function executePivotSwap(params: {
       // Approve MAX (not the exact amount) so subsequent pivots to the same
       // router skip this signature entirely.
       await signAndSend(
+        'approve',
         usdc,
         encodeFunctionData({
           abi: erc20Abi,
@@ -176,6 +176,7 @@ export async function executePivotSwap(params: {
   // --- 3. the swap ---------------------------------------------------------------
   params.onStep?.('swap');
   const txHash = await signAndSend(
+    'swap',
     txr.to as `0x${string}`,
     txr.data as `0x${string}`,
     BigInt(txr.value ?? '0'),

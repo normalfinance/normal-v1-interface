@@ -1,8 +1,14 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 
-import { AnnouncementModal } from '@/components/announcement/announcement-modal';
+// The modal brings a markdown renderer, so it loads only when there is an
+// announcement to show, not on every page.
+const AnnouncementModal = dynamic(
+  () => import('@/components/announcement/announcement-modal').then((m) => m.AnnouncementModal),
+  { ssr: false }
+);
 
 // ----------------------------------------------------------------------
 

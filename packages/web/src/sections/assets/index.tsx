@@ -1,43 +1,43 @@
 'use client';
 
 import type { Token } from '@normalfinance/types';
+import type { Holding } from '@/components/_common/holdings-table';
 
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
 import { useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMarkets } from '@/hooks/use-markets';
+import { minSpanFor } from '@/lib/prices/markets';
 import { cdn, logger } from '@normalfinance/utils';
 import { DashboardContent } from '@/layouts/dashboard';
 import { useUsdPrice } from '@/hooks/use-price-history';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
-import { fCurrency, fTokenAmount } from '@/utils/format-number';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
-import { connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
+import { assetColor, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
-import {
-  Box,
-  Card,
-  Stack,
-  Table,
-  TableRow,
-  TableBody,
-  TableCell,
-  TableHead,
-  Typography,
-  CardContent,
-  TableContainer,
-} from '@mui/material';
+import Typography from '@mui/material/Typography';
 
 import { AppPageHeader } from '@/components/_common/brand';
 import { AssetAvatar } from '@/components/_common/asset-avatar';
+import { HoldingsTable } from '@/components/_common/holdings-table';
+import {
+  AppBlock,
+  Headline,
+  assetName,
+  formatUsd,
+  formatCoin,
+  ASSET_NAMES,
+  RowsSkeleton,
+  SummaryBlock,
+} from '@/components/_common/app-ui';
 
 export default function AssetsView() {
   const { t } = useTranslate();
-  const router = useRouter();
+  const { markets } = useMarkets();
 
   const { globalIsLoading, setGlobalIsLoading } = useAppStore();
   const { wallet } = usePersistStore();
@@ -188,101 +188,128 @@ export default function AssetsView() {
     solUsd,
   ]);
 
-  // Calculate total value
-  const totalValue = displayTokens.reduce(
-    (acc, token) => acc.plus(BigNumber(token.balance).multipliedBy(token.price)),
-    BigNumber(0)
-  );
+  const valueOf = (token: Token) => BigNumber(token.balance).multipliedBy(token.price).toNumber();
+  const totalValue = displayTokens.reduce((sum, token) => sum + valueOf(token), 0);
 
-  const handleRowClick = (token: Token) => {
-    // Savings is a product, not a chain asset — its row opens /savings.
-    router.push(
-      token.contract === '__savings__' ? paths.savings : paths.assets.details(token.symbol)
-    );
+  // 24-hour price changes from the portfolio rows (the token rows carry none).
+  const changeOf = (symbol: string) =>
+    aggAssets.find((asset) => asset.symbol === symbol)?.change24h ?? null;
+
+  // The page in three groups, the way people think of their money: dollars,
+  // crypto, savings.
+  const isSavings = (token: Token) => token.contract === '__savings__';
+  const groups = [
+    {
+      key: 'cash',
+      title: t('Digital dollars'),
+      note: t('Each one is worth about one US dollar.'),
+      tokens: displayTokens.filter((token) => token.symbol === 'USDC'),
+    },
+    {
+      key: 'crypto',
+      title: t('Crypto'),
+      note: t('Prices move every day.'),
+      tokens: displayTokens.filter((token) => token.symbol !== 'USDC' && !isSavings(token)),
+    },
+    {
+      key: 'savings',
+      title: t('Savings'),
+      note: t('Earning every day.'),
+      tokens: displayTokens.filter(isSavings),
+    },
+  ]
+    .filter((group) => group.tokens.length > 0)
+    .map((group) => ({
+      ...group,
+      total: group.tokens.reduce((sum, token) => sum + valueOf(token), 0),
+    }));
+
+  const apy = savings.vaultInfo?.apy ?? null;
+
+  /** One row of the table. Savings is a product, not a coin: its row opens /savings. */
+  const holdingOf = (token: Token): Holding => {
+    const savingsRow = isSavings(token);
+    const market = markets[token.symbol];
+    // On two-wallet accounts the name carries each wallet's share.
+    const wallets = token.name.includes(' · ')
+      ? token.name.split(' · ').slice(1).join(' · ')
+      : null;
+    const name = savingsRow
+      ? t('Savings')
+      : ASSET_NAMES[token.symbol]
+        ? assetName(token.symbol)
+        : token.symbol;
+    const amount = savingsRow
+      ? apy !== null
+        ? t('Earning {{apy}}% a year', { apy: Number(apy).toFixed(2) })
+        : t('Earning every day')
+      : formatCoin(BigNumber(token.balance).toNumber(), token.symbol);
+    return {
+      key: token.contract,
+      href: savingsRow ? paths.savings : paths.assets.details(token.symbol),
+      icon: <AssetAvatar token={token} size={40} />,
+      name,
+      ticker: [savingsRow ? t('Normal Savings') : token.symbol, wallets]
+        .filter(Boolean)
+        .join(' · '),
+      amount: [amount, wallets].filter(Boolean).join(' · '),
+      value: valueOf(token),
+      price: savingsRow ? null : Number(token.price) || market?.price || null,
+      change24h: changeOf(token.symbol) ?? market?.change24h ?? null,
+      stable: token.symbol === 'USDC',
+      sparkline: market?.sparkline24h ?? [],
+      minSpan: minSpanFor(token.symbol),
+      color: assetColor(token.symbol),
+      marketCap: market?.marketCap ?? null,
+      rank: market?.rank ?? null,
+    };
   };
 
   return (
-    <Box sx={{ minHeight: '100dvh' }}>
-      <DashboardContent>
-        <AppPageHeader title={t('Assets')} subtitle={t('Your wallet tokens')} />
+    <DashboardContent>
+      <AppPageHeader title={t('Assets')} subtitle={t('Everything you hold, in one place.')} />
 
-        {/* Total Value Card */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="subtitle2" color="text.secondary">
-              {t('Total Value')}
-            </Typography>
-            <Typography variant="h4">{fCurrency(totalValue.toNumber())}</Typography>
-          </CardContent>
-        </Card>
+      <SummaryBlock
+        aria-label={t('Total')}
+        stats={groups.map((group) => ({
+          key: group.key,
+          label: group.title,
+          value: formatUsd(group.total),
+          note:
+            totalValue > 0
+              ? t('{{pct}}% of the total', { pct: Math.round((group.total / totalValue) * 100) })
+              : undefined,
+        }))}
+      >
+        <Headline label={t('Total')} value={formatUsd(totalValue)} />
+      </SummaryBlock>
 
-        {/* Tokens Table */}
-        <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{t('Asset')}</TableCell>
-                  <TableCell align="right">{t('Balance')}</TableCell>
-                  <TableCell align="right">{t('Price')}</TableCell>
-                  <TableCell align="right">{t('Value')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {globalIsLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      <Typography color="text.secondary">{t('Loading...')}</Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : displayTokens.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      <Typography color="text.secondary">{t('No assets found')}</Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  displayTokens.map((token) => {
-                    const balance = BigNumber(token.balance);
-                    const value = balance.multipliedBy(token.price);
-                    const balanceDisplay = fTokenAmount(token.balance);
-
-                    return (
-                      <TableRow
-                        key={token.contract}
-                        hover
-                        onClick={() => handleRowClick(token)}
-                        sx={{ cursor: 'pointer' }}
-                      >
-                        <TableCell>
-                          <Stack direction="row" spacing={1.5} alignItems="center">
-                            <AssetAvatar token={token} size={32} />
-                            <Stack>
-                              <Typography variant="subtitle2">{token.symbol}</Typography>
-                              <Typography variant="caption" color="text.secondary" noWrap>
-                                {token.name}
-                              </Typography>
-                            </Stack>
-                          </Stack>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2">{balanceDisplay}</Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2">{fCurrency(token.price)}</Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="subtitle2">{fCurrency(value.toNumber())}</Typography>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Card>
-      </DashboardContent>
-    </Box>
+      <AppBlock
+        flush
+        open
+        title={t('Holdings')}
+        action={
+          // CoinGecko's free data asks to be credited where it is shown.
+          <Typography sx={{ fontSize: 12.5, color: 'text.secondary' }}>
+            {t('Market data from CoinGecko')}
+          </Typography>
+        }
+        sx={{ mt: { xs: 4, md: 5 } }}
+      >
+        {globalIsLoading ? (
+          <RowsSkeleton rows={5} />
+        ) : (
+          <HoldingsTable
+            groups={groups.map((group) => ({
+              key: group.key,
+              title: group.title,
+              note: group.note,
+              total: group.total,
+              rows: group.tokens.map(holdingOf),
+            }))}
+          />
+        )}
+      </AppBlock>
+    </DashboardContent>
   );
 }

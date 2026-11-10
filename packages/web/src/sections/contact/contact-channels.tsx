@@ -1,155 +1,67 @@
 'use client';
 
-import React from 'react';
 import { Icon } from '@iconify/react';
+import { paths } from '@/routes/paths';
+import { SOCIAL_COLORS } from '@/theme/brand-colors';
 
-import { Box, Link, Typography } from '@mui/material';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { PageSection, SectionHeader } from '@/components/_common/brand';
 
-import { BLOCK_SX, MONO_FONT, PageSection, SectionHeader } from '@/components/_common/brand';
+import { LinkCells } from './link-cells';
 
-type Channel = {
-  icon: React.ReactNode;
-  name: string;
-  handle: string;
-  href: string;
-};
+import type { LinkCell } from './link-cells';
 
-const CHANNELS: Channel[] = [
+// ----------------------------------------------------------------------
+
+// Each channel in its own network's colours, at the owner's request, like
+// Roadmap's principles and About's values. X, Telegram and Discord are the
+// site's own links (paths.socials), the same ones the footer uses. LinkedIn is
+// not in paths.ts yet.
+const CHANNELS: LinkCell[] = [
   {
-    icon: <Icon icon="fa6-brands:x-twitter" width={18} height={18} />,
+    icon: <Icon icon="fa6-brands:x-twitter" />,
     name: 'X / Twitter',
-    handle: '@normalfinance',
-    href: 'https://x.com/normalfinance',
+    detail: '@normalfi',
+    href: paths.socials.twitter,
+    external: true,
+    colors: SOCIAL_COLORS.x,
   },
   {
-    icon: <Icon icon="fa6-brands:telegram" width={18} height={18} />,
+    icon: <Icon icon="fa6-brands:telegram" />,
     name: 'Telegram',
-    handle: '@normalfinance',
-    href: 'https://t.me/normalfinance',
+    detail: '@normalfinance',
+    href: paths.socials.telegram,
+    external: true,
+    colors: SOCIAL_COLORS.telegram,
   },
   {
-    icon: <Icon icon="fa6-brands:discord" width={18} height={18} />,
+    icon: <Icon icon="fa6-brands:discord" />,
     name: 'Discord',
-    handle: 'normalfinance',
-    href: 'https://discord.gg/normalfinance',
+    detail: 'Normal server',
+    href: paths.socials.discord,
+    external: true,
+    colors: SOCIAL_COLORS.discord,
   },
   {
-    icon: <Icon icon="fa6-brands:linkedin-in" width={18} height={18} />,
+    icon: <Icon icon="fa6-brands:linkedin" />,
     name: 'LinkedIn',
-    handle: 'Normal Finance',
+    detail: 'Normal Finance',
     href: 'https://linkedin.com/company/normalfinance',
+    external: true,
+    colors: SOCIAL_COLORS.linkedin,
   },
 ];
 
-const ChannelCard: React.FC<{ channel: Channel }> = ({ channel }) => (
-  <Link
-    href={channel.href}
-    target="_blank"
-    rel="noopener noreferrer"
-    underline="none"
-    sx={{
-      ...BLOCK_SX,
-      display: 'flex',
-      flexDirection: 'column',
-      transition: 'border-color 150ms ease',
-      '&:hover': {
-        borderColor: 'rgba(10,10,15,0.14)',
-        '& .arrow-btn': {
-          bgcolor: '#0A0A0F',
-          color: '#fff',
-        },
-      },
-    }}
-  >
-    {/* Top row: icon + arrow */}
-    <Box
-      sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        mb: '20px',
-      }}
-    >
-      {/* Icon box */}
-      <Box
-        sx={{
-          width: 48,
-          height: 48,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#F4F4F7',
-          borderRadius: 'var(--radius-md)',
-          color: '#0A0A0F',
-        }}
-      >
-        {channel.icon}
-      </Box>
-
-      {/* Arrow button */}
-      <Box
-        className="arrow-btn"
-        sx={{
-          width: 32,
-          height: 32,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#F4F4F7',
-          borderRadius: 'var(--radius-md)',
-          color: '#0A0A0F',
-          transition: 'bgcolor 150ms ease, color 150ms ease',
-        }}
-      >
-        <ArrowForwardIcon sx={{ fontSize: 14 }} />
-      </Box>
-    </Box>
-
-    <Typography
-      sx={{
-        fontSize: '18px',
-        fontWeight: 500,
-        color: '#0A0A0F',
-        letterSpacing: '-0.015em',
-        mb: '4px',
-      }}
-    >
-      {channel.name}
-    </Typography>
-
-    <Typography
-      sx={{
-        fontSize: '13px',
-        color: '#6B6B76',
-        fontFamily: MONO_FONT,
-      }}
-    >
-      {channel.handle}
-    </Typography>
-  </Link>
-);
-
-export const ContactChannels: React.FC = () => (
-  <PageSection>
-    <SectionHeader
-      eyebrow="Find Us"
-      title="Other ways to reach us"
-      subtitle="Join our community channels for the fastest updates, announcements, and real-time support."
-    />
-
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' },
-        gap: { xs: 1.5, md: 2 },
-      }}
-    >
-      {CHANNELS.map((channel) => (
-        <ChannelCard key={channel.name} channel={channel} />
-      ))}
-    </Box>
-  </PageSection>
-);
-
-export default ContactChannels;
+/** The community channels: one row of link cells between the frame lines. */
+export function ContactChannels() {
+  return (
+    <PageSection divider hatchFoot aria-labelledby="channels-title">
+      <SectionHeader
+        id="channels-title"
+        eyebrow="Find us"
+        title="Other ways to reach us"
+        subtitle="Join our community channels for the fastest updates, announcements, and real-time support."
+      />
+      <LinkCells items={CHANNELS} />
+    </PageSection>
+  );
+}

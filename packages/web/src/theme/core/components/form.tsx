@@ -14,7 +14,7 @@ const MuiFormLabel: Components<Theme>['MuiFormLabel'] = {
       color: theme.vars.palette.text.disabled,
       [`&.${inputLabelClasses.shrink}`]: {
         ...theme.typography.body1,
-        fontWeight: 600,
+        fontWeight: 500,
         color: theme.vars.palette.text.secondary,
         [`&.${inputLabelClasses.focused}`]: { color: theme.vars.palette.text.primary },
         [`&.${inputLabelClasses.error}`]: { color: theme.vars.palette.error.main },
@@ -50,4 +50,14 @@ const MuiFormControlLabel: Components<Theme>['MuiFormControlLabel'] = {
 
 // ----------------------------------------------------------------------
 
-export const form = { MuiFormLabel, MuiFormHelperText, MuiFormControlLabel };
+const MuiInputLabel: Components<Theme>['MuiInputLabel'] = {
+  /** **************************************
+   * DEFAULT PROPS
+   *************************************** */
+  // The label still moves above the field on focus, but in one step, never sliding.
+  defaultProps: { disableAnimation: true },
+};
+
+// ----------------------------------------------------------------------
+
+export const form = { MuiFormLabel, MuiInputLabel, MuiFormHelperText, MuiFormControlLabel };

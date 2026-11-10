@@ -7,6 +7,7 @@ import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { INK, FAINT, MUTED, PAPER, CANVAS } from '@/theme/brand-colors';
 import { useDefindexSavings } from '@/hooks/stellar/use-defindex-savings';
 
 import Box from '@mui/material/Box';
@@ -14,15 +15,17 @@ import Stack from '@mui/material/Stack';
 import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
+import { FlowHost } from '@/components/_common/flow';
+import { AppBlock } from '@/components/_common/app-ui';
 import { AppPageHeader } from '@/components/_common/brand';
 import SavingsCard from '@/components/_common/savings-card';
 import { TwoFactorPrompt } from '@/components/_common/two-factor-prompt';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 
-import { SavingsHeroCard } from './savings-hero-card';
 import { SavingsOnrampCard } from './savings-onramp-card';
 import { SavingsHistoryCard } from './savings-history-card';
 import { SavingsXlmFeesCard } from './savings-xlm-fees-card';
+import { SavingsHeroCard, SavingsEarningsCard } from './savings-hero-card';
 
 export default function SavingsView() {
   const [mounted, setMounted] = useState(false);
@@ -105,7 +108,7 @@ export default function SavingsView() {
         <Skeleton
           variant="rectangular"
           height={220}
-          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.08)' }}
+          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(var(--nf-ink-rgb),0.08)' }}
         />
         <Box
           sx={{
@@ -118,12 +121,12 @@ export default function SavingsView() {
           <Skeleton
             variant="rectangular"
             height={320}
-            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
+            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }}
           />
           <Skeleton
             variant="rectangular"
             height={200}
-            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
+            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }}
           />
         </Box>
       </DashboardContent>
@@ -151,20 +154,20 @@ export default function SavingsView() {
               width: 56,
               height: 56,
               borderRadius: 'var(--radius-md)',
-              bgcolor: '#F4F4F7',
+              bgcolor: CANVAS,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#9A9AA3',
+              color: FAINT,
             }}
           >
             <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 28 }} />
           </Box>
           <Box>
-            <Box sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
+            <Box sx={{ fontSize: '16px', fontWeight: 500, color: INK, mb: '6px' }}>
               {user ? 'Set up your savings wallet' : 'Connect your wallet'}
             </Box>
-            <Box sx={{ fontSize: '14px', color: '#6B6B76', maxWidth: 300 }}>
+            <Box sx={{ fontSize: '14px', color: MUTED, maxWidth: 300 }}>
               {user
                 ? 'Savings runs on Stellar. Create your Stellar wallet in one tap to start earning yield on USDC.'
                 : 'Sign in to view your savings and start earning yield.'}
@@ -183,8 +186,8 @@ export default function SavingsView() {
               py: '10px',
               borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: '#0A0A0F',
-              color: '#fff',
+              bgcolor: INK,
+              color: PAPER,
               fontSize: '14px',
               fontWeight: 500,
               cursor: 'pointer',
@@ -216,47 +219,52 @@ export default function SavingsView() {
 
   return (
     <DashboardContent>
-      <AppPageHeader
-        title="Savings"
-        subtitle="Earn yield on your USDC by depositing into Normal Savings."
-      />
+      {/* A deposit or withdrawal opens its review here, in place of the page,
+          with the sidebar beside it (components/_common/flow). */}
+      <FlowHost>
+        <AppPageHeader title="Savings" subtitle="Your digital dollars, earning every day." />
 
-      <TwoFactorPrompt hasFunds={currentValue > 0} />
+        <TwoFactorPrompt hasFunds={currentValue > 0} />
 
-      {/* Hero stats */}
-      <SavingsHeroCard
-        currentValue={currentValue}
-        totalDeposited={totalDeposited}
-        earnings={earnings}
-        apy={apy}
-        loading={heroLoading}
-        walletAddress={savingsHistoryAddress || undefined}
-      />
+        <SavingsHeroCard
+          currentValue={currentValue}
+          totalDeposited={totalDeposited}
+          earnings={earnings}
+          apy={apy}
+          loading={heroLoading}
+        />
 
-      {/* Action + Onramp */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '3fr 2fr' },
-          gap: 2,
-          mt: 2,
-        }}
-      >
-        <SavingsCard />
-        {/* #67: fee explainer above the onramp card — same order as the user's
-            mental model: "can I transact?" before "how do I add money?". */}
-        <Stack spacing={2}>
-          <SavingsXlmFeesCard />
-          <SavingsOnrampCard />
-        </Stack>
-      </Box>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 7fr) minmax(0, 5fr)' },
+            alignItems: 'start',
+            gap: { xs: 4, lg: 3 },
+            mt: { xs: 4, md: 5 },
+          }}
+        >
+          <Stack spacing={4} sx={{ minWidth: 0, order: { xs: 2, lg: 1 } }}>
+            <SavingsEarningsCard
+              walletAddress={savingsHistoryAddress || undefined}
+              earnings={earnings}
+              currentValue={currentValue}
+            />
+            {/* Transaction history: same wallet as the chart (#75 round 2B). */}
+            {savingsHistoryAddress && <SavingsHistoryCard walletAddress={savingsHistoryAddress} />}
+          </Stack>
 
-      {/* Transaction history — same wallet as the chart (#75 round 2B). */}
-      {savingsHistoryAddress && (
-        <Box sx={{ mt: 2 }}>
-          <SavingsHistoryCard walletAddress={savingsHistoryAddress} />
+          {/* Putting money in and taking it out first on phones. #67: the fee
+            explainer above the onramp card, the user's own order: "can I
+            transact?" before "how do I add money?". */}
+          <Stack spacing={2} sx={{ minWidth: 0, order: { xs: 1, lg: 2 } }}>
+            <AppBlock framed title="Deposit or withdraw">
+              <SavingsCard hideHeader sx={{ p: { xs: 0, md: 0 }, border: 'none' }} />
+            </AppBlock>
+            <SavingsXlmFeesCard />
+            <SavingsOnrampCard />
+          </Stack>
         </Box>
-      )}
+      </FlowHost>
     </DashboardContent>
   );
 }

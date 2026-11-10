@@ -22,10 +22,23 @@ import { lifiSourceVerdict } from '@/lib/cctp/lifi-verdict';
 
 import { IrisClient } from './iris';
 import { wireToUsdc } from './decimals';
+import { CCTP_DOMAIN, EVM_REVERT_FINAL_DEPTH } from './config';
+import {
+  stellarBurnVerdict,
+  NEVER_LANDS_AFTER_MS,
+  STELLAR_BURN_RETIRED,
+} from './stellar-burn-verdict';
+import {
+  evmBurnRevertedDetail,
+  evmBurnRevertedForGood,
+  EVM_REVERT_CHECK_AFTER_MS,
+} from './evm-burn-verdict';
 import {
   destChainOf,
   executeEvmMint,
   isEvmTxConfirmed,
+  readStellarTxFacts,
+  readEvmReceiptFacts,
   isStellarTxConfirmed,
   executeStellarMintAndForward,
 } from './executor';
@@ -74,8 +87,8 @@ export async function advanceTransfer(transfer: CctpTransfer): Promise<CctpTrans
               status: 'FAILED',
               errorDetail:
                 verdict === 'REFUNDED'
-                  ? 'Source swap refunded — funds returned to the sender; nothing was bridged'
-                  : 'Source transaction reverted on-chain — funds never left the sender; nothing was bridged',
+                  ? 'Source swap refunded: funds returned to the sender; nothing was bridged'
+                  : 'Source transaction reverted on-chain: funds never left the sender; nothing was bridged',
             },
           });
           break;
@@ -151,6 +164,52 @@ export async function advanceTransfer(transfer: CctpTransfer): Promise<CctpTrans
               eventNonce: msg.eventNonce,
             },
           });
+          break;
+        }
+        // Circle has nothing after an hour: ask Stellar whether this burn can
+        // still exist (lib/cctp/stellar-burn-verdict.ts). Only on proof that
+        // no money moved is the row retired; anything less keeps it. Young
+        // rows skip the call, so this costs nothing on a normal transfer.
+        if (
+          !msg &&
+          transfer.sourceDomain === CCTP_DOMAIN.stellar &&
+          Date.now() - transfer.createdAt.getTime() >= NEVER_LANDS_AFTER_MS
+        ) {
+          const facts = await readStellarTxFacts({ network, txHash: transfer.burnTxHash });
+          const verdict = stellarBurnVerdict(facts, transfer.createdAt.getTime());
+          if (verdict !== 'keep') {
+            await prisma.cctpTransfer.updateMany({
+              where: { id: transfer.id, status: transfer.status, burnTxHash: transfer.burnTxHash },
+              data: { status: 'FAILED', errorDetail: STELLAR_BURN_RETIRED[verdict] },
+            });
+          }
+        }
+        // A burn on Base or Ethereum that reverted for good moved no money:
+        // hand the row back to "nothing burned yet", so the auto-finish or
+        // the person can send it again (lib/cctp/evm-burn-verdict.ts). Only
+        // rows idle a while are asked, so a normal transfer costs nothing.
+        if (
+          !msg &&
+          (transfer.sourceDomain === CCTP_DOMAIN.base ||
+            transfer.sourceDomain === CCTP_DOMAIN.ethereum) &&
+          Date.now() - transfer.updatedAt.getTime() >= EVM_REVERT_CHECK_AFTER_MS
+        ) {
+          const chain = destChainOf(transfer.sourceDomain) as 'base' | 'ethereum';
+          const facts = await readEvmReceiptFacts({
+            network,
+            chain,
+            txHash: transfer.burnTxHash as `0x${string}`,
+          });
+          if (evmBurnRevertedForGood(facts, EVM_REVERT_FINAL_DEPTH[chain])) {
+            await prisma.cctpTransfer.updateMany({
+              where: { id: transfer.id, status: transfer.status, burnTxHash: transfer.burnTxHash },
+              data: {
+                status: 'CREATED',
+                burnTxHash: null,
+                errorDetail: evmBurnRevertedDetail(transfer.burnTxHash),
+              },
+            });
+          }
         }
         break;
       }
@@ -283,7 +342,8 @@ async function finishStalledPivots(): Promise<number> {
       direction: 'stellar_to_crosschain',
       dstSwapTxHash: null,
       burnTxHash: { not: null },
-      mintTxHash: { not: null },
+      // The mint landed: ours (a hash) or someone else's (COMPLETED, no hash).
+      OR: [{ mintTxHash: { not: null } }, { status: 'COMPLETED' }],
       status: { notIn: ['FAILED', 'REFUNDED'] },
     },
     orderBy: { createdAt: 'desc' },
@@ -348,6 +408,7 @@ export async function advancePendingTransfers(): Promise<{
   advanced: number;
   byStatus: Record<string, number>;
   pivotsFinished: number;
+  indexPurchasesFinished: number;
 }> {
   await prisma.cctpTransfer.updateMany({
     where: {
@@ -358,7 +419,7 @@ export async function advancePendingTransfers(): Promise<{
     },
     data: {
       status: 'FAILED',
-      errorDetail: 'Expired — no transaction was ever sent; no funds moved',
+      errorDetail: 'Expired: no transaction was ever sent; no funds moved',
     },
   });
 
@@ -412,5 +473,16 @@ export async function advancePendingTransfers(): Promise<{
   // outbound pivot sweep reads mintTxHash written moments ago.
   const pivotsFinished = await finishStalledPivots();
 
-  return { advanced: pending.length, byStatus, pivotsFinished };
+  // Crypto index purchases whose page closed before the coins were bought
+  // (server/index-legs.ts). Lazy: it drags the Turnkey SDK, and most ticks
+  // have nothing for it. A failure here must not fail the whole pass.
+  let indexPurchasesFinished = 0;
+  try {
+    const { finishIdleIndexPurchases } = await import('@/server/index-legs');
+    indexPurchasesFinished = await finishIdleIndexPurchases();
+  } catch (e) {
+    console.error('[cctp-advance] index legs sweep failed:', e);
+  }
+
+  return { advanced: pending.length, byStatus, pivotsFinished, indexPurchasesFinished };
 }

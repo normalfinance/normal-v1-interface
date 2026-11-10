@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { useTabs } from 'minimal-shared/hooks';
 import { fCurrencyTwoDecimals } from '@/utils/format-number';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
+import { INK, MUTED, FAINT, PAPER, CANVAS, INK_SOFT } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -25,7 +26,6 @@ import { Iconify } from '@/components/template/iconify';
 
 import TokensTab from './tokens-tab';
 import ActivityTab from './activity-tab';
-
 // ----------------------------------------------------------------------
 
 const MONO = {
@@ -124,8 +124,8 @@ export default function ConnectedWallet({
         sx={{
           width: 1,
           borderRadius: 'var(--radius-lg)',
-          border: '1px solid rgba(10,10,15,0.08)',
-          bgcolor: '#fff',
+          border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
+          bgcolor: PAPER,
           p: '4px 4px 12px',
         }}
       >
@@ -136,7 +136,7 @@ export default function ConnectedWallet({
           alignItems="center"
           sx={{ px: '14px', pt: '12px', pb: '12px' }}
         >
-          <Typography sx={{ fontSize: '14px', color: '#2A2A33', fontWeight: 500 }}>
+          <Typography sx={{ fontSize: '14px', color: INK_SOFT, fontWeight: 500 }}>
             {t('Total balance')}
           </Typography>
           {savingsFetching || tokensFetching ? (
@@ -156,7 +156,7 @@ export default function ConnectedWallet({
           )}
         </Stack>
 
-        <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mx: '14px' }} />
+        <Box sx={{ height: '1px', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)', mx: '14px' }} />
 
         {/* Assets row */}
         <Stack
@@ -165,7 +165,7 @@ export default function ConnectedWallet({
           alignItems="center"
           sx={{ px: '14px', py: '12px' }}
         >
-          <Typography sx={{ fontSize: '13.5px', color: '#6B6B76' }}>{t('Assets')}</Typography>
+          <Typography sx={{ fontSize: '13.5px', color: MUTED }}>{t('Assets')}</Typography>
           {tokensFetching ? (
             <Skeleton variant="text" width={60} height={22} />
           ) : (
@@ -177,7 +177,7 @@ export default function ConnectedWallet({
           )}
         </Stack>
 
-        <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mx: '14px' }} />
+        <Box sx={{ height: '1px', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)', mx: '14px' }} />
 
         {/* Savings row → /savings */}
         <Stack
@@ -196,10 +196,10 @@ export default function ConnectedWallet({
             cursor: 'pointer',
             borderRadius: 'var(--radius-md)',
             transition: 'background 150ms',
-            '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' },
+            '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.03)' },
           }}
         >
-          <Typography sx={{ fontSize: '13.5px', color: '#6B6B76' }}>{t('Savings')}</Typography>
+          <Typography sx={{ fontSize: '13.5px', color: MUTED }}>{t('Savings')}</Typography>
           {savingsFetching ? (
             <Skeleton variant="text" width={60} height={24} />
           ) : (
@@ -230,7 +230,7 @@ export default function ConnectedWallet({
               onClick={btn.onClick}
               sx={{
                 appearance: 'none',
-                border: '1px solid rgba(10,10,15,0.08)',
+                border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
                 borderRadius: 'var(--radius-md)',
                 padding: '12px 6px',
                 cursor: 'pointer',
@@ -241,15 +241,15 @@ export default function ConnectedWallet({
                 gap: '8px',
                 fontSize: '12px',
                 fontWeight: 500,
-                color: '#6B6B76',
+                color: MUTED,
                 background: 'transparent',
                 transition: 'all .15s ease',
                 '&:hover': {
-                  bgcolor: 'rgba(10,10,15,0.03)',
-                  color: '#0A0A0F',
-                  borderColor: 'rgba(10,10,15,0.14)',
+                  bgcolor: 'rgba(var(--nf-ink-rgb),0.03)',
+                  color: INK,
+                  borderColor: 'rgba(var(--nf-ink-rgb),0.14)',
                 },
-                '&:hover .action-icon-box': { bgcolor: '#0A0A0F', color: '#fff' },
+                '&:hover .action-icon-box': { bgcolor: INK, color: PAPER },
               }}
             >
               <Box
@@ -258,11 +258,11 @@ export default function ConnectedWallet({
                   width: 28,
                   height: 28,
                   borderRadius: 'var(--radius-md)',
-                  bgcolor: '#F4F4F7',
+                  bgcolor: CANVAS,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#0A0A0F',
+                  color: INK,
                   transition: 'all .15s ease',
                 }}
               >
@@ -281,21 +281,21 @@ export default function ConnectedWallet({
         sx={{
           mt: 2,
           minHeight: 0,
-          borderBottom: '1px solid rgba(10,10,15,0.08)',
+          borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
           '& .MuiTabs-flexContainer': { gap: '4px', padding: 0 },
           '& .MuiTab-root': {
             fontSize: '13.5px',
             fontWeight: 500,
-            color: '#6B6B76',
+            color: MUTED,
             padding: '10px 14px',
             minHeight: 0,
             textTransform: 'none',
             transition: 'color .15s ease',
           },
-          '& .MuiTab-root.Mui-selected': { color: '#0A0A0F' },
+          '& .MuiTab-root.Mui-selected': { color: INK },
           '& .MuiTabs-indicator': {
             height: '2px',
-            backgroundColor: '#0A0A0F',
+            backgroundColor: INK,
             boxShadow: 'none !important',
           },
         }}
@@ -324,8 +324,8 @@ export default function ConnectedWallet({
                     sx={{
                       appearance: 'none',
                       border: selected
-                        ? '1px solid rgba(10,10,15,0.9)'
-                        : '1px solid rgba(10,10,15,0.08)',
+                        ? '1px solid rgba(var(--nf-ink-rgb),0.9)'
+                        : '1px solid rgba(var(--nf-ink-rgb),0.08)',
                       borderRadius: 'var(--radius-sm)',
                       px: '12px',
                       py: '6px',
@@ -333,10 +333,10 @@ export default function ConnectedWallet({
                       fontWeight: 500,
                       fontFamily: 'inherit',
                       cursor: 'pointer',
-                      bgcolor: selected ? '#0A0A0F' : 'transparent',
-                      color: selected ? '#fff' : '#6B6B76',
+                      bgcolor: selected ? INK : 'transparent',
+                      color: selected ? PAPER : MUTED,
                       transition: 'all .15s ease',
-                      '&:hover': selected ? {} : { borderColor: 'rgba(10,10,15,0.25)' },
+                      '&:hover': selected ? {} : { borderColor: 'rgba(var(--nf-ink-rgb),0.25)' },
                     }}
                   >
                     {t(section.label)}
@@ -349,7 +349,7 @@ export default function ConnectedWallet({
               return (
                 <Box>
                   <Typography
-                    sx={{ fontSize: '11px', color: '#9A9AA5', px: '8px', pb: '2px', ...MONO }}
+                    sx={{ fontSize: '11px', color: FAINT, px: '8px', pb: '2px', ...MONO }}
                   >
                     {`${active.address.slice(0, 6)}…${active.address.slice(-6)}`}
                   </Typography>
@@ -357,7 +357,7 @@ export default function ConnectedWallet({
                   {active.tokens.length > 0 ? (
                     <TokensTab loading={tokensFetching} tokens={active.tokens} />
                   ) : (
-                    <Typography sx={{ fontSize: '13px', color: '#9A9AA5', px: '8px', py: '18px' }}>
+                    <Typography sx={{ fontSize: '13px', color: FAINT, px: '8px', py: '18px' }}>
                       {t('No assets in this wallet yet.')}
                     </Typography>
                   )}

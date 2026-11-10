@@ -174,7 +174,7 @@ export async function signWithAutopilot(params: {
     }
     if (capEnabled(IDLE_EXPIRY_DAYS) && (await idleExpired(subOrgId))) {
       await audit({ subOrgId, signWith, purpose, outcome: 'refused-expired', amountUsd });
-      throw new Error('Autopilot delegation expired from inactivity — re-enable in Settings');
+      throw new Error('Autopilot delegation expired from inactivity. Re-enable in Settings');
     }
   }
   try {

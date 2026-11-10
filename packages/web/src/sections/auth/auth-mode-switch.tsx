@@ -51,8 +51,6 @@ export function AuthModeSwitch({ mode, next, disabled = false }: Props) {
           borderRadius: 'var(--radius-md)',
           bgcolor: 'background.paper',
           transform: mode === 'signup' ? 'translateX(100%)' : 'none',
-          transition: 'transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1)',
-          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
         }}
       />
       {OPTIONS.map((option) => {

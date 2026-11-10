@@ -1,6 +1,7 @@
 import type { Theme, Components, ComponentsVariants } from '@mui/material/styles';
 
 import { varAlpha } from 'minimal-shared/utils';
+import { MUTED, CANVAS } from '@/theme/brand-colors';
 
 import { avatarGroupClasses } from '@mui/material/AvatarGroup';
 
@@ -18,21 +19,6 @@ export type AvatarGroupExtendVariant = {
 // ----------------------------------------------------------------------
 
 const COLORS = ['primary', 'secondary', 'info', 'success', 'warning', 'error'] as const;
-
-type PaletteColor = (typeof COLORS)[number] | 'default';
-
-const colorByName = (name?: string): PaletteColor => {
-  const charAt = name?.charAt(0).toLowerCase();
-
-  if (['a', 'c', 'f'].includes(charAt!)) return 'primary';
-  if (['e', 'd', 'h'].includes(charAt!)) return 'secondary';
-  if (['i', 'k', 'l'].includes(charAt!)) return 'info';
-  if (['m', 'n', 'p'].includes(charAt!)) return 'success';
-  if (['q', 's', 't'].includes(charAt!)) return 'warning';
-  if (['v', 'x', 'y'].includes(charAt!)) return 'error';
-
-  return 'default';
-};
 
 // ----------------------------------------------------------------------
 
@@ -62,23 +48,17 @@ const MuiAvatar: Components<Theme>['MuiAvatar'] = {
   styleOverrides: {
     root: { variants: [avatarColors.defaultColor, avatarColors.colors].flat() },
     rounded: { borderRadius: 'var(--radius-md)' },
-    colorDefault: ({ ownerState, theme }) => {
-      const color = colorByName(ownerState.alt);
-
-      return {
-        ...(!!ownerState.alt && {
-          ...(color !== 'default'
-            ? {
-                color: theme.vars.palette[color].contrastText,
-                backgroundColor: theme.vars.palette[color].main,
-              }
-            : {
-                color: theme.vars.palette.text.secondary,
-                backgroundColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.24),
-              }),
-        }),
-      };
-    },
+    // A person's initial is grey on the canvas, whatever the letter
+    // (2026-11-08): colour only where it means something, and a name's first
+    // letter means nothing. The template coloured it per letter
+    // (colorByName); an explicit `color` prop still picks a palette colour.
+    colorDefault: ({ ownerState }) => ({
+      ...(!!ownerState.alt && {
+        color: MUTED,
+        backgroundColor: CANVAS,
+        fontWeight: 500,
+      }),
+    }),
   },
 };
 

@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
+import { INK, MUTED, PAPER } from '@/theme/brand-colors';
 import { grantAutopilotConsent } from '@/lib/turnkey/autopilot-consent';
 
 import Stack from '@mui/material/Stack';
@@ -21,10 +22,16 @@ import { useSnackbar } from '@/components/template/snackbar';
 export default function AutopilotConsentDialog({
   open,
   onChoose,
+  purpose = 'swap',
 }: {
   open: boolean;
   /** true = delegation granted (ceremony succeeded); false = "Not now". */
   onChoose: (enabled: boolean) => void;
+  /**
+   * 'index': an index purchase can't finish without it (the API refuses one),
+   * so the words say so; a swap goes ahead either way.
+   */
+  purpose?: 'swap' | 'index';
 }) {
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
@@ -32,17 +39,25 @@ export default function AutopilotConsentDialog({
 
   const handleEnable = async () => {
     const serverPublicKey = process.env.NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY;
-    if (!serverPublicKey) return; // callers gate on this; belt-and-braces
+    if (!serverPublicKey) {
+      // Not set up on this site (the env key is missing). Say so rather than
+      // leave a button that does nothing: an index purchase would be stuck.
+      enqueueSnackbar(
+        t('Auto-finish isn’t available on this site right now. Please contact support.'),
+        { variant: 'error' }
+      );
+      return;
+    }
     try {
       setBusy(true);
       await grantAutopilotConsent(serverPublicKey);
-      enqueueSnackbar(t('Automatic swap completion is on — change it anytime in Settings.'), {
+      enqueueSnackbar(t('Automatic swap completion is on. Change it anytime in Settings.'), {
         variant: 'success',
       });
       onChoose(true);
     } catch (e: any) {
       // Stay open: the user can retry the passkey or pick "Not now".
-      enqueueSnackbar(e?.message ?? t('Could not enable — you can keep signing manually.'), {
+      enqueueSnackbar(e?.message ?? t('Could not enable. You can keep signing manually.'), {
         variant: 'error',
       });
     } finally {
@@ -56,15 +71,21 @@ export default function AutopilotConsentDialog({
       onClose={busy ? undefined : () => onChoose(false)}
       PaperProps={{ sx: { borderRadius: 'var(--radius-lg)', maxWidth: 420, p: '24px' } }}
     >
-      <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', mb: '10px' }}>
-        {t('Finish future swaps automatically?')}
+      <Typography sx={{ fontSize: '17px', fontWeight: 500, color: INK, mb: '10px' }}>
+        {purpose === 'index'
+          ? t('Buying an index needs auto-finish')
+          : t('Finish future swaps automatically?')}
       </Typography>
-      <Typography sx={{ fontSize: '13.5px', color: '#6B6B76', lineHeight: 1.6 }}>
-        {t(
-          'Cross-chain swaps normally need one more signature after the bridge wait. Enable this and Normal finishes that step for you — including a swap that is running right now. You sign once at the start and walk away.'
-        )}
+      <Typography sx={{ fontSize: '13.5px', color: MUTED, lineHeight: 1.6 }}>
+        {purpose === 'index'
+          ? t(
+              'After the bridge wait, Normal buys each coin for you, so you sign once at the start and walk away. Without it, the purchase can’t finish. It also finishes your cross-chain swaps.'
+            )
+          : t(
+              'Cross-chain swaps normally need one more signature after the bridge wait. Enable this and Normal finishes that step for you, including a swap that is running right now. You sign once at the start and walk away.'
+            )}
       </Typography>
-      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', lineHeight: 1.6, mt: '10px' }}>
+      <Typography sx={{ fontSize: '12.5px', color: MUTED, lineHeight: 1.6, mt: '10px' }}>
         {t(
           'Your wallet itself enforces the limits: only swaps you started, only to your own addresses, only the allowlisted bridge contracts. Turn it off anytime in Settings. Enabling takes up to two quick passkey confirmations.'
         )}
@@ -78,8 +99,8 @@ export default function AutopilotConsentDialog({
             textTransform: 'none',
             fontSize: '13.5px',
             fontWeight: 500,
-            color: '#0A0A0F',
-            border: '1px solid rgba(10,10,15,0.14)',
+            color: INK,
+            border: '1px solid rgba(var(--nf-ink-rgb),0.14)',
             borderRadius: 'var(--radius-md)',
             py: '9px',
           }}
@@ -94,14 +115,14 @@ export default function AutopilotConsentDialog({
             textTransform: 'none',
             fontSize: '13.5px',
             fontWeight: 500,
-            color: '#fff',
-            bgcolor: '#0A0A0F',
+            color: PAPER,
+            bgcolor: INK,
             borderRadius: 'var(--radius-md)',
             py: '9px',
-            '&:hover': { bgcolor: '#0A0A0F', opacity: 0.85 },
+            '&:hover': { bgcolor: INK, opacity: 0.85 },
           }}
         >
-          {busy ? t('Confirming…') : t('Enable')}
+          {busy ? t('Confirming…') : purpose === 'index' ? t('Turn on') : t('Enable')}
         </Button>
       </Stack>
     </Dialog>

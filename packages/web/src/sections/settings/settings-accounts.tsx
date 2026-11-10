@@ -12,6 +12,7 @@ import { forgetExternalWallet } from '@/lib/wallet-reconnect-memo';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
 import { getTurnkeyWalletInfo, type TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { unlinkWallet, getLinkedWallets, updateWalletName } from '@/services/linked-wallets';
+import { INK, WELL, FAINT, MUTED, PAPER, CANVAS, DANGER, INK_SOFT } from '@/theme/brand-colors';
 import { forgetWalletLink, useStellarWalletsKit } from '@/hooks/stellar/use-stellar-wallets-kit';
 
 import Box from '@mui/material/Box';
@@ -25,6 +26,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 
+import { appLocale } from '@/components/_common/app-ui';
 import { Iconify } from '@/components/template/iconify';
 import CopyIconButton from '@/components/copy-icon-button';
 import { useSnackbar } from '@/components/template/snackbar';
@@ -32,7 +34,6 @@ import AutopilotCard from '@/components/settings/autopilot-card';
 import WalletExportDialog from '@/components/_common/wallet-export-dialog';
 import NormalWalletImport from '@/components/_common/normal-wallet-import';
 import AddUsdcTrustlineButton from '@/components/settings/add-usdc-trustline-button';
-
 // ----------------------------------------------------------------------
 
 export function SettingsAccounts() {
@@ -211,14 +212,13 @@ export function SettingsAccounts() {
           <Box
             key={index}
             sx={{
-              p: { xs: '20px', md: '24px' },
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid rgba(10,10,15,0.08)',
-              bgcolor: '#FFFFFF',
+              pb: '24px',
+              borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
+              bgcolor: PAPER,
             }}
           >
             <Skeleton variant="text" width={160} height={24} sx={{ mb: '16px' }} />
-            <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mb: '16px' }} />
+            <Box sx={{ height: '1px', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)', mb: '16px' }} />
             <Stack spacing={1.5}>
               <Stack direction="row" justifyContent="space-between">
                 <Skeleton variant="text" width={80} />
@@ -254,15 +254,15 @@ export function SettingsAccounts() {
             px: '16px',
             py: '10px',
             borderRadius: 'var(--radius-md)',
-            border: '1px solid rgba(10,10,15,0.14)',
-            bgcolor: '#FFFFFF',
-            color: '#0A0A0F',
+            border: '1px solid rgba(var(--nf-ink-rgb),0.14)',
+            bgcolor: PAPER,
+            color: INK,
             fontSize: '14px',
             fontWeight: 500,
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'background 150ms ease',
-            '&:hover': { bgcolor: '#F4F4F7' },
+            '&:hover': { bgcolor: CANVAS },
           }}
         >
           <Iconify icon="solar:import-bold" width={17} />
@@ -280,13 +280,13 @@ export function SettingsAccounts() {
             px: '14px',
             py: '10px',
             borderRadius: 'var(--radius-md)',
-            bgcolor: '#FFFFFF',
-            border: '1px solid rgba(10,10,15,0.08)',
-            '&:focus-within': { borderColor: 'rgba(10,10,15,0.24)' },
+            bgcolor: PAPER,
+            border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
+            '&:focus-within': { borderColor: 'rgba(var(--nf-ink-rgb),0.24)' },
             transition: 'border-color 150ms ease',
           }}
         >
-          <Iconify icon="eva:search-fill" width={17} sx={{ color: '#9A9AA3', flexShrink: 0 }} />
+          <Iconify icon="eva:search-fill" width={17} sx={{ color: FAINT, flexShrink: 0 }} />
           <Box
             component="input"
             type="text"
@@ -299,9 +299,9 @@ export function SettingsAccounts() {
               outline: 'none',
               bgcolor: 'transparent',
               fontSize: '14px',
-              color: '#0A0A0F',
+              color: INK,
               fontFamily: 'inherit',
-              '&::placeholder': { color: '#9A9AA3' },
+              '&::placeholder': { color: FAINT },
             }}
           />
         </Box>
@@ -311,44 +311,37 @@ export function SettingsAccounts() {
       {wallets.length === 0 && (
         <Box
           sx={{
-            p: '40px 24px',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid rgba(10,10,15,0.08)',
-            bgcolor: '#FFFFFF',
+            py: '40px',
+            borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
+            bgcolor: PAPER,
             textAlign: 'center',
           }}
         >
-          <Typography sx={{ fontSize: '14px', color: '#9A9AA3' }}>
-            {t('No linked accounts')}
-          </Typography>
+          <Typography sx={{ fontSize: '14px', color: FAINT }}>{t('No linked accounts')}</Typography>
         </Box>
       )}
 
       {wallets.length > 0 && filteredWallets.length === 0 && (
         <Box
           sx={{
-            p: '40px 24px',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid rgba(10,10,15,0.08)',
-            bgcolor: '#FFFFFF',
+            py: '40px',
+            borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
+            bgcolor: PAPER,
             textAlign: 'center',
           }}
         >
-          <Typography sx={{ fontSize: '14px', color: '#9A9AA3' }}>
-            {t('No accounts found')}
-          </Typography>
+          <Typography sx={{ fontSize: '14px', color: FAINT }}>{t('No accounts found')}</Typography>
         </Box>
       )}
 
-      {/* Wallet cards */}
+      {/* Each wallet: on the page with a line under it, no card (Niko 2026-11-10). */}
       {filteredWallets.map((wallet) => (
         <Box
           key={wallet.id}
           sx={{
-            p: { xs: '20px', md: '24px' },
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid rgba(10,10,15,0.08)',
-            bgcolor: '#FFFFFF',
+            pb: '24px',
+            borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
+            bgcolor: PAPER,
           }}
         >
           {/* Header: name + edit */}
@@ -364,15 +357,15 @@ export function SettingsAccounts() {
                   flex: 1,
                   px: '12px',
                   py: '8px',
-                  border: '1px solid rgba(10,10,15,0.16)',
+                  border: '1px solid rgba(var(--nf-ink-rgb),0.16)',
                   borderRadius: 'var(--radius-md)',
-                  bgcolor: '#FAFAFB',
+                  bgcolor: WELL,
                   fontSize: '14px',
                   fontWeight: 500,
-                  color: '#0A0A0F',
+                  color: INK,
                   fontFamily: 'inherit',
                   outline: 'none',
-                  '&:focus': { borderColor: 'rgba(10,10,15,0.3)' },
+                  '&:focus': { borderColor: 'rgba(var(--nf-ink-rgb),0.3)' },
                 }}
               />
               <Box
@@ -384,8 +377,8 @@ export function SettingsAccounts() {
                   height: 32,
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
-                  bgcolor: '#0A0A0F',
-                  color: '#FFFFFF',
+                  bgcolor: INK,
+                  color: PAPER,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -408,8 +401,8 @@ export function SettingsAccounts() {
                   height: 32,
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
-                  bgcolor: 'rgba(10,10,15,0.06)',
-                  color: '#0A0A0F',
+                  bgcolor: 'rgba(var(--nf-ink-rgb),0.06)',
+                  color: INK,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -425,7 +418,7 @@ export function SettingsAccounts() {
                 sx={{
                   fontSize: '15px',
                   fontWeight: 500,
-                  color: '#0A0A0F',
+                  color: INK,
                   letterSpacing: '-0.01em',
                   flex: 1,
                 }}
@@ -440,10 +433,10 @@ export function SettingsAccounts() {
                     px: '8px',
                     py: '2px',
                     borderRadius: 'var(--radius-sm)',
-                    bgcolor: 'rgba(10,10,15,0.06)',
+                    bgcolor: 'rgba(var(--nf-ink-rgb),0.06)',
                     fontSize: '11px',
                     fontWeight: 500,
-                    color: '#2A2A33',
+                    color: INK_SOFT,
                     flexShrink: 0,
                   }}
                 >
@@ -458,13 +451,13 @@ export function SettingsAccounts() {
                   height: 28,
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
-                  bgcolor: 'rgba(10,10,15,0.06)',
-                  color: '#0A0A0F',
+                  bgcolor: 'rgba(var(--nf-ink-rgb),0.06)',
+                  color: INK,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+                  '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.1)' },
                 }}
               >
                 <Iconify icon="solar:pen-bold" width={14} />
@@ -472,7 +465,7 @@ export function SettingsAccounts() {
             </Stack>
           )}
 
-          <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mb: '16px' }} />
+          <Box sx={{ height: '1px', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)', mb: '16px' }} />
 
           {/* Details */}
           <Stack spacing={0} sx={{ mb: '16px' }}>
@@ -488,10 +481,10 @@ export function SettingsAccounts() {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     py: '10px',
-                    borderBottom: '1px solid rgba(10,10,15,0.08)',
+                    borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
                   }}
                 >
-                  <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
+                  <Typography sx={{ fontSize: '12px', color: MUTED }}>
                     {t('{{chain}} address', { chain: CHAINS[id].name })}
                   </Typography>
                   <Stack direction="row" spacing={0.5} alignItems="center">
@@ -499,7 +492,7 @@ export function SettingsAccounts() {
                       sx={{
                         fontSize: '12px',
                         fontWeight: 500,
-                        color: '#0A0A0F',
+                        color: INK,
                         fontFamily: '"Geist Mono", ui-monospace, monospace',
                       }}
                     >
@@ -519,18 +512,16 @@ export function SettingsAccounts() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   py: '10px',
-                  borderBottom: '1px solid rgba(10,10,15,0.08)',
+                  borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
                 }}
               >
-                <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
-                  {t('Account ID')}
-                </Typography>
+                <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Account ID')}</Typography>
                 <Stack direction="row" spacing={0.5} alignItems="center">
                   <Typography
                     sx={{
                       fontSize: '12px',
                       fontWeight: 500,
-                      color: '#0A0A0F',
+                      color: INK,
                       fontFamily: '"Geist Mono", ui-monospace, monospace',
                     }}
                   >
@@ -548,14 +539,15 @@ export function SettingsAccounts() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   py: '10px',
-                  borderBottom: '1px solid rgba(10,10,15,0.08)',
+                  borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
                 }}
               >
-                <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
-                  {t('Last Used')}
-                </Typography>
-                <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#0A0A0F' }}>
-                  {new Date(wallet.lastUsedAt).toLocaleString()}
+                <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Last Used')}</Typography>
+                <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK }}>
+                  {new Date(wallet.lastUsedAt).toLocaleString(appLocale(), {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
                 </Typography>
               </Box>
             )}
@@ -576,27 +568,29 @@ export function SettingsAccounts() {
                 gap: '8px',
                 width: '100%',
                 mb: '16px',
-                px: '14px',
-                py: '11px',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(10,10,15,0.14)',
+                px: 0,
+                py: '14px',
+                border: 'none',
+                borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
                 bgcolor: 'transparent',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 textAlign: 'left',
-                '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' },
+                '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.03)' },
               }}
             >
-              <Iconify icon="solar:key-bold" width={18} sx={{ color: '#0A0A0F' }} />
+              <Iconify icon="solar:key-bold" width={18} sx={{ color: INK }} />
               <Box sx={{ flex: 1 }}>
-                <Typography sx={{ fontSize: '13.5px', fontWeight: 500, color: '#0A0A0F' }}>
+                <Typography sx={{ fontSize: '13.5px', fontWeight: 500, color: INK }}>
                   {t('Export recovery phrase')}
                 </Typography>
-                <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
-                  {t('One phrase backs up all four addresses above — restores in any wallet app')}
+                <Typography sx={{ fontSize: '12px', color: MUTED }}>
+                  {t(
+                    'One phrase backs up all four addresses above. It restores them in any wallet app.'
+                  )}
                 </Typography>
               </Box>
-              <Iconify icon="eva:chevron-right-fill" width={18} sx={{ color: '#9A9AA3' }} />
+              <Iconify icon="eva:chevron-right-fill" width={18} sx={{ color: FAINT }} />
             </Box>
           )}
 
@@ -629,8 +623,8 @@ export function SettingsAccounts() {
               user's funds and backs the ownership checks swap logging uses
               (the server refuses the unlink as well). */}
           {wallet.walletAddress === turnkeyStellar ? (
-            <Typography sx={{ fontSize: '12px', color: '#9A9AA3', lineHeight: 1.5 }}>
-              {t('This is your Normal wallet — it stays linked to your account.')}
+            <Typography sx={{ fontSize: '12px', color: FAINT, lineHeight: 1.5 }}>
+              {t('This is your Normal wallet. It stays linked to your account.')}
             </Typography>
           ) : (
             <Box
@@ -672,7 +666,7 @@ export function SettingsAccounts() {
         <DialogTitle sx={{ px: '22px', pt: '22px', pb: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography
-              sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+              sx={{ fontSize: '15px', fontWeight: 500, color: INK, letterSpacing: '-0.01em' }}
             >
               {t('Disconnect Account')}
             </Typography>
@@ -685,13 +679,13 @@ export function SettingsAccounts() {
                 height: 28,
                 borderRadius: 'var(--radius-md)',
                 border: 'none',
-                bgcolor: 'rgba(10,10,15,0.06)',
-                color: '#0A0A0F',
+                bgcolor: 'rgba(var(--nf-ink-rgb),0.06)',
+                color: INK,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: isUnlinking ? 'not-allowed' : 'pointer',
-                '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+                '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.1)' },
               }}
             >
               <Iconify icon="mingcute:close-line" width={16} />
@@ -715,7 +709,7 @@ export function SettingsAccounts() {
               width={16}
               sx={{ color: '#DC2626', flexShrink: 0, mt: '1px' }}
             />
-            <Typography sx={{ fontSize: '13px', color: '#2A2A33', lineHeight: 1.55 }}>
+            <Typography sx={{ fontSize: '13px', color: INK_SOFT, lineHeight: 1.55 }}>
               {t('Are you sure you want to disconnect this account? This action cannot be undone.')}
             </Typography>
           </Box>
@@ -730,15 +724,15 @@ export function SettingsAccounts() {
               flex: 1,
               py: '12px',
               borderRadius: 'var(--radius-md)',
-              border: '1px solid rgba(10,10,15,0.14)',
-              bgcolor: '#FFFFFF',
-              color: '#0A0A0F',
+              border: '1px solid rgba(var(--nf-ink-rgb),0.14)',
+              bgcolor: PAPER,
+              color: INK,
               fontSize: '14px',
               fontWeight: 500,
               cursor: isUnlinking ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
               opacity: isUnlinking ? 0.5 : 1,
-              '&:hover': { bgcolor: '#F4F4F7' },
+              '&:hover': { bgcolor: CANVAS },
             }}
           >
             {t('Cancel')}
@@ -763,8 +757,8 @@ export function SettingsAccounts() {
               fontSize: '14px',
               textTransform: 'none',
               letterSpacing: '-0.01em',
-              '&:hover': { bgcolor: '#B91C1C' },
-              '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
+              '&:hover': { bgcolor: DANGER },
+              '&.Mui-disabled': { bgcolor: 'rgba(var(--nf-ink-rgb),0.08)', color: FAINT },
             }}
           >
             {isUnlinking ? t('Disconnecting...') : t('Disconnect')}
@@ -784,16 +778,16 @@ export function SettingsAccounts() {
       {seeds.length > 1 && (
         <Box
           sx={{
-            border: '1px solid rgba(10,10,15,0.08)',
-            borderRadius: 'var(--radius-lg)',
-            p: '18px',
+            pt: '18px',
+            pb: '24px',
             mt: '16px',
+            borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
           }}
         >
-          <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
+          <Typography sx={{ fontSize: '14px', fontWeight: 500, color: INK, mb: '4px' }}>
             {t('Your Normal wallets')}
           </Typography>
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', mb: '14px' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, mb: '14px' }}>
             {t(
               'Each of these is a separate recovery phrase with its own addresses. Save the phrase for every wallet you hold funds on.'
             )}
@@ -803,7 +797,7 @@ export function SettingsAccounts() {
             {seeds.map((w) => (
               <Box key={w.walletId}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>
+                  <Typography sx={{ fontSize: '13px', fontWeight: 500, color: INK }}>
                     {w.label}
                   </Typography>
                   <Typography
@@ -814,7 +808,7 @@ export function SettingsAccounts() {
                     sx={{
                       fontSize: '12px',
                       fontWeight: 500,
-                      color: '#0A0A0F',
+                      color: INK,
                       cursor: 'pointer',
                       textDecoration: 'underline',
                     }}
@@ -830,14 +824,14 @@ export function SettingsAccounts() {
                     alignItems="center"
                     sx={{ py: '6px' }}
                   >
-                    <Typography sx={{ fontSize: '12px', color: '#6B6B76' }}>
+                    <Typography sx={{ fontSize: '12px', color: MUTED }}>
                       {CHAINS[id].name}
                     </Typography>
                     <Stack direction="row" spacing={0.5} alignItems="center">
                       <Typography
                         sx={{
                           fontSize: '11.5px',
-                          color: '#2A2A33',
+                          color: INK_SOFT,
                           fontFamily: '"Geist Mono", ui-monospace, monospace',
                         }}
                       >

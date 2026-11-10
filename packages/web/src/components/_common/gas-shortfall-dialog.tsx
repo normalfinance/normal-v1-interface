@@ -11,6 +11,7 @@
 // on some browsers. Nothing was signed before this dialog; cancel is free.
 
 import { useTranslate } from '@/locales';
+import { INK, MUTED, PAPER } from '@/theme/brand-colors';
 
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -40,18 +41,18 @@ export default function GasShortfallDialog({
       onClose={onCancel}
       PaperProps={{ sx: { borderRadius: 'var(--radius-lg)', maxWidth: 400, p: '24px' } }}
     >
-      <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', mb: '10px' }}>
+      <Typography sx={{ fontSize: '17px', fontWeight: 500, color: INK, mb: '10px' }}>
         {t('Network fee just went up')}
       </Typography>
-      <Typography sx={{ fontSize: '13.5px', color: '#6B6B76', lineHeight: 1.6 }}>
+      <Typography sx={{ fontSize: '13.5px', color: MUTED, lineHeight: 1.6 }}>
         {t(
           'Gas on Ethereum rose between your quote and now, so {{tried}} ETH plus the fee no longer fits your balance. You can swap up to {{affordable}} ETH at the current fee.',
           { tried: triedAmountEth, affordable: affordableEth }
         )}
       </Typography>
-      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', lineHeight: 1.6, mt: '10px' }}>
+      <Typography sx={{ fontSize: '12.5px', color: MUTED, lineHeight: 1.6, mt: '10px' }}>
         {t(
-          'Nothing was signed or sent. Choosing the smaller amount refreshes your quote — review it and press Swap to confirm.'
+          'Nothing was signed or sent. Choosing the smaller amount gets a new quote: look it over, then confirm.'
         )}
       </Typography>
       <Stack direction="row" spacing={1.25} sx={{ mt: '18px' }}>
@@ -62,8 +63,8 @@ export default function GasShortfallDialog({
             textTransform: 'none',
             fontSize: '13.5px',
             fontWeight: 500,
-            color: '#0A0A0F',
-            border: '1px solid rgba(10,10,15,0.14)',
+            color: INK,
+            border: '1px solid rgba(var(--nf-ink-rgb),0.14)',
             borderRadius: 'var(--radius-md)',
             py: '9px',
           }}
@@ -77,11 +78,11 @@ export default function GasShortfallDialog({
             textTransform: 'none',
             fontSize: '13.5px',
             fontWeight: 500,
-            color: '#fff',
-            bgcolor: '#0A0A0F',
+            color: PAPER,
+            bgcolor: INK,
             borderRadius: 'var(--radius-md)',
             py: '9px',
-            '&:hover': { bgcolor: '#0A0A0F', opacity: 0.85 },
+            '&:hover': { bgcolor: INK, opacity: 0.85 },
           }}
         >
           {t('Use {{amount}} ETH', { amount: affordableEth })}

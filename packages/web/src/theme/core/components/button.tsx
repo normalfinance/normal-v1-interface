@@ -2,6 +2,8 @@ import type { ButtonProps } from '@mui/material/Button';
 import type { Theme, CSSObject, Components, ComponentsVariants } from '@mui/material/styles';
 
 import { varAlpha } from 'minimal-shared/utils';
+import { RouterLink } from '@/routes/components';
+import { INK, PAPER, INK_SOFT, HAIRLINE_STRONG } from '@/theme/brand-colors';
 
 import { buttonClasses } from '@mui/material/Button';
 import { loadingButtonClasses } from '@mui/lab/LoadingButton';
@@ -40,9 +42,24 @@ function styleColors(ownerState: ButtonProps, styles: (val: PaletteColor) => CSS
 
 const MuiButtonBase: Components<Theme>['MuiButtonBase'] = {
   /** **************************************
+   * DEFAULT PROPS
+   *************************************** */
+  // A button with an href navigates through Next's router. Nothing ripples: a
+  // press changes colour, it never grows a circle (DESIGN.md: nothing moves).
+  defaultProps: { LinkComponent: RouterLink, disableRipple: true },
+  /** **************************************
    * STYLE
    *************************************** */
-  styleOverrides: { root: ({ theme }) => ({ fontFamily: theme.typography.fontFamily }) },
+  styleOverrides: {
+    root: ({ theme }) => ({
+      fontFamily: theme.typography.fontFamily,
+      // The ripple also marked keyboard focus; this outline does that job now.
+      '&.Mui-focusVisible': {
+        outline: `2px solid ${theme.vars.palette.text.primary}`,
+        outlineOffset: 2,
+      },
+    }),
+  },
 };
 
 // ----------------------------------------------------------------------
@@ -102,14 +119,11 @@ const MuiButton: Components<Theme>['MuiButton'] = {
       '&:hover': { boxShadow: 'none' },
       ...(ownerState.color === 'inherit' &&
         !ownerState.disabled && {
-          color: theme.vars.palette.common.white,
-          backgroundColor: theme.vars.palette.grey[900],
-          '&:hover': { boxShadow: 'none', backgroundColor: theme.vars.palette.grey[800] },
-          ...theme.applyStyles('dark', {
-            color: theme.vars.palette.grey[900],
-            backgroundColor: theme.vars.palette.common.white,
-            '&:hover': { backgroundColor: theme.vars.palette.grey[400] },
-          }),
+          // The ink button, from the tokens so it turns with the page in dark
+          // mode (the same values as grey 900 and 800 in light mode).
+          color: PAPER,
+          backgroundColor: INK,
+          '&:hover': { boxShadow: 'none', backgroundColor: INK_SOFT },
         }),
     }),
     /**
@@ -123,11 +137,8 @@ const MuiButton: Components<Theme>['MuiButton'] = {
         inheritColor: {
           ...(ownerState.color === 'inherit' &&
             !ownerState.disabled && {
-              borderColor: varAlpha(theme.vars.palette.grey['900Channel'], 0.14),
+              borderColor: HAIRLINE_STRONG,
               '&:hover': { backgroundColor: theme.vars.palette.action.hover },
-              ...theme.applyStyles('dark', {
-                borderColor: varAlpha(theme.vars.palette.common.whiteChannel, 0.14),
-              }),
             }),
         },
         base: {

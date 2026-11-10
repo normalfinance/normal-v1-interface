@@ -12,10 +12,28 @@
 
 import type { Activity } from '@/types/activity';
 
+import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
+import { indexById } from '@/lib/index/indexes';
+import { RouterLink } from '@/routes/components';
 import { abortTimeout } from '@/utils/abort-timeout';
+import { assetName } from '@/lib/portfolio/asset-names';
 import { useState, useEffect, useCallback } from 'react';
+import { transferEnding } from '@/lib/cctp/transfer-ending';
+import { heldSymbolOf, INDEX_DIRECTION } from '@/lib/index/legs';
+import {
+  INK,
+  WELL,
+  FAINT,
+  MUTED,
+  PAPER,
+  DANGER,
+  SUCCESS,
+  WARNING,
+  INK_SOFT,
+  BRAND_COLORS,
+} from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
@@ -26,6 +44,7 @@ import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from '@/components/template/iconify';
+import { appLocale } from '@/components/_common/app-ui';
 
 const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace' } as const;
 
@@ -49,6 +68,7 @@ interface CctpTransferDetail {
   dstSwapTxHash: string | null;
   gasTopUpTxHash: string | null;
   errorDetail: string | null;
+  quoteJson?: string | null;
   createdAt: string;
 }
 
@@ -62,6 +82,8 @@ interface Step {
   explorer: Explorer | null;
   /** done even without a hash of its own (e.g. the attestation stage) */
   done?: boolean;
+  /** It ended here calmly (nothing lost): a grey dash, never a tick or red. */
+  stopped?: boolean;
 }
 
 const explorerUrl = (explorer: Explorer, hash: string): string => {
@@ -80,79 +102,171 @@ const shortHash = (h: string) => (h.length > 14 ? `${h.slice(0, 8)}…${h.slice(
 
 type Translate = (key: string, opts?: Record<string, unknown>) => string;
 
+/** The index an index purchase bought (its quote stores the id), or null. */
+function indexOfTransfer(tr: CctpTransferDetail) {
+  if (tr.direction !== INDEX_DIRECTION) return null;
+  try {
+    return indexById(tr.quoteJson ? JSON.parse(tr.quoteJson)?.index : null);
+  } catch {
+    return null;
+  }
+}
+
 function buildSteps(tr: CctpTransferDetail, t: Translate): Step[] {
   const attested = !!tr.eventNonce || !!tr.mintTxHash || tr.status === 'COMPLETED';
-  if (tr.direction === 'stellar_to_crosschain') {
+  // How it ended, if it has: a step not reached by then is not waiting.
+  const ending = transferEnding(t, tr);
+  // An index purchase: one transfer to Base, then each coin bought there.
+  // It used to fall into the swap-in branch below ("Swap INDEX to USDC")
+  // and read as done the moment Circle finished, before any coin was bought.
+  if (tr.direction === INDEX_DIRECTION) {
+    const held = tr.dstSwapTxHash ? null : heldSymbolOf(tr.errorDetail);
     return [
       {
         key: 'burn',
-        label: t('Bridge USDC (Circle CCTP)'),
-        sub: t('Burn on Stellar'),
+        label: t('Hand it to Circle'),
+        sub: t('From your Stellar wallet'),
         hash: tr.burnTxHash,
         explorer: 'stellar',
       },
       {
         key: 'attest',
-        label: t('Circle attestation'),
-        sub: attested ? t('Attested') : t('Awaiting Circle'),
+        label: t('Circle confirms'),
+        sub: attested ? t('Confirmed') : ending ? t('Not reached') : t('Waiting for Circle'),
         hash: null,
         explorer: null,
         done: attested,
       },
       {
         key: 'mint',
-        label: t('Receive USDC on Base'),
-        sub: t('Mint'),
+        label: t('Created on {{chain}}', { chain: 'Base' }),
+        sub: t('Digital dollars at your own Base address'),
         hash: tr.mintTxHash,
         explorer: 'base',
+        done: tr.status === 'COMPLETED',
       },
       {
-        key: 'pivot',
-        label: t('Swap USDC → {{asset}}', { asset: tr.dstAsset }),
-        sub: t('Via LI.FI'),
-        hash: tr.dstSwapTxHash,
-        explorer: 'lifi',
+        key: 'buy',
+        label: t('Buy the coins'),
+        sub: held
+          ? t('{{coin}} is waiting for you to try it again', { coin: assetName(held) })
+          : tr.dstSwapTxHash
+            ? t('Every coin bought')
+            : t('Buying each coin'),
+        hash: null,
+        explorer: null,
+        done: !!tr.dstSwapTxHash,
       },
     ];
   }
+  // The words the journey page uses (lib/flow/plans.ts), not the protocol's:
+  // "Hand it to Circle", never "Burn on Stellar" (Niko 2026-11-09). A swap
+  // that was sent back says so as its last step (the steps update on a refund).
+  if (tr.direction === 'stellar_to_crosschain') {
+    const coin = assetName(tr.dstAsset);
+    return [
+      {
+        key: 'burn',
+        label: t('Hand it to Circle'),
+        sub: t('From your Stellar wallet'),
+        hash: tr.burnTxHash,
+        explorer: 'stellar',
+      },
+      {
+        key: 'attest',
+        label: t('Circle confirms'),
+        sub: attested ? t('Confirmed') : ending ? t('Not reached') : t('Waiting for Circle'),
+        hash: null,
+        explorer: null,
+        done: attested,
+      },
+      {
+        key: 'mint',
+        label: t('Created on {{chain}}', { chain: 'Base' }),
+        sub: t('Digital dollars at your own Base address'),
+        hash: tr.mintTxHash,
+        explorer: 'base',
+      },
+      ending?.kind === 'coming-back'
+        ? {
+            key: 'back',
+            label: t('Sent back as digital dollars'),
+            sub: t('The swap to {{coin}} could not finish', { coin }),
+            hash: null,
+            explorer: null,
+            done: true,
+          }
+        : {
+            key: 'pivot',
+            label: t('Buy {{coin}}', { coin }),
+            sub: t('Exchanged on Base and sent to your {{coin}} wallet', { coin }),
+            hash: tr.dstSwapTxHash,
+            explorer: 'lifi',
+          },
+    ];
+  }
   // inbound: crosschain_to_stellar
-  return [
-    {
-      key: 'src',
-      label: t('Swap {{asset}} → USDC', { asset: tr.srcAsset }),
-      sub: t('Via LI.FI'),
-      hash: tr.srcSwapTxHash,
-      explorer: 'lifi',
-    },
+  const coming = [
     {
       key: 'burn',
-      label: t('Bridge USDC (Circle CCTP)'),
-      sub: t('Burn on Base'),
+      label: t('Hand it to Circle'),
+      sub: t('From your Base address'),
       hash: tr.burnTxHash,
-      explorer: 'base',
+      explorer: 'base' as const,
     },
     {
       key: 'attest',
-      label: t('Circle attestation'),
-      sub: attested ? t('Attested') : t('Awaiting Circle (~20 min)'),
+      label: t('Circle confirms'),
+      sub: attested
+        ? t('Confirmed')
+        : ending
+          ? t('Not reached')
+          : t('Waiting for Circle, about 20 minutes'),
       hash: null,
       explorer: null,
       done: attested,
     },
     {
       key: 'mint',
-      label: t('Receive USDC on Stellar'),
-      sub: t('Mint'),
+      label: t('Created on Stellar'),
+      sub: t('Digital dollars in your Stellar wallet'),
       hash: tr.mintTxHash,
-      explorer: 'stellar',
+      explorer: 'stellar' as const,
     },
   ];
+  // "Bring back as USDC": digital dollars on their way home, no exchange.
+  if (tr.srcAsset === 'USDC' && tr.dstAsset === 'USDC') return coming;
+  const coin = assetName(tr.srcAsset);
+  const send: Step = {
+    key: 'src',
+    label: t('Send to the exchange'),
+    sub: t('Exchanged for digital dollars on Base'),
+    hash: tr.srcSwapTxHash,
+    explorer: 'lifi',
+  };
+  if (ending?.kind === 'sent-back') {
+    return [
+      { ...send, done: true },
+      {
+        key: 'back',
+        label: t('The exchange sends it back'),
+        sub: t('{{coin}} back in your wallet', { coin }),
+        hash: null,
+        explorer: null,
+        done: true,
+      },
+    ];
+  }
+  if (ending?.kind === 'not-sent') {
+    return [{ ...send, sub: t('Not sent: nothing left your wallet'), hash: null, stopped: true }];
+  }
+  return [send, ...coming];
 }
 
 const STATUS_CHIP: Record<string, { label: string; color: string; bg: string }> = {
-  COMPLETED: { label: 'Completed', color: '#0A6649', bg: 'rgba(26,179,125,0.12)' },
-  FAILED: { label: 'Failed', color: '#B91C1C', bg: 'rgba(220,38,38,0.1)' },
-  REFUNDED: { label: 'Refunded', color: '#8A4A00', bg: 'rgba(245,158,11,0.12)' },
+  COMPLETED: { label: 'Completed', color: SUCCESS, bg: 'rgba(26,179,125,0.12)' },
+  FAILED: { label: 'Failed', color: DANGER, bg: 'rgba(220,38,38,0.1)' },
+  REFUNDED: { label: 'Refunded', color: WARNING, bg: 'rgba(245,158,11,0.12)' },
 };
 
 export function SwapDetailModal({
@@ -165,6 +279,8 @@ export function SwapDetailModal({
   const { t } = useTranslate();
   const [transfer, setTransfer] = useState<CctpTransferDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [retryNote, setRetryNote] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     // Keep the last content mounted while the dialog animates closed (transferId
@@ -173,6 +289,7 @@ export function SwapDetailModal({
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     setTransfer(null);
+    setRetryNote(null);
     setLoading(true);
 
     // LIVE VIEW, not a snapshot (#66 follow-up, observed live): this dialog
@@ -197,7 +314,14 @@ export function SwapDetailModal({
         const fresh: CctpTransferDetail | null = res.ok ? (data.transfer ?? null) : null;
         // Never clobber shown content with a transient failure.
         if (fresh) setTransfer(fresh);
-        if (!fresh || !TERMINAL.includes(fresh.status)) {
+        // A swap out or an index purchase is COMPLETED once Circle is done,
+        // with its last step still to come: keep watching until it lands.
+        const lastStepPending =
+          !!fresh &&
+          fresh.status === 'COMPLETED' &&
+          (fresh.direction === 'stellar_to_crosschain' || fresh.direction === INDEX_DIRECTION) &&
+          !fresh.dstSwapTxHash;
+        if (!fresh || !TERMINAL.includes(fresh.status) || lastStepPending) {
           timer = setTimeout(load, 8_000);
         }
       } catch {
@@ -218,9 +342,11 @@ export function SwapDetailModal({
   }, [transferId]);
 
   const fmt = useCallback((v: string | null) => {
-    if (!v) return '—';
+    if (!v) return '';
     const n = Number(v);
-    return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: 8 }) : v;
+    // The app's language, never the browser's (DESIGN.md: a Slovenian browser
+    // showed "1,1292 SOL" on an English page).
+    return Number.isFinite(n) ? n.toLocaleString(appLocale(), { maximumFractionDigits: 8 }) : v;
   }, []);
 
   const steps = transfer ? buildSteps(transfer, t) : [];
@@ -228,26 +354,74 @@ export function SwapDetailModal({
   // Outbound COMPLETED means "minted on Base", not "delivered" — the pivot is
   // its own step and must earn its own green (live 2026-08-26: a stuck swap
   // showed all-green + Completed while the SOL never moved).
-  const isDone =
-    transfer?.status === 'COMPLETED' &&
-    (transfer.direction !== 'stellar_to_crosschain' || !!transfer.dstSwapTxHash);
-  const isFailed = transfer?.status === 'FAILED';
+  // An index purchase too: COMPLETED is Circle's part, the coins come after.
+  const settlesLater =
+    transfer?.direction === 'stellar_to_crosschain' || transfer?.direction === INDEX_DIRECTION;
+  const isDone = transfer?.status === 'COMPLETED' && (!settlesLater || !!transfer.dstSwapTxHash);
+  // A coin of an index purchase that stopped retrying: the person's move.
+  const heldCoin =
+    transfer?.direction === INDEX_DIRECTION && !transfer.dstSwapTxHash
+      ? heldSymbolOf(transfer.errorDetail)
+      : null;
+  // How it ended, in plain words: calm (grey, nothing lost) or a real failure.
+  const ending = transfer ? transferEnding(t, transfer) : null;
+  const isFailed = ending?.kind === 'failed';
   // Waiting on the USER, not on the chain — the icon must say "your move",
   // never spin (Niko 2026-08-26: "the loading stuff that is not correct").
   const needsAction =
-    !!transfer &&
-    transfer.direction === 'stellar_to_crosschain' &&
-    (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
-    !transfer.dstSwapTxHash &&
-    transfer.status !== 'REFUNDED';
-  const activeIdx = isDone ? -1 : steps.findIndex((s) => !(s.done || !!s.hash));
+    !!heldCoin ||
+    (!!transfer &&
+      transfer.direction === 'stellar_to_crosschain' &&
+      (!!transfer.mintTxHash || transfer.status === 'COMPLETED') &&
+      !transfer.dstSwapTxHash &&
+      transfer.status !== 'REFUNDED');
+  const activeIdx =
+    isDone || ending?.calm ? -1 : steps.findIndex((s) => !(s.done || !!s.hash || s.stopped));
   const chip = transfer
     ? transfer.direction === 'stellar_to_crosschain' &&
       transfer.status === 'COMPLETED' &&
       !transfer.dstSwapTxHash
-      ? { label: t('Action needed'), color: '#8A4A00', bg: 'rgba(245,158,11,0.12)' }
-      : STATUS_CHIP[transfer.status]
+      ? { label: t('Action needed'), color: WARNING, bg: 'rgba(245,158,11,0.12)' }
+      : heldCoin
+        ? { label: t('Action needed'), color: WARNING, bg: 'rgba(245,158,11,0.12)' }
+        : transfer.direction === INDEX_DIRECTION && transfer.status === 'COMPLETED' && !isDone
+          ? undefined // Circle's part is done, the coins are still being bought
+          : ending?.calm
+            ? {
+                label: ending.kind === 'not-sent' ? t('Not sent') : t('Sent back'),
+                color: INK_SOFT,
+                bg: 'rgba(var(--nf-ink-rgb),0.06)',
+              }
+            : STATUS_CHIP[transfer.status]
     : undefined;
+
+  // Put a held coin back in line from here (recovery reachable from wherever
+  // the person already is): the same request and words as the buy page.
+  const retryHeld = async () => {
+    if (!transferId || !heldCoin) return;
+    const coin = assetName(heldCoin);
+    setRetrying(true);
+    setRetryNote(t('Trying {{coin}} again on another route…', { coin }));
+    const res = await fetch(`/api/index/purchases/${transferId}/retry`, {
+      method: 'POST',
+      headers: await buildAuthHeaders(),
+      credentials: 'include',
+    }).catch(() => null);
+    setRetrying(false);
+    // The coin is back in line (the server cleared the mark): show it so now,
+    // without waiting for the next read.
+    if (res?.ok) setTransfer((tr) => (tr ? { ...tr, errorDetail: null } : tr));
+    setRetryNote(
+      res?.ok
+        ? t('{{coin}} is being bought again. It finishes on its own: follow it in Activity.', {
+            coin,
+          })
+        : t('That did not start. Your {{coin}} share is still safe at your own Base address.', {
+            coin,
+          })
+    );
+    window.dispatchEvent(new Event('nf:activity-updated'));
+  };
 
   return (
     <Dialog
@@ -258,13 +432,13 @@ export function SwapDetailModal({
       PaperProps={{ sx: { borderRadius: 'var(--radius-lg)', p: '22px', maxWidth: 420 } }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '14px' }}>
-        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
-          {t('Swap details')}
+        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: INK }}>
+          {transfer?.direction === INDEX_DIRECTION ? t('Purchase details') : t('Swap details')}
         </Typography>
         <Box
           component="button"
           onClick={onClose}
-          sx={{ all: 'unset', cursor: 'pointer', color: '#9A9AA3', display: 'flex' }}
+          sx={{ all: 'unset', cursor: 'pointer', color: FAINT, display: 'flex' }}
         >
           <Iconify icon="mingcute:close-line" width={20} />
         </Box>
@@ -272,10 +446,10 @@ export function SwapDetailModal({
 
       {loading && !transfer ? (
         <Stack alignItems="center" sx={{ py: '32px' }}>
-          <CircularProgress size={22} sx={{ color: '#0A0A0F' }} />
+          <CircularProgress size={22} sx={{ color: INK }} />
         </Stack>
       ) : !transfer ? (
-        <Typography sx={{ fontSize: '13px', color: '#6B6B76', py: '20px', textAlign: 'center' }}>
+        <Typography sx={{ fontSize: '13px', color: MUTED, py: '20px', textAlign: 'center' }}>
           {t('Could not load this transfer.')}
         </Typography>
       ) : (
@@ -285,15 +459,24 @@ export function SwapDetailModal({
             sx={{
               p: '12px 14px',
               borderRadius: 'var(--radius-md)',
-              bgcolor: '#FAFAFB',
-              border: '1px solid rgba(10,10,15,0.08)',
+              bgcolor: WELL,
+              border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
               mb: '14px',
             }}
           >
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', ...MONO }}>
-                {fmt(transfer.srcAmount)} {transfer.srcAsset} → {fmt(transfer.dstAmount)}{' '}
-                {transfer.dstAsset}
+              <Typography sx={{ fontSize: '15px', fontWeight: 500, color: INK, ...MONO }}>
+                {transfer.direction === INDEX_DIRECTION ? (
+                  <>
+                    {fmt(transfer.srcAmount)} {transfer.srcAsset} →{' '}
+                    {indexOfTransfer(transfer)?.name ?? t('an index')}
+                  </>
+                ) : (
+                  <>
+                    {fmt(transfer.srcAmount)} {transfer.srcAsset} → {fmt(transfer.dstAmount)}{' '}
+                    {transfer.dstAsset}
+                  </>
+                )}
               </Typography>
               <Chip
                 label={t(chip?.label ?? 'In progress')}
@@ -302,7 +485,7 @@ export function SwapDetailModal({
                   height: 22,
                   fontSize: '11px',
                   fontWeight: 500,
-                  color: chip?.color ?? '#8A4A00',
+                  color: chip?.color ?? WARNING,
                   bgcolor: chip?.bg ?? 'rgba(245,158,11,0.12)',
                   '& .MuiChip-label': { px: '8px' },
                 }}
@@ -335,7 +518,12 @@ export function SwapDetailModal({
                       mt: '1px',
                     }}
                   >
-                    {stepDone ? (
+                    {s.stopped ? (
+                      <Box
+                        sx={{ width: 10, height: 2, bgcolor: FAINT }}
+                        aria-label={t('Not sent')}
+                      />
+                    ) : stepDone ? (
                       <Iconify icon="lets-icons:check-fill" width={20} sx={{ color: '#1AB37D' }} />
                     ) : showError ? (
                       <Iconify
@@ -347,17 +535,17 @@ export function SwapDetailModal({
                       <Iconify
                         icon="eva:alert-triangle-fill"
                         width={18}
-                        sx={{ color: '#B45309' }}
+                        sx={{ color: BRAND_COLORS.yellow.deep }}
                       />
                     ) : isActive ? (
-                      <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />
+                      <CircularProgress size={16} sx={{ color: INK }} />
                     ) : (
                       <Box
                         sx={{
                           width: 8,
                           height: 8,
                           borderRadius: '50%',
-                          bgcolor: 'rgba(10,10,15,0.15)',
+                          bgcolor: 'rgba(var(--nf-ink-rgb),0.15)',
                         }}
                       />
                     )}
@@ -367,13 +555,13 @@ export function SwapDetailModal({
                       sx={{
                         fontSize: '13.5px',
                         fontWeight: 500,
-                        color: '#0A0A0F',
+                        color: INK,
                         lineHeight: 1.35,
                       }}
                     >
                       {s.label}
                     </Typography>
-                    <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', lineHeight: 1.4 }}>
+                    <Typography sx={{ fontSize: '11.5px', color: FAINT, lineHeight: 1.4 }}>
                       {s.sub}
                     </Typography>
                   </Box>
@@ -387,11 +575,11 @@ export function SwapDetailModal({
                         alignItems: 'center',
                         gap: '3px',
                         fontSize: '11px',
-                        color: '#6B6B76',
+                        color: MUTED,
                         textDecoration: 'none',
                         ...MONO,
                         flexShrink: 0,
-                        '&:hover': { color: '#0A0A0F' },
+                        '&:hover': { color: INK },
                       }}
                     >
                       {shortHash(s.hash)}
@@ -404,31 +592,33 @@ export function SwapDetailModal({
           </Stack>
 
           {transfer.gasTopUpTxHash && !['skipped', 'pending'].includes(transfer.gasTopUpTxHash) && (
-            <Typography sx={{ fontSize: '11px', color: '#9A9AA3', mt: '8px' }}>
+            <Typography sx={{ fontSize: '11px', color: FAINT, mt: '8px' }}>
               {t('Network fees on Base were sponsored by Normal.')}
             </Typography>
           )}
 
-          {isFailed && transfer.errorDetail && (
+          {ending && (
             <Box
               sx={{
                 mt: '12px',
                 px: '12px',
                 py: '10px',
                 borderRadius: 'var(--radius-md)',
-                bgcolor: 'rgba(220,38,38,0.05)',
-                border: '1px solid rgba(220,38,38,0.15)',
+                bgcolor: ending.calm ? WELL : 'rgba(220,38,38,0.05)',
+                border: ending.calm
+                  ? '1px solid rgba(var(--nf-ink-rgb),0.08)'
+                  : '1px solid rgba(220,38,38,0.15)',
               }}
             >
               <Typography
                 sx={{
                   fontSize: '12px',
-                  color: '#2A2A33',
+                  color: INK_SOFT,
                   lineHeight: 1.5,
                   wordBreak: 'break-word',
                 }}
               >
-                {transfer.errorDetail}
+                {ending.text}
               </Typography>
             </Box>
           )}
@@ -436,7 +626,8 @@ export function SwapDetailModal({
               from HERE too — recovery reachable from wherever you already
               are. The swap page's banner owns the actual handler; this
               dispatches to it (and gets you there if you're elsewhere). */}
-          {transfer.status !== 'REFUNDED' &&
+          {!ending &&
+            transfer.status !== 'REFUNDED' &&
             ((transfer.direction === 'crosschain_to_stellar' &&
               !!transfer.srcSwapTxHash &&
               !transfer.burnTxHash &&
@@ -448,7 +639,7 @@ export function SwapDetailModal({
                 component="button"
                 onClick={() => {
                   onClose();
-                  if (window.location.pathname.startsWith('/swap')) {
+                  if (window.location.pathname.startsWith(paths.swap)) {
                     window.dispatchEvent(
                       new CustomEvent('nf:cctp-resume', { detail: { id: transferId } })
                     );
@@ -456,7 +647,7 @@ export function SwapDetailModal({
                     // A dispatched event dies with the old document on a full
                     // navigation (live 2026-08-26: "clicking does nothing" from
                     // any page but /swap) — the id rides the URL instead.
-                    window.location.assign(`/swap?cctpResume=${transferId}`);
+                    window.location.assign(`${paths.swap}?cctpResume=${transferId}`);
                   }
                 }}
                 sx={{
@@ -471,14 +662,67 @@ export function SwapDetailModal({
                   fontWeight: 500,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
-                  bgcolor: '#0A0A0F',
-                  color: '#fff',
+                  bgcolor: INK,
+                  color: PAPER,
                   '&:hover': { opacity: 0.85 },
                 }}
               >
                 {t('Finish this transfer')}
               </Box>
             )}
+          {heldCoin && !retrying && (
+            <Box
+              component="button"
+              onClick={retryHeld}
+              disabled={retrying}
+              sx={{
+                mt: '12px',
+                appearance: 'none',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                px: '16px',
+                py: '10px',
+                width: '100%',
+                fontSize: '13px',
+                fontWeight: 500,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                bgcolor: INK,
+                color: PAPER,
+                '&:hover': { opacity: 0.85 },
+              }}
+            >
+              {t('Try {{coin}} again', { coin: assetName(heldCoin) })}
+            </Box>
+          )}
+          {retryNote && (
+            <Typography
+              sx={{ mt: '12px', fontSize: '13px', lineHeight: 1.5, color: 'text.secondary' }}
+            >
+              {retryNote}
+            </Typography>
+          )}
+          {/* The swap's own page: its whole journey, where the money is, and
+              the way forward when it waits (Niko 2026-11-09). */}
+          {transferId && transfer.direction !== INDEX_DIRECTION && (
+            <Link
+              component={RouterLink}
+              href={paths.swapTransfer(transferId)}
+              onClick={onClose}
+              sx={{
+                display: 'block',
+                mt: '14px',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: INK,
+                textAlign: 'center',
+                textDecoration: 'underline',
+                textUnderlineOffset: '3px',
+              }}
+            >
+              {t('See every step')}
+            </Link>
+          )}
         </>
       )}
     </Dialog>

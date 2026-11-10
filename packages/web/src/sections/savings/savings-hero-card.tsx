@@ -1,20 +1,12 @@
 'use client';
 
-import Box from '@mui/material/Box';
-import Skeleton from '@mui/material/Skeleton';
 import Typography from '@mui/material/Typography';
+
+import { FIGURES, AppBlock, Headline, formatUsd, SummaryBlock } from '@/components/_common/app-ui';
 
 import { SavingsChart } from './savings-chart';
 
-const MONO = '"Geist Mono", ui-monospace, monospace';
-
-// Divider shared style
-const DIVIDER_SX = {
-  display: { xs: 'none', sm: 'block' },
-  width: '1px',
-  alignSelf: 'stretch',
-  bgcolor: 'rgba(255,255,255,0.08)',
-};
+// ----------------------------------------------------------------------
 
 interface SavingsHeroCardProps {
   currentValue: number;
@@ -25,307 +17,81 @@ interface SavingsHeroCardProps {
   walletAddress?: string;
 }
 
+/**
+ * The top of the Savings page: the balance and the rate, what it has earned,
+ * what you put in and what today's rate pays a month and a year.
+ */
 export function SavingsHeroCard({
   currentValue,
   totalDeposited,
   earnings,
   apy,
   loading,
-  walletAddress,
 }: SavingsHeroCardProps) {
-  const earningsPct = totalDeposited > 0 ? ((earnings / totalDeposited) * 100).toFixed(2) : '0.00';
-
-  const estAnnual = apy !== null ? currentValue * (apy / 100) : null;
-  const estWeekly = apy !== null ? (currentValue * (apy / 100)) / 52 : null;
-  const estMonthly = apy !== null ? (currentValue * (apy / 100)) / 12 : null;
-
-  const fmt = (n: number) =>
-    n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-  const fmt7 = (n: number) =>
-    n.toLocaleString('en-US', { minimumFractionDigits: 7, maximumFractionDigits: 7 });
+  const yearly = apy !== null ? currentValue * (apy / 100) : null;
+  const earnedPct = totalDeposited > 0 ? (earnings / totalDeposited) * 100 : null;
 
   return (
-    <Box
-      sx={{
-        borderRadius: 'var(--radius-lg)',
-        background: 'linear-gradient(135deg, #0A0A0F 0%, #2A2A33 100%)',
-        p: { xs: '24px', md: '32px' },
-        position: 'relative',
-        overflow: 'hidden',
-      }}
+    <SummaryBlock
+      aria-label="Savings balance"
+      loading={loading}
+      stats={[
+        { key: 'in', label: 'You put in', value: formatUsd(totalDeposited) },
+        {
+          key: 'earned',
+          label: 'Earned so far',
+          value: `+${formatUsd(earnings)}`,
+          note:
+            earnedPct !== null && earnings > 0
+              ? `${earnedPct.toFixed(2)}% on what you put in`
+              : undefined,
+        },
+        ...(yearly !== null
+          ? [
+              {
+                key: 'month',
+                label: "A month at today's rate",
+                value: `~${formatUsd(yearly / 12)}`,
+              },
+              { key: 'year', label: "A year at today's rate", value: `~${formatUsd(yearly)}` },
+            ]
+          : []),
+      ]}
     >
-      {/* subtle gradient orb */}
-      <Box
-        sx={{
-          position: 'absolute',
-          width: 340,
-          height: 340,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)',
-          top: -80,
-          right: -60,
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Stats row — 4 columns, earnings and est projections each stack two rows */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr 1fr',
-            sm: '1fr 1px 1fr 1px 1fr 1px 1fr',
-          },
-          columnGap: { sm: '28px' },
-          rowGap: { xs: '24px', sm: '0' },
-        }}
-      >
-        {/* Current Balance — dollar value large, 7-decimal USDC below */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <Typography
-            sx={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: 'rgba(255,255,255,0.45)',
-              letterSpacing: '0.02em',
-            }}
-          >
-            Current Balance
-          </Typography>
-          {loading && currentValue === 0 ? (
-            <Skeleton
-              variant="text"
-              width={90}
-              height={28}
-              sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
-            />
-          ) : (
-            <>
-              <Typography
-                sx={{
-                  fontSize: '22px',
-                  fontWeight: 500,
-                  fontFamily: MONO,
-                  letterSpacing: '-0.03em',
-                  color: '#FFFFFF',
-                  lineHeight: 1.1,
-                }}
-              >
-                ${fmt(currentValue)}
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  fontFamily: MONO,
-                  letterSpacing: '-0.01em',
-                  color: 'rgba(255,255,255,0.35)',
-                  lineHeight: 1,
-                }}
-              >
-                {fmt7(currentValue)} USDC
-              </Typography>
-            </>
-          )}
-        </Box>
-
-        <Box sx={DIVIDER_SX} />
-
-        {/* Current Earnings */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <Typography
-            sx={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: 'rgba(255,255,255,0.45)',
-              letterSpacing: '0.02em',
-            }}
-          >
-            {`Current Earnings (+${earningsPct}%)`}
-          </Typography>
-          {loading && earnings === 0 ? (
-            <Skeleton
-              variant="text"
-              width={90}
-              height={28}
-              sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
-            />
-          ) : (
-            <>
-              <Typography
-                sx={{
-                  fontSize: '22px',
-                  fontWeight: 500,
-                  fontFamily: MONO,
-                  letterSpacing: '-0.03em',
-                  color: earnings > 0 ? '#4ADE80' : '#FFFFFF',
-                  lineHeight: 1.1,
-                }}
-              >
-                ${fmt(earnings)}
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  fontFamily: MONO,
-                  letterSpacing: '-0.01em',
-                  color: 'rgba(255,255,255,0.35)',
-                  lineHeight: 1,
-                }}
-              >
-                {fmt7(earnings)} USDC
-              </Typography>
-            </>
-          )}
-        </Box>
-
-        <Box sx={DIVIDER_SX} />
-
-        {/* Est. column: Annual (big) + Weekly / Monthly side by side (sub) */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <Box>
-            <Typography
-              sx={{
-                fontSize: '12px',
-                fontWeight: 500,
-                color: 'rgba(255,255,255,0.45)',
-                letterSpacing: '0.02em',
-                mb: '4px',
-              }}
-            >
-              Est. Annual
+      <Headline
+        label="Savings balance"
+        value={formatUsd(currentValue)}
+        loading={loading}
+        aside={
+          apy !== null && (
+            <Typography sx={{ ...FIGURES, fontSize: 14, fontWeight: 500, color: 'text.primary' }}>
+              {`${Number(apy).toFixed(2)}% a year`}
             </Typography>
-            {estAnnual === null || loading ? (
-              <Skeleton
-                variant="text"
-                width={90}
-                height={28}
-                sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
-              />
-            ) : (
-              <Typography
-                sx={{
-                  fontSize: '22px',
-                  fontWeight: 500,
-                  fontFamily: MONO,
-                  letterSpacing: '-0.03em',
-                  color: '#FFFFFF',
-                  lineHeight: 1.1,
-                }}
-              >
-                ${fmt(estAnnual)}
-              </Typography>
-            )}
-          </Box>
-          <Box sx={{ display: 'flex', gap: '16px' }}>
-            <Box>
-              <Typography
-                sx={{
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  color: 'rgba(255,255,255,0.3)',
-                  letterSpacing: '0.02em',
-                  mb: '2px',
-                }}
-              >
-                Est. Weekly
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  fontFamily: MONO,
-                  letterSpacing: '-0.02em',
-                  color: 'rgba(255,255,255,0.6)',
-                }}
-              >
-                ~${fmt(estWeekly ?? 0)}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography
-                sx={{
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  color: 'rgba(255,255,255,0.3)',
-                  letterSpacing: '0.02em',
-                  mb: '2px',
-                }}
-              >
-                Est. Monthly
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  fontFamily: MONO,
-                  letterSpacing: '-0.02em',
-                  color: 'rgba(255,255,255,0.6)',
-                }}
-              >
-                ~${fmt(estMonthly ?? 0)}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+          )
+        }
+        note="The rate changes with the market and is never guaranteed."
+      />
+    </SummaryBlock>
+  );
+}
 
-        <Box sx={DIVIDER_SX} />
-
-        {/* APY */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <Typography
-            sx={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: 'rgba(255,255,255,0.45)',
-              letterSpacing: '0.02em',
-            }}
-          >
-            Current APY
-          </Typography>
-          {apy === null ? (
-            <Skeleton
-              variant="text"
-              width={80}
-              height={28}
-              sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
-            />
-          ) : (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Box
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  bgcolor: '#4ADE80',
-                  flexShrink: 0,
-                }}
-              />
-              <Typography
-                sx={{
-                  fontSize: '22px',
-                  fontWeight: 500,
-                  fontFamily: MONO,
-                  letterSpacing: '-0.03em',
-                  color: '#4ADE80',
-                  lineHeight: 1.1,
-                }}
-              >
-                {Number(apy).toFixed(2)}%
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      </Box>
-
-      {/* Earnings chart */}
+/** What the savings have earned over time, as a line in ink. */
+export function SavingsEarningsCard({
+  walletAddress,
+  earnings,
+  currentValue,
+}: {
+  walletAddress?: string;
+  earnings: number;
+  currentValue: number;
+}) {
+  return (
+    <AppBlock title="Earnings">
       <SavingsChart
         walletAddress={walletAddress}
         currentEarnings={earnings}
         currentBalance={currentValue}
       />
-    </Box>
+    </AppBlock>
   );
 }

@@ -114,6 +114,9 @@
     "AUTOPILOT_MAX_TX_USD",
     "NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY",
 
+    // Crypto index (ships off; lib/index/flag.ts)
+    "NEXT_PUBLIC_INDEX_ENABLED",
+
     // CCTP bridge + relayer
     "CCTP_PILOT_MAX_USD",
     "CCTP_RELAYER_EVM_ADDRESS",

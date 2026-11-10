@@ -8,6 +8,7 @@ import { usePersistStore } from '@normalfinance/state';
 import { shouldAdoptIntoSlot } from '@/lib/wallet-slot';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useNormalWallet } from '@/hooks/stellar/use-normal-wallet';
+import { INK, FAINT, PAPER, DANGER, INK_SOFT } from '@/theme/brand-colors';
 import {
   linkWallet,
   checkWalletLinkLimit,
@@ -24,7 +25,6 @@ import FingerprintIcon from '@mui/icons-material/Fingerprint';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from '@/components/template/iconify';
-
 // ---------------------------------------------------------------------------
 // Gate dialog shown when the user starts an action on a chain (send, receive)
 // without an address for it yet. The account is provisioned lazily and only
@@ -120,7 +120,7 @@ export function ChainSetupDialog({
       <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography
-            sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+            sx={{ fontSize: '17px', fontWeight: 500, color: INK, letterSpacing: '-0.02em' }}
           >
             {t('Set up your {{chain}} wallet', { chain: label })}
           </Typography>
@@ -133,15 +133,15 @@ export function ChainSetupDialog({
               height: 28,
               borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: 'rgba(10,10,15,0.06)',
-              color: '#0A0A0F',
+              bgcolor: 'rgba(var(--nf-ink-rgb),0.06)',
+              color: INK,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               fontFamily: 'inherit',
               transition: 'background 150ms ease',
-              '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+              '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.1)' },
             }}
           >
             <Iconify icon="mingcute:close-line" width={16} />
@@ -160,9 +160,9 @@ export function ChainSetupDialog({
               border: '1px solid rgba(59,130,246,0.15)',
             }}
           >
-            <Typography sx={{ fontSize: '13px', color: '#2A2A33', lineHeight: 1.55 }}>
+            <Typography sx={{ fontSize: '13px', color: INK_SOFT, lineHeight: 1.55 }}>
               {t(
-                'You don’t have a {{chain}} address yet. To continue, add {{chain}} to your Normal wallet — it takes one passkey confirmation and is created on the same secure wallet you already use.',
+                'You don’t have a {{chain}} address yet. To continue, add {{chain}} to your Normal wallet. It takes one passkey confirmation and is created on the same secure wallet you already use.',
                 { chain: label }
               )}
             </Typography>
@@ -183,19 +183,19 @@ export function ChainSetupDialog({
                 px: '20px',
                 borderRadius: 'var(--radius-md)',
                 border: 'none',
-                bgcolor: '#0A0A0F',
-                color: '#fff',
+                bgcolor: INK,
+                color: PAPER,
                 fontSize: '14px',
                 fontWeight: 500,
                 fontFamily: 'inherit',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 opacity: loading ? 0.7 : 1,
                 transition: 'all 0.15s',
-                '&:hover:not(:disabled)': { bgcolor: '#2A2A33' },
+                '&:hover:not(:disabled)': { bgcolor: INK_SOFT },
               }}
             >
               {loading ? (
-                <CircularProgress size={16} sx={{ color: '#fff' }} />
+                <CircularProgress size={16} sx={{ color: PAPER }} />
               ) : (
                 <FingerprintIcon sx={{ fontSize: 18 }} />
               )}
@@ -205,7 +205,7 @@ export function ChainSetupDialog({
             <Box
               sx={{
                 fontSize: '11.5px',
-                color: '#9A9AA3',
+                color: FAINT,
                 textAlign: 'center',
                 lineHeight: 1.5,
               }}
@@ -217,7 +217,7 @@ export function ChainSetupDialog({
               <Box
                 sx={{
                   fontSize: '12px',
-                  color: '#B91C1C',
+                  color: DANGER,
                   bgcolor: 'rgba(185,28,28,0.06)',
                   border: '1px solid rgba(185,28,28,0.15)',
                   borderRadius: 'var(--radius-md)',

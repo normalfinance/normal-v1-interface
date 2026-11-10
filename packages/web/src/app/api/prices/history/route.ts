@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 
 import { NextResponse } from 'next/server';
 import { redis } from '@/server/rateLimiter';
+import { COINGECKO_IDS as SYMBOL_TO_COINGECKO_ID } from '@/lib/prices/markets';
 
 // ---------------------------------------------------------------------------
 // Price history proxy behind a Redis cache so all visitors share one upstream
@@ -12,14 +13,6 @@ import { redis } from '@/server/rateLimiter';
 //   paid-only there; COINGECKO_API_KEY optional, keyless works at our volume)
 // - 5y/all      → Kraken public weekly OHLC (keyless, BTC back to 2013)
 // ---------------------------------------------------------------------------
-
-const SYMBOL_TO_COINGECKO_ID: Record<string, string> = {
-  BTC: 'bitcoin',
-  XLM: 'stellar',
-  USDC: 'usd-coin',
-  ETH: 'ethereum',
-  SOL: 'solana',
-};
 
 const SYMBOL_TO_KRAKEN_PAIR: Record<string, string> = {
   BTC: 'XBTUSD',

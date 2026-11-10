@@ -4,31 +4,64 @@ import { it, expect, describe } from '@jest/globals';
 
 import { shadows } from './core/shadows';
 import { customShadows } from './core/custom-shadows';
+import { SITE_THEME_CSS, SITE_THEME_ATTR, SITE_THEME_INIT } from './site-theme';
+import {
+  INK,
+  BAND,
+  FIXED,
+  FAINT,
+  HOVER,
+  MUTED,
+  PAPER,
+  CANVAS,
+  PALETTE,
+  INK_SOFT,
+  FOOTER_BG,
+  HUE_PALETTE,
+  BLOCK_COLORS,
+  BRAND_COLORS,
+  BLOCK_PALETTE,
+  SOCIAL_COLORS,
+  SOCIAL_PALETTE,
+  HAIRLINE_COLOR,
+  STATUS_PALETTE,
+  HAIRLINE_STRONG,
+  STATEMENT_COLORS,
+  STATEMENT_PALETTE,
+} from './brand-colors';
 
 // ---------------------------------------------------------------------------
 // The rules in packages/web/DESIGN.md, enforced on source text so a page can't
-// drift back: a new block with a shadow or a 22px corner fails CI on the PR
-// that adds it. Exceptions below each carry their reason.
+// drift back: a new block with a shadow, a gradient or a sliding panel fails CI
+// on the PR that adds it. Exceptions below each carry their reason.
 // ---------------------------------------------------------------------------
 
 /** Files allowed a non-token radius, each with its reason. */
 const RADIUS_EXCEPTIONS: Record<string, string> = {
   'components/_common/stat-card.tsx': 'ApexCharts bar option: a number of pixels, not CSS',
-  'components/_common/glow-border.tsx': 'radius is passed in by the caller',
-  'theme/create-theme.ts': 'MUI needs a number here; it equals --radius-md',
-};
-
-/** Files allowed a soft shadow, each with its reason. */
-const SHADOW_EXCEPTIONS: Record<string, string> = {
-  'sections/landing-page/hero-portfolio-card.tsx':
-    'the one shadow in the product: this block floats on the moving hero background',
+  'theme/create-theme.ts':
+    'MUI needs a number here; it equals --radius-md (0: everything is square)',
+  'sections/home/hero-phone.tsx':
+    'the screen of the phone in the hero photo: its corners are measured from the photo',
+  'sections/home/cta-phones.tsx':
+    "the closing carousel's phones: drawings of a device and its screens, with their corners",
 };
 
 /** Files allowed background blur, each with its reason. */
 const BLUR_EXCEPTIONS: Record<string, string> = {
-  'layouts/dashboard/normal-navbar.tsx': 'page content scrolls under the navbar',
-  'layouts/core/header-section.tsx': 'a sticky header, for the same reason as the navbar',
+  'layouts/core/header-section.tsx': 'the template header; no page renders one (see layouts/)',
   'theme/core/mixins/background.ts': 'the bgBlur mixin itself; its callers are checked here',
+};
+
+/** Files allowed to write a gradient, each with its reason. */
+const GRADIENT_EXCEPTIONS: Record<string, string> = {
+  'components/_common/hatch.tsx':
+    'the hatch: hard-edged 1px lines in the hairline colour, a texture with no fade',
+  'sections/home/home-hero.tsx':
+    'a scrim over the photo so the headline reads; a fade to nothing, not a drawn gradient',
+  'theme/core/mixins/background.ts': 'template mixin definitions; their callers are checked here',
+  'theme/core/mixins/border.ts': 'template mixin definitions; their callers are checked here',
+  'theme/core/mixins/text.ts': 'template mixin definitions; their callers are checked here',
 };
 
 const SRC = path.join(__dirname, '..');
@@ -70,19 +103,30 @@ function violations(
 
 const quoted = (value: string) => value.match(/'[^']*'/g) ?? [];
 
+/** WCAG 2.x contrast ratio between two #RRGGBB colours. */
+function contrast(a: string, b: string): number {
+  const luminance = (hex: string) => {
+    const [r, g, bl] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 // ---------------------------------------------------------------------------
 
 describe('design rules', () => {
   it('finds the source it is meant to scan', () => {
     expect(FILES.length).toBeGreaterThan(300);
-    expect(FILES.some(({ rel }) => rel === 'sections/landing-page/hero-header/index.tsx')).toBe(
-      true
-    );
+    expect(FILES.some(({ rel }) => rel === 'sections/home/home-hero.tsx')).toBe(true);
   });
 
   it('every corner is a token or a true circle', () => {
     const allowed =
-      /^'(var\(--radius-(xs|sm|md|lg|full)\)( !important)?|var\(--radius-lg\) var\(--radius-lg\) 0 0|0 0 var\(--radius-lg\) var\(--radius-lg\)|50%|inherit)'$/;
+      /^'(var\(--radius-(xs|sm|md|lg|full|site)\)( !important)?|var\(--radius-lg\) var\(--radius-lg\) 0 0|0 0 var\(--radius-lg\) var\(--radius-lg\)|50%|inherit)'$/;
     const found = violations(
       /\bborderRadius\s*[:=]\s*([^,\n}]+)/g,
       (match) => {
@@ -95,16 +139,12 @@ describe('design rules', () => {
     expect(found).toEqual([]);
   });
 
-  it('nothing has a soft shadow', () => {
-    const allowed = /^'(none( !important)?|0 0 0 \d+(\.\d+)?px rgba\([^)]*\))'$/;
-    const found = violations(
-      /\bboxShadow:\s*('[^']*'|`[^`]*`|[^,\n}]+)/g,
-      (match) => {
-        const strings = quoted(match[1]);
-        return strings.length > 0 && strings.every((s) => allowed.test(s));
-      },
-      SHADOW_EXCEPTIONS
-    );
+  it('nothing has a shadow, not even a ring', () => {
+    const allowed = /^'none( !important)?'$/;
+    const found = violations(/\bboxShadow:\s*('[^']*'|`[^`]*`|[^,\n}]+)/g, (match) => {
+      const strings = quoted(match[1]);
+      return strings.length > 0 && strings.every((s) => allowed.test(s));
+    });
     expect(found).toEqual([]);
   });
 
@@ -113,9 +153,23 @@ describe('design rules', () => {
     expect(Object.values(customShadows.light).every((value) => value === 'none')).toBe(true);
   });
 
-  it('the only shadow in the product is the hero block', () => {
-    const hero = FILES.find(({ rel }) => rel === 'sections/landing-page/hero-portfolio-card.tsx');
-    expect(hero?.text.match(/\bboxShadow:/g)).toHaveLength(1);
+  it('nothing is drawn with a gradient (the logo file is the only one)', () => {
+    const found = violations(
+      /(?:linear|radial|conic)-gradient\(|\btype:\s*'gradient'/g,
+      () => false,
+      GRADIENT_EXCEPTIONS
+    );
+    expect(found).toEqual([]);
+  });
+
+  it('nobody calls the template gradient mixins', () => {
+    // The definition files only name them in their usage comments.
+    const found = violations(
+      /mixins\.(?:bgGradient|borderGradient|textGradient)\(/g,
+      () => false,
+      GRADIENT_EXCEPTIONS
+    );
+    expect(found).toEqual([]);
   });
 
   it('hover never lifts, scales or slides anything', () => {
@@ -123,7 +177,28 @@ describe('design rules', () => {
     expect(found).toEqual([]);
   });
 
-  it('nothing blurs the page behind it except the navbar', () => {
+  it('nothing on a page moves', () => {
+    const found = [
+      // A keyframe animation may fade (a blinking caret), never move: written
+      // as a style object or with MUI's keyframes template.
+      ...violations(
+        /'@keyframes [^']+':\s*\{(?:[^{}]|\{[^{}]*\})*\}|\bkeyframes`[^`]*`/g,
+        (match) =>
+          !/\btransform\b|translate|scale(?:X|Y)?\(/.test(match[0]) ||
+          // The one thing that turns: the loading ring on the step that is
+          // happening now (Niko 2026-11-09). It stays still for people who
+          // ask for less motion (components/_common/flow/flow-journey.tsx).
+          match[0].startsWith("'@keyframes nf-step-turn'")
+      ),
+      // Panels and indicators jump to their new place; they never slide there.
+      ...violations(/\btransition:\s*['`][^'`]*\btransform\b/g, () => false),
+      ...violations(/\.animate\(\s*\[/g, () => false),
+      ...violations(/from 'framer-motion'/g, () => false),
+    ];
+    expect(found).toEqual([]);
+  });
+
+  it('nothing blurs the page behind it', () => {
     const found = violations(
       /\bbackdropFilter:\s*([^\n]*)|\bmixins\.bgBlur\(/g,
       (match) => (match[1] ?? '').includes("'none'"),
@@ -140,5 +215,153 @@ describe('design rules', () => {
   it('pages use the one content width', () => {
     const found = violations(/\bmaxWidth:\s*'?(?:1200|1240|1400)\b/g, () => false);
     expect(found).toEqual([]);
+  });
+});
+
+// The marketing site renders in both modes, so its colours come from the
+// tokens (theme/brand-colors.ts), never a fixed light value: a '#0A0A0F' or an
+// ink-alpha border would stay dark on the dark page. White and white alphas
+// are allowed: the site uses them only on surfaces dark in both modes (the
+// footer, photos, ink bands).
+const SITE_SOURCES = [
+  'app/(site)/',
+  'layouts/site/',
+  'sections/home/',
+  'sections/about/',
+  'sections/contact/',
+  'sections/legal/',
+  'sections/roadmap/',
+  'sections/blocked/',
+  'sections/error/',
+  'components/_common/brand.tsx',
+  'components/_common/backers.tsx',
+  'components/_common/icon-tile.tsx',
+  'components/_common/frame-lines.tsx',
+  'components/_common/marketing-photo.tsx',
+  'components/_common/page-hero.tsx',
+];
+
+/** Site files allowed a fixed colour, each with its reason. */
+const SITE_COLOR_EXCEPTIONS: Record<string, string> = {
+  'sections/home/home-hero.tsx': 'the scrim over the photo; the photo is the same in both modes',
+};
+
+describe('the marketing site follows dark mode', () => {
+  it('takes every colour from the tokens', () => {
+    const found = violations(
+      /'#[0-9A-Fa-f]{3,8}\b[^']*'|rgba\(\s*(?:10|0)\s*,\s*(?:10|0)\s*,\s*(?:15|0)\s*,|'(?:grey|common)\.\w+'/g,
+      () => false,
+      SITE_COLOR_EXCEPTIONS
+    ).filter((line) => SITE_SOURCES.some((prefix) => line.startsWith(prefix)));
+    expect(found).toEqual([]);
+  });
+
+  it('the page CSS defines every token in both modes', () => {
+    const [light, dark] = SITE_THEME_CSS.split(`html[${SITE_THEME_ATTR}="dark"]`);
+    const tokens = [
+      INK,
+      INK_SOFT,
+      MUTED,
+      FAINT,
+      PAPER,
+      CANVAS,
+      HAIRLINE_COLOR,
+      HAIRLINE_STRONG,
+      HOVER,
+      BAND,
+      FOOTER_BG,
+      ...Object.values(BRAND_COLORS).flatMap((hue) => [hue.tint, hue.deep]),
+      ...STATEMENT_COLORS,
+      ...Object.values(SOCIAL_COLORS).flatMap((social) => [social.tint, social.deep]),
+      ...Object.values(BLOCK_COLORS).flatMap((block) => [block.surface, block.words]),
+    ];
+    tokens.forEach((token) => {
+      const name = token.match(/--nf-[a-z0-9-]+/)?.[0];
+      expect(name).toBeDefined();
+      expect(light).toContain(`${name}:`);
+      expect(dark).toContain(`${name}:`);
+    });
+  });
+
+  it('MUI follows too, so menus, dialogs and typography match the dark page', () => {
+    const dark = SITE_THEME_CSS.split(`html[${SITE_THEME_ATTR}="dark"]`)[1];
+    ['text-primary', 'text-secondary', 'background-default', 'background-paper', 'divider'].forEach(
+      (name) => expect(dark).toContain(`--palette-${name}:`)
+    );
+  });
+
+  it('every route follows the choice: the head script leaves no page out', () => {
+    // The app went dark too (2026-11-10), so no route is skipped any more.
+    expect(SITE_THEME_INIT).not.toMatch(/location\.pathname/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+const MODES = ['light', 'dark'] as const;
+const HUES = Object.entries(HUE_PALETTE);
+
+describe.each(MODES)('%s mode stays readable (WCAG AA)', (mode) => {
+  const page = PALETTE[mode];
+
+  it('text on the page, on the canvas and on a primary button', () => {
+    expect(contrast(page.ink, page.paper)).toBeGreaterThanOrEqual(7);
+    expect(contrast(page.inkSoft, page.paper)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(page.muted, page.paper)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(page.muted, page.canvas)).toBeGreaterThanOrEqual(4.5);
+    // A primary button is page-coloured words on an ink fill, also when hovered.
+    expect(contrast(page.paper, page.ink)).toBeGreaterThanOrEqual(7);
+    expect(contrast(page.paper, page.inkSoft)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('light words on the footer and on an ink band', () => {
+    expect(contrast(FIXED.white, page.footer)).toBeGreaterThanOrEqual(7);
+    expect(contrast(FIXED.white, page.band)).toBeGreaterThanOrEqual(7);
+  });
+
+  it.each(HUES)('%s: the deep shade on the page and on its tint', (_, hue) => {
+    expect(contrast(hue[mode].deep, page.paper)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(hue[mode].deep, hue[mode].tint)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(Object.entries(SOCIAL_PALETTE))(
+    '%s: its deep shade on the page and on its wash',
+    (_, social) => {
+      expect(contrast(social[mode].deep, page.paper)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(social[mode].deep, social[mode].tint)).toBeGreaterThanOrEqual(4.5);
+    }
+  );
+
+  it.each(Object.entries(BLOCK_PALETTE))('%s: the words on its block of colour', (_, block) => {
+    expect(contrast(block[mode].words, block[mode].surface)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("the status colours (the app's reds, greens and ambers) as words on the page", () => {
+    Object.values(STATUS_PALETTE[mode]).forEach((color) => {
+      expect(contrast(color, page.paper)).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
+  it('the statement colours as display words on the page', () => {
+    // The logo's gradient in bright tones, as bright as the blocks at the foot
+    // of the page; the light gold is 2.0:1 on white. So they are only ever
+    // display-size words on the page (the home statement), never body text
+    // and never on a tint.
+    expect(STATEMENT_PALETTE[mode]).toHaveLength(6);
+    STATEMENT_PALETTE[mode].forEach((color) => {
+      expect(contrast(color, page.paper)).toBeGreaterThanOrEqual(mode === 'light' ? 2 : 3);
+    });
+  });
+});
+
+describe('the logo colours', () => {
+  it.each(HUES)('%s: dark ink reads on the fill', (_, hue) => {
+    expect(contrast(FIXED.ink, hue.fill)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('none is readable as text on white, so none is used as text', () => {
+    HUES.forEach(([, hue]) => {
+      expect(contrast(hue.fill, PALETTE.light.paper)).toBeLessThan(4.5);
+    });
   });
 });

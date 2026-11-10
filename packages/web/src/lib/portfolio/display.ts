@@ -1,7 +1,9 @@
 import type { Token } from '@normalfinance/types';
 import type { PortfolioAsset } from '@/types/portfolio';
 
+import { INK } from '@/theme/brand-colors';
 import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
+import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
 
 // Client-safe display metadata, used to turn the lean PortfolioAsset (from the
 // aggregator) into the Token shape the existing cards expect, and to label
@@ -18,12 +20,30 @@ const ASSET_DISPLAY: Record<string, { name: string; icon: string }> = {
   BTC: { name: 'Bitcoin', icon: cdn('tokens/bitcoin.webp') },
   ETH: { name: 'Ethereum', icon: cdn('tokens/ethereum.webp') },
   SOL: { name: 'Solana', icon: cdn('tokens/solana.webp') },
-  XLM: { name: 'Stellar Lumens', icon: getCryptoIconUrl('XLM') },
-  USDC: { name: 'USD Coin', icon: getCryptoIconUrl('USDC') },
+  XLM: { name: 'Stellar', icon: getCryptoIconUrl('XLM') },
+  USDC: { name: 'Digital dollars', icon: getCryptoIconUrl('USDC') },
 };
 
 export function assetDisplay(symbol: string): { name: string; icon: string } {
   return ASSET_DISPLAY[symbol] ?? { name: symbol, icon: getCryptoIconUrl(symbol) };
+}
+
+// The colour a coin is known by, for its price lines. A chain's own coin takes
+// the chain's brand colour (CHAINS); these two take their logo's instead: the
+// digital dollar its issuer's blue, Stellar's coin the black of its rocket
+// (the registry's teal marks the Stellar chain in badges, not the coin).
+const COIN_COLORS: Record<string, string> = {
+  USDC: '#2775CA',
+  // The ink token, so its line turns light on the dark page.
+  XLM: INK,
+};
+
+/** The colour of a coin's price line: its logo's colour, ink when unknown. */
+export function assetColor(symbol: string): string {
+  const upper = symbol.toUpperCase();
+  if (COIN_COLORS[upper]) return COIN_COLORS[upper];
+  const chain = chainForSymbol(upper);
+  return chain ? CHAINS[chain].brandColor : INK;
 }
 
 /** #32: short human label for the connected external wallet, used to tag

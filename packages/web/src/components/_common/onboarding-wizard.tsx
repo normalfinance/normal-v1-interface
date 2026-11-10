@@ -7,10 +7,12 @@ import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { buildAuthHeaders } from '@/utils/http';
+import { BRAND_COLORS } from '@/theme/brand-colors';
 import { supabase } from '@/lib/createSupabaseClient';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { consumeMarketingOptIn } from '@/lib/auth/auth-routes';
+import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
@@ -512,7 +514,11 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
       setStep('get-started');
     } catch (err: any) {
       logger.error('[OnboardingWizard] Turnkey wallet creation failed:', err);
-      setWalletCreateError(err.message || t('Failed to create wallet. Please try again.'));
+      setWalletCreateError(
+        friendlyAppError(
+          err?.message || t('Your wallet could not be created. Try again in a moment.')
+        )
+      );
     } finally {
       setIsCreatingWallet(false);
     }
@@ -556,7 +562,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
       setStep('get-started');
     } catch (err: any) {
       logger.error('[OnboardingWizard] Import failed:', err);
-      setImportError(err.message || t('Failed to import wallet'));
+      setImportError(friendlyAppError(err?.message || t('Failed to import wallet')));
     } finally {
       setIsImporting(false);
     }
@@ -755,7 +761,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
       enqueueSnackbar(t('USDC trustline added!'), { variant: 'success' });
       await refetchAccountStatus();
     } catch (err: any) {
-      setTrustlineError(err.message || t('Failed to add trustline'));
+      setTrustlineError(friendlyAppError(err?.message || t('Failed to add trustline')));
     }
   };
 
@@ -987,7 +993,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
         onClick={handleClose}
         sx={{ color: 'text.disabled', fontWeight: 500 }}
       >
-        {t('Skip for now — set up a wallet later')}
+        {t('Skip for now, set up a wallet later')}
       </Button>
     </Stack>
   );
@@ -1000,7 +1006,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
         </Typography>
         <Typography variant="body2" color="text.secondary">
           {t(
-            'Your wallet is secured by your passkey — Face ID, fingerprint, or device PIN. Nothing to write down, nothing to lose.'
+            'Your wallet is secured by your passkey: Face ID, fingerprint, or device PIN. Nothing to write down, nothing to lose.'
           )}
         </Typography>
       </Box>
@@ -1015,7 +1021,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
         {[
           {
             icon: 'solar:shield-keyhole-bold',
-            text: t('Keys live in secure hardware — never on this device or our servers'),
+            text: t('Keys live in secure hardware, never on this device or our servers'),
           },
           {
             icon: 'solar:smartphone-bold',
@@ -1184,7 +1190,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
         <>
           <Typography variant="caption" color="text.disabled" align="center" display="block">
             {t(
-              'Your phrase is encrypted on this device and secured by your passkey — no password needed to sign.'
+              'Your phrase is encrypted on this device and secured by your passkey. No password needed to sign.'
             )}
           </Typography>
           <Button
@@ -1285,7 +1291,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
               onClick={async () => {
                 const ok = await copy(wizardWalletAddress);
                 if (ok) enqueueSnackbar(t('Address copied'), { variant: 'success' });
-                else enqueueSnackbar(t('Copy failed — please copy manually'), { variant: 'error' });
+                else enqueueSnackbar(t('Copy failed. Please copy manually'), { variant: 'error' });
               }}
               sx={{
                 borderRadius: 'var(--radius-md)',
@@ -1320,7 +1326,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           }
           sx={btnPrimary}
         >
-          {isCoinbaseLoading ? t('Opening Coinbase…') : t('Buy XLM with card — via Coinbase')}
+          {isCoinbaseLoading ? t('Opening Coinbase…') : t('Buy XLM with card, via Coinbase')}
         </Button>
 
         <Button
@@ -1367,7 +1373,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           { label: t('Asset'), value: 'USDC' },
           {
             label: t('Issuer'),
-            value: savingsUsdcIssuer ? format.fTruncate(savingsUsdcIssuer, 14) : '—',
+            value: savingsUsdcIssuer ? format.fTruncate(savingsUsdcIssuer, 14) : '',
           },
           { label: t('Network fee'), value: '~0.00001 XLM' },
           { label: t('Reserved'), value: '0.5 XLM' },
@@ -1428,7 +1434,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
           width: 80,
           height: 80,
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%)',
+          bgcolor: BRAND_COLORS.violet.fill,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1518,7 +1524,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
                 width: 72,
                 height: 72,
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%)',
+                bgcolor: BRAND_COLORS.violet.fill,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1909,7 +1915,7 @@ export default function OnboardingWizard({ open, onClose, initialStep }: Onboard
             fontSize: '0.7rem',
           }}
         >
-          {t('{{step}}/6 — {{label}}', { step: stepNumber, label: STEP_LABEL[step] })}
+          {t('{{step}}/6: {{label}}', { step: stepNumber, label: STEP_LABEL[step] })}
         </Typography>
 
         {/* Back arrow */}

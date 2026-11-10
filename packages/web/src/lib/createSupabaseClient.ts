@@ -1,16 +1,11 @@
-import { constants } from '@normalfinance/utils';
-// lib/supabaseClient.ts
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = constants.getNetworkConfig(
-  process.env.NEXT_PUBLIC_TESTNET_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_MAINNET_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL! || ''
-);
-
-const supabaseAnonKey = constants.getNetworkConfig(
-  process.env.NEXT_PUBLIC_TESTNET_SUPABASE_ANON_KEY!,
-  process.env.NEXT_PUBLIC_MAINNET_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// The project and its keys live in one place (lib/supabase-config.ts), so the
+// marketing site's header reads the same session key this client writes.
+import {
+  SUPABASE_URL as supabaseUrl,
+  SUPABASE_ANON_KEY as supabaseAnonKey,
+} from './supabase-config';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

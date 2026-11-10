@@ -50,7 +50,7 @@ export function pivotRevertDetail(
   const ex = sanitizeToolList(exchanges);
   return `Exchange route failed on Base${t ? ` via ${t}` : ''}${
     ex.length ? ` through ${ex.join('+')}` : ''
-  }${h ? ` (${h})` : ''} — your USDC is still in your own account`;
+  }${h ? ` (${h})` : ''}. Your USDC is still in your own account`;
 }
 
 /** Reads the failed bridge back out of a row's errorDetail (null if none). */

@@ -339,7 +339,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
 
             <Alert severity="error">
               <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>
-                {t('IMPORTANT — READ THIS')}
+                {t('IMPORTANT: READ THIS')}
               </Typography>
               <Typography variant="body2">
                 {t(
@@ -371,7 +371,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
           <Stack spacing={3}>
             <Alert severity="error">
               <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>
-                {t('Your Recovery Phrase — NEVER SHARE')}
+                {t('Your Recovery Phrase: NEVER SHARE')}
               </Typography>
               <Typography variant="body2">
                 {t(
@@ -433,7 +433,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
                 disabled={!backupAcknowledged}
                 onClick={startVerification}
               >
-                {t("I've Written It Down — Verify Now")}
+                {t("I've written it down, verify now")}
               </Button>
               <Button variant="outlined" fullWidth onClick={handleCopyMnemonic}>
                 {t('Copy Recovery Phrase (clears in ') + CLIPBOARD_CLEAR_SECONDS + t('s)')}

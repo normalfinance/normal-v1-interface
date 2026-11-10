@@ -8,13 +8,17 @@ import BigNumber from 'bignumber.js';
 import { paths } from '@/routes/paths';
 import { useTranslate } from '@/locales';
 import { useMemo, useState } from 'react';
+import { cdn } from '@normalfinance/utils';
 import { useRouter } from 'next/navigation';
+import { CHAINS } from '@/lib/chains/registry';
+import { useMarkets } from '@/hooks/use-markets';
+import { BRAND_COLORS } from '@/theme/brand-colors';
+import { MONO } from '@/sections/portfolio/_shared';
+import { usePortfolio } from '@/hooks/use-portfolio';
 import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { useUsdPrice } from '@/hooks/use-price-history';
 import { useBtcPortfolio } from '@/hooks/use-btc-portfolio';
-import { MONO, CARD_SX } from '@/sections/portfolio/_shared';
-import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
 import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
@@ -22,40 +26,58 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { ActivityCard } from '@/sections/portfolio/portfolio-activity-card';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
-import { fCurrency, fTokenAmount, fCurrencyTwoDecimals } from '@/utils/format-number';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import Avatar from '@mui/material/Avatar';
 import Skeleton from '@mui/material/Skeleton';
+import Typography from '@mui/material/Typography';
+import ButtonBase from '@mui/material/ButtonBase';
+import IconButton from '@mui/material/IconButton';
+import AddRounded from '@mui/icons-material/AddRounded';
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
-import SwapVertOutlined from '@mui/icons-material/SwapVertOutlined';
-import CallMadeOutlined from '@mui/icons-material/CallMadeOutlined';
-import MoneyOffOutlined from '@mui/icons-material/MoneyOffOutlined';
+import NorthEastRounded from '@mui/icons-material/NorthEastRounded';
+import SouthWestRounded from '@mui/icons-material/SouthWestRounded';
+import SwapHorizRounded from '@mui/icons-material/SwapHorizRounded';
 import ArrowBackOutlined from '@mui/icons-material/ArrowBackOutlined';
-import AttachMoneyOutlined from '@mui/icons-material/AttachMoneyOutlined';
-import CallReceivedOutlined from '@mui/icons-material/CallReceivedOutlined';
+import ContentCopyRounded from '@mui/icons-material/ContentCopyRounded';
+import AccountBalanceOutlined from '@mui/icons-material/AccountBalanceOutlined';
 
-import { Iconify } from '@/components/template/iconify';
 import SendModal from '@/components/_common/send-modal';
 import { useSnackbar } from '@/components/template/snackbar';
 import OnRampDialog from '@/components/_common/onramp-dialog';
 import ReceiveModal from '@/components/_common/receive-modal';
 import OffRampDialog from '@/components/_common/offramp-dialog';
+import { AssetAvatar } from '@/components/_common/asset-avatar';
+import { getAssetNetwork } from '@/components/_common/network-badge';
 import { SpecificNotFound } from '@/components/_common/specific-not-found';
 import { ChainSetupDialog } from '@/components/_common/chain-setup-dialog';
 import { ChainReceiveModal } from '@/components/_common/chain-receive-modal';
 import { BitcoinReceiveModal } from '@/components/_common/bitcoin-receive-modal';
 import MoneyGramPendingBanner from '@/components/_common/moneygram-pending-banner';
-import { NetworkBadge, getAssetNetwork } from '@/components/_common/network-badge';
 import RampPendingBanner, { RampInflightInline } from '@/components/_common/ramp-pending-banner';
+import {
+  BOX_PX,
+  FIGURES,
+  RowList,
+  AppBlock,
+  Headline,
+  ActionRow,
+  assetName,
+  formatUsd,
+  formatCoin,
+  ASSET_NAMES,
+  ActionButton,
+  SummaryBlock,
+} from '@/components/_common/app-ui';
 
+import { AssetAbout } from './asset-about';
+import { AssetMarketCard } from './asset-market';
 import { AssetPriceChart } from './asset-price-chart';
 
 // ---------------------------------------------------------------------------
-// Per-asset capabilities. Swap is Soroswap (XLM↔USDC only), Save is the USDC
-// savings vault, Buy is the fiat on-ramp. BTC/ETH/SOL get Buy once LI.FI
-// lands.
+// Per-asset capabilities. Swap opens the Swap page with the coin picked
+// (Soroswap for XLM and USDC; LI.FI, and CCTP to digital dollars, for BTC, ETH
+// and SOL). Save is the USDC savings vault, Buy the fiat on-ramp.
 // ---------------------------------------------------------------------------
 
 type AssetActionKey = 'send' | 'receive' | 'swap' | 'save' | 'buy' | 'sell';
@@ -68,7 +90,7 @@ function getAssetActions(symbol: string): AssetActionKey[] {
     case 'BTC':
     case 'ETH':
     case 'SOL':
-      return ['send', 'receive', 'buy', 'sell'];
+      return ['send', 'receive', 'swap', 'buy', 'sell'];
     case 'USDC':
       return ['send', 'receive', 'swap', 'save', 'buy', 'sell'];
     case 'XLM':
@@ -78,8 +100,7 @@ function getAssetActions(symbol: string): AssetActionKey[] {
   }
 }
 
-// Native (non-Stellar) chain config for the synthesized display tokens and
-// the per-chain notes shown under the action row.
+// Native (non-Stellar) chain config for the synthesized display tokens.
 const NATIVE_CHAINS: Record<
   string,
   {
@@ -88,7 +109,6 @@ const NATIVE_CHAINS: Record<
     contract: string;
     icon: string;
     decimals: number;
-    note: string;
   }
 > = {
   BTC: {
@@ -97,7 +117,6 @@ const NATIVE_CHAINS: Record<
     contract: '__btc__',
     icon: cdn('tokens/bitcoin.webp'),
     decimals: 8,
-    note: 'Bitcoin lives on its own network. You can send and receive BTC here, but it can’t be swapped or used for savings yet.',
   },
   ETH: {
     chain: 'ethereum',
@@ -105,7 +124,6 @@ const NATIVE_CHAINS: Record<
     contract: '__eth__',
     icon: cdn('tokens/ethereum.webp'),
     decimals: 18,
-    note: 'Ethereum lives on its own network. You can send and receive ETH here, but it can’t be swapped or used for savings yet.',
   },
   SOL: {
     chain: 'solana',
@@ -113,7 +131,6 @@ const NATIVE_CHAINS: Record<
     contract: '__sol__',
     icon: cdn('tokens/solana.webp'),
     decimals: 9,
-    note: 'Solana lives on its own network. You can send and receive SOL here, but it can’t be swapped or used for savings yet.',
   },
 };
 
@@ -157,6 +174,10 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   // Live USD price for natives the user has no address for yet (the
   // synthesized token would otherwise show $0.00)
   const nativeUsdPrice = useUsdPrice(upperSymbol, !!native);
+
+  const { markets, isLoading: marketsLoading } = useMarkets();
+  const market = markets[upperSymbol];
+  const portfolio = usePortfolio(!!user);
 
   const nativeToken = isBtc ? btc.btcToken : isEth ? eth.ethToken : isSol ? sol.solToken : null;
   const nativeAddress = isBtc
@@ -207,16 +228,9 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   if (native && nativeLoading && !nativeToken) {
     return (
       <DashboardContent>
-        <Skeleton
-          variant="rectangular"
-          height={220}
-          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
-        />
-        <Skeleton
-          variant="rectangular"
-          height={280}
-          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)', mt: 2 }}
-        />
+        <Skeleton variant="text" sx={{ width: 220, fontSize: 28, mb: 4 }} />
+        <Skeleton variant="rectangular" height={180} />
+        <Skeleton variant="rectangular" height={360} sx={{ mt: 5 }} />
       </DashboardContent>
     );
   }
@@ -291,35 +305,35 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
   > = {
     send: {
       label: t('Send'),
-      icon: <CallMadeOutlined sx={{ fontSize: 14 }} />,
+      icon: <NorthEastRounded />,
       onClick: () =>
         native ? requireNativeWallet('send') : requireStellarWallet(() => setSendOpen(true)),
     },
     receive: {
       label: t('Receive'),
-      icon: <CallReceivedOutlined sx={{ fontSize: 14 }} />,
+      icon: <SouthWestRounded />,
       onClick: () =>
         native ? requireNativeWallet('receive') : requireStellarWallet(() => setReceiveOpen(true)),
     },
     swap: {
       label: t('Swap'),
-      icon: <SwapVertOutlined sx={{ fontSize: 14 }} />,
+      icon: <SwapHorizRounded />,
       onClick: () => router.push(`${paths.swap}?from=${token.symbol}`),
     },
     save: {
       label: t('Save'),
-      icon: <SavingsOutlined sx={{ fontSize: 14 }} />,
+      icon: <SavingsOutlined />,
       onClick: () => router.push(paths.savings),
     },
     buy: {
       label: t('Buy'),
-      icon: <AttachMoneyOutlined sx={{ fontSize: 14 }} />,
+      icon: <AddRounded />,
       onClick: () =>
         native ? requireNativeWallet('buy') : requireStellarWallet(() => setBuyOpen(true)),
     },
     sell: {
-      label: t('Sell'),
-      icon: <MoneyOffOutlined sx={{ fontSize: 14 }} />,
+      label: t('Cash out'),
+      icon: <AccountBalanceOutlined />,
       onClick: () =>
         native ? requireNativeWallet('sell') : requireStellarWallet(() => setSellOpen(true)),
     },
@@ -341,263 +355,207 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
         { label: t('Decimals'), value: String(native.decimals) },
       ]
     : [
+        ...(wallet.address && !companionStellar
+          ? [{ label: t('Your address'), value: wallet.address, copyable: true }]
+          : []),
         { label: t('Network'), value: 'Stellar' },
         { label: t('Contract'), value: token.contract, copyable: true },
         ...(token.issuer ? [{ label: t('Issuer'), value: token.issuer, copyable: true }] : []),
         { label: t('Decimals'), value: String(token.decimals) },
       ];
 
+  const network = getAssetNetwork(token);
+  const displayName = ASSET_NAMES[token.symbol] ? assetName(token.symbol) : token.name;
+  const amount = formatCoin(balance.toNumber(), token.symbol);
+
+  // How the holding moved today, from the coin's 24-hour change: value ×
+  // pct / (100 + pct) is what it was worth less a day ago.
+  const pct24h =
+    aggAssets.find((a) => a.symbol === upperSymbol)?.change24h ?? market?.change24h ?? null;
+  const today =
+    pct24h != null && Number.isFinite(pct24h) && value.gt(0)
+      ? (value.toNumber() * pct24h) / (100 + pct24h)
+      : null;
+  const moved = today !== null && Math.abs(today) >= 0.005;
+
+  // Its share of everything held, once the whole account has loaded.
+  const accountLoaded =
+    !portfolio.isLoading &&
+    !portfolio.savings.positionLoading &&
+    !portfolio.savings.companionPositionLoading;
+  const share =
+    accountLoaded && portfolio.totalUsd > 0 && value.gt(0)
+      ? Math.min(100, (value.toNumber() / portfolio.totalUsd) * 100)
+      : null;
+
+  // The holder's own address on the chain's explorer (one-wallet accounts:
+  // with two Stellar wallets there is no single address to show).
+  const explorerAddress = native
+    ? nativeAddress
+      ? CHAINS[native.chain as keyof typeof CHAINS].explorerAddress(nativeAddress)
+      : null
+    : wallet.address && !companionStellar
+      ? CHAINS.stellar.explorerAddress(wallet.address)
+      : null;
+  const explorer = explorerAddress
+    ? {
+        href: explorerAddress,
+        label: t('Your address on {{site}}', { site: new URL(explorerAddress).hostname }),
+      }
+    : null;
+
   return (
     <DashboardContent>
-      {/* Back to portfolio */}
-      <Box
-        component="button"
-        onClick={() => router.push(paths.portfolio)}
+      <ButtonBase
+        onClick={() => router.push(paths.assets.root)}
         sx={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          border: 'none',
-          bgcolor: 'transparent',
-          color: '#6B6B76',
-          fontSize: '13px',
+          alignSelf: 'flex-start',
+          gap: 0.75,
+          ml: -1,
+          mb: 2,
+          px: 1,
+          py: 0.5,
+          fontSize: 14,
           fontWeight: 500,
-          cursor: 'pointer',
-          fontFamily: 'inherit',
-          p: 0,
-          mb: '16px',
-          transition: 'color 150ms ease',
-          '&:hover': { color: '#0A0A0F' },
+          color: 'text.secondary',
+          '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
         }}
       >
-        <ArrowBackOutlined sx={{ fontSize: 15 }} />
-        {t('Portfolio')}
+        <ArrowBackOutlined sx={{ fontSize: 16 }} />
+        {t('Assets')}
+      </ButtonBase>
+
+      {/* The page's title: the coin, its everyday name, its ticker and network. */}
+      <Stack direction="row" alignItems="center" spacing={1.75} sx={{ mb: { xs: 3, md: 4 } }}>
+        <AssetAvatar token={token} size={48} />
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            component="h1"
+            sx={{ fontSize: { xs: 24, md: 28 }, fontWeight: 500, letterSpacing: '-0.025em' }}
+          >
+            {displayName}
+          </Typography>
+          <Typography sx={{ fontSize: 15, color: 'text.secondary' }}>
+            {`${token.symbol} · ${network} network`}
+          </Typography>
+        </Box>
+      </Stack>
+
+      <SummaryBlock
+        aria-label={t('Your balance')}
+        actions={
+          <ActionRow count={actions.length}>
+            {actions.map((action, index) => (
+              <ActionButton
+                key={action.label}
+                primary={index === 0}
+                icon={action.icon}
+                label={action.label}
+                onClick={action.onClick}
+              />
+            ))}
+          </ActionRow>
+        }
+      >
+        {nativeError ? (
+          <Headline
+            label={t('Your balance')}
+            value={t('Unavailable')}
+            note={
+              <ButtonBase
+                onClick={() => refetchNative()}
+                sx={{ font: 'inherit', fontWeight: 500, textDecoration: 'underline' }}
+              >
+                {t("Couldn't load the balance. Try again")}
+              </ButtonBase>
+            }
+          />
+        ) : (
+          <Headline
+            label={t('Your balance')}
+            value={price.isZero() ? amount : formatUsd(value.toNumber())}
+            note={
+              <>
+                {[
+                  price.isZero() ? null : amount,
+                  share !== null
+                    ? t('{{pct}}% of your money', {
+                        pct: share < 1 ? share.toFixed(1) : Math.round(share),
+                      })
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+                {/* #75 2b: per-wallet split. The big number is the account
+                    total; this line says who holds what. */}
+                {showWalletSplit && (
+                  <Box sx={{ mt: 0.5 }}>
+                    {`${t('Normal wallet')} ${formatCoin(companionBalance.toNumber(), token.symbol)} · ${connectedWalletLabel(wallet.walletType)} ${formatCoin(slotBalance.toNumber(), token.symbol)}`}
+                  </Box>
+                )}
+                {/* Today's move, in the shared Change colours */}
+                {moved && (
+                  <Box
+                    sx={{ mt: 0.5, color: today > 0 ? BRAND_COLORS.mint.deep : 'text.secondary' }}
+                  >
+                    {`${today > 0 ? '+' : '−'}${formatUsd(Math.abs(today))} ${t('today')}`}
+                  </Box>
+                )}
+              </>
+            }
+          />
+        )}
+        {/* Money on the way (Niko 2026-08-26): the in-flight indicator lives
+            in the balance block, right under the number it explains. */}
+        <RampInflightInline symbol={token.symbol} />
+      </SummaryBlock>
+
+      {/* The price, edge to edge in the coin's colour. A digital dollar's
+          line draws flat (it never spans less than 2% of its price), which
+          is the honest picture of a dollar. */}
+      <Box sx={{ mt: { xs: 4, md: 5 } }}>
+        <AssetPriceChart symbol={token.symbol} />
+      </Box>
+
+      <Box sx={{ mt: 4 }}>
+        <AssetMarketCard symbol={token.symbol} market={market} loading={marketsLoading} />
       </Box>
 
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
-          gap: 2,
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 7fr) minmax(0, 5fr)' },
+          gap: { xs: 4, lg: 3 },
           alignItems: 'start',
+          mt: 4,
         }}
       >
-        {/* Overview + actions */}
-        <Box sx={{ ...CARD_SX, minWidth: 0 }}>
-          <Stack direction="row" alignItems="center" spacing="14px" sx={{ mb: '22px' }}>
-            <Avatar
-              src={token.icon || getCryptoIconUrl(token.symbol)}
-              alt={token.name}
-              sx={{ width: 44, height: 44 }}
-            />
-            <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Box
-                  sx={{
-                    fontSize: '17px',
-                    fontWeight: 500,
-                    color: '#0A0A0F',
-                    letterSpacing: '-0.01em',
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {token.name}
-                </Box>
-                <NetworkBadge network={getAssetNetwork(token)} />
-              </Box>
-              <Box sx={{ fontSize: '13px', color: '#9A9AA3', lineHeight: 1.3 }}>{token.symbol}</Box>
-            </Box>
-          </Stack>
+        <AssetAbout symbol={token.symbol} explorer={explorer} />
 
-          <Box sx={{ mb: '22px' }}>
-            <Box
-              sx={{
-                fontSize: '11px',
-                fontWeight: 500,
-                color: '#9A9AA3',
-                textTransform: 'uppercase',
-                letterSpacing: '0.16em',
-                mb: '6px',
-              }}
-            >
-              {t('Your Balance')}
-            </Box>
-            {nativeError ? (
-              <>
-                <Box
-                  sx={{
-                    ...MONO,
-                    fontSize: '28px',
-                    fontWeight: 500,
-                    color: '#9A9AA3',
-                    letterSpacing: '-0.02em',
-                    lineHeight: 1.2,
-                  }}
-                >
-                  — {token.symbol}
-                </Box>
-                <Box
-                  component="button"
-                  onClick={() => refetchNative()}
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    mt: '6px',
-                    border: 'none',
-                    bgcolor: 'transparent',
-                    color: '#B45309',
-                    fontSize: '13px',
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    p: 0,
-                  }}
-                >
-                  <Iconify icon="solar:refresh-linear" width={14} />
-                  {t("Couldn't load balance — tap to retry")}
-                </Box>
-              </>
-            ) : (
-              <>
-                <Box
-                  sx={{
-                    ...MONO,
-                    fontSize: '28px',
-                    fontWeight: 500,
-                    color: '#0A0A0F',
-                    letterSpacing: '-0.02em',
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {fTokenAmount(balance)} {token.symbol}
-                </Box>
-                <Box sx={{ fontSize: '14px', color: '#6B6B76', mt: '4px' }}>
-                  {price.isZero() ? '—' : fCurrencyTwoDecimals(value.toNumber())}
-                  <Box component="span" sx={{ mx: '8px', color: 'rgba(10,10,15,0.2)' }}>
-                    ·
-                  </Box>
-                  {price.isZero() ? '—' : fCurrency(price.toNumber())} / {token.symbol}
-                </Box>
-                {/* #75 2b: per-wallet split — the big number is the account
-                    total, this line says who holds what. */}
-                {showWalletSplit && (
-                  <Box sx={{ fontSize: '12px', color: '#9A9AA3', mt: '6px', ...MONO }}>
-                    {t('Normal wallet')} {fTokenAmount(companionBalance)}
-                    <Box component="span" sx={{ mx: '6px', color: 'rgba(10,10,15,0.2)' }}>
-                      ·
-                    </Box>
-                    {connectedWalletLabel(wallet.walletType)} {fTokenAmount(slotBalance)}
-                  </Box>
-                )}
-              </>
-            )}
-            {/* Money on the way (Niko 2026-08-26): the in-flight indicator
-                lives IN the balance card — right under the number it
-                explains. Failures keep the dismissible banner below. */}
-            <RampInflightInline symbol={token.symbol} />
-          </Box>
-
-          {/* Actions */}
-          <Box
-            sx={{
-              display: 'grid',
-              // ≤5 actions sit in one row; 6 (USDC) wrap into a tidy 3×2.
-              gridTemplateColumns: `repeat(${actions.length > 5 ? 3 : actions.length}, 1fr)`,
-              gap: '6px',
-            }}
-          >
-            {actions.map((action) => (
-              <Box
-                key={action.label}
-                component="button"
-                onClick={action.onClick}
-                sx={{
-                  appearance: 'none',
-                  border: '1px solid rgba(10,10,15,0.08)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '10px 6px',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '7px',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: '#6B6B76',
-                  background: 'transparent',
-                  transition: 'all .15s ease',
-                  '&:hover': {
-                    bgcolor: 'rgba(10,10,15,0.03)',
-                    color: '#0A0A0F',
-                    borderColor: 'rgba(10,10,15,0.14)',
-                  },
-                  '&:hover .action-icon-box': { bgcolor: '#0A0A0F', color: '#fff' },
-                }}
-              >
-                <Box
-                  className="action-icon-box"
-                  sx={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 'var(--radius-md)',
-                    bgcolor: '#F4F4F7',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#0A0A0F',
-                    transition: 'all .15s ease',
-                  }}
-                >
-                  {action.icon}
-                </Box>
-                {action.label}
-              </Box>
-            ))}
-          </Box>
-
-          {native && (
-            <Box
-              sx={{
-                mt: '14px',
-                px: '12px',
-                py: '10px',
-                borderRadius: 'var(--radius-md)',
-                bgcolor: 'rgba(247,147,26,0.06)',
-                border: '1px solid rgba(247,147,26,0.18)',
-                fontSize: '12.5px',
-                color: '#6B6B76',
-                lineHeight: 1.5,
-              }}
-            >
-              {t(native.note)}
-            </Box>
-          )}
-        </Box>
-
-        {/* Token info */}
-        <Box sx={{ ...CARD_SX, minWidth: 0 }}>
-          <Box sx={{ fontSize: '15px', fontWeight: 500, color: '#0A0A0F', mb: '16px' }}>
-            {t('Token Information')}
-          </Box>
-          <Stack spacing="12px">
+        <AppBlock flush open title={t('Details')}>
+          <RowList>
             {infoRows.map((row) => (
               <Box
                 key={row.label}
+                className="nf-row"
                 sx={{
                   display: 'flex',
-                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  gap: '12px',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                  minHeight: 52,
+                  px: BOX_PX,
+                  py: 1,
                 }}
               >
-                <Box sx={{ fontSize: '13px', color: '#6B6B76', flexShrink: 0 }}>{row.label}</Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                  <Box
+                <Typography sx={{ flexShrink: 0, fontSize: 14, color: 'text.secondary' }}>
+                  {row.label}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                  <Typography
                     sx={{
-                      ...MONO,
-                      fontSize: '12.5px',
-                      color: '#0A0A0F',
+                      ...(row.copyable ? MONO : FIGURES),
+                      fontSize: row.copyable ? 13 : 14,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -605,32 +563,26 @@ export default function AssetDetailsView({ symbol }: { symbol: string }) {
                     }}
                   >
                     {row.value}
-                  </Box>
+                  </Typography>
                   {row.copyable && (
-                    <Iconify
-                      icon="solar:copy-linear"
-                      width={15}
-                      sx={{
-                        cursor: 'pointer',
-                        color: '#9A9AA3',
-                        flexShrink: 0,
-                        '&:hover': { color: '#0A0A0F' },
-                      }}
+                    <IconButton
+                      size="small"
+                      aria-label={t('Copy')}
                       onClick={() => handleCopy(row.value, t('Copied to clipboard'))}
-                    />
+                      sx={{ mr: -0.75 }}
+                    >
+                      <ContentCopyRounded sx={{ fontSize: 16 }} />
+                    </IconButton>
                   )}
                 </Box>
               </Box>
             ))}
-          </Stack>
-        </Box>
+          </RowList>
+        </AppBlock>
       </Box>
 
-      {/* Price history */}
-      <AssetPriceChart symbol={token.symbol} />
-
       {/* Asset-scoped activity */}
-      <Box sx={{ mt: 2 }}>
+      <Box sx={{ mt: 4 }}>
         {/* In-flight MoneyGram cash deposits/outs — USDC (Stellar) is the only
             asset MoneyGram ramps, so the banner only belongs here. */}
         {/* doc 89 F2: FAILED ramp handoffs for THIS asset (dismissible).

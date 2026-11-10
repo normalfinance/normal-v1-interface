@@ -8,6 +8,7 @@ import useSWR from 'swr';
 import { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
+import { INK, MUTED, DANGER, SUCCESS } from '@/theme/brand-colors';
 import { grantAutopilotConsent } from '@/lib/turnkey/autopilot-consent';
 import { revokeAutopilotConsent } from '@/lib/turnkey/autopilot-revoke';
 
@@ -46,7 +47,7 @@ export default function AutopilotCard() {
       enqueueSnackbar(t('Automatic swap completion turned off.'), { variant: 'success' });
       await mutate();
     } catch (e: any) {
-      enqueueSnackbar(e?.message ?? t('Could not revoke — try again.'), { variant: 'error' });
+      enqueueSnackbar(e?.message ?? t('Could not revoke. Try again.'), { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -69,7 +70,7 @@ export default function AutopilotCard() {
       enqueueSnackbar(t('Automatic swap completion is on.'), { variant: 'success' });
       await mutate();
     } catch (e: any) {
-      enqueueSnackbar(e?.message ?? t('Could not enable — try again.'), { variant: 'error' });
+      enqueueSnackbar(e?.message ?? t('Could not enable. Try again.'), { variant: 'error' });
     } finally {
       setBusy(false);
     }
@@ -78,15 +79,13 @@ export default function AutopilotCard() {
   return (
     <Box
       sx={{
-        p: { xs: '20px', md: '24px' },
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid rgba(10,10,15,0.08)',
-        bgcolor: '#FAFAFB',
-        mb: '16px',
+        // A setting on the page with a line under it: no grey card (Niko 2026-11-10).
+        py: '16px',
+        borderBottom: '1px solid rgba(var(--nf-ink-rgb),0.08)',
       }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '6px' }}>
-        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: INK }}>
           {t('Automatic swap completion')}
         </Typography>
         <Typography
@@ -96,17 +95,17 @@ export default function AutopilotCard() {
             px: '9px',
             py: '3px',
             borderRadius: 'var(--radius-sm)',
-            bgcolor: data?.active ? 'rgba(26,179,125,0.12)' : 'rgba(10,10,15,0.06)',
-            color: data?.active ? '#0A6649' : '#6B6B76',
+            bgcolor: data?.active ? 'rgba(26,179,125,0.12)' : 'rgba(var(--nf-ink-rgb),0.06)',
+            color: data?.active ? SUCCESS : MUTED,
           }}
         >
           {data?.active ? t('On') : error ? t('Unknown') : t('Off')}
         </Typography>
       </Stack>
-      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', lineHeight: 1.55 }}>
+      <Typography sx={{ fontSize: '12.5px', color: MUTED, lineHeight: 1.55 }}>
         {data?.active
           ? t(
-              'Normal finishes the swaps you start — only to your own addresses, only the allowlisted bridge contracts. Revoking takes one passkey confirmation.'
+              'Normal finishes the swaps you start: only to your own addresses, only through the allowlisted bridge contracts. Revoking takes one passkey confirmation.'
             )
           : t(
               'When enabled (during a cross-chain swap), Normal completes the later swap steps automatically so you never sign twice around a bridge wait.'
@@ -121,7 +120,7 @@ export default function AutopilotCard() {
             textTransform: 'none',
             fontSize: '13px',
             fontWeight: 500,
-            color: '#B42318',
+            color: DANGER,
             border: '1px solid rgba(180,35,24,0.3)',
             borderRadius: 'var(--radius-md)',
             px: '14px',
@@ -140,11 +139,11 @@ export default function AutopilotCard() {
             textTransform: 'none',
             fontSize: '13px',
             fontWeight: 500,
-            color: '#0A0A0F',
-            border: '1px solid rgba(10,10,15,0.14)',
+            color: INK,
+            border: '1px solid rgba(var(--nf-ink-rgb),0.14)',
             borderRadius: 'var(--radius-md)',
             px: '14px',
-            '&:hover': { bgcolor: 'rgba(10,10,15,0.04)' },
+            '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.04)' },
           }}
         >
           {busy ? t('Confirming…') : t('Turn on')}

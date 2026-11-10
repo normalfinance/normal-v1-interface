@@ -1,6 +1,5 @@
 'use client';
 
-import { m } from 'framer-motion';
 import { useNetwork } from '@/hooks';
 import { usePopover } from 'minimal-shared/hooks';
 
@@ -13,7 +12,6 @@ import IconButton from '@mui/material/IconButton';
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import { CustomPopover } from '@/components/template/custom-popover';
-import { varTap, varHover, transitionTap } from '@/components/template/animate';
 
 // ---------------------------------------------------------------------------
 // Guard: hide toggle when the deployment is hard-locked to mainnet.
@@ -49,10 +47,6 @@ export function NetworkToggle() {
   return (
     <>
       <IconButton
-        component={m.button}
-        whileTap={varTap(0.96)}
-        whileHover={varHover(1.04)}
-        transition={transitionTap()}
         aria-label="network-picker-button"
         onClick={onOpen}
         sx={[

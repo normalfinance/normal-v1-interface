@@ -31,11 +31,15 @@
 * Design tokens (rules: packages/web/DESIGN.md)
 *************************************** */
 :root {
-  /* Corners. Change a value here and every page follows. */
-  --radius-xs: 4px; /* tracks, tiny tags */
-  --radius-sm: 6px; /* badges, chips, tooltips, menu items */
-  --radius-md: 8px; /* buttons, inputs, tabs, nested tiles */
-  --radius-lg: 12px; /* every block: cards, panels, dialogs, popovers */
+  /* Corners. Change a value here and every page follows. Everything is square,
+     the site and the app alike (2026-11-06, owner's call): the roles stay, so
+     a corner can come back in one place, but every value is 0. */
+  --radius-xs: 0px; /* tracks, tiny tags */
+  --radius-sm: 0px; /* badges, chips, tooltips, menu items */
+  --radius-md: 0px; /* buttons, inputs, tabs, nested tiles */
+  --radius-lg: 0px; /* every block: cards, panels, dialogs, popovers */
+  /* The marketing site's own token, from when only the site was square. */
+  --radius-site: 0px;
   --radius-full: 999px; /* true circles only: avatars, dots, switches */
 
   /* The one content width, navbar and footer included. */
@@ -89,61 +93,4 @@ input[type='number']::-webkit-outer-spin-button {
 input[type='number']::-webkit-inner-spin-button {
   margin: 0;
   -webkit-appearance: none;
-}
-
-/* Custom */
-
-.rainbow-button {
-  background: linear-gradient(124deg, #2de9c8, #00aff7, #947bff, #f8279c, #ff6f4c, #ffe13d);
-  background-size: 1800% 1800%;
-
-  -webkit-animation: rainbow 18s ease infinite;
-  -z-animation: rainbow 18s ease infinite;
-  -o-animation: rainbow 18s ease infinite;
-  animation: rainbow 18s ease infinite;
-}
-
-@-webkit-keyframes rainbow {
-  0% {
-    background-position: 0% 82%;
-  }
-  50% {
-    background-position: 100% 19%;
-  }
-  100% {
-    background-position: 0% 82%;
-  }
-}
-@-moz-keyframes rainbow {
-  0% {
-    background-position: 0% 82%;
-  }
-  50% {
-    background-position: 100% 19%;
-  }
-  100% {
-    background-position: 0% 82%;
-  }
-}
-@-o-keyframes rainbow {
-  0% {
-    background-position: 0% 82%;
-  }
-  50% {
-    background-position: 100% 19%;
-  }
-  100% {
-    background-position: 0% 82%;
-  }
-}
-@keyframes rainbow {
-  0% {
-    background-position: 0% 82%;
-  }
-  50% {
-    background-position: 100% 19%;
-  }
-  100% {
-    background-position: 0% 82%;
-  }
 }

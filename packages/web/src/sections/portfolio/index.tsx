@@ -10,61 +10,31 @@ import { DashboardContent } from '@/layouts/dashboard';
 import { usePersistStore } from '@normalfinance/state';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { INK, FAINT, MUTED, PAPER, CANVAS } from '@/theme/brand-colors';
 import { assetDisplay, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
-import SavingsCard from '@/components/_common/savings-card';
 import { TwoFactorPrompt } from '@/components/_common/two-factor-prompt';
 import { GetStartedPicker } from '@/components/_common/get-started-picker';
 
-import { HeroCard } from './portfolio-hero-card';
-import { HoldingsCard } from './portfolio-holdings-card';
+import { MoneyBlock } from './portfolio-money';
+import { BalanceBlock } from './portfolio-balance';
 import { ActivityCard } from './portfolio-activity-card';
 
 import type { HoldingData } from './_shared';
-
 // Shown until we know whether the user even has a wallet. Beyond that each
 // card owns its own skeleton, so a slow source never blanks the whole page.
 function PortfolioSkeleton() {
   return (
     <DashboardContent>
-      {/* Hero skeleton */}
-      <Skeleton
-        variant="rectangular"
-        height={220}
-        sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.08)' }}
-      />
-
-      {/* Holdings + Savings skeleton */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
-          gap: 2,
-          mt: 2,
-        }}
-      >
-        <Skeleton
-          variant="rectangular"
-          height={320}
-          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
-        />
-        <Skeleton
-          variant="rectangular"
-          height={320}
-          sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
-        />
-      </Box>
-
-      {/* Activity skeleton */}
-      <Skeleton
-        variant="rectangular"
-        height={280}
-        sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)', mt: 2 }}
-      />
+      {/* The balance, the four tiles, then the assets: Home's own shape. */}
+      <Skeleton variant="text" sx={{ width: 120, fontSize: 14 }} />
+      <Skeleton variant="text" sx={{ width: 240, fontSize: 44 }} />
+      <Skeleton variant="rectangular" sx={{ mt: 2.5, height: { xs: 68, md: 72 } }} />
+      <Skeleton variant="rectangular" sx={{ mt: { xs: 3, md: 5 }, height: 360 }} />
     </DashboardContent>
   );
 }
@@ -100,10 +70,6 @@ export default function PortfolioView() {
   const walletChecking = !!user && !wallet.address && hasTurnkeyWallet === null;
 
   const savingsValue = savingsUsd;
-  // #75: earnings compose slot + companion, exactly like the value does —
-  // with an external wallet in the slot, `savings.earnings` alone is the
-  // EMPTY wallet's earnings and showed a confident $0.00.
-  const earnings = savings.earnings + savings.companionEarnings;
   // Companion loading included: savings load like any other asset — the
   // skeleton holds until EVERY source has answered.
   const savingsLoading =
@@ -173,6 +139,29 @@ export default function PortfolioView() {
   );
   const totalBalance = walletBalance + savingsValue;
 
+  // The wallet's move over the last 24 hours, from each asset's price change:
+  // value × pct / (100 + pct) is what the asset was worth less a day ago.
+  // Read from the portfolio rows: the token conversion drops change24h.
+  const { change24h, changes } = useMemo(() => {
+    const rows = [
+      ...(['XLM', 'USDC', 'BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[]),
+      ...(walletBalances.companionStellar?.assets ?? []),
+    ].filter((a): a is PortfolioAsset => !!a);
+    const bySymbol: Record<string, number | null> = {};
+    let delta = 0;
+    let known = false;
+    rows.forEach((a) => {
+      bySymbol[a.symbol] = a.change24h;
+      const value = BigNumber(a.balance ?? 0)
+        .multipliedBy(a.price ?? 0)
+        .toNumber();
+      if (a.change24h == null || !Number.isFinite(a.change24h) || !(value > 0)) return;
+      known = true;
+      delta += (value * a.change24h) / (100 + a.change24h);
+    });
+    return { change24h: known ? delta : null, changes: bySymbol };
+  }, [getAsset, walletBalances.companionStellar]);
+
   const holdingsData: HoldingData[] = useMemo(() => {
     const entries: HoldingData[] = walletTokens.map((tkn) => {
       const value = BigNumber(tkn.balance).multipliedBy(tkn.price).toNumber();
@@ -237,16 +226,7 @@ export default function PortfolioView() {
       return (
         <DashboardContent>
           <Box sx={{ display: 'flex', justifyContent: 'center', pt: { xs: 4, md: 7 } }}>
-            <Box
-              sx={{
-                width: '100%',
-                maxWidth: 460,
-                p: { xs: '20px', md: '24px' },
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid rgba(10,10,15,0.08)',
-                bgcolor: '#fff',
-              }}
-            >
+            <Box sx={{ width: '100%', maxWidth: 460, bgcolor: PAPER }}>
               <GetStartedPicker />
             </Box>
           </Box>
@@ -272,20 +252,20 @@ export default function PortfolioView() {
               width: 56,
               height: 56,
               borderRadius: 'var(--radius-md)',
-              bgcolor: '#F4F4F7',
+              bgcolor: CANVAS,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#9A9AA3',
+              color: FAINT,
             }}
           >
             <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 28 }} />
           </Box>
           <Box>
-            <Box sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
+            <Box sx={{ fontSize: '16px', fontWeight: 500, color: INK, mb: '6px' }}>
               Connect your wallet
             </Box>
-            <Box sx={{ fontSize: '14px', color: '#6B6B76', maxWidth: 280 }}>
+            <Box sx={{ fontSize: '14px', color: MUTED, maxWidth: 280 }}>
               Sign in to view your portfolio, holdings, and activity.
             </Box>
           </Box>
@@ -298,8 +278,8 @@ export default function PortfolioView() {
               py: '10px',
               borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: '#0A0A0F',
-              color: '#fff',
+              bgcolor: INK,
+              color: PAPER,
               fontSize: '14px',
               fontWeight: 500,
               cursor: 'pointer',
@@ -319,49 +299,43 @@ export default function PortfolioView() {
     <DashboardContent>
       <TwoFactorPrompt hasFunds={totalBalance > 0} />
 
-      <HeroCard
-        totalBalance={totalBalance}
-        walletBalance={walletBalance}
-        savingsValue={savingsValue}
-        earnings={earnings}
-        // The totals here sum BOTH sources — native-chain balances and the
-        // Stellar token store. Gating on savings alone let the figure paint
-        // before XLM/USDC landed, so the number visibly jumped a beat later.
-        // Doc 117: gated on the CAPPED first paint, like Holdings below.
-        // This was the live flag — a stuck companion lookup would spin the
-        // page hero forever, even after every other row had painted.
+      {/* No greeting and no date (Niko 2026-11-09): the balance first, then
+          the assets right under it, on the first screen of a phone. */}
+      <BalanceBlock
+        total={totalBalance}
+        change={change24h}
+        // The totals sum BOTH sources, native-chain balances and the Stellar
+        // token store; gated on the capped first paint (doc 117), so a stuck
+        // companion lookup can't spin the balance forever.
         loading={!firstPaintDone && (savingsLoading || balancesLoading)}
-        holdingsData={holdingsData}
-        balancesError={!!walletBalances.error}
+        error={!!walletBalances.error}
         onRetry={() => walletBalances.refresh()}
       />
 
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' },
-          gap: 2,
-          mt: 2,
+          // One column at every width (Niko 2026-11-09): your money across the
+          // page, with room for each coin's price and share, then the activity.
+          gridTemplateColumns: 'minmax(0, 1fr)',
+          alignItems: 'start',
+          gap: 4,
+          mt: { xs: 3, md: 5 },
         }}
       >
-        <HoldingsCard
-          holdingsData={holdingsData}
+        <MoneyBlock
+          holdings={holdingsData}
           sections={holdingsSections}
-          totalBalance={totalBalance}
+          changes={changes}
+          // Savings is one of the rows, so the list waits for it too, on the
+          // FIRST paint only: a background refetch must never flash it back.
+          loading={!firstPaintDone && (balancesLoading || savings.positionLoading)}
           error={!!walletBalances.error}
           onRetry={() => walletBalances.refresh()}
-          // Savings is one of the holdings rows, so the card must wait for it
-          // too — otherwise the coins paint and the savings row drops in a
-          // couple of seconds later. Only on the FIRST paint: once real data
-          // has rendered, a background refetch must never flash the skeleton
-          // back, which would be worse than the late row.
-          loading={!firstPaintDone && (balancesLoading || savings.positionLoading)}
         />
-        <SavingsCard sx={{ minWidth: 0, overflow: 'hidden' }} />
-      </Box>
-
-      <Box sx={{ mt: 2 }}>
         <ActivityCard
+          limit={5}
+          title="Recent activity"
           walletAddress={wallet.address}
           bitcoinAddress={bitcoinAddress}
           ethereumAddress={ethereumAddress}

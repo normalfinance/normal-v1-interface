@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useSavingsHistory } from '@/hooks/use-savings-history';
+import { INK, HOVER, MUTED, CANVAS } from '@/theme/brand-colors';
 import { buildRealEarningsHistory } from '@/lib/savings/earnings-history';
 
 import Box from '@mui/material/Box';
@@ -10,7 +11,6 @@ import Typography from '@mui/material/Typography';
 
 type TimeFilter = '1W' | '1M' | '3M' | '6M' | '1Y' | '5Y' | 'ALL';
 
-const MONO = '"Geist Mono", ui-monospace, monospace';
 const TIME_FILTERS: TimeFilter[] = ['1W', '1M', '3M', '6M', '1Y', '5Y', 'ALL'];
 const WINDOW_MS: Record<TimeFilter, number | null> = {
   '1W': 7 * 24 * 60 * 60 * 1000,
@@ -30,17 +30,16 @@ const NUM_POINTS = 80;
 
 function fmtY(v: number): string {
   if (v <= 0) return '$0';
-  if (v >= 100) return `$${v.toFixed(2)}`;
-  if (v >= 1) return `$${v.toFixed(3)}`;
-  if (v >= 0.01) return `$${v.toFixed(4)}`;
+  if (v >= 1) return `$${v.toFixed(2)}`;
+  if (v >= 0.01) return `$${v.toFixed(3)}`;
   if (v >= 0.001) return `$${v.toFixed(5)}`;
   return `$${v.toFixed(6)}`;
 }
 
 function fmtStat(v: number): string {
   if (v <= 0) return '$0.00000';
-  if (v >= 100) return `$${v.toFixed(2)}`;
-  if (v >= 1) return `$${v.toFixed(4)}`;
+  // Cents from a cent up; below that, enough digits to show it growing.
+  if (v >= 0.01) return `$${v.toFixed(2)}`;
   if (v >= 0.00001) return `$${v.toFixed(5)}`;
   return '<$0.00001';
 }
@@ -197,26 +196,20 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '3px', flexShrink: 0 }}>
       <Typography
         sx={{
-          fontSize: '9.5px',
+          fontSize: '13px',
           fontWeight: 500,
-          color: 'rgba(255,255,255,0.28)',
-          letterSpacing: '0.09em',
-          textTransform: 'uppercase',
+          color: 'inherit',
         }}
       >
         {label}
       </Typography>
       <Typography
         sx={{
-          fontSize: '13px',
+          fontSize: accent ? '20px' : '15px',
           fontWeight: 500,
-          fontFamily: MONO,
+          fontVariantNumeric: 'tabular-nums',
           letterSpacing: '-0.01em',
-          color: accent
-            ? '#4ADE80'
-            : estimated
-              ? 'rgba(255,255,255,0.5)'
-              : 'rgba(255,255,255,0.85)',
+          color: 'inherit',
         }}
       >
         {estimated ? '~' : ''}
@@ -229,16 +222,14 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
     // Doc 90 W3: a failed history fetch used to render a flat "$0.00" curve
     // presented as the user's real earnings. Say it instead.
     return (
-      <Box sx={{ mt: '20px', pt: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <Typography sx={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>
-          {`Couldn't load your earnings history — it retries automatically.`}
-        </Typography>
-      </Box>
+      <Typography sx={{ fontSize: '14px', color: 'text.secondary' }}>
+        Couldn&apos;t load your earnings history. It tries again on its own.
+      </Typography>
     );
   }
 
   return (
-    <Box sx={{ mt: '20px', pt: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+    <Box sx={{ color: 'text.primary' }}>
       {/* Stats + filter row */}
       <Box
         sx={{
@@ -273,17 +264,16 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
               sx={{
                 px: '9px',
                 py: '4px',
-                borderRadius: 'var(--radius-sm)',
                 border: 'none',
-                fontSize: '11px',
+                fontSize: '12.5px',
                 fontWeight: 500,
                 lineHeight: 1.4,
                 cursor: 'pointer',
-                fontFamily: MONO,
-                transition: 'background 0.12s, color 0.12s',
-                bgcolor: filter === f ? 'rgba(74,222,128,0.18)' : 'transparent',
-                color: filter === f ? '#4ADE80' : 'rgba(255,255,255,0.28)',
-                '&:hover': { color: filter === f ? '#4ADE80' : 'rgba(255,255,255,0.55)' },
+                fontFamily: 'inherit',
+                transition: 'background 0.12s',
+                bgcolor: filter === f ? CANVAS : 'transparent',
+                color: filter === f ? INK : MUTED,
+                '&:hover': { color: INK, bgcolor: filter === f ? CANVAS : HOVER },
               }}
             >
               {f}
@@ -297,7 +287,7 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
         <Skeleton
           variant="rectangular"
           height={CHART_H + 24}
-          sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-sm)' }}
+          sx={{ bgcolor: 'currentColor', opacity: 0.06 }}
         />
       ) : (
         <Box>
@@ -319,9 +309,9 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
                 <Typography
                   key={i}
                   sx={{
-                    fontSize: '9px',
-                    color: 'rgba(255,255,255,0.25)',
-                    fontFamily: MONO,
+                    fontSize: '11px',
+                    color: 'inherit',
+                    fontVariantNumeric: 'tabular-nums',
                     textAlign: 'right',
                     lineHeight: 1,
                   }}
@@ -338,13 +328,6 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
                 preserveAspectRatio="none"
                 style={{ display: 'block', width: '100%', height: `${CHART_H}px` }}
               >
-                <defs>
-                  <linearGradient id="nf-earnings-area" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4ADE80" stopOpacity="0.18" />
-                    <stop offset="100%" stopColor="#4ADE80" stopOpacity="0.01" />
-                  </linearGradient>
-                </defs>
-
                 {/* Subtle grid lines */}
                 {gridYs.map((gy, i) => (
                   <line
@@ -353,26 +336,27 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
                     y1={gy}
                     x2={CHART_W}
                     y2={gy}
-                    stroke="rgba(255,255,255,0.05)"
+                    stroke="currentColor"
+                    strokeOpacity="0.08"
                     strokeWidth="1"
                   />
                 ))}
 
                 {linePath && areaPath ? (
                   <>
-                    <path d={areaPath} fill="url(#nf-earnings-area)" />
+                    <path d={areaPath} fill="currentColor" fillOpacity="0.04" />
                     <path
                       d={linePath}
                       fill="none"
-                      stroke="#4ADE80"
+                      stroke="currentColor"
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                     {lastPoint && (
                       <>
-                        <circle cx={endX} cy={endY} r="8" fill="#4ADE80" fillOpacity="0.18" />
-                        <circle cx={endX} cy={endY} r="3.5" fill="#4ADE80" />
+                        <circle cx={endX} cy={endY} r="8" fill="currentColor" fillOpacity="0.18" />
+                        <circle cx={endX} cy={endY} r="3.5" fill="currentColor" />
                       </>
                     )}
                   </>
@@ -382,10 +366,10 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
                     y1={CHART_H * 0.72}
                     x2={CHART_W}
                     y2={CHART_H * 0.72}
-                    stroke="#4ADE80"
+                    stroke="currentColor"
                     strokeWidth="1.5"
                     strokeDasharray="7 5"
-                    strokeOpacity="0.2"
+                    strokeOpacity="0.35"
                   />
                 )}
               </svg>
@@ -401,12 +385,10 @@ export function SavingsChart({ walletAddress, currentEarnings }: SavingsChartPro
               mt: '6px',
             }}
           >
-            <Typography sx={{ fontSize: '9px', color: 'rgba(255,255,255,0.22)', fontFamily: MONO }}>
-              {chartPoints.length > 0 ? fmtDate(minT, now) : '—'}
+            <Typography sx={{ fontSize: '11px', color: 'inherit' }}>
+              {chartPoints.length > 0 ? fmtDate(minT, now) : ''}
             </Typography>
-            <Typography sx={{ fontSize: '9px', color: 'rgba(255,255,255,0.22)', fontFamily: MONO }}>
-              Today
-            </Typography>
+            <Typography sx={{ fontSize: '11px', color: 'inherit' }}>Today</Typography>
           </Box>
         </Box>
       )}

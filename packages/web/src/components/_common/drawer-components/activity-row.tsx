@@ -7,6 +7,16 @@ import type { Activity } from '@/types/activity';
 import { useTranslate } from '@/locales';
 import { useState, useCallback } from 'react';
 import { format, getCryptoIconUrl } from '@normalfinance/utils';
+import {
+  INK,
+  MUTED,
+  FAINT,
+  DANGER,
+  SUCCESS,
+  WARNING,
+  INK_SOFT,
+  BRAND_COLORS,
+} from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -22,7 +32,7 @@ const ICON_BOX_SX = {
   justifyContent: 'center',
   borderRadius: '50%',
   flexShrink: 0,
-  bgcolor: 'rgba(10,10,15,0.06)',
+  bgcolor: 'rgba(var(--nf-ink-rgb),0.06)',
 } as const;
 
 const MONO = {
@@ -146,19 +156,23 @@ export function ActivityRow({ activity }: { activity: Activity }) {
   type ChipConfig = { label: string; color: string; bg: string };
   // Palette anchored to #1AB37D (savings green) + brand gradient colors
   const CHIP: Record<string, ChipConfig> = {
-    Buy: { label: 'On-Ramp', color: '#0A6649', bg: 'rgba(26,179,125,0.11)' },
-    Sell: { label: 'Off-Ramp', color: '#8A4A00', bg: 'rgba(255,176,96,0.16)' },
-    Receive: { label: 'Received', color: '#0A5272', bg: 'rgba(91,207,255,0.14)' },
-    Sent: { label: 'Sent', color: '#2A2A33', bg: 'rgba(10,10,15,0.07)' },
-    Swap: { label: 'Swap', color: '#5A2E9E', bg: 'rgba(177,123,255,0.13)' },
-    'Savings Deposit': { label: 'Deposit', color: '#0A6649', bg: 'rgba(26,179,125,0.11)' },
-    'Savings Withdraw': { label: 'Withdraw', color: '#2A2A33', bg: 'rgba(10,10,15,0.07)' },
-    Mint: { label: 'Mint', color: '#0A6649', bg: 'rgba(26,179,125,0.11)' },
-    Redeem: { label: 'Redeem', color: '#8A4A00', bg: 'rgba(255,176,96,0.16)' },
-    'Add Liquidity': { label: 'Add Liquidity', color: '#0A5272', bg: 'rgba(91,207,255,0.14)' },
+    Buy: { label: 'On-Ramp', color: SUCCESS, bg: 'rgba(26,179,125,0.11)' },
+    Sell: { label: 'Off-Ramp', color: WARNING, bg: 'rgba(255,176,96,0.16)' },
+    Receive: { label: 'Received', color: BRAND_COLORS.sky.deep, bg: 'rgba(91,207,255,0.14)' },
+    Sent: { label: 'Sent', color: INK_SOFT, bg: 'rgba(var(--nf-ink-rgb),0.07)' },
+    Swap: { label: 'Swap', color: BRAND_COLORS.violet.deep, bg: 'rgba(177,123,255,0.13)' },
+    'Savings Deposit': { label: 'Deposit', color: SUCCESS, bg: 'rgba(26,179,125,0.11)' },
+    'Savings Withdraw': { label: 'Withdraw', color: INK_SOFT, bg: 'rgba(var(--nf-ink-rgb),0.07)' },
+    Mint: { label: 'Mint', color: SUCCESS, bg: 'rgba(26,179,125,0.11)' },
+    Redeem: { label: 'Redeem', color: WARNING, bg: 'rgba(255,176,96,0.16)' },
+    'Add Liquidity': {
+      label: 'Add Liquidity',
+      color: BRAND_COLORS.sky.deep,
+      bg: 'rgba(91,207,255,0.14)',
+    },
     'Remove Liquidity': {
       label: 'Remove Liquidity',
-      color: '#7A1D4A',
+      color: BRAND_COLORS.magenta.deep,
       bg: 'rgba(255,123,197,0.12)',
     },
   };
@@ -167,8 +181,8 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       ? CHIP['Sell']
       : (CHIP[activity.type] ?? {
           label: activity.type,
-          color: '#2A2A33',
-          bg: 'rgba(10,10,15,0.07)',
+          color: INK_SOFT,
+          bg: 'rgba(var(--nf-ink-rgb),0.07)',
         });
   const isPending =
     ((activity.type === 'Sent' || activity.type === 'Receive') && activity.confirmed === false) ||
@@ -283,7 +297,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
       break;
   }
 
-  const amountColor = isPositive === true ? '#1AB37D' : '#0A0A0F';
+  const amountColor = isPositive === true ? '#1AB37D' : INK;
   const amountPrefix = isPositive === true ? '+' : '';
 
   /* ---------- UI ------------------------------------------------ */
@@ -300,7 +314,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
           mx: '-8px',
           transition: 'background .15s ease',
           cursor: cctpId ? 'pointer' : 'default',
-          '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' },
+          '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.03)' },
         }}
       >
         {icon}
@@ -337,7 +351,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                     px: '7px',
                     borderRadius: 'var(--radius-sm)',
                     bgcolor: 'rgba(245,158,11,0.1)',
-                    color: '#B45309',
+                    color: BRAND_COLORS.yellow.deep,
                     fontSize: '10px',
                     fontWeight: 500,
                     letterSpacing: '0.02em',
@@ -360,7 +374,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                     px: '7px',
                     borderRadius: 'var(--radius-sm)',
                     bgcolor: 'rgba(220,38,38,0.1)',
-                    color: '#B91C1C',
+                    color: DANGER,
                     fontSize: '10px',
                     fontWeight: 500,
                     letterSpacing: '0.02em',
@@ -379,7 +393,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                     px: '7px',
                     borderRadius: 'var(--radius-sm)',
                     bgcolor: 'rgba(245,158,11,0.1)',
-                    color: '#B45309',
+                    color: BRAND_COLORS.yellow.deep,
                     fontSize: '10px',
                     fontWeight: 500,
                     letterSpacing: '0.02em',
@@ -390,12 +404,10 @@ export function ActivityRow({ activity }: { activity: Activity }) {
               )}
             </Box>
             {amountStr && (
-              <Typography sx={{ fontSize: '12px', color: '#6B6B76', ...MONO }}>
-                {amountStr}
-              </Typography>
+              <Typography sx={{ fontSize: '12px', color: MUTED, ...MONO }}>{amountStr}</Typography>
             )}
             {subtitle && (
-              <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>{subtitle}</Typography>
+              <Typography sx={{ fontSize: '11.5px', color: FAINT }}>{subtitle}</Typography>
             )}
           </Stack>
 
@@ -407,7 +419,7 @@ export function ActivityRow({ activity }: { activity: Activity }) {
                 {usdStr}
               </Typography>
             )}
-            <Typography sx={{ fontSize: '11px', color: '#9A9AA3', ...MONO }}>
+            <Typography sx={{ fontSize: '11px', color: FAINT, ...MONO }}>
               {time} {t('ago')}
             </Typography>
           </Stack>

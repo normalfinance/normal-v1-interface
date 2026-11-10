@@ -9,6 +9,7 @@ import { useStellarConfig } from '@/hooks';
 import { authedFetch } from '@/utils/authed-fetch';
 import { useState, useEffect, useCallback } from 'react';
 import { useSendToken } from '@/hooks/stellar/use-send-token';
+import { INK, WELL, MUTED, DANGER, INK_SOFT } from '@/theme/brand-colors';
 import { fetchSolBalance, fetchEthBalance } from '@/hooks/use-chain-portfolio';
 import { saveOfframpFill, fetchOfframpFills, removeOfframpFill } from '@/lib/offramp-fills';
 import {
@@ -31,7 +32,6 @@ import { Iconify } from '@/components/template/iconify';
 import { createSolanaAdapter } from './send-adapters/solana';
 import { createBitcoinAdapter } from './send-adapters/bitcoin';
 import { createEthereumAdapter } from './send-adapters/ethereum';
-
 // Kept back from the send so the source chain can pay its own network fee (and,
 // for SOL, the account's rent-exempt minimum ~0.00089 SOL + ~0.000005 fee).
 // Coinbase's "Max" doesn't know about these, so a max sell would otherwise fail
@@ -307,7 +307,7 @@ export function CoinbaseOfframpModal({
         if (sawError) {
           enqueueSnackbar(
             t(
-              'Could not reach Coinbase to check for a pending cash-out — close this and try again.'
+              'Could not reach Coinbase to check for a pending cash-out. Close this and try again.'
             ),
             { variant: 'warning' }
           );
@@ -349,7 +349,7 @@ export function CoinbaseOfframpModal({
       clearFill(txn.transactionId);
       setError(
         t(
-          'This Coinbase sale’s 30-minute window has passed, so Coinbase would no longer match the deposit. Nothing was sent — start a new sale on Coinbase.'
+          'This Coinbase sale’s 30-minute window has passed, so Coinbase would no longer match the deposit. Nothing was sent. Start a new sale on Coinbase.'
         )
       );
       return;
@@ -365,7 +365,7 @@ export function CoinbaseOfframpModal({
       if (!txn.memo && (await destinationRequiresMemo(config.HORIZON_URL, txn.toAddress))) {
         setError(
           t(
-            'This destination requires a memo, but Coinbase didn’t provide one — we can’t safely send. Please contact support.'
+            'This destination requires a memo, but Coinbase didn’t provide one. We can’t safely send. Please contact support.'
           )
         );
         return;
@@ -420,7 +420,7 @@ export function CoinbaseOfframpModal({
           : t('A network fee has to stay in the wallet to send.');
       setError(
         t(
-          '{{why}} You can sell at most about {{avail}} {{symbol}} right now — start a new sale on Coinbase and enter {{avail}} (or less) instead of using Max.',
+          '{{why}} You can sell at most about {{avail}} {{symbol}} right now. Start a new sale on Coinbase and enter {{avail}} (or less) instead of using Max.',
           { why, avail, symbol }
         )
       );
@@ -489,11 +489,11 @@ export function CoinbaseOfframpModal({
         <Stack spacing={2.5}>
           <Box sx={{ textAlign: 'center' }}>
             <Typography
-              sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+              sx={{ fontSize: '17px', fontWeight: 500, color: INK, letterSpacing: '-0.02em' }}
             >
               {title}
             </Typography>
-            <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '4px' }}>
+            <Typography sx={{ fontSize: '13px', color: MUTED, mt: '4px' }}>
               {stage === 'searching' && t('Looking for your Coinbase sell order…')}
               {stage === 'ready' &&
                 t(
@@ -502,7 +502,7 @@ export function CoinbaseOfframpModal({
               {stage === 'sending' && t('Approve the send with your passkey…')}
               {stage === 'confirming' &&
                 t(
-                  'Crypto sent. Coinbase will pay out your cash once it confirms — you can close this.'
+                  'Crypto sent. Coinbase will pay out your cash once it confirms. You can close this.'
                 )}
               {stage === 'done' &&
                 t(
@@ -510,14 +510,14 @@ export function CoinbaseOfframpModal({
                 )}
               {stage === 'pending' &&
                 t(
-                  'Your crypto was sent, but Coinbase hasn’t confirmed the sale yet. This usually resolves within minutes — the row stays Pending in Activity until it does. Nothing more to do here.'
+                  'Your crypto was sent, but Coinbase hasn’t confirmed the sale yet. This usually resolves within minutes. The row stays Pending in Activity until it does. Nothing more to do here.'
                 )}
               {stage === 'failed' &&
                 (sentHash
                   ? t(
-                      'Coinbase reported this sale as failed or expired after your crypto was sent. Nothing more should be sent — the crypto arrives as a balance in your Coinbase account, where you can sell it directly or contact Coinbase support.'
+                      'Coinbase reported this sale as failed or expired after your crypto was sent. Nothing more should be sent: the crypto arrives as a balance in your Coinbase account, where you can sell it directly or contact Coinbase support.'
                     )
-                  : t('We couldn’t complete the send. No funds were moved — you can try again.'))}
+                  : t('We couldn’t complete the send. No funds were moved. You can try again.'))}
               {stage === 'none' &&
                 t(
                   'We didn’t find a pending Coinbase sell order. If you just confirmed one, give it a moment and reopen.'
@@ -536,8 +536,8 @@ export function CoinbaseOfframpModal({
                 sx={{
                   p: '14px',
                   borderRadius: 'var(--radius-md)',
-                  bgcolor: '#FAFAFB',
-                  border: '1px solid rgba(10,10,15,0.08)',
+                  bgcolor: WELL,
+                  border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
                 }}
               >
                 <Stack spacing={1.5}>
@@ -555,7 +555,7 @@ export function CoinbaseOfframpModal({
                         sx={{
                           fontSize: '17px',
                           fontWeight: 500,
-                          color: '#0A0A0F',
+                          color: INK,
                           letterSpacing: '-0.01em',
                           fontFamily: 'monospace',
                         }}
@@ -563,7 +563,7 @@ export function CoinbaseOfframpModal({
                         {txn.amount} {symbol}
                       </Typography>
                       {Number(token.price) > 0 && (
-                        <Typography sx={{ fontSize: '12.5px', color: '#6B6B76' }}>
+                        <Typography sx={{ fontSize: '12.5px', color: MUTED }}>
                           ≈ ${(parseFloat(txn.amount) * Number(token.price)).toFixed(2)}
                         </Typography>
                       )}
@@ -586,16 +586,16 @@ export function CoinbaseOfframpModal({
             )}
 
           {stage === 'ready' && windowExpired && (
-            <Typography sx={{ fontSize: '12.5px', color: '#B91C1C', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: '12.5px', color: DANGER, lineHeight: 1.5 }}>
               {t(
-                'Coinbase matches deposits for 30 minutes after “Cash out now”. This sale is past that window — start a new sale on Coinbase instead of sending.'
+                'Coinbase matches deposits for 30 minutes after “Cash out now”. This sale is past that window. Start a new sale on Coinbase instead of sending.'
               )}
             </Typography>
           )}
 
           {(stage === 'searching' || stage === 'sending' || stage === 'confirming') && (
             <Stack alignItems="center" sx={{ py: 1 }}>
-              <CircularProgress size={26} sx={{ color: '#0A0A0F' }} />
+              <CircularProgress size={26} sx={{ color: INK }} />
             </Stack>
           )}
 
@@ -609,7 +609,7 @@ export function CoinbaseOfframpModal({
                 border: '1px solid rgba(220,38,38,0.15)',
               }}
             >
-              <Typography sx={{ fontSize: '12.5px', color: '#B91C1C', lineHeight: 1.5 }}>
+              <Typography sx={{ fontSize: '12.5px', color: DANGER, lineHeight: 1.5 }}>
                 {error}
               </Typography>
             </Box>
@@ -624,10 +624,10 @@ export function CoinbaseOfframpModal({
                 startIcon={<Iconify icon="solar:shield-keyhole-bold" width={18} />}
                 sx={{
                   borderRadius: 'var(--radius-md)',
-                  bgcolor: '#0A0A0F',
+                  bgcolor: INK,
                   textTransform: 'none',
                   fontWeight: 500,
-                  '&:hover': { bgcolor: '#2A2A33' },
+                  '&:hover': { bgcolor: INK_SOFT },
                 }}
               >
                 {t('Send with passkey')}
@@ -639,10 +639,10 @@ export function CoinbaseOfframpModal({
                 onClick={handleSend}
                 sx={{
                   borderRadius: 'var(--radius-md)',
-                  bgcolor: '#0A0A0F',
+                  bgcolor: INK,
                   textTransform: 'none',
                   fontWeight: 500,
-                  '&:hover': { bgcolor: '#2A2A33' },
+                  '&:hover': { bgcolor: INK_SOFT },
                 }}
               >
                 {t('Try again')}
@@ -656,8 +656,8 @@ export function CoinbaseOfframpModal({
                 borderRadius: 'var(--radius-md)',
                 textTransform: 'none',
                 fontWeight: 500,
-                borderColor: 'rgba(10,10,15,0.16)',
-                color: '#0A0A0F',
+                borderColor: 'rgba(var(--nf-ink-rgb),0.16)',
+                color: INK,
               }}
             >
               {stage === 'ready' ? t('Cancel') : t('Close')}
@@ -684,12 +684,12 @@ function Row({
     <Box
       sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
     >
-      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', flexShrink: 0 }}>{label}</Typography>
+      <Typography sx={{ fontSize: '12.5px', color: MUTED, flexShrink: 0 }}>{label}</Typography>
       <Typography
         sx={{
           fontSize: '12.5px',
           fontWeight: 500,
-          color: '#0A0A0F',
+          color: INK,
           fontFamily: mono ? '"Geist Mono", monospace' : 'inherit',
           ...(truncate
             ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }

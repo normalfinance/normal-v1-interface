@@ -14,7 +14,7 @@ import { useStellarWalletsKit, SESSION_BASED_WALLET_TYPES } from './use-stellar-
 // suppress their own error UI and let the reconnect snackbar handle it.
 export class WalletSessionExpiredError extends Error {
   constructor() {
-    super('Wallet session expired — reconnect required');
+    super('Wallet session expired: reconnect required');
     this.name = 'WalletSessionExpiredError';
   }
 }
@@ -75,7 +75,7 @@ export function useWalletReconnect() {
         // connect flow, and retry the SAME signature once — the in-flight
         // step pauses and continues instead of failing.
         enqueueSnackbar(
-          t('Your wallet session expired — reconnect to continue where you left off.'),
+          t('Your wallet session expired. Reconnect to continue where you left off.'),
           { variant: 'info', autoHideDuration: 6000 }
         );
         try {

@@ -7,6 +7,7 @@ import { authedFetch } from '@/utils/authed-fetch';
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { TWO_FACTOR_ENABLED, twoFactorErrorMessage } from '@/lib/auth/two-factor';
+import { INK, FAINT, MUTED, CANVAS, DANGER, SUCCESS, INK_SOFT } from '@/theme/brand-colors';
 
 import { Box, Stack, Alert, Button, Typography } from '@mui/material';
 
@@ -28,27 +29,27 @@ type Step =
 
 const primaryButtonSx = {
   borderRadius: 'var(--radius-md)',
-  bgcolor: '#0A0A0F',
+  bgcolor: INK,
   fontSize: '14px',
   fontWeight: 500,
   letterSpacing: '-0.01em',
-  '&:hover': { bgcolor: '#2A2A33' },
-  '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: '#9A9AA3' },
+  '&:hover': { bgcolor: INK_SOFT },
+  '&.Mui-disabled': { bgcolor: 'rgba(var(--nf-ink-rgb),0.08)', color: FAINT },
 };
 
 const secondaryButtonSx = {
   fontSize: '13px',
   fontWeight: 500,
-  color: '#0A0A0F',
-  border: '1px solid rgba(10,10,15,0.14)',
+  color: INK,
+  border: '1px solid rgba(var(--nf-ink-rgb),0.14)',
   borderRadius: 'var(--radius-md)',
   px: '14px',
-  '&:hover': { bgcolor: 'rgba(10,10,15,0.04)' },
+  '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.04)' },
 };
 
 const dangerButtonSx = {
   ...secondaryButtonSx,
-  color: '#B42318',
+  color: DANGER,
   border: '1px solid rgba(180,35,24,0.3)',
   '&:hover': { bgcolor: 'rgba(180,35,24,0.05)' },
 };
@@ -250,7 +251,7 @@ export function TwoFactorCard() {
 
   const renderHeader = () => (
     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '4px' }}>
-      <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F' }}>
+      <Typography sx={{ fontSize: '14px', fontWeight: 500, color: INK }}>
         {t('Two-factor authentication')}
       </Typography>
       <Typography
@@ -260,8 +261,8 @@ export function TwoFactorCard() {
           px: '9px',
           py: '3px',
           borderRadius: 'var(--radius-sm)',
-          bgcolor: factor ? 'rgba(26,179,125,0.12)' : 'rgba(10,10,15,0.06)',
-          color: factor ? '#0A6649' : '#6B6B76',
+          bgcolor: factor ? 'rgba(26,179,125,0.12)' : 'rgba(var(--nf-ink-rgb),0.06)',
+          color: factor ? SUCCESS : MUTED,
         }}
       >
         {factor ? t('On') : t('Off')}
@@ -270,14 +271,14 @@ export function TwoFactorCard() {
   );
 
   const renderDescription = (text: string) => (
-    <Typography sx={{ fontSize: '13px', color: '#6B6B76', lineHeight: 1.55, mb: '16px' }}>
+    <Typography sx={{ fontSize: '13px', color: MUTED, lineHeight: 1.55, mb: '16px' }}>
       {t(text)}
     </Typography>
   );
 
   const renderPhrase = (wallets: string[], saved: string[]) => (
     <>
-      <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
+      <Typography sx={{ fontSize: '14px', fontWeight: 500, color: INK, mb: '4px' }}>
         {t('Save your recovery phrase first')}
       </Typography>
       {renderDescription(
@@ -333,7 +334,7 @@ export function TwoFactorCard() {
           sx={{ width: 176, height: 176, display: 'block' }}
         />
         <Box sx={{ width: '100%' }}>
-          <Typography sx={{ fontSize: '12px', color: '#6B6B76', mb: '6px' }}>
+          <Typography sx={{ fontSize: '12px', color: MUTED, mb: '6px' }}>
             {t("Can't scan it? Enter this key in your app instead:")}
           </Typography>
           <Box
@@ -342,9 +343,9 @@ export function TwoFactorCard() {
               py: '10px',
               fontFamily: MONO_FONT,
               fontSize: '12.5px',
-              color: '#0A0A0F',
+              color: INK,
               wordBreak: 'break-all',
-              bgcolor: '#F4F4F7',
+              bgcolor: CANVAS,
               borderRadius: 'var(--radius-md)',
             }}
           >
@@ -361,7 +362,7 @@ export function TwoFactorCard() {
 
   const renderCodes = (codes: string[]) => (
     <>
-      <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
+      <Typography sx={{ fontSize: '14px', fontWeight: 500, color: INK, mb: '4px' }}>
         {t('Save your recovery codes')}
       </Typography>
       {renderDescription(
@@ -376,8 +377,8 @@ export function TwoFactorCard() {
           mb: '12px',
           fontFamily: MONO_FONT,
           fontSize: '12.5px',
-          color: '#0A0A0F',
-          bgcolor: '#F4F4F7',
+          color: INK,
+          bgcolor: CANVAS,
           borderRadius: 'var(--radius-md)',
         }}
       >
@@ -422,7 +423,7 @@ export function TwoFactorCard() {
           "You'll enter a code from your authenticator app when you log in and before you send, swap, deposit or withdraw."
         )}
         {remaining !== null && (
-          <Typography sx={{ fontSize: '13px', color: '#0A0A0F', mb: '12px' }}>
+          <Typography sx={{ fontSize: '13px', color: INK, mb: '12px' }}>
             {t('Recovery codes left')}: <strong>{remaining}</strong>
           </Typography>
         )}

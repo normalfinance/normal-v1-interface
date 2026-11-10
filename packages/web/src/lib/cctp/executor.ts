@@ -18,6 +18,9 @@ import { rpc, xdr, Keypair, Contract, Networks, TransactionBuilder } from '@stel
 import { hexToBytes } from './hookdata';
 import { EVM_CCTP, STELLAR_CCTP, type CctpChain } from './config';
 
+import type { EvmReceiptFacts } from './evm-burn-verdict';
+import type { StellarTxFacts } from './stellar-burn-verdict';
+
 const RECEIVE_MESSAGE_ABI = [
   {
     type: 'function',
@@ -107,6 +110,27 @@ export async function isEvmTxConfirmed(params: {
     return true;
   } catch (e: any) {
     if (e?.name === 'TransactionReceiptNotFoundError') return false;
+    throw e;
+  }
+}
+
+/** A transaction's receipt and the chain's height, for
+ *  lib/cctp/evm-burn-verdict.ts. No receipt yet reads as null, not an error. */
+export async function readEvmReceiptFacts(params: {
+  network: NetworkType;
+  chain: 'base' | 'ethereum';
+  txHash: `0x${string}`;
+}): Promise<EvmReceiptFacts> {
+  const pub = createPublicClient({
+    chain: evmChain(params.network, params.chain),
+    transport: relayerTransport(params.chain),
+  });
+  const latestBlock = await pub.getBlockNumber();
+  try {
+    const r = await pub.getTransactionReceipt({ hash: params.txHash });
+    return { receipt: { status: r.status, blockNumber: r.blockNumber }, latestBlock };
+  } catch (e: any) {
+    if (e?.name === 'TransactionReceiptNotFoundError') return { receipt: null, latestBlock };
     throw e;
   }
 }
@@ -263,6 +287,37 @@ export async function isStellarTxConfirmed(params: {
     if (tx?.successful === false) throw new Error(`stellar tx failed: ${params.txHash}`);
   }
   return false; // 404 = genuinely not on-chain yet
+}
+
+/** What Stellar knows about a transaction, for lib/cctp/stellar-burn-verdict.ts.
+ *  Horizon is asked only when the RPC has nothing (it keeps full history). */
+export async function readStellarTxFacts(params: {
+  network: NetworkType;
+  txHash: string;
+}): Promise<StellarTxFacts> {
+  const stellarCfg = getStellarConfigForNetwork(params.network);
+  const server = new rpc.Server(stellarCfg.RPC_URL, {
+    allowHttp: stellarCfg.RPC_URL.startsWith('http://'),
+  });
+  const res = await server.getTransaction(params.txHash);
+  let horizonFound: boolean | null = null;
+  if (res.status === 'NOT_FOUND') {
+    try {
+      const hz = await fetch(`${stellarCfg.HORIZON_URL}/transactions/${params.txHash}`, {
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (hz.ok) horizonFound = true;
+      else if (hz.status === 404) horizonFound = false;
+    } catch {
+      /* unreachable: null, so nothing is concluded */
+    }
+  }
+  return {
+    status: res.status as StellarTxFacts['status'],
+    latestLedgerCloseTime: Number(res.latestLedgerCloseTime ?? 0),
+    oldestLedgerCloseTime: Number(res.oldestLedgerCloseTime ?? 0),
+    horizonFound,
+  };
 }
 
 /** Which destination chain executes the mint for a transfer row. */

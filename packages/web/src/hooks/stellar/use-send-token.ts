@@ -163,7 +163,7 @@ export function useSendToken(): ReturnType {
         const sym = args.token.symbol;
         const messages = {
           'activation-minimum': t(
-            'This account isn’t active on Stellar yet — the first transfer must be at least {{min}} XLM to activate it.',
+            'This account isn’t active on Stellar yet. The first transfer must be at least {{min}} XLM to activate it.',
             { min: MIN_ACTIVATION_XLM }
           ),
           'destination-not-active': t(
@@ -171,7 +171,7 @@ export function useSendToken(): ReturnType {
             { min: MIN_ACTIVATION_XLM, sym }
           ),
           'destination-needs-trustline': t(
-            'That wallet can’t hold {{sym}} yet — it needs a {{sym}} trustline. Add the asset in that wallet’s app, then try again.',
+            'That wallet can’t hold {{sym}} yet: it needs a {{sym}} trustline. Add the asset in that wallet’s app, then try again.',
             { sym }
           ),
         } as const;
@@ -248,7 +248,7 @@ export function useSendToken(): ReturnType {
           : await signTransaction(unsignedXDR);
 
       if (!signedXDR) {
-        throw new Error('Transaction signing failed — no signed XDR returned');
+        throw new Error('Transaction signing failed: no signed XDR returned');
       }
 
       const transaction = TransactionBuilder.fromXDR(signedXDR, config.NETWORK_PASSPHRASE);

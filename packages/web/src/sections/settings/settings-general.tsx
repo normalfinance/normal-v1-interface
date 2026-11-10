@@ -5,6 +5,8 @@ import { cdn } from '@normalfinance/utils';
 import { useState, useEffect } from 'react';
 import { buildAuthHeaders } from '@/utils/http';
 import { supabase } from '@/lib/createSupabaseClient';
+import { INK, MUTED, FAINT } from '@/theme/brand-colors';
+import { useSiteTheme } from '@/layouts/site/use-site-theme';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 
 import Box from '@mui/material/Box';
@@ -16,22 +18,8 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
-
-// ----------------------------------------------------------------------
-
-const CardBox = ({ children }: { children: React.ReactNode }) => (
-  <Box
-    sx={{
-      p: { xs: '20px', md: '24px' },
-      borderRadius: 'var(--radius-lg)',
-      border: '1px solid rgba(10,10,15,0.08)',
-      bgcolor: '#FFFFFF',
-    }}
-  >
-    {children}
-  </Box>
-);
-
+import { SegmentedControl } from '@/components/_common/brand';
+import { RowList, AppBlock, appLocale } from '@/components/_common/app-ui';
 // ----------------------------------------------------------------------
 
 export function SettingsGeneral() {
@@ -73,7 +61,13 @@ export function SettingsGeneral() {
   const userAvatar =
     userMetadata?.picture || userMetadata?.avatar_url || cdn('logo/logo-single.svg');
   const displayName = userMetadata?.name || userEmail || 'User';
-  const createdAt = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A';
+  const createdAt = user.created_at
+    ? new Date(user.created_at).toLocaleDateString(appLocale(), {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'N/A';
   const authProvider = user.app_metadata?.provider || 'email';
 
   const handleMarketingToggle = async (checked: boolean) => {
@@ -101,54 +95,47 @@ export function SettingsGeneral() {
 
   return (
     <Stack spacing={2}>
-      {/* Profile card */}
-      <CardBox>
-        {/* Avatar + name */}
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: '20px' }}>
+      {/* Profile: an open list, the person first, then their details (each
+          row draws the line under itself, as every list in the app). */}
+      <AppBlock flush open title={t('Profile')}>
+        <Stack className="nf-row" direction="row" spacing={2} alignItems="center" sx={{ py: 2 }}>
           <Avatar src={userAvatar} alt={displayName} sx={{ width: 64, height: 64 }} />
           <Box>
             <Typography
-              sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', letterSpacing: '-0.01em' }}
+              sx={{ fontSize: '16px', fontWeight: 500, color: INK, letterSpacing: '-0.01em' }}
             >
               {displayName}
             </Typography>
-            <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '2px' }}>
-              {userEmail}
-            </Typography>
+            {/* Without a name the email is already the line above: say it once. */}
+            {userEmail && userEmail !== displayName && (
+              <Typography sx={{ fontSize: '13px', color: MUTED, mt: '2px' }}>
+                {userEmail}
+              </Typography>
+            )}
           </Box>
         </Stack>
 
-        <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)', mb: '20px' }} />
-
-        {/* Details rows */}
-        <Stack spacing={0}>
+        <RowList>
           <InfoRow label={t('Display name')} value={displayName} />
           <InfoRow label={t('Email')} value={userEmail} />
           <InfoRow label={t('Account created')} value={createdAt} />
           <InfoRow
             label={t('Auth provider')}
             value={authProvider.charAt(0).toUpperCase() + authProvider.slice(1)}
-            last
           />
-        </Stack>
-      </CardBox>
+        </RowList>
+      </AppBlock>
 
-      {/* Notifications card */}
-      <CardBox>
-        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '16px' }}>
-          {t('Notifications')}
-        </Typography>
-
+      {/* Emails */}
+      <AppBlock flush open title={t('Emails')}>
         <Box
+          className="nf-row"
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            p: '14px 16px',
-            borderRadius: 'var(--radius-md)',
-            bgcolor: '#FAFAFB',
-            border: '1px solid rgba(10,10,15,0.08)',
             gap: '12px',
+            py: 1.75,
           }}
         >
           <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
@@ -160,7 +147,9 @@ export function SettingsGeneral() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                bgcolor: marketingOptIn ? 'rgba(10,10,15,0.08)' : 'rgba(10,10,15,0.04)',
+                bgcolor: marketingOptIn
+                  ? 'rgba(var(--nf-ink-rgb),0.08)'
+                  : 'rgba(var(--nf-ink-rgb),0.04)',
                 flexShrink: 0,
                 transition: 'background 200ms ease',
               }}
@@ -169,19 +158,19 @@ export function SettingsGeneral() {
                 icon="solar:mailbox-bold"
                 width={20}
                 sx={{
-                  color: marketingOptIn ? '#0A0A0F' : '#9A9AA3',
+                  color: marketingOptIn ? INK : FAINT,
                   transition: 'color 200ms ease',
                 }}
               />
             </Box>
 
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>
+              <Typography sx={{ fontSize: '13px', fontWeight: 500, color: INK }}>
                 {t('Product updates')}
               </Typography>
-              <Typography sx={{ fontSize: '12px', color: '#6B6B76', mt: '2px', lineHeight: 1.4 }}>
+              <Typography sx={{ fontSize: '12px', color: MUTED, mt: '2px', lineHeight: 1.4 }}>
                 {t('New features and announcements sent to')}{' '}
-                <Box component="span" sx={{ color: '#0A0A0F', fontWeight: 500 }}>
+                <Box component="span" sx={{ color: INK, fontWeight: 500 }}>
                   {userEmail}
                 </Box>
               </Typography>
@@ -202,32 +191,86 @@ export function SettingsGeneral() {
               disabled={isSaving}
               sx={{
                 flexShrink: 0,
+                // MUI pads the switch by 12px; pull it out so the track lines up
+                // with the values above (the right edge of the list).
+                mr: '-12px',
                 '& .MuiSwitch-switchBase.Mui-checked': {
-                  color: '#0A0A0F',
-                  '& + .MuiSwitch-track': { bgcolor: '#0A0A0F' },
+                  color: INK,
+                  '& + .MuiSwitch-track': { bgcolor: INK },
                 },
               }}
             />
           )}
         </Box>
-      </CardBox>
+      </AppBlock>
+
+      <Appearance />
     </Stack>
   );
 }
 
-function InfoRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+/**
+ * Light, dark or the system's setting: the same choice as the site header's
+ * switch, kept in this browser (Niko 2026-11-10: the app in dark and light
+ * mode too; the phone app has the same Appearance setting).
+ */
+function Appearance() {
+  const { t } = useTranslate();
+  const { choice, setChoice } = useSiteTheme();
+
+  return (
+    <AppBlock flush open title={t('Appearance')}>
+      <Box
+        className="nf-row"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          py: 1.5,
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontSize: '13px', fontWeight: 500, color: INK }}>
+            {t('Theme')}
+          </Typography>
+          <Typography sx={{ fontSize: '12px', color: MUTED, mt: '2px', lineHeight: 1.4 }}>
+            {t('System follows your device.')}
+          </Typography>
+        </Box>
+        <SegmentedControl
+          value={choice}
+          onChange={setChoice}
+          options={[
+            { value: 'system', label: t('System') },
+            { value: 'light', label: t('Light') },
+            { value: 'dark', label: t('Dark') },
+          ]}
+        />
+      </Box>
+    </AppBlock>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <Box
+      className="nf-row"
       sx={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        py: '12px',
-        borderBottom: last ? 'none' : '1px solid rgba(10,10,15,0.08)',
+        gap: 2,
+        minHeight: 52,
+        px: { xs: '20px', md: '24px' },
+        py: 1,
       }}
     >
-      <Typography sx={{ fontSize: '13px', color: '#6B6B76' }}>{label}</Typography>
-      <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>{value}</Typography>
+      <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>{label}</Typography>
+      <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'text.primary', textAlign: 'right' }}>
+        {value}
+      </Typography>
     </Box>
   );
 }

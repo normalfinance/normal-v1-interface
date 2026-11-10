@@ -3,26 +3,31 @@ import type { Token } from '@normalfinance/types';
 import React, { useState } from 'react';
 import { useTranslate } from '@/locales';
 import { BigNumber } from 'bignumber.js';
-import { fCurrency } from '@/utils/format-number';
-import { getCryptoIconUrl } from '@normalfinance/utils';
+import { INK, HOVER, MUTED, PAPER, CANVAS, INK_SOFT, HAIRLINE_STRONG } from '@/theme/brand-colors';
 
-import { alpha, useTheme } from '@mui/material/styles';
-import {
-  Box,
-  Chip,
-  Dialog,
-  Button,
-  TextField,
-  Typography,
-  DialogTitle,
-  DialogContent,
-  InputAdornment,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Dialog from '@mui/material/Dialog';
+import InputBase from '@mui/material/InputBase';
+import { useTheme } from '@mui/material/styles';
+import ButtonBase from '@mui/material/ButtonBase';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import SearchRounded from '@mui/icons-material/SearchRounded';
 
-import { Iconify } from '@/components/template/iconify';
 import ModalCloseButton from '@/components/_common/modal-close-button';
 
-import { NetworkBadge, getAssetNetwork } from './network-badge';
+import { HAIRLINE } from './brand';
+import { AssetAvatar } from './asset-avatar';
+import { FIGURES, ROW_LINES, assetName, formatUsd, formatCoin } from './app-ui';
+
+// ---------------------------------------------------------------------------
+// Every asset picker in the app (swap, send, withdraw, asset actions): a
+// square dialog in the app's own rows (Niko 2026-11-09: the old one, with its
+// coloured network chips, had to go). A coin's network is the small circle on
+// its icon (AssetAvatar: USDC carries Stellar's), never a coloured badge. What
+// you hold comes first, highest value first; the rest follow under a grey band,
+// the way the holdings table groups its rows. Full screen on a phone.
+// ---------------------------------------------------------------------------
 
 export interface PickTokenProps {
   open: boolean;
@@ -32,468 +37,225 @@ export interface PickTokenProps {
   onTokenSelect: (token: Token) => void;
 }
 
-const PickToken: React.FC<PickTokenProps> = ({
-  open,
-  onClose,
-  buttonSource,
-  tokens = [],
-  onTokenSelect,
-}) => {
-  const theme = useTheme();
-  const { t } = useTranslate('auto');
+const SIDE = '20px';
 
+/** A missing price or balance counts as $0. */
+const usdValue = (token: Token): BigNumber => {
+  const v = BigNumber(token.price || 0).multipliedBy(token.balance || 0);
+  return v.isFinite() ? v : BigNumber(0);
+};
+const owns = (token: Token) => BigNumber(token.balance || 0).gt(0);
+// Highest value first (Niko 2026-08-21). The sort is stable, so $0 ties keep
+// the curated order.
+const byUsdDesc = (a: Token, b: Token) => usdValue(b).comparedTo(usdValue(a)) ?? 0;
+
+/** "Stellar · Lobstr" names on an account with two wallets: the wallet after the dot. */
+const ownerOf = (token: Token) =>
+  token.name.includes(' · ') ? token.name.split(' · ').slice(1).join(' · ') : null;
+
+function GroupBand({ children }: { children: React.ReactNode }) {
+  return (
+    <Typography
+      component="h3"
+      sx={{
+        px: SIDE,
+        py: 1,
+        fontSize: 13.5,
+        fontWeight: 500,
+        color: INK_SOFT,
+        bgcolor: CANVAS,
+      }}
+    >
+      {children}
+    </Typography>
+  );
+}
+
+function AssetRow({ token, onPick }: { token: Token; onPick: (token: Token) => void }) {
+  const held = owns(token);
+  const owner = ownerOf(token);
+  const amount = held
+    ? formatCoin(BigNumber(token.balance).toNumber(), token.symbol)
+    : token.symbol;
+
+  return (
+    <ButtonBase
+      onClick={() => onPick(token)}
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.75,
+        width: '100%',
+        minHeight: 64,
+        px: SIDE,
+        py: 1.25,
+        textAlign: 'left',
+        // Only where there is a pointer: a tap on a phone would leave it grey.
+        '@media (hover: hover)': { '&:hover': { bgcolor: HOVER } },
+        '&.Mui-focusVisible': { outline: `2px solid ${INK}`, outlineOffset: -2 },
+      }}
+    >
+      <AssetAvatar token={token} size={40} />
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography
+          sx={{
+            fontSize: 15,
+            fontWeight: 500,
+            color: INK,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {assetName(token.symbol)}
+        </Typography>
+        <Typography
+          sx={{
+            ...FIGURES,
+            mt: '2px',
+            fontSize: 13.5,
+            color: MUTED,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {[amount, owner].filter(Boolean).join(' · ')}
+        </Typography>
+      </Box>
+      {held && (
+        <Typography sx={{ ...FIGURES, fontSize: 15, fontWeight: 500, color: INK, flexShrink: 0 }}>
+          {formatUsd(usdValue(token).toNumber())}
+        </Typography>
+      )}
+    </ButtonBase>
+  );
+}
+
+const PickToken: React.FC<PickTokenProps> = ({ open, onClose, tokens = [], onTokenSelect }) => {
+  const { t } = useTranslate('auto');
+  const theme = useTheme();
+  const phone = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Highest USD value first (Niko 2026-08-21) — this component IS every
-  // asset picker in the app (swap, send, withdraw, asset actions), so the
-  // ordering rule lives here once. NaN-safe: a missing price or balance
-  // sorts as $0; the sort is stable, so $0 ties keep the curated order.
-  const usdValue = (token: Token): BigNumber => {
-    const v = BigNumber(token.price || 0).multipliedBy(token.balance || 0);
-    return v.isFinite() ? v : BigNumber(0);
-  };
-  const byUsdDesc = (a: Token, b: Token) => usdValue(b).comparedTo(usdValue(a)) ?? 0;
-
-  const filteredTokens = tokens
-    .filter((token) => {
-      const lowerTerm = searchTerm.toLowerCase();
-      return (
-        token.name.toLowerCase().includes(lowerTerm) ||
-        token.symbol.toLowerCase().includes(lowerTerm)
-      );
-    })
-    .sort(byUsdDesc);
-
-  const handleTokenClick = (token: Token) => {
+  const pick = (token: Token) => {
     onTokenSelect(token);
+    setSearchTerm('');
     onClose();
   };
 
-  const featuredTokens = tokens.filter((token) => token.featured);
-  const ownedTokens = tokens.filter((token) => BigNumber(token.balance).gt(0)).sort(byUsdDesc);
-  const unownedTokens = tokens.filter((token) => BigNumber(token.balance).eq(0));
-  const arrangedTokens = [...unownedTokens];
+  const term = searchTerm.trim().toLowerCase();
+  const matches = tokens
+    .filter(
+      (token) =>
+        token.name.toLowerCase().includes(term) ||
+        token.symbol.toLowerCase().includes(term) ||
+        assetName(token.symbol).toLowerCase().includes(term)
+    )
+    .sort(byUsdDesc);
+  const owned = tokens.filter(owns).sort(byUsdDesc);
+  const others = tokens.filter((token) => !owns(token));
+
+  const list = (rows: Token[]) => (
+    <Box sx={ROW_LINES}>
+      {rows.map((token) => (
+        <AssetRow key={token.contract} token={token} onPick={pick} />
+      ))}
+    </Box>
+  );
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
+      fullScreen={phone}
+      aria-labelledby="pick-token-title"
       slotProps={{
         paper: {
           sx: {
-            gap: 1,
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'flex-start',
             width: '100%',
-            maxWidth: '400px',
-            maxHeight: '600px',
+            maxWidth: phone ? 'none' : 420,
+            maxHeight: phone ? 'none' : 'min(640px, calc(100% - 64px))',
+            m: phone ? 0 : 2,
+            bgcolor: PAPER,
+            border: phone ? 'none' : HAIRLINE,
           },
         },
       }}
     >
-      <DialogTitle sx={{ p: 2, pb: '12px', width: '100%' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" component="div">
-            {t('Select an asset')}
-          </Typography>
-          <ModalCloseButton onClick={onClose} />
-        </Box>
-      </DialogTitle>
-      <DialogContent
+      {/* Title and close */}
+      <Box
         sx={{
-          p: 2,
-          width: '100%',
-          '&::-webkit-scrollbar': {
-            width: '2px',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            backgroundColor: theme.palette.divider,
-            borderRadius: 'var(--radius-xs)',
-          },
-          scrollbarWidth: 'thin',
-          scrollbarColor: `${theme.palette.divider} transparent`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          minHeight: 60,
+          px: SIDE,
         }}
       >
-        {/* Search Bar */}
-        <Box sx={{ mb: 2, display: 'flex', gap: 1, height: '48px' }}>
-          <TextField
-            variant="outlined"
+        <Typography id="pick-token-title" sx={{ fontSize: 17, fontWeight: 500, color: INK }}>
+          {t('Choose an asset')}
+        </Typography>
+        <ModalCloseButton onClick={onClose} />
+      </Box>
+
+      {/* Search */}
+      <Box sx={{ px: SIDE, pb: 1.5 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            height: 44,
+            px: 1.5,
+            border: `1px solid ${HAIRLINE_STRONG}`,
+            '&:focus-within': { borderColor: INK },
+          }}
+        >
+          <SearchRounded sx={{ fontSize: 20, color: MUTED }} />
+          <InputBase
             fullWidth
-            size="small"
-            placeholder={t('Search assets')}
+            // A phone's keyboard would cover half the list before anyone asked for it.
+            autoFocus={!phone}
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-            }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Iconify icon="eva:search-fill" width={20} />
-                  </InputAdornment>
-                ),
-              },
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                height: 48,
-              },
-            }}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={t('Search by name or ticker')}
+            inputProps={{ 'aria-label': t('Search assets') }}
+            sx={{ fontSize: 15, color: INK }}
           />
         </Box>
+      </Box>
 
-        {/* Conditionally render different components */}
-        {searchTerm.length > 0 ? (
-          <Box width="100%">
-            <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-              <Iconify icon="eva:search-fill" width={14} />
-
-              <Typography variant="caption">{t('Search results')}</Typography>
-            </Box>
-            {filteredTokens.length > 0 ? (
-              filteredTokens.map((token) => (
-                <Button
-                  key={token.contract}
-                  sx={{
-                    display: 'flex',
-                    padding: '16px 0px',
-                    width: '100%',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                  onClick={() => handleTokenClick(token)}
-                >
-                  <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
-                    <Box
-                      component="img"
-                      src={token.icon || getCryptoIconUrl(token.symbol)}
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '50%',
-                        objectFit: 'cover',
-                      }}
-                    />
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                        >
-                          {token.name.includes('Short') && (
-                            <Chip label="Short" color="error" size="small" variant="soft" />
-                          )}
-                          {token.name.replace('Short', '').split(' · ')[0]}
-                        </Typography>
-                        <NetworkBadge network={getAssetNetwork(token)} />
-                      </Box>
-                      {token.name.includes(' · ') && (
-                        <Typography
-                          sx={{
-                            fontSize: '11.5px',
-                            color: theme.palette.text.secondary,
-                            textAlign: 'left',
-                            lineHeight: 1.35,
-                          }}
-                        >
-                          {token.name.split(' · ').slice(1).join(' · ')}
-                        </Typography>
-                      )}
-                    </Box>
-                  </Box>
-                  <Box>
-                    {token.balance && (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'flex-end',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Typography
-                          variant="body2"
-                          sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                        >
-                          {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                </Button>
-              ))
-            ) : (
-              <Typography>{t('No tokens match your search.')}</Typography>
-            )}
-          </Box>
+      {/* The assets */}
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', borderTop: HAIRLINE, pb: 1 }}>
+        {term ? (
+          matches.length ? (
+            list(matches)
+          ) : (
+            <Typography sx={{ px: SIDE, py: 5, fontSize: 14, color: MUTED, textAlign: 'center' }}>
+              {t('No asset matches “{{term}}”.', { term: searchTerm.trim() })}
+            </Typography>
+          )
         ) : (
-          <Box sx={{ p: 0 }}>
-            <Box
-              sx={{
-                display: 'flex',
-                padding: '8px 0px',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                gap: '10px',
-                alignSelf: 'stretch',
-              }}
-            >
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '4px',
-                  justifyContent: 'flex-start',
-                  alignSelf: 'stretch',
-                  flexWrap: 'wrap',
-                }}
-              >
-                {featuredTokens.map((token) => (
-                  <Button
-                    key={token.contract}
-                    sx={{
-                      display: 'flex',
-                      height: '68px',
-                      width: '68.5px',
-                      padding: '10px',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px',
-                      alignSelf: 'stretch',
-                      borderRadius: 'var(--radius-md)',
-                      border: `1px solid ${theme.palette.divider}`,
-                      backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                    }}
-                    onClick={() => handleTokenClick(token)}
-                  >
-                    <Box
-                      component="img"
-                      src={token.icon || getCryptoIconUrl(token.symbol)}
-                      sx={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: '50%', // If you want it circular; remove if square
-                        objectFit: 'cover', // ensures image covers the box
-                      }}
-                    />
-                    <Typography
-                      variant="body2"
-                      sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                    >
-                      {token.symbol.startsWith('sn') && (
-                        <Chip label="Short" color="error" size="small" variant="soft" />
-                      )}
-                      {token.symbol}
-                    </Typography>
-                  </Button>
-                ))}
-              </Box>
-              {ownedTokens.length > 0 && (
-                <Box sx={{ mt: '12px' }} width="100%">
-                  <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    <Iconify icon="carbon:skill-level-basic" width={14} />
-
-                    <Typography variant="caption">{t('Your assets')}</Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      width: '100%',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      gap: '0px',
-                      alignSelf: 'stretch',
-                    }}
-                  >
-                    {ownedTokens.map((token) => (
-                      <Button
-                        key={token.contract}
-                        sx={{
-                          display: 'flex',
-                          padding: '16px 0px',
-                          width: '100%',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                        }}
-                        onClick={() => handleTokenClick(token)}
-                      >
-                        <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
-                          <Box
-                            component="img"
-                            src={token.icon || getCryptoIconUrl(token.symbol)}
-                            sx={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: '50%',
-                              objectFit: 'cover',
-                            }}
-                          />
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'flex-start',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <Typography
-                                variant="body2"
-                                sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                              >
-                                {token.name.includes('Short') && (
-                                  <Chip label="Short" color="error" size="small" variant="soft" />
-                                )}
-                                {token.name.replace('Short', '').split(' · ')[0]}
-                              </Typography>
-                              <NetworkBadge network={getAssetNetwork(token)} />
-                            </Box>
-                            {token.name.includes(' · ') && (
-                              <Typography
-                                sx={{
-                                  fontSize: '11.5px',
-                                  color: theme.palette.text.secondary,
-                                  textAlign: 'left',
-                                  lineHeight: 1.35,
-                                }}
-                              >
-                                {token.name.split(' · ').slice(1).join(' · ')}
-                              </Typography>
-                            )}
-                          </Box>
-                        </Box>
-                        <Box>
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'flex-end',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <Typography
-                              variant="body2"
-                              sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                            >
-                              {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Button>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-              <Box sx={{ mt: '12px' }} width="100%">
-                <Box sx={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <Iconify icon="eva:star-outline" width={14} />
-
-                  <Typography variant="caption">{t('All assets')}</Typography>
-                </Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    width: '100%',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: '0px',
-                    alignSelf: 'stretch',
-                  }}
-                >
-                  {arrangedTokens.map((token) => (
-                    <Button
-                      key={token.contract}
-                      sx={{
-                        display: 'flex',
-                        padding: '16px 0px',
-                        width: '100%',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                      onClick={() => handleTokenClick(token)}
-                    >
-                      <Box display="flex" alignItems="center" justifyContent="center" gap="10px">
-                        <Box
-                          component="img"
-                          src={token.icon || getCryptoIconUrl(token.symbol)}
-                          sx={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                          }}
-                        />
-
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'flex-start',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Typography
-                              variant="body2"
-                              sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                            >
-                              {token.name.includes('Short') && (
-                                <Chip label="Short" color="error" size="small" variant="soft" />
-                              )}
-                              {token.name.replace('Short', '').split(' · ')[0]}
-                            </Typography>
-                            <NetworkBadge network={getAssetNetwork(token)} />
-                          </Box>
-                          {token.name.includes(' · ') && (
-                            <Typography
-                              sx={{
-                                fontSize: '11.5px',
-                                color: theme.palette.text.secondary,
-                                textAlign: 'left',
-                                lineHeight: 1.35,
-                              }}
-                            >
-                              {token.name.split(' · ').slice(1).join(' · ')}
-                            </Typography>
-                          )}
-                        </Box>
-                      </Box>
-                      <Box>
-                        {BigNumber(token.balance).gt(0) && (
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'flex-end',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <Typography
-                              variant="body2"
-                              sx={{ fontWeight: 500, color: theme.palette.text.primary }}
-                            >
-                              {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    </Button>
-                  ))}
-                </Box>
-              </Box>
-            </Box>
-          </Box>
+          <>
+            {owned.length > 0 && (
+              <>
+                <GroupBand>{t('Your assets')}</GroupBand>
+                {list(owned)}
+              </>
+            )}
+            {others.length > 0 && (
+              <>
+                <GroupBand>{owned.length ? t('Other assets') : t('Assets')}</GroupBand>
+                {list(others)}
+              </>
+            )}
+          </>
         )}
-      </DialogContent>
+      </Box>
     </Dialog>
   );
 };

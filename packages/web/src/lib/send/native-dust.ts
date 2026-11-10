@@ -15,7 +15,7 @@ export const SOL_RENT_DUST_MESSAGE =
   'Use MAX to send everything, or leave at least 0.001 SOL.';
 
 export const SOL_INSUFFICIENT_MESSAGE =
-  'Amount plus the 0.000005 SOL network fee exceeds your balance \u2014 use MAX or reduce the amount.';
+  'Amount plus the 0.000005 SOL network fee exceeds your balance. Use MAX or reduce the amount.';
 
 /** The most SOL an account can send: everything minus the fee, leaving the
  *  account at EXACTLY zero (which Solana allows — the forbidden zone is
@@ -55,4 +55,4 @@ export function lamportsToSolString(lamports: bigint): string {
 export const BTC_DUST_LIMIT_SAT = 546;
 
 export const BTC_DUST_MESSAGE =
-  'Bitcoin rejects amounts below 546 sats (~0.00000546 BTC) \u2014 send a larger amount.';
+  'Bitcoin rejects amounts below 546 sats (~0.00000546 BTC). Send a larger amount.';

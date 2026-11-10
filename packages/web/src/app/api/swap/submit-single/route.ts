@@ -78,7 +78,7 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
           {
             success: false,
             embedded_unavailable: true,
-            error: 'Single-signature swap unavailable right now — using the standard flow',
+            error: 'Single-signature swap unavailable right now. Using the standard flow',
           },
           { status: 409 }
         );

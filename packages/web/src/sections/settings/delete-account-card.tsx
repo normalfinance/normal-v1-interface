@@ -5,6 +5,7 @@ import { useState, useCallback } from 'react';
 import { authedFetch } from '@/utils/authed-fetch';
 import { usePersistStore } from '@normalfinance/state';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { INK, MUTED, DANGER, SUCCESS, WARNING, DANGER_DEEP } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -17,10 +18,10 @@ import DialogContent from '@mui/material/DialogContent';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
+import { BLOCK_SX } from '@/components/_common/brand';
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
 import WalletExportDialog from '@/components/_common/wallet-export-dialog';
-
 // ---------------------------------------------------------------------------
 // Settings › Security › Delete account — the web face of DELETE /api/account.
 // Same three gates as the server, in the server's order, driven by dryRun so
@@ -139,20 +140,11 @@ export function DeleteAccountCard() {
 
   return (
     <>
-      <Box
-        sx={{
-          p: { xs: '20px', md: '24px' },
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid rgba(220,38,38,0.2)',
-          bgcolor: '#FFFFFF',
-          maxWidth: 480,
-          mt: 2,
-        }}
-      >
-        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#0A0A0F', mb: '4px' }}>
+      <Box sx={{ ...BLOCK_SX, maxWidth: 480, mt: 2 }}>
+        <Typography sx={{ fontSize: '14px', fontWeight: 500, color: INK, mb: '4px' }}>
           {t('Delete account')}
         </Typography>
-        <Typography sx={{ fontSize: '13px', color: '#6B6B76', mb: '16px' }}>
+        <Typography sx={{ fontSize: '13px', color: MUTED, mb: '16px' }}>
           {t(
             'Removes your Normal login and personal data. Your wallet stays yours: before deleting you must export its recovery phrase, which restores your funds in any wallet.'
           )}
@@ -165,9 +157,9 @@ export function DeleteAccountCard() {
             borderRadius: 'var(--radius-md)',
             textTransform: 'none',
             fontWeight: 500,
-            color: '#B91C1C',
+            color: DANGER,
             borderColor: 'rgba(220,38,38,0.4)',
-            '&:hover': { borderColor: '#B91C1C', bgcolor: 'rgba(220,38,38,0.04)' },
+            '&:hover': { borderColor: DANGER, bgcolor: 'rgba(220,38,38,0.04)' },
           }}
         >
           {t('Delete my account')}
@@ -183,21 +175,21 @@ export function DeleteAccountCard() {
       >
         <DialogContent sx={{ px: '22px', py: '26px' }}>
           <Stack spacing={2}>
-            <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
+            <Typography sx={{ fontSize: '17px', fontWeight: 500, color: INK }}>
               {t('Delete your account')}
             </Typography>
 
             {checking && !gate && (
               <Stack direction="row" spacing={1.5} alignItems="center">
-                <CircularProgress size={18} sx={{ color: '#0A0A0F' }} />
-                <Typography sx={{ fontSize: '13px', color: '#6B6B76' }}>
+                <CircularProgress size={18} sx={{ color: INK }} />
+                <Typography sx={{ fontSize: '13px', color: MUTED }}>
                   {t('Checking your wallet…')}
                 </Typography>
               </Stack>
             )}
 
             {gate?.code === 'EXPORT_REQUIRED' && (
-              <GateBox tone="warn" title={t('Step 1 — save your recovery phrase')}>
+              <GateBox tone="warn" title={t('Step 1: save your recovery phrase')}>
                 <Typography sx={{ fontSize: '13px', lineHeight: 1.5 }}>
                   {t(
                     'After deletion, the recovery phrase is the only way to reach your funds. Export it now; one passkey confirmation per wallet.'
@@ -212,7 +204,7 @@ export function DeleteAccountCard() {
                       onClick={() => setExportWalletId(id)}
                       sx={{
                         borderRadius: 'var(--radius-md)',
-                        bgcolor: '#0A0A0F',
+                        bgcolor: INK,
                         textTransform: 'none',
                       }}
                     >
@@ -232,7 +224,7 @@ export function DeleteAccountCard() {
                     'A swap, purchase or cash-out has not finished yet. Wait for it to complete, then check again.'
                   )}
                 </Typography>
-                <Typography sx={{ fontSize: '12px', color: '#6B6B76', mt: 1 }}>
+                <Typography sx={{ fontSize: '12px', color: MUTED, mt: 1 }}>
                   {t('Swaps: {{a}} · Purchases/sales: {{b}} · MoneyGram: {{c}}', {
                     a: gate.counts?.cctp ?? 0,
                     b: gate.counts?.ramp ?? 0,
@@ -343,7 +335,7 @@ export function DeleteAccountCard() {
                 variant="outlined"
                 onClick={() => setOpen(false)}
                 disabled={deleting}
-                sx={{ borderRadius: 'var(--radius-md)', textTransform: 'none', color: '#0A0A0F' }}
+                sx={{ borderRadius: 'var(--radius-md)', textTransform: 'none', color: INK }}
               >
                 {t('Cancel')}
               </Button>
@@ -354,10 +346,10 @@ export function DeleteAccountCard() {
                 startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : null}
                 sx={{
                   borderRadius: 'var(--radius-md)',
-                  bgcolor: '#B91C1C',
+                  bgcolor: DANGER,
                   textTransform: 'none',
                   fontWeight: 500,
-                  '&:hover': { bgcolor: '#991B1B' },
+                  '&:hover': { bgcolor: DANGER_DEEP },
                 }}
               >
                 {deleting ? t('Deleting…') : t('Delete account')}
@@ -392,10 +384,10 @@ function GateBox({
 }) {
   const colors =
     tone === 'ok'
-      ? { bg: 'rgba(16,185,129,0.05)', border: 'rgba(16,185,129,0.2)', fg: '#047857' }
+      ? { bg: 'rgba(16,185,129,0.05)', border: 'rgba(16,185,129,0.2)', fg: SUCCESS }
       : tone === 'error'
-        ? { bg: 'rgba(220,38,38,0.05)', border: 'rgba(220,38,38,0.15)', fg: '#B91C1C' }
-        : { bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.25)', fg: '#92400E' };
+        ? { bg: 'rgba(220,38,38,0.05)', border: 'rgba(220,38,38,0.15)', fg: DANGER }
+        : { bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.25)', fg: WARNING };
   return (
     <Box
       sx={{

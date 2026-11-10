@@ -32,7 +32,7 @@ export const EVM_ABANDON_AFTER_MS = 30 * 60 * 1000;
 export const SOL_ABANDON_AFTER_MS = 10 * 60 * 1000;
 
 export const SEND_IN_FLIGHT_MESSAGE =
-  'Your previous send is still confirming — this usually takes under a minute. Please wait a moment and try again.';
+  'Your previous send is still confirming. This usually takes under a minute. Please wait a moment and try again.';
 
 export const INSUFFICIENT_MESSAGE =
   'Not enough balance to cover this send plus its network fee. Reduce the amount slightly and try again.';

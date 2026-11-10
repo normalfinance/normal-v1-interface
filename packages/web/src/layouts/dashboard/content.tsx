@@ -32,6 +32,9 @@ export function DashboardContent({
           flex: '1 1 auto',
           flexDirection: 'column',
           maxWidth: 'var(--page-max)',
+          // No boxes in the app (Niko 2026-11-10): what used to be padded
+          // inside a box (`BOX_PX`) lines up with the page instead.
+          '--nf-box-px': '0px',
           px: { xs: 2, sm: 3 },
           pt: { xs: 3, md: 5 },
           pb: 'var(--section-y)',

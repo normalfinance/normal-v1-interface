@@ -29,6 +29,7 @@ import { ensureChainAccount } from '@/lib/turnkey/add-account';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyTurnkeyError } from '@/lib/turnkey/passkey-stamper';
 import { getXlmToken, getSwapUsdcToken } from '@/utils/token-selectors';
+import { INK, WELL, FAINT, MUTED, PAPER, DANGER, INK_SOFT } from '@/theme/brand-colors';
 import { getTurnkeyWalletInfo, invalidateTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import {
   linkWallet,
@@ -184,7 +185,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
         invalidateTurnkeyWalletInfo();
       } else if (step === 'activate') {
         const xlm = findToken('XLM');
-        if (!xlm) throw new Error(t('XLM balance not loaded yet — try again in a moment.'));
+        if (!xlm) throw new Error(t('XLM balance not loaded yet. Try again in a moment.'));
         const amount = BigNumber(fundingXlm);
         if (!amount.gte(2)) throw new Error(t('At least 2 XLM is needed to activate the wallet.'));
         // Name the real problem instead of "the transfer was not completed"
@@ -194,7 +195,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
         if (BigNumber(xlm.balance || 0).lt(amount)) {
           throw new Error(
             t(
-              '{{wallet}} only has {{have}} XLM — either lower the amount, or use the QR code above to send at least 1 XLM from another wallet or an exchange.',
+              '{{wallet}} only has {{have}} XLM. Either lower the amount, or use the QR code above to send at least 1 XLM from another wallet or an exchange.',
               {
                 wallet: t('Your connected wallet'),
                 have: BigNumber(xlm.balance || 0).toFixed(2),
@@ -218,7 +219,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
         if (!usdc)
           throw new Error(
             tokens.length === 0
-              ? t('Balances are still loading — try again in a moment.')
+              ? t('Balances are still loading. Try again in a moment.')
               : t('Your connected wallet has no USDC to move.')
           );
         const amount = BigNumber(fundUsdc || 0);
@@ -243,12 +244,12 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
   const stepMeta: Record<SetupStep, { label: string; sub: string; cta: string }> = {
     create: {
       label: t('Create your Normal wallet'),
-      sub: t('One passkey confirmation — your connected wallet stays connected.'),
+      sub: t('One passkey confirmation. Your connected wallet stays connected.'),
       cta: t('Create with passkey'),
     },
     activate: {
       label: t('Activate it with a little XLM'),
-      sub: t('New Stellar accounts need XLM to exist — sent from your connected wallet.'),
+      sub: t('New Stellar accounts need XLM to exist. Sent from your connected wallet.'),
       cta: t('Send XLM'),
     },
     trustline: {
@@ -258,7 +259,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
     },
     fund: {
       label: t('Move the USDC you want to swap'),
-      sub: t('Sent from your connected wallet — you approve it there.'),
+      sub: t('Sent from your connected wallet. You approve it there.'),
       cta: t('Move USDC'),
     },
     ready: {
@@ -279,26 +280,26 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
       slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)', p: '22px' } } }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: '6px' }}>
-        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F' }}>
+        <Typography sx={{ fontSize: '17px', fontWeight: 500, color: INK }}>
           {t('Set up your Normal wallet')}
         </Typography>
         <Box
           component="button"
           onClick={busy ? undefined : onClose}
-          sx={{ all: 'unset', cursor: 'pointer', color: '#9A9AA3', display: 'flex' }}
+          sx={{ all: 'unset', cursor: 'pointer', color: FAINT, display: 'flex' }}
         >
           <Iconify icon="mingcute:close-line" width={20} />
         </Box>
       </Stack>
-      <Typography sx={{ fontSize: '12.5px', color: '#6B6B76', mb: '14px', lineHeight: 1.5 }}>
+      <Typography sx={{ fontSize: '12.5px', color: MUTED, mb: '14px', lineHeight: 1.5 }}>
         {t(
-          'Cross-chain swaps run through your Normal wallet — a passkey-secured wallet that can hold BTC, ETH and SOL.'
+          'Cross-chain swaps run through your Normal wallet, a passkey-secured wallet that can hold BTC, ETH and SOL.'
         )}
       </Typography>
 
       {probing && !probe && !companionAddress ? (
         <Stack alignItems="center" sx={{ py: '28px' }}>
-          <CircularProgress size={22} sx={{ color: '#0A0A0F' }} />
+          <CircularProgress size={22} sx={{ color: INK }} />
         </Stack>
       ) : (
         <>
@@ -329,25 +330,25 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                     {done ? (
                       <Iconify icon="lets-icons:check-fill" width={20} sx={{ color: '#1AB37D' }} />
                     ) : active && busy ? (
-                      <CircularProgress size={16} sx={{ color: '#0A0A0F' }} />
+                      <CircularProgress size={16} sx={{ color: INK }} />
                     ) : (
                       <Box
                         sx={{
                           width: 8,
                           height: 8,
                           borderRadius: '50%',
-                          bgcolor: active ? '#0A0A0F' : 'rgba(10,10,15,0.15)',
+                          bgcolor: active ? INK : 'rgba(var(--nf-ink-rgb),0.15)',
                           mt: '2px',
                         }}
                       />
                     )}
                   </Box>
                   <Box>
-                    <Typography sx={{ fontSize: '13.5px', fontWeight: 500, color: '#0A0A0F' }}>
+                    <Typography sx={{ fontSize: '13.5px', fontWeight: 500, color: INK }}>
                       {stepMeta[s].label}
                     </Typography>
                     {active && (
-                      <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3' }}>
+                      <Typography sx={{ fontSize: '11.5px', color: FAINT }}>
                         {stepMeta[s].sub}
                       </Typography>
                     )}
@@ -366,21 +367,21 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                   p: '14px',
                   mb: '12px',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(10,10,15,0.08)',
-                  bgcolor: '#FAFAFB',
+                  border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
+                  bgcolor: WELL,
                   textAlign: 'center',
                 }}
               >
                 <Typography
                   sx={{
                     fontSize: '12.5px',
-                    color: '#6B6B76',
+                    color: MUTED,
                     mb: '10px',
                     lineHeight: 1.5,
                   }}
                 >
                   {t(
-                    'Send at least 1 XLM to this address from any wallet or exchange — this screen continues by itself as soon as it arrives.'
+                    'Send at least 1 XLM to this address from any wallet or exchange. This screen continues by itself as soon as it arrives.'
                   )}
                 </Typography>
                 {qrUrl && (
@@ -396,7 +397,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                     sx={{
                       ...MONO,
                       fontSize: '11.5px',
-                      color: '#0A0A0F',
+                      color: INK,
                       wordBreak: 'break-all',
                       textAlign: 'left',
                     }}
@@ -408,7 +409,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
                   )}
                 </Stack>
                 {probing && (
-                  <Typography sx={{ fontSize: '11.5px', color: '#9A9AA3', mt: '6px' }}>
+                  <Typography sx={{ fontSize: '11.5px', color: FAINT, mt: '6px' }}>
                     {t('Watching for the payment…')}
                   </Typography>
                 )}
@@ -419,7 +420,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
               <Typography
                 sx={{
                   fontSize: '12px',
-                  color: '#6B6B76',
+                  color: MUTED,
                   mb: '6px',
                   textAlign: 'center',
                 }}
@@ -451,7 +452,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
             <Typography
               sx={{
                 fontSize: '12px',
-                color: '#B91C1C',
+                color: DANGER,
                 bgcolor: 'rgba(185,28,28,0.06)',
                 border: '1px solid rgba(185,28,28,0.15)',
                 borderRadius: 'var(--radius-md)',
@@ -478,18 +479,18 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
               py: '13px',
               borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: '#0A0A0F',
-              color: '#fff',
+              bgcolor: INK,
+              color: PAPER,
               fontSize: '14px',
               fontWeight: 500,
               fontFamily: 'inherit',
               cursor: busy || probing ? 'not-allowed' : 'pointer',
               opacity: busy || probing ? 0.7 : 1,
-              '&:hover:not(:disabled)': { bgcolor: '#2A2A33' },
+              '&:hover:not(:disabled)': { bgcolor: INK_SOFT },
             }}
           >
             {busy ? (
-              <CircularProgress size={16} sx={{ color: '#fff' }} />
+              <CircularProgress size={16} sx={{ color: PAPER }} />
             ) : step === 'create' || step === 'trustline' ? (
               <FingerprintIcon sx={{ fontSize: 18 }} />
             ) : null}
@@ -500,7 +501,7 @@ export function NormalWalletSetupDialog({ open, onClose, neededUsdc = 0, onReady
             <Typography
               sx={{
                 fontSize: '11.5px',
-                color: '#9A9AA3',
+                color: FAINT,
                 mt: '10px',
                 textAlign: 'center',
               }}

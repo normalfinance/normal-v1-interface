@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import { useTranslate } from '@/locales/use-locales';
 import { useInFlightRamps } from '@/hooks/use-inflight-ramps';
+import { INK, WELL, FAINT, MUTED, DANGER } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -76,20 +77,20 @@ export default function RampPendingBanner({ symbol }: Props) {
             py: '12px',
             borderRadius: 'var(--radius-md)',
             border: '1px solid',
-            borderColor: r.failed ? 'rgba(185,28,28,0.25)' : 'rgba(10,10,15,0.08)',
-            bgcolor: r.failed ? 'rgba(185,28,28,0.04)' : '#FAFAFB',
+            borderColor: r.failed ? 'rgba(185,28,28,0.25)' : 'rgba(var(--nf-ink-rgb),0.08)',
+            bgcolor: r.failed ? 'rgba(185,28,28,0.04)' : WELL,
           }}
         >
           <Iconify
             icon={r.failed ? 'mingcute:warning-line' : 'eos-icons:three-dots-loading'}
             width={20}
-            sx={{ color: r.failed ? '#B91C1C' : '#9A9AA3', flexShrink: 0 }}
+            sx={{ color: r.failed ? DANGER : FAINT, flexShrink: 0 }}
           />
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>
+            <Typography sx={{ fontSize: '13px', fontWeight: 500, color: INK }}>
               {r.message}
             </Typography>
-            <Typography sx={{ fontSize: '11.5px', color: '#6B6B76' }}>{r.detail}</Typography>
+            <Typography sx={{ fontSize: '11.5px', color: MUTED }}>{r.detail}</Typography>
           </Box>
           {r.failed && (
             <Box
@@ -101,9 +102,9 @@ export default function RampPendingBanner({ symbol }: Props) {
                 border: 'none',
                 background: 'none',
                 cursor: 'pointer',
-                color: '#9A9AA3',
+                color: FAINT,
                 p: '4px',
-                '&:hover': { color: '#0A0A0F' },
+                '&:hover': { color: INK },
               }}
             >
               <Iconify icon="mingcute:close-line" width={16} />

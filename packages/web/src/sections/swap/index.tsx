@@ -9,6 +9,7 @@ import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
+import { INK, FAINT, MUTED, PAPER, CANVAS } from '@/theme/brand-colors';
 import { ActivityCard } from '@/sections/portfolio/portfolio-activity-card';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
 
@@ -17,12 +18,14 @@ import Stack from '@mui/material/Stack';
 import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
+import { FlowHost } from '@/components/_common/flow';
 import { AppPageHeader } from '@/components/_common/brand';
 import { GetStartedPicker } from '@/components/_common/get-started-picker';
 import WalletReadinessNotice from '@/components/_common/wallet-readiness-notice';
 import NormalWalletSetupDialog from '@/components/_common/normal-wallet-setup-dialog';
 
 import SwapCard from './swap-card';
+import { InProgressBlock } from './in-progress-block';
 import { SavingsOnrampCard } from '../savings/savings-onramp-card';
 
 import type { SwapSymbol } from './engines/types';
@@ -70,7 +73,11 @@ export default function SwapView() {
           variant="rectangular"
           height={48}
           width={200}
-          sx={{ borderRadius: 'var(--radius-md)', bgcolor: 'rgba(10,10,15,0.08)', mb: '24px' }}
+          sx={{
+            borderRadius: 'var(--radius-md)',
+            bgcolor: 'rgba(var(--nf-ink-rgb),0.08)',
+            mb: '24px',
+          }}
         />
         <Box
           sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '3fr 2fr' }, gap: '20px' }}
@@ -78,12 +85,12 @@ export default function SwapView() {
           <Skeleton
             variant="rectangular"
             height={420}
-            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
+            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }}
           />
           <Skeleton
             variant="rectangular"
             height={200}
-            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(10,10,15,0.06)' }}
+            sx={{ borderRadius: 'var(--radius-lg)', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }}
           />
         </Box>
       </DashboardContent>
@@ -99,16 +106,7 @@ export default function SwapView() {
       return (
         <DashboardContent>
           <Box sx={{ display: 'flex', justifyContent: 'center', pt: { xs: 4, md: 7 } }}>
-            <Box
-              sx={{
-                width: '100%',
-                maxWidth: 460,
-                p: { xs: '20px', md: '24px' },
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid rgba(10,10,15,0.08)',
-                bgcolor: '#fff',
-              }}
-            >
+            <Box sx={{ width: '100%', maxWidth: 460, bgcolor: PAPER }}>
               <GetStartedPicker />
             </Box>
           </Box>
@@ -134,20 +132,20 @@ export default function SwapView() {
               width: 56,
               height: 56,
               borderRadius: 'var(--radius-md)',
-              bgcolor: '#F4F4F7',
+              bgcolor: CANVAS,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#9A9AA3',
+              color: FAINT,
             }}
           >
             <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 28 }} />
           </Box>
           <Box>
-            <Box sx={{ fontSize: '16px', fontWeight: 500, color: '#0A0A0F', mb: '6px' }}>
+            <Box sx={{ fontSize: '16px', fontWeight: 500, color: INK, mb: '6px' }}>
               Connect your wallet
             </Box>
-            <Box sx={{ fontSize: '14px', color: '#6B6B76', maxWidth: 280 }}>
+            <Box sx={{ fontSize: '14px', color: MUTED, maxWidth: 280 }}>
               Sign in to swap XLM, USDC, BTC, ETH and SOL.
             </Box>
           </Box>
@@ -160,8 +158,8 @@ export default function SwapView() {
               py: '10px',
               borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: '#0A0A0F',
-              color: '#fff',
+              bgcolor: INK,
+              color: PAPER,
               fontSize: '14px',
               fontWeight: 500,
               cursor: 'pointer',
@@ -185,60 +183,71 @@ export default function SwapView() {
 
   return (
     <DashboardContent>
-      <AppPageHeader
-        title="Swap"
-        subtitle="Exchange XLM, USDC, BTC, ETH and SOL — delivered to your own wallet."
-      />
+      {/* The review page and the live journey open here, in place of the
+          page, with the sidebar beside them (components/_common/flow). */}
+      <FlowHost>
+        <AppPageHeader
+          title="Swap"
+          subtitle="Swap between digital dollars, Bitcoin, Ethereum, Solana and Stellar. It all lands in your own wallet."
+        />
 
-      {/* #74: USDC-readiness notices, one per wallet, right wallet's signer.
+        {/* #74: USDC-readiness notices, one per wallet, right wallet's signer.
           Self-hiding: render nothing while checking, on probe failure, or
           when the wallet is ready — most users never see this block. */}
-      {wallet.address && (
-        <Stack spacing={1} sx={{ mb: '16px' }}>
-          <WalletReadinessNotice
-            address={wallet.address}
-            walletLabel={isExternalWallet ? connectedWalletLabel(wallet.walletType) : 'Your wallet'}
-            kind="slot"
-          />
-          {isExternalWallet && companionStellar && (
+        {wallet.address && (
+          <Stack spacing={1} sx={{ mb: '16px' }}>
             <WalletReadinessNotice
-              address={companionStellar.address}
-              walletLabel="Normal wallet"
-              kind="companion"
-              onOpenSetup={() => setSetupOpen(true)}
+              address={wallet.address}
+              walletLabel={
+                isExternalWallet ? connectedWalletLabel(wallet.walletType) : 'Your wallet'
+              }
+              kind="slot"
             />
-          )}
-        </Stack>
-      )}
+            {isExternalWallet && companionStellar && (
+              <WalletReadinessNotice
+                address={companionStellar.address}
+                walletLabel="Normal wallet"
+                kind="companion"
+                onOpenSetup={() => setSetupOpen(true)}
+              />
+            )}
+          </Stack>
+        )}
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '3fr 2fr' },
-          gap: 2,
-          alignItems: 'start',
-        }}
-      >
-        <SwapCard initial={initial} />
-        <SavingsOnrampCard />
-      </Box>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '3fr 2fr' },
+            gap: 2,
+            alignItems: 'start',
+          }}
+        >
+          <SwapCard initial={initial} />
+          {/* Swaps still under way sit beside the card, not above it (Niko
+              2026-11-09); each opens its own page with every step. */}
+          <Box sx={{ display: 'grid', gap: 2, minWidth: 0 }}>
+            <InProgressBlock />
+            <SavingsOnrampCard />
+          </Box>
+        </Box>
 
-      <NormalWalletSetupDialog
-        open={setupOpen}
-        onClose={() => setSetupOpen(false)}
-        neededUsdc={0}
-      />
-
-      {/* Unified activity — swaps + cross-chain transfers */}
-      <Box sx={{ mt: 2 }}>
-        <ActivityCard
-          walletAddress={wallet.address}
-          bitcoinAddress={bitcoinAddress}
-          ethereumAddress={ethereumAddress}
-          solanaAddress={solanaAddress}
-          defaultTab="swaps"
+        <NormalWalletSetupDialog
+          open={setupOpen}
+          onClose={() => setSetupOpen(false)}
+          neededUsdc={0}
         />
-      </Box>
+
+        {/* Unified activity — swaps + cross-chain transfers */}
+        <Box sx={{ mt: 2 }}>
+          <ActivityCard
+            walletAddress={wallet.address}
+            bitcoinAddress={bitcoinAddress}
+            ethereumAddress={ethereumAddress}
+            solanaAddress={solanaAddress}
+            defaultTab="swaps"
+          />
+        </Box>
+      </FlowHost>
     </DashboardContent>
   );
 }
