@@ -1,5 +1,7 @@
 'use client';
 
+import type { AllocationPart } from '@/lib/portfolio/allocation';
+
 import { paths } from '@/routes/paths';
 import { PAPER } from '@/theme/brand-colors';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
@@ -12,6 +14,7 @@ import SouthWestRounded from '@mui/icons-material/SouthWestRounded';
 import SwapHorizRounded from '@mui/icons-material/SwapHorizRounded';
 
 import { HAIRLINE } from '@/components/_common/brand';
+import { AllocationDonut } from '@/components/_common/allocation-donut';
 import { Headline, formatUsd, ActionTile, ActionTiles } from '@/components/_common/app-ui';
 
 // ----------------------------------------------------------------------
@@ -23,16 +26,19 @@ type BalanceBlockProps = {
   loading: boolean;
   error: boolean;
   onRetry: () => void;
+  /** What it is made of, for the ring beside it (Niko 2026-11-10). */
+  parts: AllocationPart[];
 };
 
 /**
  * The top of Home: the whole balance, how it moved in the last day, and the
- * four ways to move money (the same flows as Move money). Nothing else: the
+ * four ways to move money (the same flows as Move money), with a ring of what
+ * it is made of beside the figure (Niko 2026-11-10). Nothing else: the
  * assets follow right under it (Niko 2026-11-09). On phones it sits on the
  * page with no box, so the list fits on the first screen; from tablets up it
  * is the page's summary box, the tiles beside the figure on wide screens.
  */
-export function BalanceBlock({ total, change, loading, error, onRetry }: BalanceBlockProps) {
+export function BalanceBlock({ total, change, loading, error, onRetry, parts }: BalanceBlockProps) {
   const { startAction } = useAssetActionsContext();
   const moved = change != null && Math.abs(change) >= 0.005;
 
@@ -71,7 +77,18 @@ export function BalanceBlock({ total, change, loading, error, onRetry }: Balance
         borderBottom: HAIRLINE,
       }}
     >
-      <Headline label="Total balance" value={formatUsd(total)} note={note} loading={loading} />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, md: 3 }, minWidth: 0 }}>
+        {/* As tall as the figure beside it (Niko 2026-11-10: "a little small") */}
+        <AllocationDonut
+          parts={parts}
+          size={{ xs: 92, md: 120 }}
+          thickness={14}
+          variant="compact"
+          loading={loading}
+          label="Your money by asset"
+        />
+        <Headline label="Total balance" value={formatUsd(total)} note={note} loading={loading} />
+      </Box>
       <ActionTiles>
         <ActionTile icon={<AddRounded />} label="Add money" onClick={() => startAction('buy')} />
         <ActionTile icon={<NorthEastRounded />} label="Send" onClick={() => startAction('send')} />

@@ -17,6 +17,7 @@ import {
   PALETTE,
   INK_SOFT,
   FOOTER_BG,
+  GRID_COLOR,
   HUE_PALETTE,
   BLOCK_COLORS,
   BRAND_COLORS,
@@ -102,6 +103,19 @@ function violations(
 }
 
 const quoted = (value: string) => value.match(/'[^']*'/g) ?? [];
+
+/** An `rgba(r,g,b,a)` colour laid over a #RRGGBB one, as #RRGGBB: what the screen shows. */
+function over(rgba: string, hex: string): string {
+  const [r, g, b, a] = (rgba.match(/[\d.]+/g) ?? []).map(Number);
+  return `#${[r, g, b]
+    .map((channel, i) => {
+      const base = parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+      return Math.round(channel * a + base * (1 - a))
+        .toString(16)
+        .padStart(2, '0');
+    })
+    .join('')}`;
+}
 
 /** WCAG 2.x contrast ratio between two #RRGGBB colours. */
 function contrast(a: string, b: string): number {
@@ -267,6 +281,7 @@ describe('the marketing site follows dark mode', () => {
       CANVAS,
       HAIRLINE_COLOR,
       HAIRLINE_STRONG,
+      GRID_COLOR,
       HOVER,
       BAND,
       FOOTER_BG,
@@ -351,6 +366,18 @@ describe.each(MODES)('%s mode stays readable (WCAG AA)', (mode) => {
     STATEMENT_PALETTE[mode].forEach((color) => {
       expect(contrast(color, page.paper)).toBeGreaterThanOrEqual(mode === 'light' ? 2 : 3);
     });
+  });
+});
+
+describe.each(MODES)('%s mode: the lines across a chart', (mode) => {
+  const page = PALETTE[mode];
+
+  it('are fainter than a hairline, yet still drawn', () => {
+    // Niko 2026-11-11: "make the added horizontal lines in graphs more
+    // transparent". A little over half a hairline's strength, 1.1:1.
+    const grid = contrast(over(page.grid, page.paper), page.paper);
+    expect(grid).toBeLessThan(contrast(over(page.hairline, page.paper), page.paper));
+    expect(grid).toBeGreaterThanOrEqual(1.08);
   });
 });
 

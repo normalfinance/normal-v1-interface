@@ -500,9 +500,12 @@ export function FlowView({
         message={leave.message}
       />
 
-      {/* Back, while there is somewhere to go back to. */}
+      {/* Back, while there is somewhere to go back to: also while it runs,
+          once it finishes on its own ("You can leave this page"; Niko
+          2026-11-11: the arrow back to swap did not come back). Leaving then
+          is like closing the page: it carries on without it. */}
       <Box sx={{ minHeight: 36, mb: 1 }}>
-        {!running && (
+        {(!running || (leave.safe && !waiting)) && (
           <ButtonBase
             onClick={back.onClick}
             sx={{

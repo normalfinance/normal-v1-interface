@@ -1,5 +1,7 @@
 'use client';
 
+import type { WaitsOn } from '@/sections/swap/cctp-phase';
+
 import { useSyncExternalStore } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -25,6 +27,13 @@ export interface InProgressItem {
   phase: InProgressPhase;
   /** The digital dollars were seen at the person's own Base address. */
   onBase: boolean;
+  /**
+   * Who moves it next (sections/swap/cctp-phase.ts waitsOn): only 'person'
+   * says "Needs you" and offers to finish it.
+   */
+  waitsOn: WaitsOn;
+  /** Auto-finish is on and still takes this swap's next step. */
+  autoFinish: boolean;
 }
 
 interface InProgressState {

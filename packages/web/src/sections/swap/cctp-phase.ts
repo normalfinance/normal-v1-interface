@@ -10,6 +10,9 @@
 // Failed. Two surfaces, two stories, one missing line.
 // ---------------------------------------------------------------------------
 
+import { autofinishAhead } from '@/lib/cctp/autofinish';
+import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
+
 export type Phase = 'hidden' | 'auto' | 'halt-receive' | 'halt-finish';
 
 /** The row fields the classification needs — TransferRow satisfies this. */
@@ -44,6 +47,72 @@ export function bannerPhase(tr: PhaseFields): Phase {
   // inbound
   if (tr.status === 'COMPLETED') return 'hidden'; // USDC delivered to Stellar
   if (tr.burnTxHash) return 'auto'; // bridging Base → Stellar
-  if (tr.srcSwapTxHash) return 'halt-receive'; // USDC on Base, needs the burn
+  // The coin went to the exchange, nothing burned yet: its digital dollars are
+  // on their way to Base or already there. Which one, and who moves them next,
+  // is waitsOn's question: this phase alone does NOT mean "needs you".
+  if (tr.srcSwapTxHash) return 'halt-receive';
   return 'hidden'; // pre-LI.FI delivery — nothing to recover yet
+}
+
+// ---------------------------------------------------------------------------
+// Who a swap under way waits on now: the words on its page (Niko 2026-11-10).
+//
+// A Bitcoin swap still confirming said "Your swap needs you", its "Bitcoin
+// confirms the payment" step said "Waiting for you", and "Finish the swap"
+// could only answer that the money had not arrived. The phase says where the
+// money is; this says who moves it next:
+//
+//   'exchange'  a swap in whose digital dollars have not reached the person's
+//               Base address: the exchange is still converting and sending
+//               them. Nobody can do anything but wait: they arrive, or the
+//               exchange returns the coin.
+//   'normal'    it finishes on its own: Circle is carrying it ('auto'), or
+//               auto-finish takes the next step (the server's gate still
+//               tries this row, lib/cctp/autofinish.ts).
+//   'person'    the next step needs the person's passkey: "Needs you".
+// ---------------------------------------------------------------------------
+
+export type WaitsOn = 'exchange' | 'normal' | 'person';
+
+export interface WaitFacts {
+  /** The digital dollars were seen at the person's own Base address. */
+  onBase: boolean;
+  /** Auto-finish is on and still takes this row's next step (autoFinishAhead). */
+  autoFinish: boolean;
+}
+
+export function waitsOn(phase: Exclude<Phase, 'hidden'>, facts: WaitFacts): WaitsOn {
+  if (phase === 'auto') return 'normal';
+  if (phase === 'halt-receive' && !facts.onBase) return 'exchange';
+  return facts.autoFinish ? 'normal' : 'person';
+}
+
+/** The row fields auto-finish's gate reads. */
+export interface AutoFinishFields {
+  direction: string;
+  createdAt: string;
+  updatedAt: string;
+  retryCount?: number | null;
+}
+
+/**
+ * With auto-finish on, does the server still take this row's next step? The
+ * cron's own clocks (lib/cctp/autofinish.ts): a swap in counts from its
+ * creation, a swap out from its last change.
+ */
+export function autoFinishAhead(tr: AutoFinishFields, now: number): boolean {
+  const from = Date.parse(tr.direction === 'stellar_to_crosschain' ? tr.updatedAt : tr.createdAt);
+  return autofinishAhead({ ageMs: now - from, retryCount: tr.retryCount ?? 0 });
+}
+
+/**
+ * When a wait on the exchange is longer than usual: twice the coin's chain's
+ * settlement window (the CHAINS registry, "Usually 10 to 60 minutes" for
+ * Bitcoin), and never under 15 minutes, so a fast chain's slow minute is not
+ * called late.
+ */
+export function exchangeSlowAfterMs(coin: string): number {
+  const chain = chainForSymbol(coin);
+  const maxMinutes = chain ? CHAINS[chain].settlement.maxMinutes : 60;
+  return Math.max(maxMinutes * 2, 15) * 60_000;
 }

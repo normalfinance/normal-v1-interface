@@ -17,6 +17,7 @@ import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 
+import { assetName } from '@/components/_common/app-ui';
 import { TwoFactorPrompt } from '@/components/_common/two-factor-prompt';
 import { GetStartedPicker } from '@/components/_common/get-started-picker';
 
@@ -310,6 +311,12 @@ export default function PortfolioView() {
         loading={!firstPaintDone && (savingsLoading || balancesLoading)}
         error={!!walletBalances.error}
         onRetry={() => walletBalances.refresh()}
+        // The ring: every row of the list below, an asset in two wallets summed.
+        parts={holdingsData.map((h) => ({
+          symbol: h.token.symbol,
+          label: h.token.symbol === 'Savings' ? 'Savings' : assetName(h.token.symbol),
+          value: h.value,
+        }))}
       />
 
       <Box

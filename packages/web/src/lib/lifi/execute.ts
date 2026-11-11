@@ -4,6 +4,7 @@ import type { ChainAddresses } from '@/lib/chains/registry';
 
 import { logger } from '@/utils/logger';
 import { describePsbt } from '@/lib/lifi/psbt-debug';
+import { LIFI_CHAIN_IDS } from '@/lib/lifi/chain-ids';
 import { SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
@@ -32,11 +33,8 @@ import {
 // for why Turnkey's PSBT parser is bypassed.
 // ---------------------------------------------------------------------------
 
-export const LIFI_CHAIN_IDS = {
-  ETH: 1,
-  SOL: 1151111081099710,
-  BTC: 20000000000001,
-} as const;
+// The ids live in a light module the status pages share (chain-ids.ts).
+export { LIFI_CHAIN_IDS };
 
 interface LifiTransactionRequest {
   data: string;

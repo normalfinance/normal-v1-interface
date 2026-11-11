@@ -10,6 +10,7 @@ import { MUTED } from '@/theme/brand-colors';
 import { useMarkets } from '@/hooks/use-markets';
 import { minSpanFor } from '@/lib/prices/markets';
 import { assetColor } from '@/lib/portfolio/display';
+import { allocationColor } from '@/lib/portfolio/allocation';
 
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -61,6 +62,8 @@ function toHolding(
     sparkline: market?.sparkline24h ?? [],
     minSpan: minSpanFor(token.symbol),
     color: assetColor(token.symbol),
+    // Its colour in the ring beside the balance, by its share.
+    swatch: allocationColor(token.symbol),
     marketCap: market?.marketCap ?? null,
     rank: market?.rank ?? null,
   };

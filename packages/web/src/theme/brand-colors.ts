@@ -31,6 +31,8 @@ type Neutrals = {
   hairline: string;
   /** Inputs, outlined buttons. */
   hairlineStrong: string;
+  /** A chart's lines across, behind its scale: fainter than a hairline. */
+  grid: string;
   /** A hover wash on a plain surface. */
   hover: string;
   /** An ink band inside a light page (old pages); a raised band in dark mode. */
@@ -49,6 +51,7 @@ export const PALETTE: Record<Mode, Neutrals> = {
     canvas: '#F4F4F7',
     hairline: 'rgba(10,10,15,0.08)',
     hairlineStrong: 'rgba(10,10,15,0.14)',
+    grid: 'rgba(10,10,15,0.045)',
     hover: 'rgba(10,10,15,0.05)',
     band: '#0A0A0F',
     footer: '#0A0A0F',
@@ -62,6 +65,7 @@ export const PALETTE: Record<Mode, Neutrals> = {
     canvas: '#17161E',
     hairline: 'rgba(255,255,255,0.09)',
     hairlineStrong: 'rgba(255,255,255,0.16)',
+    grid: 'rgba(255,255,255,0.05)',
     hover: 'rgba(255,255,255,0.06)',
     band: '#15141B',
     // A shade darker than the dark page, under a hairline: the floor of the page.
@@ -208,6 +212,13 @@ export const CANVAS = cssVar('canvas');
 /** The one hairline colour, for borders and dividers. */
 export const HAIRLINE_COLOR = cssVar('hairline');
 export const HAIRLINE_STRONG = cssVar('hairline-strong');
+/**
+ * A chart's lines across, one for each value on its scale: a little over half
+ * a hairline's strength in both modes (1.1:1 on the page), so the values
+ * guide the eye and the line stays in front (Niko 2026-11-11: "make the added
+ * horizontal lines in graphs more transparent").
+ */
+export const GRID_COLOR = cssVar('grid');
 export const HOVER = cssVar('hover');
 export const BAND = cssVar('band');
 export const FOOTER_BG = cssVar('footer');

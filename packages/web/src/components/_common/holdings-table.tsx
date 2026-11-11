@@ -50,6 +50,8 @@ export type Holding = {
   marketCap: number | null;
   /** Its share of what the table shows, 0 to 1 (Home's share column). */
   share?: number;
+  /** Its colour in the ring beside the balance, by its share: the ring's legend. */
+  swatch?: string;
   rank: number | null;
 };
 
@@ -264,7 +266,17 @@ function HoldingRow({ row, variant }: { row: Holding; variant: Variant }) {
       {variant === 'home' && (
         <Box sx={{ ...from('md'), textAlign: 'right' }}>
           {row.share !== undefined && (
-            <Typography component="span" sx={MAIN}>
+            <Typography
+              component="span"
+              sx={{ ...MAIN, display: 'inline-flex', alignItems: 'center', gap: 1 }}
+            >
+              {row.swatch && (
+                <Box
+                  component="span"
+                  aria-hidden="true"
+                  sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: row.swatch }}
+                />
+              )}
               {row.share < 0.01 && row.share > 0 ? '<1%' : `${Math.round(row.share * 100)}%`}
             </Typography>
           )}

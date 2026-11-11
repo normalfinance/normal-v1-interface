@@ -1,6 +1,7 @@
 'use client';
 
 import type { IndexMeta } from '@/lib/index/indexes';
+import type { IndexWeight } from '@/lib/index/basket';
 import type { FlowPlan, FlowSummary } from '@/lib/flow/types';
 import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 import type { TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
@@ -13,29 +14,27 @@ import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { CCTP_DOMAIN } from '@/lib/cctp/config';
 import { RouterLink } from '@/routes/components';
-import { useMarkets } from '@/hooks/use-markets';
 import { useFlowRun } from '@/hooks/use-flow-run';
-import { minSpanFor } from '@/lib/prices/markets';
 import { useNetworkStore } from '@normalfinance/state';
 import { assetDisplay } from '@/lib/portfolio/display';
 import { confirmAction } from '@/lib/auth/action-code';
 import { DashboardContent } from '@/layouts/dashboard';
 import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { readBridgeStatus } from '@/lib/flow/lifi-status';
+import { CoinStack } from '@/sections/indexes/index-parts';
+import { useIndexWeights } from '@/hooks/use-index-weights';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
-import { basketChange, basketSeries } from '@/lib/index/indexes';
 import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { indexBuyStepId, indexPurchasePlan } from '@/lib/flow/plans';
-import { CoinStack, WeightBar } from '@/sections/indexes/index-parts';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
-import { INK, FAINT, HOVER, MUTED, CANVAS, DANGER, HAIRLINE_STRONG } from '@/theme/brand-colors';
+import { IndexPurchasesInProgress } from '@/sections/indexes/purchases-in-progress';
+import { INK, FAINT, MUTED, CANVAS, DANGER, HAIRLINE_STRONG } from '@/theme/brand-colors';
 import {
   weightLabel,
-  CRYPTO_INDEX,
   splitPurchase,
   purchaseVerdict,
   wireToUsdNumber,
@@ -69,12 +68,13 @@ import {
   RowList,
   AppBlock,
   ROW_LINES,
-  Sparkline,
   formatUsd,
   assetName,
   formatCoin,
   formatPrice,
 } from '@/components/_common/app-ui';
+
+import { IndexChart } from './index-chart';
 
 // ---------------------------------------------------------------------------
 // /app/indexes/<slug>: buy an index (Top 3: Bitcoin, Ethereum and Solana) in one purchase, with
@@ -137,13 +137,10 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   const { t } = useTranslate();
   const { user } = useSupabaseAuth();
   const network = useNetworkStore((s) => s.network);
-  const { markets } = useMarkets();
-  // The basket's day, for the page's line and today's figure (the card's sums).
-  const daySeries = useMemo(
-    () => basketSeries(meta.def, (s) => markets[s]?.sparkline24h),
-    [meta.def, markets]
-  );
-  const today = basketChange(meta.def, (s) => markets[s]?.change24h);
+  // Each coin’s share follows its market size (lib/index/basket.ts), read
+  // from the same market data the purchase is split by.
+  const { weights, markets } = useIndexWeights(meta.def);
+  const weightOf = (symbol: string) => weights?.find((w) => w.symbol === symbol)?.weightBps;
   const { assets, refresh } = useWalletBalances(true);
   const flow = useFlowRun();
   const { run: flowState } = flow;
@@ -186,17 +183,20 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
     assets.find((a) => a.chain === 'stellar' && a.symbol === 'USDC')?.balance ?? 0
   );
   const wire = toWire(amount);
-  const minimum = minimumPurchaseWire();
-  const verdict = wire ? purchaseVerdict(wire, null) : null;
+  // The smallest coin’s share sets the smallest purchase (each slice pays an
+  // exchange): unknown until the market sizes are.
+  const minimum = weights ? minimumPurchaseWire(weights) : null;
+  const minimumLabel = minimum ? formatUsd(wireToUsdNumber(minimum)) : null;
+  const verdict = wire && weights ? purchaseVerdict(wire, null, weights) : null;
   const tooMuch = wire !== null && wireToUsdNumber(wire) > usdcBalance;
-  const missing = CRYPTO_INDEX.legs.filter(
-    (l) => info && !info[CHAINS[CHAIN_OF[l.symbol]].addressField as keyof TurnkeyWalletInfo]
+  const missing = meta.def.coins.filter(
+    (symbol) => info && !info[CHAINS[CHAIN_OF[symbol]].addressField as keyof TurnkeyWalletInfo]
   );
 
   // ---- the plan and the summary, from the amount ---------------------------
   const buildPlan = useCallback(
-    (totalWire: bigint): FlowPlan => {
-      const slices = splitPurchase(totalWire);
+    (totalWire: bigint, shares: IndexWeight[]): FlowPlan => {
+      const slices = splitPurchase(totalWire, shares);
       return indexPurchasePlan({
         t,
         amountUsdc: formatCoin(wireToUsdNumber(totalWire), 'USDC'),
@@ -224,7 +224,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   );
 
   const buildSummary = useCallback(
-    (totalWire: bigint): FlowSummary => ({
+    (totalWire: bigint, shares: IndexWeight[]): FlowSummary => ({
       rows: [
         {
           key: 'pay',
@@ -232,7 +232,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
           value: formatUsd(wireToUsdNumber(totalWire)),
           detail: t('Digital dollars from your Stellar wallet'),
         },
-        ...splitPurchase(totalWire).map((s) => {
+        ...splitPurchase(totalWire, shares).map((s) => {
           const price = markets[s.symbol]?.price;
           const usd = wireToUsdNumber(s.amountWire);
           return {
@@ -275,10 +275,15 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   );
 
   const liveWire = verdict?.ok ? wire : null;
-  const livePlan = useMemo(() => (liveWire ? buildPlan(liveWire) : null), [liveWire, buildPlan]);
+  // The shares this review shows, and so the ones the purchase carries.
+  const liveWeights = liveWire ? weights : null;
+  const livePlan = useMemo(
+    () => (liveWire && liveWeights ? buildPlan(liveWire, liveWeights) : null),
+    [liveWire, liveWeights, buildPlan]
+  );
   const liveSummary = useMemo(
-    () => (liveWire ? buildSummary(liveWire) : null),
-    [liveWire, buildSummary]
+    () => (liveWire && liveWeights ? buildSummary(liveWire, liveWeights) : null),
+    [liveWire, liveWeights, buildSummary]
   );
   const liveLede = liveWire
     ? t('{{pay}} split into Bitcoin, Ethereum and Solana.', {
@@ -301,6 +306,9 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   const phaseRef = useRef(flowState.phase);
   phaseRef.current = flowState.phase;
   const leaveFlow = useCallback(() => {
+    // Leaving while it runs (it finishes on its own, the only time Back shows
+    // then): stop following it here, as closing the page would.
+    if (phaseRef.current === 'running') cancelled.current = true;
     flow.reset();
     setFrozen(null);
     setHeld(null);
@@ -508,7 +516,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   );
 
   const handleConfirm = useCallback(async () => {
-    if (!liveWire || !livePlan || !liveSummary || busy) return;
+    if (!liveWire || !liveWeights || !livePlan || !liveSummary || busy) return;
     if (!autopilot) {
       setConsentOpen(true);
       return;
@@ -548,7 +556,9 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
         method: 'POST',
         headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ amountWire: liveWire.toString() }),
+        // The shares this review showed: the server takes them while they still
+        // agree with the market sizes, else asks for a fresh look.
+        body: JSON.stringify({ amountWire: liveWire.toString(), weights: liveWeights }),
       });
       const created = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(created?.error ?? t('This purchase could not be saved.'));
@@ -630,7 +640,20 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
       }
       flow.fail(friendlyAppError(e));
     }
-  }, [liveWire, livePlan, liveSummary, liveLede, busy, autopilot, flow, network, info, t, follow]);
+  }, [
+    liveWire,
+    liveWeights,
+    livePlan,
+    liveSummary,
+    liveLede,
+    busy,
+    autopilot,
+    flow,
+    network,
+    info,
+    t,
+    follow,
+  ]);
 
   // Put a held coin back in line: the server retries it on another route
   // (api/index/purchases/:id/retry), the page says so and steps aside.
@@ -690,7 +713,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
         </ButtonBase>
         {/* The index's picture first: the coins it holds, as on its card. */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, mb: 3 }}>
-          <CoinStack symbols={meta.def.legs.map((leg) => leg.symbol)} size={48} />
+          <CoinStack symbols={meta.def.coins} size={48} />
           <AppPageHeader
             title={meta.name}
             subtitle={t('Bitcoin, Ethereum and Solana in one purchase, with one signature.')}
@@ -707,67 +730,45 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
           }}
         >
           <Box sx={{ minWidth: 0, order: { xs: 2, lg: 1 }, display: 'grid', gap: 4 }}>
-            {/* The page's one focal point: the basket's day as a line, and its
-                weights in each coin's colour (Niko 2026-11-09: "lift it up"). */}
+            {/* The page's one focal point: the index over a chosen range, and its
+                shares by market size in each coin's colour (Niko 2026-11-09: "lift
+                it up"; 2026-11-10: "different graphs not just 24h"). */}
+            <IndexChart meta={meta} />
+
             <AppBlock
-              title={t('The last 24 hours')}
+              flush
+              open
+              title={t('What you buy')}
               action={
                 <Typography sx={{ fontSize: 12.5, color: MUTED }}>
-                  {t('Market data from CoinGecko')}
+                  {t('Shares by market size')}
                 </Typography>
               }
             >
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.25 }}>
-                <Typography
-                  component="div"
-                  sx={{
-                    ...FIGURES,
-                    fontSize: { xs: 26, md: 30 },
-                    fontWeight: 500,
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {today === null ? null : <Change pct={today} />}
-                </Typography>
-                <Typography sx={{ fontSize: 13.5, color: MUTED }}>
-                  {t('{{name}} today, at its weights', { name: meta.name })}
-                </Typography>
-              </Box>
-              <Box sx={{ mt: 2.5, mb: 3 }}>
-                <Sparkline
-                  points={daySeries}
-                  color={INK}
-                  wash={HOVER}
-                  height={112}
-                  minSpan={minSpanFor('BTC')}
-                  label={t('{{name}} over the last 24 hours', { name: meta.name })}
-                />
-              </Box>
-              <WeightBar def={meta.def} height={8} />
-            </AppBlock>
-
-            <AppBlock flush open title={t('What you buy')}>
               <RowList>
-                {CRYPTO_INDEX.legs.map((leg) => {
-                  const m = markets[leg.symbol];
+                {meta.def.coins.map((symbol) => {
+                  const m = markets[symbol];
+                  const share = weightOf(symbol);
                   return (
                     <ListRow
-                      key={leg.symbol}
+                      key={symbol}
                       icon={
                         <Box
                           component="img"
-                          src={assetDisplay(leg.symbol).icon}
+                          src={assetDisplay(symbol).icon}
                           alt=""
                           sx={{ width: 40, height: 40, borderRadius: '50%', display: 'block' }}
                         />
                       }
-                      title={assetName(leg.symbol)}
-                      subtitle={t('{{weight}} of every purchase', {
-                        weight: weightLabel(leg.weightBps),
-                      })}
+                      title={assetName(symbol)}
+                      subtitle={
+                        share
+                          ? t('{{weight}} of every purchase', { weight: weightLabel(share) })
+                          : t('Its share follows its market size')
+                      }
                       value={m ? formatPrice(m.price) : undefined}
                       detail={<Change pct={m?.change24h ?? null} />}
-                      href={paths.assets.details(leg.symbol)}
+                      href={paths.assets.details(symbol)}
                     />
                   );
                 })}
@@ -896,29 +897,30 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
               {/* What each coin gets: always the three coins with their logos,
                   the dollars and the coin they buy once the amount works. */}
               <Box sx={{ mt: 1, ...ROW_LINES }}>
-                {meta.def.legs.map((leg) => {
+                {meta.def.coins.map((symbol) => {
                   const slice = verdict?.ok
-                    ? verdict.slices.find((s) => s.symbol === leg.symbol)
+                    ? verdict.slices.find((s) => s.symbol === symbol)
                     : undefined;
                   const usd = slice ? wireToUsdNumber(slice.amountWire) : null;
-                  const price = markets[leg.symbol]?.price;
+                  const price = markets[symbol]?.price;
+                  const share = weightOf(symbol);
                   return (
                     <Box
-                      key={leg.symbol}
+                      key={symbol}
                       sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 1.25 }}
                     >
                       <Box
                         component="img"
-                        src={assetDisplay(leg.symbol).icon}
+                        src={assetDisplay(symbol).icon}
                         alt=""
                         sx={{ width: 24, height: 24, borderRadius: '50%', display: 'block' }}
                       />
                       <Typography sx={{ ...field, flex: 1, minWidth: 0 }}>
                         <Box component="span" sx={{ color: INK, fontWeight: 500 }}>
-                          {assetName(leg.symbol)}
+                          {assetName(symbol)}
                         </Box>{' '}
                         <Box component="span" sx={FIGURES}>
-                          {weightLabel(leg.weightBps)}
+                          {share ? weightLabel(share) : ''}
                         </Box>
                       </Typography>
                       <Box sx={{ textAlign: 'right' }}>
@@ -934,7 +936,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                         </Typography>
                         {usd !== null && !!price && (
                           <Typography sx={{ ...FIGURES, fontSize: 12, color: MUTED }}>
-                            ≈ {formatCoin(usd / price, leg.symbol)}
+                            ≈ {formatCoin(usd / price, symbol)}
                           </Typography>
                         )}
                       </Box>
@@ -943,13 +945,11 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                 })}
               </Box>
 
-              {wire !== null && verdict && !verdict.ok && (
+              {wire !== null && verdict && !verdict.ok && minimumLabel && (
                 <Typography sx={{ mt: 1.5, fontSize: 12.5, color: DANGER }}>
                   {t(
                     'The smallest purchase is {{min}}, so every coin’s share is worth its exchange.',
-                    {
-                      min: formatUsd(wireToUsdNumber(minimum)),
-                    }
+                    { min: minimumLabel }
                   )}
                 </Typography>
               )}
@@ -965,13 +965,13 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                     {t('First add these to your wallet, one passkey confirmation each:')}
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {missing.map((l) => (
+                    {missing.map((symbol) => (
                       <Button
-                        key={l.symbol}
+                        key={symbol}
                         variant="outlined"
-                        onClick={() => setSetupChain(CHAIN_OF[l.symbol] as TurnkeyChain)}
+                        onClick={() => setSetupChain(CHAIN_OF[symbol] as TurnkeyChain)}
                       >
-                        {t('Add {{coin}}', { coin: assetName(l.symbol) })}
+                        {t('Add {{coin}}', { coin: assetName(symbol) })}
                       </Button>
                     ))}
                   </Box>
@@ -995,16 +995,15 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
               </Button>
               <Typography sx={{ mt: 1.5, fontSize: 12.5, lineHeight: 1.5, color: MUTED }}>
                 {autopilot === false
-                  ? t(
-                      'One signature needs auto-finish: you can turn it on at the review. Minimum {{min}}.',
-                      { min: formatUsd(wireToUsdNumber(minimum)) }
-                    )
-                  : t(
-                      'You see every step and each coin’s share before you confirm. Minimum {{min}}.',
-                      { min: formatUsd(wireToUsdNumber(minimum)) }
-                    )}
+                  ? t('One signature needs auto-finish: you can turn it on at the review.')
+                  : t('You see every step and each coin’s share before you confirm.')}{' '}
+                {/* The smallest coin's share sets it, so it moves with the market. */}
+                {minimumLabel && t('Minimum {{min}}.', { min: minimumLabel })}
               </Typography>
             </AppBlock>
+            {/* This index's purchases still under way: one left running (the
+                page closed, or Back) opens its own page from here. */}
+            <IndexPurchasesInProgress indexId={meta.id} sx={{ mt: { xs: 4, md: 5 } }} />
           </Box>
         </Box>
 
