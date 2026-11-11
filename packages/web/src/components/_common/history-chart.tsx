@@ -8,7 +8,7 @@ import { useTranslate } from '@/locales';
 import { axisTicks } from '@/lib/charts/axis';
 import { priceDomain } from '@/lib/prices/markets';
 import { useMemo, useState, useEffect } from 'react';
-import { INK, MUTED, PAPER, HAIRLINE_COLOR, HAIRLINE_STRONG } from '@/theme/brand-colors';
+import { INK, MUTED, PAPER, GRID_COLOR, HAIRLINE_STRONG } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
@@ -23,8 +23,9 @@ import { BOX_PX, FIGURES, AppBlock, appLocale } from '@/components/_common/app-u
 // indexes subpage should also show different graphs"). Drawn from the left
 // edge to its scale in one colour over a faint wash, with a dashed line at the
 // range's opening value and its high and low marked. The scale on the right
-// holds a few round values with a hairline across for each (Niko 2026-11-10:
-// "why does no graph have y axis values"; lib/charts/axis.ts). Pointing at the
+// holds a few round values with a faint line across for each (Niko 2026-11-10:
+// "why does no graph have y axis values"; lib/charts/axis.ts), fainter than a
+// hairline (GRID_COLOR; Niko 2026-11-11: "more transparent"). Pointing at the
 // line (or dragging a finger, or the arrow keys) reads the value at that
 // moment into the figures above it; what the figures say is the caller's
 // (`figures`).
@@ -314,7 +315,7 @@ export function HistoryChart({
               touchAction: 'pan-y',
             }}
           >
-            {/* The scale's hairlines across, under everything */}
+            {/* The scale's lines across, fainter than a hairline, under everything */}
             {chart.ticks.map((tick, i) =>
               tick.onOpening ? null : (
                 <Box
@@ -325,7 +326,7 @@ export function HistoryChart({
                     left: 0,
                     right: 0,
                     top: pct(tick.y),
-                    borderTop: `1px solid ${HAIRLINE_COLOR}`,
+                    borderTop: `1px solid ${GRID_COLOR}`,
                     display: tickDisplay(i, chart.ticks.length),
                   }}
                 />
@@ -424,7 +425,7 @@ export function HistoryChart({
             </Box>
           </Box>
 
-          {/* The scale: each value beside its hairline, the column as wide as
+          {/* The scale: each value beside its line, the column as wide as
               its widest value and ending where the page does */}
           <Box aria-hidden="true" sx={{ position: 'relative', flex: 'none', pl: 1.5, pr: BOX_PX }}>
             <Box sx={{ height: 0, overflow: 'hidden', visibility: 'hidden' }}>
