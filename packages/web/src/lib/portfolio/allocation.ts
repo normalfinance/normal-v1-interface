@@ -1,4 +1,3 @@
-import { BRAND_COLORS } from '@/theme/brand-colors';
 import { assetColor } from '@/lib/portfolio/display';
 
 // ---------------------------------------------------------------------------
@@ -10,16 +9,29 @@ import { assetColor } from '@/lib/portfolio/display';
 // told apart for every kind of colour vision, so the order was chosen by
 // validating every order of the six (the dataviz skill's validate_palette.js,
 // light and dark): Stellar's ink sits between Ethereum's and Solana's violets,
-// which are too alike to touch. Worst neighbours: ΔE 23.4 colour-blind, 24.3
-// normal (floors 8 and 15). A part someone doesn't hold leaves a gap closed by
-// its neighbours; the legend, the gaps and the readout carry identity then.
+// which are too alike to touch. Worst neighbours: digital dollars and Savings,
+// where the ring closes, ΔE 19.3 colour-blind, 20.0 normal (floors 8 and 15).
+// A part someone doesn't hold leaves a gap closed by its neighbours; the
+// legend, the gaps and the readout carry identity then.
 // ---------------------------------------------------------------------------
 
 export const ALLOCATION_ORDER = ['USDC', 'BTC', 'ETH', 'XLM', 'SOL', 'Savings'] as const;
 
-/** An asset's colour in the ring: its coin colour; Savings the savings green. */
+/**
+ * Savings in the ring: the logo's mint (#2DE9C8, OKLCH hue 177) at the
+ * lightness a chart colour keeps in both modes (L 0.66, chroma 0.12). The
+ * logo's own (L 0.84) fades on white; the brand's deep mint (#245B2D) is its
+ * shade for words, too dark and too grey for a mark (Niko 2026-11-10: "the
+ * dark green representing the savings is ugly"). Beside its neighbours,
+ * Solana and digital dollars, it passes every check of the validator in
+ * light and dark; on white it is 2.9:1, so the legend and the list beside the
+ * ring carry each share in words.
+ */
+export const SAVINGS_COLOR = '#01AB92';
+
+/** An asset's colour in the ring: its coin colour; Savings the mint. */
 export function allocationColor(symbol: string): string {
-  return symbol === 'Savings' ? BRAND_COLORS.mint.deep : assetColor(symbol);
+  return symbol === 'Savings' ? SAVINGS_COLOR : assetColor(symbol);
 }
 
 export interface AllocationPart {

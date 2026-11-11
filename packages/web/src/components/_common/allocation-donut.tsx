@@ -200,7 +200,7 @@ export function AllocationDonut({
           <Typography
             sx={{
               ...FIGURES,
-              fontSize: variant === 'compact' ? { xs: 13, md: 15 } : { xs: 18, md: 22 },
+              fontSize: variant === 'compact' ? { xs: 15, md: 18 } : { xs: 18, md: 22 },
               fontWeight: 500,
               lineHeight: 1.1,
               color: INK,
@@ -212,7 +212,7 @@ export function AllocationDonut({
             sx={{
               mt: 0.25,
               maxWidth: '70%',
-              fontSize: variant === 'compact' ? { xs: 9.5, md: 10.5 } : 12,
+              fontSize: variant === 'compact' ? { xs: 10.5, md: 11.5 } : 12,
               lineHeight: 1.25,
               color: MUTED,
               overflow: 'hidden',

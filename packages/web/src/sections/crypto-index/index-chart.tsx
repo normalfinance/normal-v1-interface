@@ -21,9 +21,10 @@ import { HistoryChart, HISTORY_RANGES } from '@/components/_common/history-chart
 // ---------------------------------------------------------------------------
 // The index over a chosen range (Niko 2026-11-10: "different graphs not just
 // 24h"): its coins' combined market size from the range's start, in ink, the
-// same chart a coin's page draws (HistoryChart). Under it, its shares by
-// market size. "All" is left out: its coins' histories begin years apart, so
-// "all time" would only mean "since the youngest coin".
+// same chart a coin's page draws (HistoryChart), its scale in how far it moved
+// since the range opened (0% on the opening's dashed line). Under it, its
+// shares by market size. "All" is left out: its coins' histories begin years
+// apart, so "all time" would only mean "since the youngest coin".
 // ---------------------------------------------------------------------------
 
 const INDEX_RANGES = HISTORY_RANGES.filter((r) => r.value !== 'all');
@@ -73,6 +74,7 @@ export function IndexChart({ meta }: { meta: IndexMeta }) {
       loading={!points.length && !failed}
       failed={failed}
       valueLabel={(value, first) => signedPct(movedPct(value, first))}
+      axis="change"
       ariaLabel={t(
         '{{name}} chart. Use the left and right arrow keys to read how it moved at each point.',
         { name: meta.name }

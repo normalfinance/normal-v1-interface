@@ -78,10 +78,11 @@ export function BalanceBlock({ total, change, loading, error, onRetry, parts }: 
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, md: 3 }, minWidth: 0 }}>
+        {/* As tall as the figure beside it (Niko 2026-11-10: "a little small") */}
         <AllocationDonut
           parts={parts}
-          size={{ xs: 64, md: 88 }}
-          thickness={11}
+          size={{ xs: 92, md: 120 }}
+          thickness={14}
           variant="compact"
           loading={loading}
           label="Your money by asset"
