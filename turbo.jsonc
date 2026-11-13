@@ -4,6 +4,7 @@
   "globalEnv": [
     // Environment context
     "NODE_ENV",
+    "VERCEL_ENV",
     "VERCEL_GIT_BRANCH",
     "CI",
     "NEXT_TELEMETRY_DISABLED",
@@ -192,8 +193,6 @@
     "PUSH_INCLUDE_AMOUNTS",
     "CUSTOMERIO_API_KEY",
     "CUSTOMERIO_SITE_ID",
-    "DUNE_API_KEY",
-    "DUNE_NAMESPACE",
 
     // Build + feature flags
     "BUILD_STATIC_EXPORT",
