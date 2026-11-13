@@ -12,7 +12,12 @@ import {
   fetchVaultWalletsFromHorizon,
 } from '@/services/defindex-sync';
 
-import { METRICS_CACHE_TAG, loadMetricsSnapshot, saveMetricsSnapshot } from './metrics-store';
+import {
+  METRICS_CACHE_TAG,
+  loadMetricsSnapshot,
+  saveMetricsSnapshot,
+  loadLegacyYieldLedger,
+} from './metrics-store';
 
 // ---------------------------------------------------------------------------
 // The daily sync behind /dashboard (replaces the Dune upload, 2026-11-13).
@@ -33,6 +38,8 @@ export async function runMetricsSync(
   now: () => Date = () => new Date()
 ): Promise<MetricsSyncResult> {
   const previous = await loadMetricsSnapshot();
+  // First run of a new snapshot format: keep the savers the old one knew.
+  const ledgerSeed = previous ? {} : await loadLegacyYieldLedger();
   const sources: MetricsSources = {
     relayerAddresses: {
       evm: process.env.CCTP_RELAYER_EVM_ADDRESS ?? null,
@@ -109,7 +116,7 @@ export async function runMetricsSync(
     }
   );
 
-  const snapshot = buildMetricsSnapshot(sources, errors, previous, now());
+  const snapshot = buildMetricsSnapshot(sources, errors, previous, now(), ledgerSeed);
   const bytes = await saveMetricsSnapshot(snapshot);
 
   try {

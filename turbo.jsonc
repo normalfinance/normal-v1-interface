@@ -193,6 +193,7 @@
     "PUSH_INCLUDE_AMOUNTS",
     "CUSTOMERIO_API_KEY",
     "CUSTOMERIO_SITE_ID",
+    "DASHBOARD_TEAM_EMAILS",
 
     // Build + feature flags
     "BUILD_STATIC_EXPORT",

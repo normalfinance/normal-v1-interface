@@ -1,13 +1,16 @@
 // ---------------------------------------------------------------------------
-// The public metrics page (/dashboard), built from the same rows the daily
-// sync used to upload to Dune (2026-11-13: Dune's free plan ended, so the
-// numbers now live with us).
+// The numbers behind /dashboard (public) and /dashboard/team (team only),
+// built from the same rows the daily sync used to upload to Dune
+// (2026-11-13: Dune's free plan ended, so the numbers now live with us).
 //
-// Each builder below reproduces one Dune query from
-// docs/audit/119-dune-v2-setup-guide.html (its number is in the comment), so
-// the figures carry over unchanged. Everything here is pure and jest-covered;
-// fetching and saving live in server/metrics-sync.ts and the page only reads
-// the saved snapshot.
+// The builders reproduce the Dune queries in
+// docs/audit/119-dune-v2-setup-guide.html (numbers in the comments), but keep
+// everything PER DAY so the page's period dropdown can cut any window
+// (lib/metrics/periods.ts). Counts of distinct wallets cannot be added up
+// across days, so those are counted here for every day, week, month and
+// period window.
+//
+// Pure and jest-covered; fetching and saving live in server/metrics-sync.ts.
 //
 // Carry-forward rule: a source that failed this run keeps its previous
 // section, with the time it was last refreshed and the error, rather than
@@ -20,26 +23,30 @@ import type { ActivityV2Row, WalletChainRow, HoldingsSnapshotRow } from '@/lib/d
 
 import { transactionActionType } from '@/lib/dune/transaction-log';
 
-export const METRICS_SNAPSHOT_VERSION = 1;
+import { PERIODS, bucketOf, bucketKeys, windowStart } from './periods';
 
-/** Newest activity rows kept for the log table. Months of history at today's
- *  pace, and small enough to keep the whole snapshot one Redis value. */
+import type { Point, PeriodKey, StackedDaily } from './periods';
+
+export type { Point, StackedDaily } from './periods';
+
+export const METRICS_SNAPSHOT_VERSION = 2;
+
+/** Newest activity rows kept for the team page's log. Months of history at
+ *  today's pace, and small enough to keep the snapshot one Redis value. */
 export const ACTIVITY_LOG_LIMIT = 500;
-
-/** 3.8 kept the 15 busiest routes. */
-export const TOP_ROUTES_LIMIT = 15;
 
 /**
  * Relayer gas thresholds, measured in doc 128 ("Thresholds: measured, not
- * guessed"): one inbound mint costs about 0.5 XLM, one Base mint well under
- * a millionth of an ETH. Below these a top-up is due.
+ * guessed"): an inbound mint costs about 0.5 XLM and a Base mint about
+ * 0.0000008 ETH, so these leave roughly 40 and 2,500 mints. Below them a
+ * top-up is due.
  */
 export const GAS_TOP_UP_BELOW: Record<string, number> = {
   GAS_STELLAR: 20,
   GAS_BASE: 0.002,
 };
 
-/** The fixed series order for chains, so a chain keeps its colour. */
+/** The fixed series order for chains, so a chain keeps its place. */
 export const CHAIN_ORDER = ['bitcoin', 'ethereum', 'solana', 'stellar'] as const;
 
 /** The slice for the integrator fees that reached the fee wallets before the
@@ -50,14 +57,17 @@ export const PRE_RECORDING_FEES = 'lifi-pre-recording';
 // Snapshot shape
 // ---------------------------------------------------------------------------
 
-/** One value per UTC day; `day` is YYYY-MM-DD. */
-export type Point = { day: string; value: number };
 export type Slice = { label: string; value: number };
-/** Several series over one shared list of days (stacked charts need that). */
-export type StackedDaily = { days: string[]; series: { name: string; data: number[] }[] };
-
-export type RouteRow = { route: string; volumeUsd: number; swaps: number };
 export type HoldingRow = { asset: string; balance: number; usd: number };
+
+/** Distinct wallets per day, week (Monday) and month (1st), each filled with
+ *  zeros up to today, plus the count inside every period's window. */
+export interface DistinctSeries {
+  daily: Point[];
+  weekly: Point[];
+  monthly: Point[];
+  window: Record<PeriodKey, number>;
+}
 
 export type GasStatus = 'ok' | 'top-up' | 'ignore';
 export interface GasFloatRow {
@@ -108,24 +118,71 @@ export interface SectionState {
   error: string | null;
 }
 
+export interface ActivitySection {
+  /** Completed actions per day. */
+  actionsByDay: Point[];
+  activeWallets: DistinctSeries;
+  /** USD per day, per product (3.6). */
+  volumeByProduct: StackedDaily;
+  /** USD per day, per chain the action started on. */
+  volumeByChain: StackedDaily;
+  /** USD per day, per swap route (3.8, cut to any window). */
+  volumeByRoute: StackedDaily;
+}
+
+/**
+ * What happened on Stellar, the numbers SDF asks for. An action counts when
+ * it settles on Stellar: it started there (Soroswap, savings, sends,
+ * MoneyGram, outbound bridges) or it is a CCTP bridge INTO Stellar, whose
+ * mint lands there. Every CCTP route has Stellar on one side, so a CCTP row
+ * that started elsewhere is inbound.
+ */
+export interface StellarSection {
+  actionsByDay: Point[];
+  volumeByDay: Point[];
+  activeWallets: DistinctSeries;
+  /** USD bridged into Stellar with CCTP, per day. */
+  cctpInByDay: Point[];
+  /** USD bridged out of Stellar with CCTP, per day. */
+  cctpOutByDay: Point[];
+  /** USD of MoneyGram cash deposits (in) and cash pick-ups (out), per day. */
+  moneygramInByDay: Point[];
+  moneygramOutByDay: Point[];
+}
+
 export interface MetricsSnapshot {
   version: typeof METRICS_SNAPSHOT_VERSION;
   generatedAt: string;
   sections: Record<SectionKey, SectionState>;
   users: { total: number; signupsByDay: Point[] };
-  volume: { totalUsd: number; productMix: Slice[]; topRoutes: RouteRow[] };
+  activity: ActivitySection;
+  stellar: StellarSection;
   revenue: {
+    /** All time, including the fee-wallet slice that predates recording (3.2). */
     totalUsd: number;
+    /** All time, by product, with that slice (3.3). */
     byProduct: Slice[];
+    /** Recorded fees per day per product (3.4). */
     dailyByProduct: StackedDaily;
+    /** Running total of the recorded fees (3.5). */
     cumulative: Point[];
   };
-  activeWallets: Point[];
-  savings: { tvlUsd: number; tvlByDay: Point[]; yieldEarnedUsd: number };
+  savings: {
+    tvlUsd: number;
+    tvlByDay: Point[];
+    yieldEarnedUsd: number;
+    /** The yield total as each daily sync saw it (history starts with this page). */
+    yieldByDay: Point[];
+  };
+  /** Running total of addresses per chain, per day (3.10). */
   walletsByChain: StackedDaily;
-  holdings: { byAsset: HoldingRow[]; gasFloat: GasFloatRow[]; feesInWalletsUsd: number };
-  activityLog: { rows: ActivityLogRow[]; total: number };
-  /** Kept between runs, never sent to the page. */
+  holdings: { byAsset: HoldingRow[]; feesInWalletsUsd: number };
+  /** Team page only: never sent to the public page. */
+  private: {
+    gasFloat: GasFloatRow[];
+    activityLog: { rows: ActivityLogRow[]; total: number };
+  };
+  /** Kept between runs, never sent to any page. */
   internal: {
     /** Latest known interest per saver, so a saver who withdrew everything
      *  keeps counting toward "yield earned" after leaving the vault. */
@@ -133,14 +190,24 @@ export interface MetricsSnapshot {
   };
 }
 
-/** What the page receives: the snapshot without its internal bookkeeping. */
-export type PublicMetricsSnapshot = Omit<MetricsSnapshot, 'internal'>;
+/** What the public page receives. */
+export type PublicMetricsSnapshot = Omit<MetricsSnapshot, 'private' | 'internal'>;
+/** What the team page receives. */
+export type TeamMetricsSnapshot = Omit<MetricsSnapshot, 'internal'>;
 
 export function toPublicSnapshot(snapshot: MetricsSnapshot | null): PublicMetricsSnapshot | null {
   if (!snapshot) return null;
   const copy: Partial<MetricsSnapshot> = { ...snapshot };
+  delete copy.private;
   delete copy.internal;
   return copy as PublicMetricsSnapshot;
+}
+
+export function toTeamSnapshot(snapshot: MetricsSnapshot | null): TeamMetricsSnapshot | null {
+  if (!snapshot) return null;
+  const copy: Partial<MetricsSnapshot> = { ...snapshot };
+  delete copy.internal;
+  return copy as TeamMetricsSnapshot;
 }
 
 export interface MetricsSources {
@@ -171,12 +238,7 @@ function num(value: unknown): number {
 
 /** Every day from `first` to `last` inclusive, as YYYY-MM-DD. */
 export function daysBetween(first: string, last: string): string[] {
-  const out: string[] = [];
-  const end = Date.parse(`${last}T00:00:00Z`);
-  for (let t = Date.parse(`${first}T00:00:00Z`); t <= end; t += 86_400_000) {
-    out.push(new Date(t).toISOString().slice(0, 10));
-  }
-  return out;
+  return bucketKeys(first, last, 'day');
 }
 
 function sortedSlices(map: Map<string, number>): Slice[] {
@@ -191,9 +253,105 @@ function add(map: Map<string, number>, key: string, value: number) {
 
 const isCompleted = (row: ActivityV2Row) => row.status === 'completed';
 
+/** True when the action settles on Stellar (see StellarSection). */
+export function settlesOnStellar(row: ActivityV2Row): boolean {
+  return row.chain === 'stellar' || (row.product === 'cctp' && row.chain !== 'stellar');
+}
+
+/** Sparse day -> value map as a sorted point list. */
+function toPoints(map: Map<string, number>): Point[] {
+  return Array.from(map.entries())
+    .map(([day, value]) => ({ day, value }))
+    .sort((a, b) => a.day.localeCompare(b.day));
+}
+
+/** Day -> (name -> value) as one stacked series set; `order` ranks the names. */
+function toStacked(
+  perDay: Map<string, Map<string, number>>,
+  order: (totals: Map<string, number>) => string[]
+): StackedDaily {
+  const days = Array.from(perDay.keys()).sort();
+  const totals = new Map<string, number>();
+  for (const bucket of perDay.values()) {
+    for (const [name, value] of bucket) add(totals, name, value);
+  }
+  return {
+    days,
+    series: order(totals).map((name) => ({
+      name,
+      data: days.map((day) => perDay.get(day)?.get(name) ?? 0),
+    })),
+  };
+}
+
+function addTo(
+  perDay: Map<string, Map<string, number>>,
+  day: string,
+  name: string,
+  value: number
+): void {
+  const bucket = perDay.get(day) ?? new Map<string, number>();
+  add(bucket, name, value);
+  perDay.set(day, bucket);
+}
+
+const byTotal = (totals: Map<string, number>) =>
+  sortedSlices(totals)
+    .filter((s) => s.value > 0)
+    .map((s) => s.label);
+
+const byChainOrder = (totals: Map<string, number>) => {
+  const known: string[] = CHAIN_ORDER.filter((chain) => (totals.get(chain) ?? 0) > 0);
+  const others = Array.from(totals.keys())
+    .filter((name) => !(CHAIN_ORDER as readonly string[]).includes(name))
+    .filter((name) => (totals.get(name) ?? 0) > 0)
+    .sort();
+  return [...known, ...others];
+};
+
 // ---------------------------------------------------------------------------
-// Builders, one per Dune query
+// Builders
 // ---------------------------------------------------------------------------
+
+/** Distinct wallets per day, week and month, and inside each period window. */
+export function buildDistinct(
+  entries: { day: string; wallet: string }[],
+  today: string
+): DistinctSeries {
+  const window = Object.fromEntries(PERIODS.map((p) => [p.key, 0])) as Record<PeriodKey, number>;
+  if (entries.length === 0) return { daily: [], weekly: [], monthly: [], window };
+
+  const sets = {
+    day: new Map<string, Set<string>>(),
+    week: new Map<string, Set<string>>(),
+    month: new Map<string, Set<string>>(),
+  };
+  let first = entries[0].day;
+  for (const { day, wallet } of entries) {
+    if (day < first) first = day;
+    for (const bucket of ['day', 'week', 'month'] as const) {
+      const key = bucketOf(day, bucket);
+      const set = sets[bucket].get(key) ?? new Set<string>();
+      set.add(wallet);
+      sets[bucket].set(key, set);
+    }
+  }
+  const last = entries.reduce((max, e) => (e.day > max ? e.day : max), today);
+  const series = (bucket: 'day' | 'week' | 'month') =>
+    bucketKeys(first, last, bucket).map((key) => ({
+      day: key,
+      value: sets[bucket].get(key)?.size ?? 0,
+    }));
+
+  for (const period of PERIODS) {
+    const start = windowStart(period, today);
+    const wallets = new Set<string>();
+    for (const { day, wallet } of entries) if (start === null || day >= start) wallets.add(wallet);
+    window[period.key] = wallets.size;
+  }
+
+  return { daily: series('day'), weekly: series('week'), monthly: series('month'), window };
+}
 
 /** Registered users counter + sign-ups per day (the pre-v2 queries). */
 export function buildUsers(rows: UserRow[]): MetricsSnapshot['users'] {
@@ -202,36 +360,72 @@ export function buildUsers(rows: UserRow[]): MetricsSnapshot['users'] {
     const day = dayOf(row.created_at);
     if (day) add(byDay, day, 1);
   }
-  const signupsByDay = Array.from(byDay.entries())
-    .map(([day, value]) => ({ day, value }))
-    .sort((a, b) => a.day.localeCompare(b.day));
-  return { total: rows.length, signupsByDay };
+  return { total: rows.length, signupsByDay: toPoints(byDay) };
 }
 
-/** 3.1 total volume, 3.7 product mix, 3.8 top swap routes. Completed rows only. */
-export function buildVolume(rows: ActivityV2Row[]): MetricsSnapshot['volume'] {
-  const done = rows.filter(isCompleted);
-  let totalUsd = 0;
-  const byProduct = new Map<string, number>();
-  const routes = new Map<string, RouteRow>();
-  for (const row of done) {
+/**
+ * Everything the activity rows feed, per day: actions, volume by product
+ * (3.1, 3.6, 3.7), by chain and by route (3.8), distinct active wallets
+ * (3.9), and the Stellar-side numbers. Completed rows only.
+ */
+export function buildActivity(
+  rows: ActivityV2Row[],
+  today: string
+): { activity: ActivitySection; stellar: StellarSection } {
+  const actions = new Map<string, number>();
+  const byProduct = new Map<string, Map<string, number>>();
+  const byChain = new Map<string, Map<string, number>>();
+  const byRoute = new Map<string, Map<string, number>>();
+  const active: { day: string; wallet: string }[] = [];
+
+  const stellarActions = new Map<string, number>();
+  const stellarVolume = new Map<string, number>();
+  const stellarActive: { day: string; wallet: string }[] = [];
+  const cctpIn = new Map<string, number>();
+  const cctpOut = new Map<string, number>();
+  const mgiIn = new Map<string, number>();
+  const mgiOut = new Map<string, number>();
+
+  for (const row of rows) {
+    if (!isCompleted(row)) continue;
+    const day = dayOf(row.date);
+    if (!day) continue;
     const usd = num(row.amount_usd);
-    totalUsd += usd;
-    add(byProduct, row.product, usd);
-    if (row.action === 'swap') {
-      const route = `${row.asset_in} → ${row.asset_out}`;
-      const entry = routes.get(route) ?? { route, volumeUsd: 0, swaps: 0 };
-      entry.volumeUsd += usd;
-      entry.swaps += 1;
-      routes.set(route, entry);
+
+    add(actions, day, 1);
+    addTo(byProduct, day, row.product, usd);
+    addTo(byChain, day, row.chain || 'unknown', usd);
+    if (row.action === 'swap') addTo(byRoute, day, `${row.asset_in} → ${row.asset_out}`, usd);
+    if (row.wallet_address) active.push({ day, wallet: row.wallet_address });
+
+    if (settlesOnStellar(row)) {
+      add(stellarActions, day, 1);
+      add(stellarVolume, day, usd);
+      if (row.wallet_address) stellarActive.push({ day, wallet: row.wallet_address });
+    }
+    if (row.product === 'cctp') add(row.chain === 'stellar' ? cctpOut : cctpIn, day, usd);
+    if (row.product === 'ramp' && row.provider === 'moneygram') {
+      add(row.action === 'offramp' ? mgiOut : mgiIn, day, usd);
     }
   }
+
   return {
-    totalUsd,
-    productMix: sortedSlices(byProduct).filter((s) => s.value > 0),
-    topRoutes: Array.from(routes.values())
-      .sort((a, b) => b.volumeUsd - a.volumeUsd)
-      .slice(0, TOP_ROUTES_LIMIT),
+    activity: {
+      actionsByDay: toPoints(actions),
+      activeWallets: buildDistinct(active, today),
+      volumeByProduct: toStacked(byProduct, byTotal),
+      volumeByChain: toStacked(byChain, byChainOrder),
+      volumeByRoute: toStacked(byRoute, byTotal),
+    },
+    stellar: {
+      actionsByDay: toPoints(stellarActions),
+      volumeByDay: toPoints(stellarVolume),
+      activeWallets: buildDistinct(stellarActive, today),
+      cctpInByDay: toPoints(cctpIn),
+      cctpOutByDay: toPoints(cctpOut),
+      moneygramInByDay: toPoints(mgiIn),
+      moneygramOutByDay: toPoints(mgiOut),
+    },
   };
 }
 
@@ -270,35 +464,17 @@ export function buildRevenue(
 
   // 3.4: fees per day per product, completed rows.
   const perDay = new Map<string, Map<string, number>>();
-  const products = new Map<string, number>();
   for (const row of done) {
     const day = dayOf(row.date);
-    if (!day) continue;
-    const fee = num(row.fee_usd);
-    const bucket = perDay.get(day) ?? new Map<string, number>();
-    add(bucket, row.product, fee);
-    perDay.set(day, bucket);
-    add(products, row.product, fee);
+    if (day) addTo(perDay, day, row.product, num(row.fee_usd));
   }
-  const days = Array.from(perDay.keys()).sort();
   // A product that never earned a fee would only add an empty legend entry.
-  const earning = sortedSlices(products)
-    .filter((s) => s.value > 0)
-    .map((s) => s.label);
-  const dailyByProduct: StackedDaily = {
-    days,
-    series: earning.map((name) => ({
-      name,
-      data: days.map((day) => perDay.get(day)?.get(name) ?? 0),
-    })),
-  };
+  const dailyByProduct = toStacked(perDay, byTotal);
 
   // 3.5: running total of the daily recorded fees.
   let running = 0;
-  const cumulative = days.map((day) => {
-    let dayTotal = 0;
-    for (const value of perDay.get(day)?.values() ?? []) dayTotal += value;
-    running += dayTotal;
+  const cumulative = dailyByProduct.days.map((day) => {
+    for (const value of perDay.get(day)?.values() ?? []) running += value;
     return { day, value: running };
   });
 
@@ -311,40 +487,14 @@ export function buildRevenue(
 }
 
 /**
- * 3.9 daily active wallets: distinct wallets with a completed action that
- * day, across every product. Days without any activity are filled with zero
- * up to `today`; Dune joined only the active days, which drew a line over the
- * quiet ones.
- */
-export function buildActiveWallets(rows: ActivityV2Row[], today: string): Point[] {
-  const perDay = new Map<string, Set<string>>();
-  for (const row of rows) {
-    if (!isCompleted(row) || !row.wallet_address) continue;
-    const day = dayOf(row.date);
-    if (!day) continue;
-    const set = perDay.get(day) ?? new Set<string>();
-    set.add(row.wallet_address);
-    perDay.set(day, set);
-  }
-  if (perDay.size === 0) return [];
-  const sorted = Array.from(perDay.keys()).sort();
-  const last = sorted[sorted.length - 1] > today ? sorted[sorted.length - 1] : today;
-  return daysBetween(sorted[0], last).map((day) => ({ day, value: perDay.get(day)?.size ?? 0 }));
-}
-
-/**
- * 3.10 wallets by chain, cumulative. Each chain's running total is carried
- * across every day (Dune only had points on the days a chain grew, which
- * broke the stacked area) and extended to `today`.
+ * 3.10 wallets by chain: each chain's running total of addresses, carried
+ * across every day up to `today`.
  */
 export function buildWalletsByChain(rows: WalletChainRow[], today: string): StackedDaily {
   const added = new Map<string, Map<string, number>>();
   for (const row of rows) {
     const day = dayOf(row.date);
-    if (!day) continue;
-    const bucket = added.get(day) ?? new Map<string, number>();
-    add(bucket, row.chain, num(row.wallets_added));
-    added.set(day, bucket);
+    if (day) addTo(added, day, row.chain, num(row.wallets_added));
   }
   if (added.size === 0) return { days: [], series: [] };
   const sorted = Array.from(added.keys()).sort();
@@ -423,7 +573,7 @@ const GAS_WALLETS: Record<string, { wallet: string; role: string; addressKey: 'e
 export function buildHoldings(
   rows: HoldingsSnapshotRow[],
   addresses: MetricsSources['relayerAddresses'] = {}
-): MetricsSnapshot['holdings'] {
+): { byAsset: HoldingRow[]; gasFloat: GasFloatRow[]; feesInWalletsUsd: number } {
   const byAsset = new Map<string, HoldingRow>();
   let feesInWalletsUsd = 0;
   const gasFloat: GasFloatRow[] = [];
@@ -475,7 +625,7 @@ export function buildHoldings(
 }
 
 /** The "Full activity timeline": completed actions, newest first. */
-export function buildActivityLog(rows: ActivityV2Row[]): MetricsSnapshot['activityLog'] {
+export function buildActivityLog(rows: ActivityV2Row[]): MetricsSnapshot['private']['activityLog'] {
   const done = rows
     .filter(isCompleted)
     .slice()
@@ -501,45 +651,61 @@ export function buildActivityLog(rows: ActivityV2Row[]): MetricsSnapshot['activi
 // The whole snapshot
 // ---------------------------------------------------------------------------
 
+function emptyDistinct(): DistinctSeries {
+  return buildDistinct([], '1970-01-01');
+}
+
 function emptySnapshot(now: string): MetricsSnapshot {
-  const section: SectionState = { updatedAt: null, error: null };
+  const section = (): SectionState => ({ updatedAt: null, error: null });
+  const stacked = (): StackedDaily => ({ days: [], series: [] });
   return {
     version: METRICS_SNAPSHOT_VERSION,
     generatedAt: now,
     sections: {
-      users: { ...section },
-      activity: { ...section },
-      walletChains: { ...section },
-      savingsTvl: { ...section },
-      yield: { ...section },
-      holdings: { ...section },
+      users: section(),
+      activity: section(),
+      walletChains: section(),
+      savingsTvl: section(),
+      yield: section(),
+      holdings: section(),
     },
     users: { total: 0, signupsByDay: [] },
-    volume: { totalUsd: 0, productMix: [], topRoutes: [] },
-    revenue: {
-      totalUsd: 0,
-      byProduct: [],
-      dailyByProduct: { days: [], series: [] },
-      cumulative: [],
+    activity: {
+      actionsByDay: [],
+      activeWallets: emptyDistinct(),
+      volumeByProduct: stacked(),
+      volumeByChain: stacked(),
+      volumeByRoute: stacked(),
     },
-    activeWallets: [],
-    savings: { tvlUsd: 0, tvlByDay: [], yieldEarnedUsd: 0 },
-    walletsByChain: { days: [], series: [] },
-    holdings: { byAsset: [], gasFloat: [], feesInWalletsUsd: 0 },
-    activityLog: { rows: [], total: 0 },
+    stellar: {
+      actionsByDay: [],
+      volumeByDay: [],
+      activeWallets: emptyDistinct(),
+      cctpInByDay: [],
+      cctpOutByDay: [],
+      moneygramInByDay: [],
+      moneygramOutByDay: [],
+    },
+    revenue: { totalUsd: 0, byProduct: [], dailyByProduct: stacked(), cumulative: [] },
+    savings: { tvlUsd: 0, tvlByDay: [], yieldEarnedUsd: 0, yieldByDay: [] },
+    walletsByChain: stacked(),
+    holdings: { byAsset: [], feesInWalletsUsd: 0 },
+    private: { gasFloat: [], activityLog: { rows: [], total: 0 } },
     internal: { yieldByWallet: {} },
   };
 }
 
 /**
  * Build this run's snapshot. A source left undefined (its fetch failed) keeps
- * the previous run's section and records `errors[section]`.
+ * the previous run's section and records `errors[section]`. `ledgerSeed`
+ * carries the yield ledger over from an older snapshot format.
  */
 export function buildMetricsSnapshot(
   sources: MetricsSources,
   errors: Partial<Record<SectionKey, string>>,
   previous: MetricsSnapshot | null,
-  now: Date
+  now: Date,
+  ledgerSeed: Record<string, number> = {}
 ): MetricsSnapshot {
   const at = now.toISOString();
   const today = at.slice(0, 10);
@@ -547,7 +713,7 @@ export function buildMetricsSnapshot(
   // A deep copy, so building never mutates the snapshot it carries from.
   const next: MetricsSnapshot = base
     ? { ...(JSON.parse(JSON.stringify(base)) as MetricsSnapshot), generatedAt: at }
-    : emptySnapshot(at);
+    : { ...emptySnapshot(at), internal: { yieldByWallet: { ...ledgerSeed } } };
 
   const mark = (key: SectionKey, fresh: boolean) => {
     next.sections[key] = fresh
@@ -562,14 +728,19 @@ export function buildMetricsSnapshot(
   mark('users', !!sources.users);
 
   // Holdings first: revenue needs the fee-wallet total.
-  if (sources.holdings) next.holdings = buildHoldings(sources.holdings, sources.relayerAddresses);
+  if (sources.holdings) {
+    const holdings = buildHoldings(sources.holdings, sources.relayerAddresses);
+    next.holdings = { byAsset: holdings.byAsset, feesInWalletsUsd: holdings.feesInWalletsUsd };
+    next.private = { ...next.private, gasFloat: holdings.gasFloat };
+  }
   mark('holdings', !!sources.holdings);
 
   if (sources.activity) {
-    next.volume = buildVolume(sources.activity);
+    const built = buildActivity(sources.activity, today);
+    next.activity = built.activity;
+    next.stellar = built.stellar;
     next.revenue = buildRevenue(sources.activity, next.holdings.feesInWalletsUsd);
-    next.activeWallets = buildActiveWallets(sources.activity, today);
-    next.activityLog = buildActivityLog(sources.activity);
+    next.private = { ...next.private, activityLog: buildActivityLog(sources.activity) };
   }
   mark('activity', !!sources.activity);
 
@@ -584,7 +755,9 @@ export function buildMetricsSnapshot(
 
   if (sources.yieldRows) {
     const result = buildYield(sources.yieldRows, next.internal.yieldByWallet);
-    next.savings = { ...next.savings, yieldEarnedUsd: result.yieldEarnedUsd };
+    const history = next.savings.yieldByDay.filter((p) => p.day !== today);
+    history.push({ day: today, value: result.yieldEarnedUsd });
+    next.savings = { ...next.savings, yieldEarnedUsd: result.yieldEarnedUsd, yieldByDay: history };
     next.internal = { ...next.internal, yieldByWallet: result.yieldByWallet };
   }
   mark('yield', !!sources.yieldRows);
