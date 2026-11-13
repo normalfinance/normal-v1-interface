@@ -4,6 +4,7 @@
 // DeFindex TVL, spot prices) and hands the data to the builders.
 // ---------------------------------------------------------------------------
 
+import type { StellarWalletRecord } from '@/lib/metrics/wallets';
 import type { ChainSavingsEvent } from '@/lib/dune/savings-merge';
 import type {
   PriceMap,
@@ -19,6 +20,7 @@ import type {
 import { prisma } from '@/lib/prisma';
 import { getSpotPrices } from '@/lib/portfolio/aggregate';
 import { mergeSavingsSources } from '@/lib/dune/savings-merge';
+import { buildStellarWalletList } from '@/lib/metrics/wallets';
 import { fetchAllDepositWallets } from '@/services/prisma-sync';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
 import { fetchStellarBalancesFromPool } from '@/lib/stellar/horizon-pool';
@@ -251,6 +253,30 @@ export async function fetchWalletChains(): Promise<WalletChainRow[]> {
     },
   });
   return buildWalletChainRows(wallets, NETWORK);
+}
+
+/**
+ * Every Stellar wallet Normal knows, from all four tables (lib/metrics/
+ * wallets.ts): passkey wallets plus the earlier and connected ones that
+ * predate Turnkey. Reads addresses and dates only.
+ */
+export async function fetchStellarWallets(): Promise<StellarWalletRecord[]> {
+  const [turnkey, seeds, linked, firstUsers] = await Promise.all([
+    prisma.turnkeyWallet.findMany({ select: { stellarAddress: true, createdAt: true } }),
+    prisma.turnkeyWalletSeed.findMany({ select: { stellarAddress: true, createdAt: true } }),
+    prisma.linkedWallet.findMany({ select: { walletAddress: true, createdAt: true } }),
+    prisma.user.findMany({ select: { walletAddress: true, createdAt: true } }),
+  ]);
+  return buildStellarWalletList({
+    passkey: [...turnkey, ...seeds].map((r) => ({
+      address: r.stellarAddress,
+      createdAt: r.createdAt,
+    })),
+    earlier: [...linked, ...firstUsers].map((r) => ({
+      address: r.walletAddress,
+      createdAt: r.createdAt,
+    })),
+  });
 }
 
 // ---------------------------------------------------------------------------

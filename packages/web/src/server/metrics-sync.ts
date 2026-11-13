@@ -5,7 +5,12 @@ import { revalidateTag } from 'next/cache';
 import { fetchSupabaseUsers } from '@/services/supabase-sync';
 import { fetchAllDepositWallets } from '@/services/prisma-sync';
 import { buildSavingsTvl, buildMetricsSnapshot } from '@/lib/metrics/snapshot';
-import { fetchActivityV2, fetchWalletChains, fetchHoldingsSnapshot } from '@/services/dune-sync-v2';
+import {
+  fetchActivityV2,
+  fetchWalletChains,
+  fetchStellarWallets,
+  fetchHoldingsSnapshot,
+} from '@/services/dune-sync-v2';
 import {
   fetchVaultSnapshots,
   fetchYieldSnapshots,
@@ -73,10 +78,16 @@ export async function runMetricsSync(
     return `${rows.length} users`;
   });
 
-  await step('walletChains', fetchWalletChains, (rows) => {
-    sources.walletChains = rows;
-    return `${rows.length} rows`;
-  });
+  await step(
+    'walletChains',
+    async () => ({ chains: await fetchWalletChains(), stellar: await fetchStellarWallets() }),
+    ({ chains, stellar }) => {
+      sources.walletChains = chains;
+      sources.stellarWallets = stellar;
+      const passkey = stellar.filter((w) => w.kind === 'passkey').length;
+      return `${chains.length} rows, ${stellar.length} Stellar wallets (${passkey} passkey)`;
+    }
+  );
 
   // The holdings snapshot adds the savings TVL as its own row; reuse this
   // run's reading so the two never disagree (or the last known one).

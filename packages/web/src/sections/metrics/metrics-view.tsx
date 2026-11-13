@@ -453,9 +453,7 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
           title="Wallets by chain"
           initial="all"
           subheader={(p) =>
-            p.key === 'all'
-              ? 'Addresses created on each chain since launch.'
-              : `Addresses created on each chain since launch; in brackets, how many are new in the ${spanOf(p)}.`
+            `Wallets on each chain since launch${p.key === 'all' ? '' : `; in brackets, how many are new in the ${spanOf(p)}`}. Stellar counts every Stellar wallet: passkey wallets plus the earlier Normal wallets and connected wallets from before June 2026.`
           }
         >
           {(p) => {
@@ -501,7 +499,11 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
         <Kpi
           label="Stellar wallets"
           value={fNumber(stellarChain?.total ?? 0)}
-          foot={`+${fNumber(stellarChain?.added ?? 0)} in the last 30 days`}
+          foot={
+            snapshot.stellarWallets
+              ? `${fNumber(snapshot.stellarWallets.passkey)} passkey, ${fNumber(snapshot.stellarWallets.earlier)} earlier or connected; +${fNumber(stellarChain?.added ?? 0)} in the last 30 days`
+              : `+${fNumber(stellarChain?.added ?? 0)} in the last 30 days`
+          }
         />
         <Kpi
           label="Active on Stellar, last 30 days"
@@ -575,7 +577,8 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
         Volume and revenue count completed actions only. Dollar values for BTC, ETH, SOL and XLM use
         the price on the day of each update, so older actions show today&apos;s value; USDC is
         exact. An action counts as on Stellar when it settles there, including CCTP bridges into
-        Stellar. Days are UTC.
+        Stellar. Stellar wallets include those created before passkey (Turnkey) wallets launched in
+        June 2026 and wallets users connected, each counted once. Days are UTC.
       </Typography>
     </Container>
   );

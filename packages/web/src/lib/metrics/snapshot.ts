@@ -23,8 +23,10 @@ import type { ActivityV2Row, WalletChainRow, HoldingsSnapshotRow } from '@/lib/d
 
 import { transactionActionType } from '@/lib/dune/transaction-log';
 
+import { countKinds, withAllStellarWallets } from './wallets';
 import { PERIODS, bucketOf, bucketKeys, windowStart } from './periods';
 
+import type { StellarWalletRecord } from './wallets';
 import type { Point, PeriodKey, StackedDaily } from './periods';
 
 export type { Point, StackedDaily } from './periods';
@@ -174,8 +176,11 @@ export interface MetricsSnapshot {
     /** The yield total as each daily sync saw it (history starts with this page). */
     yieldByDay: Point[];
   };
-  /** Running total of addresses per chain, per day (3.10). */
+  /** Running total of addresses per chain, per day (3.10). Stellar counts
+   *  every Stellar wallet (lib/metrics/wallets.ts), not only passkey ones. */
   walletsByChain: StackedDaily;
+  /** How the Stellar wallets split; absent in snapshots saved before 2026-11-13. */
+  stellarWallets?: { passkey: number; earlier: number };
   holdings: { byAsset: HoldingRow[]; feesInWalletsUsd: number };
   /** Team page only: never sent to the public page. */
   private: {
@@ -214,6 +219,8 @@ export interface MetricsSources {
   users?: UserRow[];
   activity?: ActivityV2Row[];
   walletChains?: WalletChainRow[];
+  /** Every Stellar wallet; replaces the passkey-only Stellar rows of walletChains. */
+  stellarWallets?: StellarWalletRecord[];
   vaultSnapshots?: VaultSnapshotRow[];
   yieldRows?: YieldSnapshotRow[];
   holdings?: HoldingsSnapshotRow[];
@@ -746,7 +753,14 @@ export function buildMetricsSnapshot(
   }
   mark('activity', !!sources.activity);
 
-  if (sources.walletChains) next.walletsByChain = buildWalletsByChain(sources.walletChains, today);
+  if (sources.walletChains) {
+    const network = sources.walletChains[0]?.network ?? 'mainnet';
+    const rows = sources.stellarWallets
+      ? withAllStellarWallets(sources.walletChains, sources.stellarWallets, network)
+      : sources.walletChains;
+    next.walletsByChain = buildWalletsByChain(rows, today);
+    if (sources.stellarWallets) next.stellarWallets = countKinds(sources.stellarWallets);
+  }
   mark('walletChains', !!sources.walletChains);
 
   if (sources.vaultSnapshots) {
