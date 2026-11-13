@@ -25,7 +25,7 @@ const PHASES: Phase[] = [
     when: 'Q1 — Q2 2026',
     bullets: [
       'Non-custodial Stellar wallet, mobile + web',
-      'USDC high-yield savings (8.2% APY)',
+      'USDC savings at a variable rate',
       'Fiat on/off-ramps in 50+ countries',
       'Halborn audit complete',
     ],

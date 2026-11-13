@@ -33,32 +33,31 @@ const DEFAULT_QUESTIONS: Question[] = [
   {
     title: 'How does Normal work?',
     answer:
-      'Normal is a non-custodial Stellar wallet with built-in fiat ramps and a high-yield savings account. You hold your keys. We just make the experience feel like a banking app — fast, clean, and global.',
+      'Normal is a self-custody crypto wallet with built-in ways to buy, sell and swap crypto, and a USDC savings vault. Your wallet is secured by a passkey on your own device. We just make it feel like a banking app: fast, clean and global.',
   },
   {
-    title: 'Is 7%+ APY too good to be true?',
+    title: 'Where does the savings rate come from?',
     answer:
-      "No, 5–10% APY is realistic in the current Stellar DeFi ecosystem, though yields are variable and not guaranteed. Stellar's Blend protocol has shown USDC lending yields in the 8–15%+ range during periods of strong borrowing demand — driven by genuine utilization from cross-border payments, remittances, and business liquidity needs in emerging markets.",
+      'From interest that borrowers pay on Blend, a lending protocol on Stellar, where borrowers must post more collateral than they borrow. The rate changes with demand and is never guaranteed. You can see the current rate before you deposit.',
   },
   {
     title: 'How exactly is the yield made and secured?',
     answer:
-      "Your USDC is deposited into Blend's lending pools. Borrowers over-collateralize their loans and pay interest — you earn a share proportional to your deposit. DeFindex optimizes allocation across the most efficient pools. Security is maintained through non-custodial architecture, over-collateralization with automatic liquidations, and audited Soroban smart contracts.",
+      "Your USDC goes into a savings vault: a smart contract on Stellar that Normal set up and manages using DeFindex. The vault supplies the USDC to Blend's lending pools, where borrowers post more collateral than they borrow and pay interest, and you earn a share in proportion to your deposit. The vault's code cannot be changed, and loans whose collateral falls too low are liquidated. Smart contracts can still fail, so please read our documentation for the risks.",
   },
   {
     title: 'What assets does Normal support?',
-    answer:
-      "We integrate new assets every week. We're building support for the top 100 cryptocurrencies and popular equities, commodities, FX pairs, ETFs, and more.",
+    answer: "Bitcoin, Ethereum, Solana, Stellar (XLM) and USDC. We're adding more over time.",
   },
   {
     title: 'Does Normal require KYC?',
     answer:
-      'No KYC is required to create an account or invest. However, you must complete KYC to deposit and withdraw via our regulated financial partners. We restrict access from U.S. sanctioned jurisdictions and countries where our services are not supported.',
+      "Normal doesn't ask for ID to create an account. When you buy or sell crypto for money, the provider you choose (Coinbase, Stripe or MoneyGram) verifies your identity under its own rules. Our Terms of Service don't allow use by residents of the sanctioned countries they list.",
   },
   {
     title: 'How much does Normal cost?',
     answer:
-      'Creating an account is 100% free. Savings deposits incur a flat 0.5% fee. Withdrawals incur a tiered yield commission: 20% under $500, 15% from $500–$2,499, 10% from $2,500–$50,000, and 5% above $50,000. Swaps incur a 0.5% fee on the input amount.',
+      'Creating an account is 100% free. Savings deposits incur a flat 0.5% fee. Withdrawals incur a tiered yield commission: 20% under $500, 15% from $500–$2,499, 10% from $2,500–$50,000, and 5% above $50,000. Swaps incur a 0.5% fee on the input amount. The savings vault also keeps 10% of the yield it earns as a performance fee, shared between Normal and DeFindex.',
   },
   {
     title: 'Is Normal safe to use?',

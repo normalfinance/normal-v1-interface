@@ -14,8 +14,6 @@ const BRANDS = [
   'DeFindex',
   'Blend',
   'Coinbase',
-  'MoonPay',
-  'Visa',
   'MoneyGram',
   'Turnkey',
   'LI.FI',

@@ -48,12 +48,6 @@ const MILESTONES: FeatureItem[] = [
   },
   {
     status: 'shipped',
-    title: 'Hit $24M total deposits',
-    date: 'Apr 2026',
-    description: 'Crossed $24M TVL across USDC savings vaults.',
-  },
-  {
-    status: 'shipped',
     title: 'Multi-chain support — Turnkey, LI.FI & MoneyGram',
     date: 'Jun 2026',
     description:

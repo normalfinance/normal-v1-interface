@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useVaultApy } from '@/hooks/use-vault-apy';
 
 import { Box, Typography } from '@mui/material';
 
@@ -12,7 +13,7 @@ const SMALL_CARDS = [
     eyebrow: 'Cash in & out',
     title: '50+ countries, one tap.',
     description:
-      'Fiat ramps via Stripe, Coinbase, MoonPay, SEPA and ACH. Deposits clear in minutes, not days.',
+      'Buy and sell through Coinbase, Stripe and MoneyGram, with more providers to come. Deposits clear in minutes, not days.',
   },
   {
     eyebrow: 'Full transparency',
@@ -24,9 +25,15 @@ const SMALL_CARDS = [
     eyebrow: 'More assets coming',
     title: 'Crypto, equities and RWAs.',
     description:
-      'BTC and ETH next. Tokenized treasuries and ETFs after that. One account, every asset.',
+      'Bitcoin, Ethereum and Solana are live. Tokenized treasuries and ETFs are on our roadmap. One account, every asset.',
   },
 ];
+
+/** The vault's live rate, never a fixed number. */
+function LiveApy() {
+  const apy = useVaultApy();
+  return <>{apy != null ? `${apy.toFixed(2)}%` : '…'}</>;
+}
 
 export const RoadmapBento: React.FC = () => (
   <Box
@@ -148,8 +155,7 @@ export const RoadmapBento: React.FC = () => (
             }}
           >
             {[
-              { value: '8.09%', label: 'Current APY' },
-              { value: '$24M+', label: 'Deposits' },
+              { value: <LiveApy />, label: 'Current APY' },
               { value: '0', label: 'Lockups' },
             ].map((stat, i, arr) => (
               <Box key={stat.label} sx={{ display: 'flex', alignItems: 'stretch', gap: '28px' }}>

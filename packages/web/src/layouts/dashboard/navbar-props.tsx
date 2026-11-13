@@ -41,7 +41,7 @@ export const NormalNavbarDefaults: Props = {
                 url: paths.savings,
                 icon: <SavingsOutlined sx={{ fontSize: 20 }} />,
                 title: 'Savings',
-                description: 'Earn 8%+ APY on USDC.',
+                description: 'Earn a variable rate on USDC.',
               },
               {
                 url: paths.swap,
