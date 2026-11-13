@@ -49,9 +49,9 @@ export default function TermsOfServiceView() {
 
 const MESSAGE = `# NORMAL TERMS OF SERVICE
 
-Version 2.0
+Version 2.1
 
-Last Updated: October 14, 2026
+Last Updated: November 13, 2026
 
 These Terms of Service ("Terms") govern your use of the Normal wallet and savings app ("Normal") and related services offered by Normal Finance, Inc. and its affiliates (together, "the Company," "us," "our," and "we") through this website ("Site").
 
@@ -81,7 +81,7 @@ WE RESERVE THE RIGHT TO AMEND THESE TERMS AT ANY TIME AND WILL NOTIFY YOU OF ANY
 
 2.1. Transfers. You may send and receive digital assets to and from addresses you choose. Blockchain transactions are irreversible. The Company is not responsible for assets sent to an incorrect address, to an address on the wrong network, or without a memo or tag that the recipient requires.
 
-2.2. Normal Savings. Normal Savings deposits your USDC into a vault operated by DeFindex that lends it through Blend, both of which are third-party smart contracts on the Stellar network. Yields are variable, are determined by those protocols and by market conditions, and are not guaranteed. Deposits and withdrawals require network fees in XLM, which you must hold. The Company is not liable for any loss arising from the operation, failure or exploit of those protocols, from changes in yield, or from the de-pegging of USDC.
+2.2. Normal Savings. Normal Savings deposits your USDC into a vault smart contract that the Company set up and manages using DeFindex, and the vault supplies it to Blend, a lending protocol. DeFindex and Blend are third-party smart contracts on the Stellar network. The Company holds the vault's management roles and receives part of its performance fee (see section 4.2). Yields are variable, are determined by those protocols and by market conditions, and are not guaranteed. Deposits and withdrawals require network fees in XLM, which you must hold. The Company is not liable for any loss arising from the operation, failure or exploit of those protocols, from changes in yield, or from the de-pegging of USDC.
 
 2.3. Swaps and Bridges. You may exchange one digital asset for another. Exchanges on Stellar are executed through Soroswap; exchanges between networks are executed through LI.FI and, where a Stellar asset is involved, through Circle's Cross-Chain Transfer Protocol and an intermediate address on the Base network that you control. Prices are quotes from those protocols and may change before execution. A cross-network exchange may complete in stages and may require you to finish or reverse a stage; the App shows these states and we may, with your consent, complete certain stages automatically on your behalf. The Company is not a party to any exchange and is not liable for slippage, failed or delayed routes, or losses arising from third-party protocols.
 
@@ -99,7 +99,7 @@ WE RESERVE THE RIGHT TO AMEND THESE TERMS AT ANY TIME AND WILL NOTIFY YOU OF ANY
 
 4.1. Network Fees. Transactions on a blockchain require a fee paid to that network ("Network Fee"). The Company has no control over the amount of a Network Fee, the time to process a transaction, or the method of payment. Network Fees are shown in the Services where known and are paid from your wallet.
 
-4.2. Normal Fees. The Company charges fees for certain Services, shown to you before you confirm a transaction. At the date of these Terms: a fee of 0.5% of the amount on exchanges executed through the Services; a fee of 0.5% of the amount deposited into Normal Savings; and, on withdrawal from Normal Savings, a commission on the yield you earned (not on your principal) of 20% for withdrawals under $500, 15% from $500, 10% from $2,500 and 5% from $50,000. Third-party providers for buying and selling charge their own fees under their own terms. We may change our fees from time to time and will post the new fees in the Services before they take effect; your continued use after that constitutes acceptance.
+4.2. Normal Fees. The Company charges fees for certain Services, shown to you before you confirm a transaction. At the date of these Terms: a fee of 0.5% of the amount on exchanges executed through the Services; a fee of 0.5% of the amount deposited into Normal Savings; and, on withdrawal from Normal Savings, a commission on the yield you earned (not on your principal) of 20% for withdrawals under $500, 15% from $500, 10% from $2,500 and 5% from $50,000. The Normal Savings vault also keeps a performance fee on the yield it earns (currently 10%), which the Company shares with DeFindex. Third-party providers for buying and selling charge their own fees under their own terms. We may change our fees from time to time and will post the new fees in the Services before they take effect; your continued use after that constitutes acceptance.
 
 4.3. Taxes. It is your sole responsibility to determine whether, and to what extent, any taxes apply to your use of the Services, and to withhold, collect, report and remit the correct amount of taxes to the appropriate tax authorities.
 

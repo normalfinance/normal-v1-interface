@@ -110,7 +110,8 @@ const DEMO_ROWS: Row[] = [
     sub: 'DeFi · auto-compounding',
     usd: 700.02,
     changePct: null,
-    apyPct: 8.09,
+    // Filled from the vault's live rate below, never a fixed number.
+    apyPct: null,
     group: 'defi',
     href: paths.savings,
   },
@@ -138,7 +139,10 @@ export function HeroPortfolioCard() {
   const [tab, setTab] = useState<TabId>('all');
 
   const rows = useMemo<Row[]>(() => {
-    if (!isAuthed) return [...DEMO_ROWS].sort((a, b) => b.usd - a.usd);
+    if (!isAuthed)
+      return DEMO_ROWS.map((r) => (r.id === 'savings' ? { ...r, apyPct: apy ?? null } : r)).sort(
+        (a, b) => b.usd - a.usd
+      );
     const out: Row[] = [];
     // #32 + Niko 2026-08-21: ONE row per asset. On hybrid accounts the two
     // Stellar wallets' XLM/USDC are COMBINED (the row shows the total; the
