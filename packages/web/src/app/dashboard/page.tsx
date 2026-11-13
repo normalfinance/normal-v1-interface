@@ -28,15 +28,17 @@ export const metadata: Metadata = {
   },
 };
 
-// Rendered per request (Redis is never read at build time), but every
-// request within 5 minutes shares one Redis read, and the daily sync clears
-// the cache the moment it saves new numbers.
+// Rendered per request (Redis is never read at build time). Requests within
+// a minute share one Redis read, whatever it found, and the daily sync
+// clears the cache the moment it saves new numbers. A short window on
+// purpose: with 5 minutes a page kept showing numbers already deleted, then
+// "No numbers yet" well after they were back (2026-11-13).
 export const dynamic = 'force-dynamic';
 
 const getSnapshot = unstable_cache(
   async () => toPublicSnapshot(await loadMetricsSnapshot()),
-  ['metrics-snapshot'],
-  { revalidate: 300, tags: [METRICS_CACHE_TAG] }
+  ['metrics-snapshot-v3'],
+  { revalidate: 60, tags: [METRICS_CACHE_TAG] }
 );
 
 export default async function Page() {

@@ -110,8 +110,11 @@ function SyncHealth({ snapshot }: { snapshot: TeamMetricsSnapshot }) {
                       <Chip
                         size="small"
                         variant="soft"
-                        color="error"
-                        label="Not refreshed"
+                        // Refreshed in this run but with a note = partial.
+                        color={section.updatedAt === snapshot.generatedAt ? 'warning' : 'error'}
+                        label={
+                          section.updatedAt === snapshot.generatedAt ? 'Partial' : 'Not refreshed'
+                        }
                         sx={{ alignSelf: 'flex-start' }}
                       />
                       <Typography

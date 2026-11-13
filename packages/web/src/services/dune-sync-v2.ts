@@ -21,9 +21,9 @@ import { getSpotPrices } from '@/lib/portfolio/aggregate';
 import { mergeSavingsSources } from '@/lib/dune/savings-merge';
 import { fetchAllDepositWallets } from '@/services/prisma-sync';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
-import { fetchVaultWalletsFromHorizon } from '@/services/defindex-sync';
 import { fetchStellarBalancesFromPool } from '@/lib/stellar/horizon-pool';
 import { fetchAllVaultEvents, normalizeVaultEvents } from '@/server/defindex-events';
+import { fetchVaultDepositors, fetchVaultWalletsFromHorizon } from '@/services/defindex-sync';
 import {
   buildCctpOpsRows,
   buildHoldingsRows,
@@ -110,15 +110,19 @@ async function fetchSavingsMerged(): Promise<{ deposits: VaultDepositInput[]; so
     orderBy: { createdAt: 'asc' },
   });
 
+  // Who to ask about: our database's depositors plus DeFindex's own list of
+  // every vault depositor (2026-11-13: 18 wallets). The Horizon scan is only
+  // the fallback: it returned 432 accounts with any operation near the vault,
+  // and one call each took 433s, past Vercel's 5-minute limit.
   let wallets: string[];
+  const dbWallets = await fetchAllDepositWallets().catch(() =>
+    Array.from(new Set(dbRows.map((r) => r.walletAddress)))
+  );
   try {
-    const [dbWallets, horizonWallets] = await Promise.all([
-      fetchAllDepositWallets(),
-      fetchVaultWalletsFromHorizon(),
-    ]);
-    wallets = Array.from(new Set([...dbWallets, ...horizonWallets]));
+    wallets = Array.from(new Set([...dbWallets, ...(await fetchVaultDepositors())]));
   } catch {
-    wallets = Array.from(new Set(dbRows.map((r) => r.walletAddress)));
+    const horizonWallets = await fetchVaultWalletsFromHorizon().catch(() => [] as string[]);
+    wallets = Array.from(new Set([...dbWallets, ...horizonWallets]));
   }
 
   // Sequential on purpose: DeFindex throttles hard (429s appear ~10 rapid

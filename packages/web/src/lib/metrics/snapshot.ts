@@ -715,9 +715,11 @@ export function buildMetricsSnapshot(
     ? { ...(JSON.parse(JSON.stringify(base)) as MetricsSnapshot), generatedAt: at }
     : { ...emptySnapshot(at), internal: { yieldByWallet: { ...ledgerSeed } } };
 
+  // A fresh section can still carry a note (refreshed, but partly: e.g. some
+  // savers could not be read); a stale one keeps its last refresh time.
   const mark = (key: SectionKey, fresh: boolean) => {
     next.sections[key] = fresh
-      ? { updatedAt: at, error: null }
+      ? { updatedAt: at, error: errors[key] ?? null }
       : {
           updatedAt: base?.sections[key]?.updatedAt ?? null,
           error: errors[key] ?? 'Not refreshed in this run',

@@ -476,4 +476,25 @@ describe('the whole snapshot', () => {
     const snapshot = buildMetricsSnapshot({ yieldRows: [] }, {}, null, NOW, { OLD: 4 });
     expect(snapshot.savings.yieldEarnedUsd).toBe(4);
   });
+
+  it('keeps a saver who could not be read at their last known yield, and notes it', () => {
+    const first = buildMetricsSnapshot(
+      { yieldRows: [yieldRow('BIG', 436.66), yieldRow('SMALL', 1)] },
+      {},
+      null,
+      NOW
+    );
+    // Next run: DeFindex throttled BIG, so only SMALL came back.
+    const second = buildMetricsSnapshot(
+      { yieldRows: [yieldRow('SMALL', 1.5)] },
+      { yield: '1 of 2 savers could not be read; their last known yield is used' },
+      first,
+      LATER
+    );
+    expect(second.savings.yieldEarnedUsd).toBeCloseTo(438.16);
+    expect(second.sections.yield).toEqual({
+      updatedAt: LATER.toISOString(),
+      error: '1 of 2 savers could not be read; their last known yield is used',
+    });
+  });
 });

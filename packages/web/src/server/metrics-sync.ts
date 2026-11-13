@@ -9,6 +9,7 @@ import { fetchActivityV2, fetchWalletChains, fetchHoldingsSnapshot } from '@/ser
 import {
   fetchVaultSnapshots,
   fetchYieldSnapshots,
+  fetchVaultDepositors,
   fetchVaultWalletsFromHorizon,
 } from '@/services/defindex-sync';
 
@@ -54,12 +55,15 @@ export async function runMetricsSync(
     fetcher: () => Promise<T>,
     keep: (value: T) => string
   ): Promise<void> {
+    // Each step reports its time: the whole run must fit Vercel's 5 minutes.
+    const started = Date.now();
+    const took = () => `${Math.round((Date.now() - started) / 1000)}s`;
     try {
-      results[key] = keep(await fetcher());
+      results[key] = `${keep(await fetcher())} (${took()})`;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       errors[key] = message;
-      results[key] = `ERROR: ${message}`;
+      results[key] = `ERROR: ${message} (${took()})`;
       logger.error(`[metrics] ${key} failed`, error);
     }
   }
@@ -93,17 +97,34 @@ export async function runMetricsSync(
   await step(
     'yield',
     async () => {
-      // Database wallets plus every wallet Horizon saw touch the vault, so a
-      // saver who deposited outside the app still counts.
-      const [dbWallets, horizonWallets] = await Promise.all([
-        fetchAllDepositWallets(),
-        fetchVaultWalletsFromHorizon(),
-      ]);
-      return fetchYieldSnapshots(Array.from(new Set([...dbWallets, ...horizonWallets])));
+      // Only real savers: confirmed database deposits plus every wallet with
+      // a savings deposit or withdrawal in this run's activity (database rows
+      // merged with DeFindex chain events, so savers outside the app count).
+      // Asking about every account Horizon saw near the vault meant 461 calls
+      // for 17 depositors, one at a time: minutes, past Vercel's limit.
+      // Without this run's activity, fall back to that wider list.
+      const dbWallets = await fetchAllDepositWallets();
+      const depositors = await fetchVaultDepositors().catch(() => null);
+      const seen = sources.activity
+        ? sources.activity.filter((r) => r.product === 'savings').map((r) => r.wallet_address)
+        : [];
+      const wider =
+        depositors === null && !sources.activity ? await fetchVaultWalletsFromHorizon() : [];
+      return fetchYieldSnapshots(
+        Array.from(new Set([...dbWallets, ...(depositors ?? []), ...seen, ...wider])).filter(
+          Boolean
+        )
+      );
     },
-    (rows) => {
+    ({ rows, failed, total }) => {
       sources.yieldRows = rows;
-      return `${rows.length} savers`;
+      // A saver DeFindex would not answer for keeps their last known yield
+      // (the ledger); say so instead of dropping them quietly.
+      if (failed.length) {
+        errors.yield = `${failed.length} of ${total} savers could not be read; their last known yield is used`;
+      }
+      const interest = rows.reduce((sum, r) => sum + r.total_interest_earned, 0);
+      return `${rows.length} of ${total} savers read, $${interest.toFixed(2)} earned${failed.length ? `, ${failed.length} failed` : ''}`;
     }
   );
 
@@ -120,7 +141,7 @@ export async function runMetricsSync(
   const bytes = await saveMetricsSnapshot(snapshot);
 
   try {
-    // The page caches the snapshot for 5 minutes; show the new one now.
+    // The page caches the snapshot for a minute; show the new one now.
     revalidateTag(METRICS_CACHE_TAG);
   } catch (error) {
     logger.error('[metrics] could not refresh the page cache', error);
