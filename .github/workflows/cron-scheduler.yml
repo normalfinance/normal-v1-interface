@@ -46,11 +46,11 @@ on:
     # Upstash QStash schedule (same account as our Redis), or — the real fix —
     # merge develop into master so Vercel's own 2-minute crons take over.
     - cron: '*/15 * * * *'
-    # Once a day: dune-sync (production only — staging shares the same Dune
-    # tables, running it twice would double the append-only holdings rows).
-    # Verified 2026-09-02 via heartbeats: the three fast jobs were beating
-    # every 15 min while dune-sync had NEVER been scheduled — the dashboard's
-    # daily history (holdings, gas float, combined TVL) was not accumulating.
+    # Once a day: dune-sync, production only. Since 2026-11-13 it refreshes
+    # the numbers on normalfinance.io/dashboard instead of uploading to Dune
+    # (the free plan ended); the path kept its name so this schedule never
+    # points at a path production lacks. This is its ONLY trigger (it is not
+    # in vercel.json), so the numbers refresh exactly once a day.
     # 05:07 UTC, off the hour, because GitHub delays on-the-hour schedules.
     - cron: '7 5 * * *'
   workflow_dispatch:
@@ -62,7 +62,7 @@ on:
         type: choice
         options: [staging, production, both]
       include_dune_sync:
-        description: 'Also refresh the Dune dashboard tables (~3 min)'
+        description: 'Also refresh the /dashboard numbers (~3 min, production only)'
         required: false
         default: false
         type: boolean
@@ -100,11 +100,10 @@ jobs:
           JOBS="cctp-advance fee-escrow-sweep ramp-reconcile push-notify"
           CURL_MAX=110
 
-          # The daily firing runs ONLY dune-sync: it makes ~24 Dune API calls
-          # against a per-minute rate limit, so every 15 minutes would starve
-          # itself (doc 121) for zero benefit — the dashboard needs one honest
-          # snapshot per day. Its route waits out 429s (maxDuration 300), so
-          # the curl deadline must cover that.
+          # The daily firing runs ONLY dune-sync (the /dashboard refresh): it
+          # reads every saver from DeFindex and every wallet balance on four
+          # chains, so once a day is the decision (Niko, 2026-11-13). It can
+          # take minutes (maxDuration 300), so the curl deadline must cover it.
           if [ "${EVENT_SCHEDULE:-}" = "7 5 * * *" ]; then
             JOBS="dune-sync"
             CURL_MAX=300
@@ -145,9 +144,9 @@ jobs:
             fi
             for job in $JOBS; do
               if [ "$job" = "dune-sync" ] && [ "$label" = "staging" ]; then
-                # Staging shares the production Dune tables; a second sync
-                # would double the append-only holdings rows for the day.
-                echo "⏭️  staging dune-sync skipped — production owns the Dune upload"
+                # Production owns the public /dashboard numbers; staging's
+                # sync would only spend DeFindex and RPC calls for nobody.
+                echo "⏭️  staging dune-sync skipped: production owns the /dashboard numbers"
                 continue
               fi
               poke "$label" "$base" "$job"
