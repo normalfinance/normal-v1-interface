@@ -2,7 +2,7 @@ import type { CctpTransfer } from '@prisma/client';
 
 import { prisma } from '@/lib/prisma';
 import { BigNumber } from 'bignumber.js';
-import { scopedAmountWire } from '@/lib/cctp/amounts';
+import { legAmountWire } from '@/lib/cctp/amounts';
 import { autopilotEnabled } from '@/server/autopilot-signer';
 import { autopilotPivotSwap } from '@/server/autopilot-pivot';
 import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
@@ -39,7 +39,7 @@ import {
 // - A leg is claimed by compare-and-set before anything signs, and its swap
 //   hash is written the moment it broadcasts, so two callers (the open page
 //   and the cron) can never swap the same share twice.
-// - A leg swaps only its own share of the Base balance (scopedAmountWire).
+// - A leg swaps exactly its own share of the Base balance (legAmountWire).
 // - A reverted route is recorded and denied on the next try (bridge
 //   failover); after LEG_MAX_ATTEMPTS the leg is HELD: its USDC stays at the
 //   person's own Base address, where Bring back or support can move it.
@@ -188,8 +188,9 @@ async function runLeg(purchase: CctpTransfer, wallet: Wallet, leg: Leg): Promise
     functionName: 'balanceOf',
     args: [purchase.destAddress as `0x${string}`],
   })) as bigint;
-  // This leg's share only: the other legs' USDC sits in the same balance.
-  const pivotWire = scopedAmountWire(balance, BigInt(leg.amountWire));
+  // This leg's share only, to the cent: the other legs' USDC sits in the same
+  // balance, so no slippage headroom (lib/cctp/amounts.ts legAmountWire).
+  const pivotWire = legAmountWire(balance, BigInt(leg.amountWire));
   if (pivotWire === 0n) return release('no USDC found on Base for this leg');
 
   const denyBridges = [parseFailedTool(leg.errorDetail)].filter((x): x is string => !!x);

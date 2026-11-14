@@ -10,6 +10,7 @@ import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import {
   eventTxId,
+  principalFromEvents,
   reconcileTotalDeposited,
   totalDepositedWithoutHistory,
 } from '@/server/savings-deposits';
@@ -52,24 +53,6 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise
       setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
     ),
   ]);
-
-function parseEventAmount(event: any): number {
-  const raw =
-    event.amount ?? event.assetAmount ?? event.assets?.[0]?.amount ?? event.underlyingAmount ?? 0;
-  return Number(raw) || 0;
-}
-
-function computeTotalDepositedFromEvents(events: any[]): number | null {
-  if (!Array.isArray(events) || events.length === 0) return null;
-  let total = 0;
-  for (const event of events) {
-    const type: string = (event.eventType ?? event.type ?? '').toLowerCase();
-    const amount = parseEventAmount(event) / DECIMALS;
-    if (type === 'deposit') total += amount;
-    else if (type === 'withdraw') total -= amount;
-  }
-  return Math.max(total, 0);
-}
 
 async function fetchAllEvents(
   walletAddress: string,
@@ -172,8 +155,10 @@ export async function GET(request: NextRequest) {
     // by tx hash, so transactions the cached snapshot (or the lagging indexer
     // itself) has not seen yet are counted from our rows until it catches up.
     // Cache v2 stores the event tx ids alongside the total — the hashes are
-    // what make that reconciliation exact.
-    const eventsCacheKey = `savings:events2:${userAddress}:${network}`;
+    // what make that reconciliation exact. v3 (2026-11-14): the total is the
+    // principal still invested (average cost), no longer deposits minus
+    // withdrawals, so v2 entries must not be read.
+    const eventsCacheKey = `savings:events3:${userAddress}:${network}`;
     interface EventsCacheEntry {
       total: number;
       txIds: string[];
@@ -308,7 +293,9 @@ export async function GET(request: NextRequest) {
     // wrong for display. Only totalInterestEarned from that endpoint is used (for earnings).
     const records = depositRecords.status === 'fulfilled' ? depositRecords.value : [];
     const events = eventsResult.status === 'fulfilled' ? eventsResult.value : [];
-    const totalDepositedFromEvents = computeTotalDepositedFromEvents(events);
+    // The principal still invested (average cost, server/savings-deposits.ts):
+    // deposits minus withdrawals counted paid-out yield as principal.
+    const totalDepositedFromEvents = principalFromEvents(events);
 
     let eventsBase: { total: number; txIds: string[] } | null = null;
     if (cachedEvents != null) {
@@ -336,6 +323,9 @@ export async function GET(request: NextRequest) {
         eventTxIds: eventsBase.txIds,
         rows: records,
         nowMs: Date.now(),
+        // A withdrawal the indexer hasn't seen yet removes its fraction of
+        // the principal: the vault balance is already past it.
+        currentValue: underlyingValue,
       });
       totalDeposited = reconciled.total;
       if (reconciled.pendingCount > 0) {

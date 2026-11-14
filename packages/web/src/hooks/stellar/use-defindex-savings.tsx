@@ -690,8 +690,13 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         // Optimistically update the shared savings cache.
         if (positionBefore) {
           const base = positionBefore;
-          const preCV = Math.max(parseFloat(base.currentValue) - parsedAmount, 0);
-          const preTD = Math.max(parseFloat(base.totalDeposited) - parsedAmount, 0);
+          const baseCV = parseFloat(base.currentValue);
+          const preCV = Math.max(baseCV - parsedAmount, 0);
+          // A withdrawal takes out its share of the principal, not its full
+          // amount: part of what it pays out is yield (the server's average
+          // cost rule, server/savings-deposits.ts).
+          const taken = baseCV > 0 ? Math.min(parsedAmount / baseCV, 1) : 1;
+          const preTD = Math.max(parseFloat(base.totalDeposited) * (1 - taken), 0);
           const next = {
             ...base,
             currentValue: preCV.toFixed(7),
