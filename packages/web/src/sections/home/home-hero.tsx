@@ -8,6 +8,7 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import { StoreBadges } from '@/components/_common/store-badges';
 import { FrameLines, FRAME_LINES_Z } from '@/components/_common/frame-lines';
 import { COLUMN_SX, GUTTER_SX, BrandButton } from '@/components/_common/brand';
 
@@ -37,7 +38,7 @@ function HeroCopy({ tone }: { tone: 'light' | 'dark' }) {
           color: dark ? 'rgba(255,255,255,0.88)' : INK_SOFT,
         }}
       >
-        Save in digital dollars and own Bitcoin. One simple app, without the memecoins or the
+        Save in digital dollars and own the top crypto. One simple app, without the memecoins or the
         jargon.
       </Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} sx={{ mt: 4 }}>
@@ -48,6 +49,7 @@ function HeroCopy({ tone }: { tone: 'light' | 'dark' }) {
           How it works
         </BrandButton>
       </Stack>
+      <StoreBadges sx={{ mt: 4 }} />
     </>
   );
 }

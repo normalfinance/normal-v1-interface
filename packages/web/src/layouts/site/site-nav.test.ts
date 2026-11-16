@@ -1,4 +1,4 @@
-import { menusFor, NAV_MENUS } from './site-nav';
+import { menusFor, NAV_MENUS, navLinksFor } from './site-nav';
 
 const product = (signedIn: boolean) =>
   menusFor(signedIn)
@@ -21,6 +21,15 @@ describe('the Product menu opens the app', () => {
     expect(hrefOf(false, 'Swap')).toBe('/login?next=%2Fapp%2Fswap');
     expect(hrefOf(false, 'Add money')).toBe('/login?next=%2Fapp%3Faction%3Dbuy');
     expect(hrefOf(false, 'Send')).toBe('/login?next=%2Fapp%3Faction%3Dsend');
+  });
+
+  it('the plain Savings link opens the app too, through login when signed out', () => {
+    const savings = (signedIn: boolean) =>
+      navLinksFor(signedIn).find((link) => link.label === 'Savings')?.href;
+    expect(savings(true)).toBe('/app/savings');
+    expect(savings(false)).toBe('/login?next=%2Fapp%2Fsavings');
+    // A link of the site itself is left alone.
+    expect(navLinksFor(false).find((link) => link.label === 'Security')?.href).toBe('/#security');
   });
 
   it('leaves the Resources links alone', () => {

@@ -161,7 +161,7 @@ export function TransferView({ id }: { id: string }) {
   // An index purchase opened here (an old link) goes to its own page.
   const indexPurchase = row?.direction === 'stellar_to_index';
   useEffect(() => {
-    if (indexPurchase) router.replace(paths.indexes.purchase(id));
+    if (indexPurchase) router.replace(paths.autoinvest.purchase(id));
   }, [indexPurchase, id, router]);
 
   const keeper = <CctpRecoveryBanner addresses={addresses} />;

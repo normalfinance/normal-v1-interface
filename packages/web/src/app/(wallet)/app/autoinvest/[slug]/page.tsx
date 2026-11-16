@@ -12,13 +12,13 @@ type Props = { params: { slug: string } };
 export function generateMetadata({ params }: Props): Metadata {
   const meta = indexBySlug(params.slug);
   return {
-    title: `${meta?.name ?? 'Index'} | Normal`,
+    title: `${meta?.name ?? 'Autoinvest'} | Normal`,
     description: meta?.tagline,
     robots: { index: false, follow: false },
   };
 }
 
-export default function IndexPage({ params }: Props) {
+export default function AutoinvestPlanPage({ params }: Props) {
   const meta = indexBySlug(params.slug);
   if (!indexEnabled() || !meta) notFound();
   return <CryptoIndexView meta={meta} />;

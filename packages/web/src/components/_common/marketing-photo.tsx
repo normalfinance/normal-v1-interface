@@ -16,7 +16,7 @@ import PhotoCameraOutlined from '@mui/icons-material/PhotoCameraOutlined';
 // to the CDN under marketing/ (set `src` to cdn('marketing/<slot>.webp')). A
 // slot without a `src` shows its brief instead, so the layout never breaks.
 
-export type PhotoSlot = 'hero' | 'savings' | 'everyday' | 'signup' | 'addMoney' | 'enjoy' | 'about';
+export type PhotoSlot = 'hero' | 'savings' | 'everyday' | 'phoneAndCard' | 'about';
 
 type PhotoSpec = {
   alt: string;
@@ -52,11 +52,12 @@ export const MARKETING_PHOTOS: Record<PhotoSlot, PhotoSpec> = {
     eager: true,
   },
   savings: {
-    alt: 'A woman relaxing on her sofa at home, checking her phone',
-    brief: 'Someone relaxed on the sofa at home, checking their phone. Calm, unhurried.',
+    alt: 'A smiling family on their sofa at home, the mother holding a phone',
+    // Niko 2026-11-16: "replace it with happy family image".
+    brief: 'A happy family together on the sofa at home, a phone in hand. Warm, unhurried.',
     size: '2400 × 1200',
-    src: pexels(27176011),
-    focus: '60% 40%',
+    src: pexels(9885415),
+    focus: '50% 45%',
   },
   everyday: {
     alt: 'A woman smiling at her phone',
@@ -65,26 +66,15 @@ export const MARKETING_PHOTOS: Record<PhotoSlot, PhotoSpec> = {
     src: pexels(7984828),
     focus: '50% 25%',
   },
-  signup: {
-    alt: 'A young woman signing up on her phone',
-    brief: 'Someone calm at home, phone in hand, in soft light: the sign-up moment.',
-    size: '1600 × 2000',
-    src: pexels(36812954),
-    focus: '50% 30%',
-  },
-  addMoney: {
+  // How it works shows one person (Niko 2026-11-16: "lets just have 1 person
+  // with mobile phone and credit card"); its other two steps are drawn from
+  // the app and the partners' marks.
+  phoneAndCard: {
     alt: 'A woman smiling at her phone with her bank card in the other hand',
-    brief: 'Someone holding a bank card and a phone, pleased: adding money for the first time.',
+    brief: 'Someone holding a bank card and a phone, pleased: money sorted, ready to save or buy.',
     size: '1600 × 2000',
     src: pexels(6214139),
     focus: '50% 30%',
-  },
-  enjoy: {
-    alt: 'A woman outdoors, relaxed, her phone in her hand',
-    brief: 'Someone outdoors with their phone, at ease: money sorted, life going on.',
-    size: '1600 × 2000',
-    src: pexels(3775085),
-    focus: '45% 30%',
   },
   about: {
     alt: 'A big group photo in front of the Meridian 2026 Lisbon backdrop',

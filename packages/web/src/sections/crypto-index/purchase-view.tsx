@@ -158,10 +158,13 @@ export function IndexPurchaseView({ id }: { id: string }) {
         ]
       : journey.standing === 'done'
         ? [
-            { label: t('Buy more'), primary: true, href: paths.indexes.details(meta.slug) },
+            { label: t('Buy more'), primary: true, href: paths.autoinvest.details(meta.slug) },
             activity,
           ]
-        : [{ label: t('Back to indexes'), primary: true, href: paths.indexes.root }, activity];
+        : [
+            { label: t('Back to Autoinvest'), primary: true, href: paths.autoinvest.root },
+            activity,
+          ];
 
   const started = new Intl.DateTimeFormat(appLocale(), {
     day: 'numeric',
@@ -216,7 +219,7 @@ export function IndexPurchaseView({ id }: { id: string }) {
           coins: coins.join(', '),
         })}
         confirm={{ label: '', onClick: () => {} }}
-        back={{ label: t('Back to indexes'), onClick: () => router.push(paths.indexes.root) }}
+        back={{ label: t('Back to Autoinvest'), onClick: () => router.push(paths.autoinvest.root) }}
         doneActions={doneActions}
         failActions={[activity]}
         leave={{ safe: true, message: '' }}

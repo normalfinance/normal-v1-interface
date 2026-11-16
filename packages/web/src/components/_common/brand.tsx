@@ -5,6 +5,7 @@ import type { ButtonProps } from '@mui/material/Button';
 import type { Theme, SxProps } from '@mui/material/styles';
 
 import { forwardRef } from 'react';
+import { ease } from '@/theme/motion';
 import { TYPE } from '@/theme/type-scale';
 import { GUTTER_SX, COLUMN_SX } from '@/theme/site-grid';
 import {
@@ -404,7 +405,7 @@ export function SegmentedControl<T extends string>({
               fontWeight: 500,
               whiteSpace: 'nowrap',
               borderRadius: 'var(--radius-sm)',
-              transition: 'background 150ms, color 150ms',
+              transition: ease(['background', 'color'], 'quick'),
               bgcolor: active ? PAPER : 'transparent',
               color: active ? INK : MUTED,
               '&:hover': { color: INK },

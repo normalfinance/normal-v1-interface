@@ -25,8 +25,8 @@ const notFoundConfig = {
   asset: assetOrPairNotFound,
   index: {
     src: cdn('placeholders/index-not-found.svg'),
-    defaultTitle: 'Index Not Found',
-    defaultDescription: "The index you're looking for doesn't exist",
+    defaultTitle: 'Plan not found',
+    defaultDescription: "The Autoinvest plan you're looking for doesn't exist",
   },
   default: {
     src: cdn('placeholders/404.svg'),

@@ -48,6 +48,23 @@ const RADIUS_EXCEPTIONS: Record<string, string> = {
     "the closing carousel's phones: drawings of a device and its screens, with their corners",
 };
 
+/** Files allowed to turn something on a transition, each with its reason. */
+const TURN_EXCEPTIONS: Record<string, string> = {
+  'layouts/site/site-header.tsx':
+    "the menu chevron's half turn as its dropdown opens, on the shared curve (DESIGN.md)",
+};
+
+/** The marketing site: every change in it eases on the one curve (theme/motion.ts). */
+const SITE_FILES = [
+  'sections/home/',
+  'sections/about/',
+  'layouts/site/',
+  'components/_common/reveal.tsx',
+  'components/_common/brand.tsx',
+  'components/_common/partner-strip.tsx',
+  'components/_common/store-badges.tsx',
+];
+
 /** Files allowed background blur, each with its reason. */
 const BLUR_EXCEPTIONS: Record<string, string> = {
   'layouts/core/header-section.tsx': 'the template header; no page renders one (see layouts/)',
@@ -205,10 +222,37 @@ describe('design rules', () => {
           match[0].startsWith("'@keyframes nf-step-turn'")
       ),
       // Panels and indicators jump to their new place; they never slide there.
-      ...violations(/\btransition:\s*['`][^'`]*\btransform\b/g, () => false),
+      // The one other thing that turns: a header menu's chevron, a half turn
+      // as its menu opens (Niko 2026-11-16: "all animations must animate with
+      // ease"), on the shared curve.
+      ...violations(
+        /\btransition:\s*(?:['`][^'`]*\btransform\b|ease\(\s*\[?[^)]*'transform')/g,
+        () => false,
+        TURN_EXCEPTIONS
+      ),
       ...violations(/\.animate\(\s*\[/g, () => false),
       ...violations(/from 'framer-motion'/g, () => false),
     ];
+    expect(found).toEqual([]);
+  });
+
+  it('every change on the site eases on the one curve', () => {
+    // A transition or animation written by hand picks its own timing; the
+    // site's all go through theme/motion.ts (ease(), EASE), so every one
+    // settles the same way and none is linear.
+    const found = violations(/\b(?:transition|animation):\s*['"][^'"]*['"]/g, (match) =>
+      match[0].includes("'none'")
+    ).filter((line) => SITE_FILES.some((prefix) => line.startsWith(prefix)));
+    expect(found).toEqual([]);
+  });
+
+  it('nothing moves at a constant speed', () => {
+    const found = violations(
+      /\b(?:transition|animation):\s*['`][^'`]*\blinear\b(?!-gradient)[^'`]*['`]/g,
+      // Except the loading ring: a turn that never ends keeps one speed, or it
+      // would stutter at every lap (flow-journey.tsx, named above).
+      (match) => match[0].includes('nf-step-turn')
+    );
     expect(found).toEqual([]);
   });
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ease } from '@/theme/motion';
 import { paths } from '@/routes/paths';
 import { TYPE } from '@/theme/type-scale';
 import { INK, HOVER, MUTED, PAPER, BRAND_COLORS, HAIRLINE_COLOR } from '@/theme/brand-colors';
@@ -103,7 +104,7 @@ function Item({
           cursor: 'pointer',
           color: INK,
           bgcolor: 'transparent',
-          transition: 'background-color 200ms ease',
+          transition: ease('background-color', 'quick'),
           '&:hover': { bgcolor: HOVER },
         }}
       >
@@ -124,7 +125,7 @@ function Item({
             borderRadius: 'var(--radius-site)',
             color: open ? PAPER : INK,
             bgcolor: open ? INK : PAPER,
-            transition: 'background-color 200ms ease, color 200ms ease',
+            transition: ease(['background-color', 'color'], 'quick'),
             '& svg': { fontSize: 18 },
           }}
         >
@@ -135,7 +136,7 @@ function Item({
         sx={{
           display: 'grid',
           gridTemplateRows: open ? '1fr' : '0fr',
-          transition: 'grid-template-rows 320ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+          transition: ease('grid-template-rows'),
         }}
       >
         <Box sx={{ overflow: 'hidden' }}>
@@ -147,7 +148,7 @@ function Item({
               pb: 3,
               color: MUTED,
               opacity: open ? 1 : 0,
-              transition: 'opacity 320ms ease',
+              transition: ease('opacity'),
             }}
           >
             {question.answer}

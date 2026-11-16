@@ -92,8 +92,8 @@ export function IndexCard({ meta }: { meta: IndexMeta }) {
   return (
     <ButtonBase
       component={RouterLink}
-      href={paths.indexes.details(meta.slug)}
-      aria-label={t('{{name}} index: see what it holds and buy', { name: meta.name })}
+      href={paths.autoinvest.details(meta.slug)}
+      aria-label={t('{{name}}: see what it holds and buy', { name: meta.name })}
       sx={{
         display: 'flex',
         flexDirection: 'column',
@@ -187,7 +187,7 @@ export function IndexCard({ meta }: { meta: IndexMeta }) {
   );
 }
 
-/** The place the next indexes will take: quiet, not a link. */
+/** The place the next Autoinvest plans will take: quiet, not a link. */
 export function IndexComingCard() {
   const { t } = useTranslate();
   return (
@@ -208,7 +208,7 @@ export function IndexComingCard() {
         <DonutSmallOutlined />
       </Box>
       <Typography sx={{ fontSize: 15, fontWeight: 500, color: INK }}>
-        {t('More indexes are coming')}
+        {t('More plans are coming')}
       </Typography>
       <Typography sx={{ fontSize: 13.5, lineHeight: 1.5, color: MUTED }}>
         {t('Each one a set of coins chosen and weighted for you, bought in one purchase.')}

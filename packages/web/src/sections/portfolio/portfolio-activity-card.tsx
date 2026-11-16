@@ -188,12 +188,12 @@ function describe(a: Activity): Described {
       };
     }
     case 'Swap': {
-      // A crypto index purchase: digital dollars out, several coins in.
+      // An Autoinvest purchase: digital dollars out, several coins in.
       if (a.tokenOut.symbol === 'INDEX') {
         const index = indexById(a.tokenOut.address.replace(/^index:/, ''));
         return {
           icon: <DonutSmallOutlined />,
-          title: index ? `Bought the ${index.name} index` : 'Bought an index',
+          title: index ? `Bought ${index.name} with Autoinvest` : 'Bought with Autoinvest',
           subtitle: index
             ? index.def.coins.map((symbol) => assetName(symbol)).join(', ')
             : undefined,

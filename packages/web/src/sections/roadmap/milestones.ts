@@ -82,7 +82,7 @@ export const MILESTONES: Milestone[] = [
   },
   {
     status: 'in-progress',
-    title: 'Normal Crypto Indexes',
+    title: 'Autoinvest',
     date: 'Q4 2026',
     description: 'Top 3 first: Bitcoin, Ethereum and Solana in one purchase, with one signature.',
   },

@@ -2,18 +2,17 @@ import type { Metadata } from 'next';
 
 import { notFound } from 'next/navigation';
 import { indexEnabled } from '@/lib/index/flag';
-import { IndexesView } from '@/sections/indexes';
+import { IndexPurchaseView } from '@/sections/crypto-index/purchase-view';
 
 // ----------------------------------------------------------------------
 
+// One Autoinvest purchase's own page: every step, where the money is, what it needs.
 export const metadata: Metadata = {
-  title: 'Indexes | Normal',
-  description: 'Sets of coins you buy in one purchase, with one signature.',
+  title: 'Your purchase | Normal',
   robots: { index: false, follow: false },
 };
 
-export default function IndexesPage() {
-  // Off until the team switches it on (lib/index/flag.ts).
+export default function Page({ params }: { params: { id: string } }) {
   if (!indexEnabled()) notFound();
-  return <IndexesView />;
+  return <IndexPurchaseView id={params.id} />;
 }

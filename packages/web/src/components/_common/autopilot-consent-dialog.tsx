@@ -73,7 +73,7 @@ export default function AutopilotConsentDialog({
     >
       <Typography sx={{ fontSize: '17px', fontWeight: 500, color: INK, mb: '10px' }}>
         {purpose === 'index'
-          ? t('Buying an index needs auto-finish')
+          ? t('Autoinvest needs auto-finish')
           : t('Finish future swaps automatically?')}
       </Typography>
       <Typography sx={{ fontSize: '13.5px', color: MUTED, lineHeight: 1.6 }}>

@@ -13,14 +13,14 @@ import { AppPageHeader } from '@/components/_common/brand';
 import { IndexCard, IndexComingCard } from './index-card';
 import { IndexPurchasesInProgress } from './purchases-in-progress';
 
-/** /app/indexes: every index as a card to pick, then the place for the next. */
+/** /app/autoinvest: every Autoinvest plan as a card to pick, then the place for the next. */
 export function IndexesView() {
   const { t } = useTranslate();
   return (
     <DashboardContent>
       <AppPageHeader
-        title={t('Indexes')}
-        subtitle={t('Sets of coins you buy in one purchase, with one signature.')}
+        title={t('Autoinvest')}
+        subtitle={t('Put digital dollars into the top coins in one purchase, with one signature.')}
         action={
           // CoinGecko's free data asks to be credited where it is shown.
           <Typography sx={{ fontSize: 12.5, color: MUTED }}>

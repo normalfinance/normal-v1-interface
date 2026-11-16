@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { Point } from '@/utils/homography';
 
 import { cdn } from '@/utils/cdn';
+import { ease } from '@/theme/motion';
 import { matrix3dOnto } from '@/utils/homography';
 import { useRef, useState, useEffect } from 'react';
 import { FIXED, HUE_PALETTE } from '@/theme/brand-colors';
@@ -108,7 +109,7 @@ const HOLDINGS = [
 const TABS = [
   { label: 'Home', icon: <HomeIcon /> },
   { label: 'Assets', icon: <AccountBalanceWalletOutlined /> },
-  { label: 'Indexes', icon: <DonutSmallOutlined /> },
+  { label: 'Autoinvest', icon: <DonutSmallOutlined /> },
   { label: 'Savings', icon: <SavingsOutlined /> },
   { label: 'Activity', icon: <ReceiptLongOutlined /> },
 ];
@@ -248,7 +249,7 @@ export function PhoneHomeScreen({
           borderRadius: 'var(--radius-lg)',
           bgcolor: PAPER,
           opacity: showToast ? 1 : 0,
-          transition: 'opacity 450ms ease',
+          transition: ease('opacity', 450),
         }}
       >
         <Box
@@ -382,7 +383,7 @@ export function PhoneHomeScreen({
         name="Digital dollars"
         sub="50 USDC"
         value="$50.00"
-        sx={{ opacity: showPayment ? 1 : 0, transition: 'opacity 600ms ease' }}
+        sx={{ opacity: showPayment ? 1 : 0, transition: ease('opacity', 'slow') }}
       />
 
       <Box
@@ -510,7 +511,7 @@ export function HeroPhone({
           pointerEvents: 'none',
           transformOrigin: '0 0',
           opacity: transform ? 1 : 0,
-          transition: 'opacity 250ms ease',
+          transition: ease('opacity', 250),
         }}
       >
         <PhoneHomeScreen

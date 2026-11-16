@@ -15,6 +15,7 @@ import { CCTP_DOMAIN } from '@/lib/cctp/config';
 import { RouterLink } from '@/routes/components';
 import { useFlowRun } from '@/hooks/use-flow-run';
 import { heldWords } from '@/lib/index/held-words';
+import { indexSetupNeeds } from '@/lib/index/setup';
 import { useNetworkStore } from '@normalfinance/state';
 import { assetDisplay } from '@/lib/portfolio/display';
 import { confirmAction } from '@/lib/auth/action-code';
@@ -160,6 +161,8 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   const [view, setView] = useState<'form' | 'flow'>('form');
   const [frozen, setFrozen] = useState<{ summary: FlowSummary; lede: string } | null>(null);
   const [info, setInfo] = useState<TurnkeyWalletInfo | null>(null);
+  // Null info means no wallet only once it has been read.
+  const [infoRead, setInfoRead] = useState(false);
   const [autopilot, setAutopilot] = useState<boolean | null>(null);
   const [consentOpen, setConsentOpen] = useState(false);
   const [setupChain, setSetupChain] = useState<TurnkeyChain | null>(null);
@@ -179,6 +182,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
 
   const loadInfo = useCallback(async () => {
     setInfo(await getTurnkeyWalletInfo().catch(() => null));
+    setInfoRead(true);
   }, []);
   const loadAutopilot = useCallback(async () => {
     try {
@@ -207,9 +211,14 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   const minimumLabel = minimum ? formatUsd(wireToUsdNumber(minimum)) : null;
   const verdict = wire && weights ? purchaseVerdict(wire, null, weights) : null;
   const tooMuch = wire !== null && wireToUsdNumber(wire) > usdcBalance;
-  const missing = meta.def.coins.filter(
-    (symbol) => info && !info[CHAINS[CHAIN_OF[symbol]].addressField as keyof TurnkeyWalletInfo]
-  );
+  // Every network the purchase needs and the wallet lacks, Stellar first; with
+  // no wallet yet, all of them (lib/index/setup.ts).
+  const missing = infoRead
+    ? indexSetupNeeds(
+        meta.def,
+        (chain) => !!info?.[CHAINS[chain].addressField as keyof TurnkeyWalletInfo]
+      )
+    : [];
 
   // ---- the plan and the summary, from the amount ---------------------------
   const buildPlan = useCallback(
@@ -731,7 +740,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
       <FlowHost>
         <ButtonBase
           component={RouterLink}
-          href={paths.indexes.root}
+          href={paths.autoinvest.root}
           sx={{
             alignSelf: 'flex-start',
             gap: 0.75,
@@ -746,7 +755,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
           }}
         >
           <ArrowBackOutlined sx={{ fontSize: 16 }} />
-          {t('Indexes')}
+          {t('Autoinvest')}
         </ButtonBase>
         {/* The index's picture first: the coins it holds, as on its card. */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, mb: 3 }}>
@@ -1002,13 +1011,13 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                     {t('First add these to your wallet, one passkey confirmation each:')}
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {missing.map((symbol) => (
+                    {missing.map((chain) => (
                       <Button
-                        key={symbol}
+                        key={chain}
                         variant="outlined"
-                        onClick={() => setSetupChain(CHAIN_OF[symbol] as TurnkeyChain)}
+                        onClick={() => setSetupChain(chain as TurnkeyChain)}
                       >
-                        {t('Add {{coin}}', { coin: assetName(symbol) })}
+                        {t('Add {{coin}}', { coin: CHAINS[chain].name })}
                       </Button>
                     ))}
                   </Box>

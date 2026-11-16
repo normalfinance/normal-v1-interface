@@ -2,6 +2,7 @@ import type { SvgIconComponent } from '@mui/icons-material';
 
 import { cdn } from '@/utils/cdn';
 import { paths } from '@/routes/paths';
+import { indexEnabled } from '@/lib/index/flag';
 import { authHref } from '@/lib/auth/auth-routes';
 import { appActionHref } from '@/lib/app-action-url';
 
@@ -9,23 +10,32 @@ import FlagOutlined from '@mui/icons-material/FlagOutlined';
 import FeedOutlined from '@mui/icons-material/FeedOutlined';
 import MailOutlined from '@mui/icons-material/MailOutlined';
 import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
+import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import ArticleOutlined from '@mui/icons-material/ArticleOutlined';
 import SavingsOutlined from '@mui/icons-material/SavingsOutlined';
 import AddCardOutlined from '@mui/icons-material/AddCardOutlined';
 import SwapHorizOutlined from '@mui/icons-material/SwapHorizOutlined';
 import NorthEastOutlined from '@mui/icons-material/NorthEastOutlined';
+import DonutSmallOutlined from '@mui/icons-material/DonutSmallOutlined';
 import HelpOutlineOutlined from '@mui/icons-material/HelpOutlineOutlined';
 
 // ----------------------------------------------------------------------
 
-export type SiteLink = { label: string; href: string; external?: boolean };
+export type SiteLink = {
+  label: string;
+  href: string;
+  external?: boolean;
+  /** A page of the app: signed out, the link goes through login and back (`viaLogin`). */
+  app?: boolean;
+};
 
 export type NavMenuLink = SiteLink & {
   description: string;
   icon: SvgIconComponent;
-  /** A page of the app: signed out, the link goes through login and back (`menusFor`). */
-  app?: boolean;
 };
+
+/** A plain header link: a word in the desktop bar, a row with its icon in the phone menu. */
+export type NavLink = NavMenuLink;
 
 export type NavMenu = {
   label: string;
@@ -84,6 +94,18 @@ export const NAV_MENUS: NavMenu[] = [
             icon: NorthEastOutlined,
             app: true,
           },
+          // Where Autoinvest is switched on, as in the app (lib/index/flag.ts).
+          ...(indexEnabled()
+            ? [
+                {
+                  label: 'Autoinvest',
+                  description: 'The top coins in one purchase.',
+                  href: paths.autoinvest.root,
+                  icon: DonutSmallOutlined,
+                  app: true,
+                },
+              ]
+            : []),
         ],
       },
     ],
@@ -169,27 +191,50 @@ export function menusFor(signedIn: boolean): NavMenu[] {
     ...menu,
     groups: menu.groups.map((group) => ({
       ...group,
-      links: group.links.map((link) =>
-        link.app ? { ...link, href: authHref('login', link.href) } : link
-      ),
+      links: group.links.map((link) => viaLogin(link)),
     })),
   }));
 }
 
-/** Plain links beside the dropdowns. */
-export const NAV_LINKS: SiteLink[] = [
-  { label: 'Savings', href: paths.site.savings },
-  { label: 'Security', href: paths.site.security },
+/** Signed out, an app link goes through login and comes back (login's `next`). */
+function viaLogin<T extends SiteLink>(link: T): T {
+  return link.app ? { ...link, href: authHref('login', link.href) } : link;
+}
+
+/**
+ * Plain links beside the dropdowns. Savings opens the app's Savings (Niko
+ * 2026-11-16), like the Product menu's links; the Savings page of the site
+ * stays in the footer.
+ */
+export const NAV_LINKS: NavLink[] = [
+  {
+    label: 'Savings',
+    description: 'Earn on your digital dollars.',
+    href: paths.savings,
+    icon: SavingsOutlined,
+    app: true,
+  },
+  {
+    label: 'Security',
+    description: 'How your money stays safe.',
+    href: paths.site.security,
+    icon: ShieldOutlined,
+  },
 ];
+
+/** The plain links for the visitor: app links straight there signed in, through login when not. */
+export function navLinksFor(signedIn: boolean): NavLink[] {
+  return signedIn ? NAV_LINKS : NAV_LINKS.map((link) => viaLogin(link));
+}
 
 export const FOOTER_COLUMNS: { title: string; links: SiteLink[] }[] = [
   {
     title: 'Product',
     links: [
       { label: 'Savings', href: paths.site.savings },
-      { label: 'Add money', href: paths.site.buy },
+      { label: 'Buy crypto', href: paths.site.buy },
       { label: 'Swap', href: paths.site.swap },
-      { label: 'Send', href: paths.site.wallet },
+      { label: 'Cash to crypto', href: paths.site.cash },
       { label: 'Security', href: paths.site.security },
       { label: 'Open the app', href: paths.portfolio },
     ],

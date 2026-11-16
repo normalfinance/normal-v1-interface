@@ -4,9 +4,9 @@
 // picks a size outside them. Everything is weight 500 or 400 (DESIGN.md).
 // Sizes are phone / desktop; the big ones scale with the viewport between.
 export const TYPE = {
-  /** The hero's one line. */
+  /** The hero's one line. A step smaller since 2026-11-16 (Niko: "make the header a little smaller"). */
   display: {
-    fontSize: { xs: 56, sm: 72, md: 'clamp(76px, 7.2vw, 104px)' },
+    fontSize: { xs: 50, sm: 64, md: 'clamp(68px, 6.4vw, 92px)' },
     fontWeight: 500,
     lineHeight: 0.96,
     letterSpacing: '-0.045em',

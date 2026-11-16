@@ -65,7 +65,7 @@ export function IndexPurchasesInProgress({
           return (
             <ListRow
               key={item.id}
-              href={paths.indexes.purchase(item.id)}
+              href={paths.autoinvest.purchase(item.id)}
               icon={
                 <RowIcon>
                   <DonutSmallOutlined />

@@ -1,5 +1,6 @@
 'use client';
 
+import { ease } from '@/theme/motion';
 import { INK, PAPER, BRAND_COLORS, HAIRLINE_STRONG } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
@@ -53,7 +54,7 @@ export function TwoFactorDemo() {
               fontFamily: MONO_FONT,
               fontSize: 22,
               fontWeight: 500,
-              transition: 'border-color 200ms',
+              transition: ease('border-color', 'quick'),
             }}
           >
             <Box component="span" sx={fade(index < typed)}>
@@ -89,7 +90,7 @@ export function TwoFactorDemo() {
           color: PAPER,
           bgcolor: INK,
           opacity: typed === CODE.length ? 1 : 0.4,
-          transition: 'opacity 300ms',
+          transition: ease('opacity'),
         }}
       >
         Continue

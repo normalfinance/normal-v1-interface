@@ -11,6 +11,7 @@ import { ReferralCapture } from '@/components/_common/referral-capture';
 import { SiteHeader } from './site-header';
 import { SiteFooter } from './site-footer';
 import { SiteThemeScope } from './theme-toggle';
+import { SmoothAnchors } from './smooth-anchors';
 
 // ----------------------------------------------------------------------
 
@@ -37,6 +38,8 @@ export function SiteLayout({ children }: { children: ReactNode }) {
       {/* Light or dark, per the visitor; only while the site is on screen. */}
       <SiteThemeScope />
       <ReferralCapture />
+      {/* Links to a section of the same page scroll there on the curve. */}
+      <SmoothAnchors />
       <SiteHeader />
       <Box
         component="main"
