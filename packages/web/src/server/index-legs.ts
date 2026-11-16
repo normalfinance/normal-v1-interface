@@ -9,14 +9,6 @@ import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
 import { ensureTransferGas } from '@/server/cctp-transfer-gas';
 import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
 import {
-  heldDetail,
-  legRunnable,
-  INDEX_DIRECTION,
-  LEG_CRON_IDLE_MS,
-  statusAfterFailure,
-  purchaseReadyForLegs,
-} from '@/lib/index/legs';
-import {
   sanitizeTool,
   sanitizeTxHash,
   parseFailedTool,
@@ -24,6 +16,15 @@ import {
   pivotRevertDetail,
   parseFailedExchanges,
 } from '@/lib/cctp/failure-class';
+import {
+  heldDetail,
+  legRunnable,
+  NO_FUNDS_DETAIL,
+  INDEX_DIRECTION,
+  LEG_CRON_IDLE_MS,
+  statusAfterFailure,
+  purchaseReadyForLegs,
+} from '@/lib/index/legs';
 
 // ---------------------------------------------------------------------------
 // Buys the coins of a crypto index purchase (lib/index/basket.ts) once Circle
@@ -191,7 +192,7 @@ async function runLeg(purchase: CctpTransfer, wallet: Wallet, leg: Leg): Promise
   // This leg's share only, to the cent: the other legs' USDC sits in the same
   // balance, so no slippage headroom (lib/cctp/amounts.ts legAmountWire).
   const pivotWire = legAmountWire(balance, BigInt(leg.amountWire));
-  if (pivotWire === 0n) return release('no USDC found on Base for this leg');
+  if (pivotWire === 0n) return release(NO_FUNDS_DETAIL);
 
   const denyBridges = [parseFailedTool(leg.errorDetail)].filter((x): x is string => !!x);
   const denyExchanges = parseFailedExchanges(leg.errorDetail);

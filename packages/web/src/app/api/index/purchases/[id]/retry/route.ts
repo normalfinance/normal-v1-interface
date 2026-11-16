@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { finishIndexPurchase } from '@/server/index-legs';
-import { HELD_MARK, INDEX_DIRECTION } from '@/lib/index/legs';
+import { HELD_MARK, INDEX_DIRECTION, heldReasonOfLeg } from '@/lib/index/legs';
 
 // ---------------------------------------------------------------------------
 // POST /api/index/purchases/:id/retry: give a held coin another go. A coin is
@@ -29,13 +29,25 @@ export const POST = withAuth(async (_req, { user, params }) => {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const reset = await prisma.indexLeg.updateMany({
+  const held = await prisma.indexLeg.findMany({
     where: { purchaseId: params.id, status: 'HELD', dstSwapTxHash: null },
-    data: { status: 'PENDING', retryCount: 0 },
+    select: { id: true, errorDetail: true },
   });
-  if (reset.count === 0) {
+  if (held.length === 0) {
     return NextResponse.json({ ok: false, reason: 'nothing-held' }, { status: 409 });
   }
+  // A coin whose share was not at the Base address cannot be bought by trying
+  // again: it would only fail the same way while the page says "being bought
+  // again" (live 2026-11-11). Only coins whose exchange failed go back in line.
+  const retryable = held.filter((l) => heldReasonOfLeg(l.errorDetail) === 'route');
+  if (retryable.length === 0) {
+    return NextResponse.json({ ok: false, reason: 'missing' }, { status: 409 });
+  }
+
+  await prisma.indexLeg.updateMany({
+    where: { id: { in: retryable.map((l) => l.id) }, status: 'HELD', dstSwapTxHash: null },
+    data: { status: 'PENDING', retryCount: 0 },
+  });
   // The coin is back in line: the purchase no longer waits for the person
   // (finishIndexPurchase marks it again if a coin is held once more).
   await prisma.cctpTransfer

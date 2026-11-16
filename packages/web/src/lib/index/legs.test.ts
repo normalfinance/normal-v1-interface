@@ -5,6 +5,8 @@ import {
   legRunnable,
   heldSymbolOf,
   purchasePhase,
+  NO_FUNDS_DETAIL,
+  heldReasonOfLeg,
   INDEX_DIRECTION,
   LEG_MAX_ATTEMPTS,
   statusAfterFailure,
@@ -94,5 +96,19 @@ describe('a held coin on the purchase row', () => {
     expect(heldSymbolOf(null)).toBeNull();
     expect(heldSymbolOf('autofinish no-usdc')).toBeNull();
     expect(heldSymbolOf('index-held:')).toBeNull();
+  });
+});
+
+describe('heldReasonOfLeg: can trying again buy the coin? (2026-11-14)', () => {
+  it('a share that was not on Base cannot be bought by trying again', () => {
+    // The live leg's own words (server/index-legs.ts).
+    expect(heldReasonOfLeg('no USDC found on Base for this leg')).toBe('missing');
+    expect(heldReasonOfLeg(NO_FUNDS_DETAIL)).toBe('missing');
+  });
+
+  it('an exchange that kept failing can: its share is still at the Base address', () => {
+    expect(heldReasonOfLeg('pivot-revert:mayan:0xabc')).toBe('route');
+    expect(heldReasonOfLeg('gas: top-up failed')).toBe('route');
+    expect(heldReasonOfLeg(null)).toBe('route');
   });
 });

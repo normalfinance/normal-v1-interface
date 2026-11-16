@@ -78,6 +78,12 @@ export interface FlowViewProps {
   doneNote?: string;
   /** After a failure: "Try again", "Bring back as USDC". */
   failActions?: FlowAction[];
+  /**
+   * The failure panel's title: "This did not go through" unless the page knows
+   * better. An index purchase whose coins mostly arrived says which one did
+   * not ("Solana was not bought yet"), not that the whole thing failed.
+   */
+  failTitle?: string;
   /** Above the steps: an offer or an explanation that belongs to this run. */
   notice?: ReactNode;
   /** While running: can the person leave this page without parking the money? */
@@ -389,6 +395,7 @@ export function FlowView({
   doneActions = [],
   doneNote,
   failActions = [],
+  failTitle,
   notice,
   leave,
   handOffTitle,
@@ -466,7 +473,7 @@ export function FlowView({
       <Box sx={{ display: 'grid', gap: 1.25 }}>
         <Panel tone="failed">
           <Typography sx={{ fontSize: 14, fontWeight: 500, color: RED }}>
-            {t('This did not go through')}
+            {failTitle ?? t('This did not go through')}
           </Typography>
           <Typography sx={{ mt: 0.5, fontSize: 13.5, lineHeight: 1.55, color: INK_SOFT }}>
             {run.error}
