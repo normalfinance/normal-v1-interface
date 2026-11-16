@@ -16,7 +16,7 @@ import PhotoCameraOutlined from '@mui/icons-material/PhotoCameraOutlined';
 // to the CDN under marketing/ (set `src` to cdn('marketing/<slot>.webp')). A
 // slot without a `src` shows its brief instead, so the layout never breaks.
 
-export type PhotoSlot = 'hero' | 'savings' | 'everyday' | 'signup' | 'addMoney' | 'enjoy' | 'about';
+export type PhotoSlot = 'hero' | 'savings' | 'everyday' | 'phoneAndCard' | 'about';
 
 type PhotoSpec = {
   alt: string;
@@ -66,31 +66,15 @@ export const MARKETING_PHOTOS: Record<PhotoSlot, PhotoSpec> = {
     src: pexels(7984828),
     focus: '50% 25%',
   },
-  // The three steps show three different people and moments (Niko
-  // 2026-11-16: not three women with a phone and a card): a man signing up at
-  // home, cash handed over a counter (MoneyGram takes cash), an older man out
-  // and about.
-  signup: {
-    alt: 'A man on his sofa at home, signing up on his phone',
-    brief: 'Someone calm at home, phone in hand, in soft light: the sign-up moment.',
+  // How it works shows one person (Niko 2026-11-16: "lets just have 1 person
+  // with mobile phone and credit card"); its other two steps are drawn from
+  // the app and the partners' marks.
+  phoneAndCard: {
+    alt: 'A woman smiling at her phone with her bank card in the other hand',
+    brief: 'Someone holding a bank card and a phone, pleased: money sorted, ready to save or buy.',
     size: '1600 × 2000',
-    src: pexels(39219515),
-    focus: '45% 40%',
-  },
-  addMoney: {
-    alt: 'A customer handing cash to a cashier at a shop counter',
-    brief:
-      'Cash handed over a shop counter: adding money with cash at a MoneyGram location, or a card.',
-    size: '1600 × 2000',
-    src: pexels(4921262),
-    focus: '50% 45%',
-  },
-  enjoy: {
-    alt: 'An older man outdoors, smiling, his phone in his hand',
-    brief: 'Someone outdoors with their phone, at ease: money sorted, life going on.',
-    size: '1600 × 2000',
-    src: pexels(4894558),
-    focus: '42% 30%',
+    src: pexels(6214139),
+    focus: '50% 30%',
   },
   about: {
     alt: 'A big group photo in front of the Meridian 2026 Lisbon backdrop',

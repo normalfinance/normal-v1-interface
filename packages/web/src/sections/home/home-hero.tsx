@@ -2,7 +2,7 @@
 
 import { paths } from '@/routes/paths';
 import { TYPE } from '@/theme/type-scale';
-import { INK, FIXED, INK_SOFT } from '@/theme/brand-colors';
+import { INK, FIXED, INK_SOFT, BRAND_COLORS } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -17,49 +17,67 @@ import { HeroPhone } from './hero-phone';
 
 const GOOGLE_PLAY = 'https://play.google.com/store/apps/details?id=io.normalfinance.app';
 
-/**
- * Where to get the app (Niko 2026-11-16): Google's own Play badge, unmodified,
- * linked to the listing, and a plain note for iPhone. Apple's badge may only
- * point at an app that is on the App Store or open for pre-order (App Store
- * Marketing Guidelines), so iPhone gets words until the app is approved; then
- * the note becomes Apple's "Download on the App Store" badge.
- */
-function StoreBadges({ tone }: { tone: 'light' | 'dark' }) {
-  const dark = tone === 'dark';
+/** One height for both badges, so they read as a pair (both makers ask for equal sizes). */
+const BADGE_HEIGHT = 40;
 
+/**
+ * Where to get the app (Niko 2026-11-16): each store's own badge, unmodified.
+ * Google Play links to the listing. The App Store badge waits for Apple's
+ * approval: it carries a "Coming soon" tag and links nowhere yet. Apple's
+ * marketing guidelines reserve the badge for apps on the App Store or open for
+ * pre-order, so the tag goes the day the app is live, and the badge then links
+ * to it.
+ */
+function StoreBadges() {
   return (
-    <Stack direction="row" alignItems="center" flexWrap="wrap" gap={2} sx={{ mt: 3 }}>
+    <Stack direction="row" alignItems="center" flexWrap="wrap" gap={2.5} sx={{ mt: 4 }}>
       <Box
         component="a"
         href={GOOGLE_PLAY}
         target="_blank"
         rel="noopener noreferrer"
-        // The file's transparent margin is the badge's clear space: the badge
-        // itself lines up with the words above.
-        sx={{ display: 'block', ml: '-10px', lineHeight: 0 }}
+        // Google's file carries its clear space as a transparent margin (a
+        // quarter of its height each side): 60px of file is a 40px badge,
+        // lined up with the words above.
+        sx={{ display: 'block', m: '-10px', lineHeight: 0 }}
       >
         <Box
           component="img"
           src="/marketing/google-play-badge.png"
           alt="Get it on Google Play"
-          sx={{ display: 'block', height: 60, width: 'auto' }}
+          sx={{ display: 'block', height: BADGE_HEIGHT * 1.5, width: 'auto' }}
         />
       </Box>
-      <Typography
-        sx={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          height: 40,
-          px: 2,
-          fontSize: 14,
-          fontWeight: 500,
-          border: `1px solid ${dark ? 'rgba(255,255,255,0.6)' : INK}`,
-          borderRadius: 'var(--radius-md)',
-          color: dark ? FIXED.white : INK,
-        }}
-      >
-        iPhone: coming soon
-      </Typography>
+      <Box sx={{ position: 'relative', lineHeight: 0 }}>
+        <Box
+          component="img"
+          src="/marketing/app-store-badge.svg"
+          alt="Download on the App Store, coming soon"
+          sx={{ display: 'block', height: BADGE_HEIGHT, width: 'auto' }}
+        />
+        {/* Above the badge's corner, never on it: Apple's artwork stays as it is. */}
+        <Box
+          component="span"
+          aria-hidden="true"
+          sx={{
+            position: 'absolute',
+            right: -6,
+            bottom: '100%',
+            mb: '4px',
+            px: '7px',
+            py: '2px',
+            fontSize: 11,
+            fontWeight: 500,
+            lineHeight: '14px',
+            letterSpacing: '0.02em',
+            whiteSpace: 'nowrap',
+            color: FIXED.ink,
+            bgcolor: BRAND_COLORS.yellow.fill,
+          }}
+        >
+          Coming soon
+        </Box>
+      </Box>
     </Stack>
   );
 }
@@ -97,7 +115,7 @@ function HeroCopy({ tone }: { tone: 'light' | 'dark' }) {
           How it works
         </BrandButton>
       </Stack>
-      <StoreBadges tone={tone} />
+      <StoreBadges />
     </>
   );
 }

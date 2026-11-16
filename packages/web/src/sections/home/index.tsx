@@ -39,11 +39,18 @@ export default function HomeView() {
       <Reveal>
         <HomeSavings />
       </Reveal>
-      {/* Only where Autoinvest is switched on, as in the app (lib/index/flag.ts). */}
+      {/*
+        Only where Autoinvest is switched on, as in the app (lib/index/flag.ts).
+        A hatch rail parts it from Savings: two washes side by side read as one
+        block (Niko 2026-11-16: "we need some separation").
+      */}
       {indexEnabled() && (
-        <Reveal>
-          <HomeAutoinvest />
-        </Reveal>
+        <>
+          <HatchRail />
+          <Reveal>
+            <HomeAutoinvest />
+          </Reveal>
+        </>
       )}
       <Reveal>
         <HomeSteps />

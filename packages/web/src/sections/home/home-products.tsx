@@ -22,6 +22,8 @@ import ArrowDownwardRounded from '@mui/icons-material/ArrowDownwardRounded';
 
 import { PageSection, GRID_FRAME_SX, SectionHeader } from '@/components/_common/brand';
 
+import { RAMPS } from './ramps';
+
 // ----------------------------------------------------------------------
 
 // Four products as one grid of cells spanning the column. Each cell shows a
@@ -32,22 +34,6 @@ import { PageSection, GRID_FRAME_SX, SectionHeader } from '@/components/_common/
 
 const BTC = cdn('tokens/bitcoin.webp');
 const USDC = cdn('tokens/USDC.webp');
-
-// The ways money comes in, as the app's Add money lists them (onramp-dialog):
-// the same partners, the same words.
-const PROVIDERS = [
-  {
-    name: 'MoneyGram',
-    detail: 'Cash at a location',
-    icon: cdn('icons/moneygram/mgi.webp'),
-  },
-  { name: 'Stripe', detail: 'Card or bank', icon: '/marketing/providers/stripe.svg' },
-  {
-    name: 'Coinbase',
-    detail: 'Card or bank',
-    icon: '/marketing/providers/coinbase.png',
-  },
-];
 
 /** A card cut from the app, on the cell's pale wash. */
 function Slice({ hue, children }: { hue: HueShades; children: ReactNode }) {
@@ -186,7 +172,7 @@ const CASH = (
   <Slice hue={BRAND_COLORS.sky}>
     <Label>Add money with</Label>
     <Box sx={{ display: 'grid', gap: '14px', mt: '12px' }}>
-      {PROVIDERS.map((provider) => (
+      {RAMPS.map((provider) => (
         <ProviderRow key={provider.name} {...provider} />
       ))}
     </Box>
