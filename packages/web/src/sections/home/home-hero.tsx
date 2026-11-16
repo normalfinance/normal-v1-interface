@@ -2,85 +2,19 @@
 
 import { paths } from '@/routes/paths';
 import { TYPE } from '@/theme/type-scale';
-import { INK, FIXED, INK_SOFT, BRAND_COLORS } from '@/theme/brand-colors';
+import { INK, FIXED, INK_SOFT } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import { StoreBadges } from '@/components/_common/store-badges';
 import { FrameLines, FRAME_LINES_Z } from '@/components/_common/frame-lines';
 import { COLUMN_SX, GUTTER_SX, BrandButton } from '@/components/_common/brand';
 
 import { HeroPhone } from './hero-phone';
 
 // ----------------------------------------------------------------------
-
-const GOOGLE_PLAY = 'https://play.google.com/store/apps/details?id=io.normalfinance.app';
-
-/** One height for both badges, so they read as a pair (both makers ask for equal sizes). */
-const BADGE_HEIGHT = 40;
-
-/**
- * Where to get the app (Niko 2026-11-16): each store's own badge, unmodified.
- * Google Play links to the listing. The App Store badge waits for Apple's
- * approval: it carries a "Coming soon" tag and links nowhere yet. Apple's
- * marketing guidelines reserve the badge for apps on the App Store or open for
- * pre-order, so the tag goes the day the app is live, and the badge then links
- * to it.
- */
-function StoreBadges() {
-  return (
-    <Stack direction="row" alignItems="center" flexWrap="wrap" gap={2.5} sx={{ mt: 4 }}>
-      <Box
-        component="a"
-        href={GOOGLE_PLAY}
-        target="_blank"
-        rel="noopener noreferrer"
-        // Google's file carries its clear space as a transparent margin (a
-        // quarter of its height each side): 60px of file is a 40px badge,
-        // lined up with the words above.
-        sx={{ display: 'block', m: '-10px', lineHeight: 0 }}
-      >
-        <Box
-          component="img"
-          src="/marketing/google-play-badge.png"
-          alt="Get it on Google Play"
-          sx={{ display: 'block', height: BADGE_HEIGHT * 1.5, width: 'auto' }}
-        />
-      </Box>
-      <Box sx={{ position: 'relative', lineHeight: 0 }}>
-        <Box
-          component="img"
-          src="/marketing/app-store-badge.svg"
-          alt="Download on the App Store, coming soon"
-          sx={{ display: 'block', height: BADGE_HEIGHT, width: 'auto' }}
-        />
-        {/* Above the badge's corner, never on it: Apple's artwork stays as it is. */}
-        <Box
-          component="span"
-          aria-hidden="true"
-          sx={{
-            position: 'absolute',
-            right: -6,
-            bottom: '100%',
-            mb: '4px',
-            px: '7px',
-            py: '2px',
-            fontSize: 11,
-            fontWeight: 500,
-            lineHeight: '14px',
-            letterSpacing: '0.02em',
-            whiteSpace: 'nowrap',
-            color: FIXED.ink,
-            bgcolor: BRAND_COLORS.yellow.fill,
-          }}
-        >
-          Coming soon
-        </Box>
-      </Box>
-    </Stack>
-  );
-}
 
 // Over the photo the words are white in both modes; under it (phones) they
 // take the page's colours.
@@ -115,7 +49,7 @@ function HeroCopy({ tone }: { tone: 'light' | 'dark' }) {
           How it works
         </BrandButton>
       </Stack>
-      <StoreBadges />
+      <StoreBadges sx={{ mt: 4 }} />
     </>
   );
 }

@@ -9,6 +9,8 @@ import { INK, HOVER, MUTED, HAIRLINE_COLOR } from '@/theme/brand-colors';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
+import { HATCH_SX } from '@/components/_common/hatch';
+
 // ----------------------------------------------------------------------
 
 // Who stands behind Normal, what Savings is built on and who checked it, as
@@ -95,7 +97,29 @@ const LOGO_BOX = Math.max(...PARTNERS.map((partner) => partner.height));
 /** Cells per row at each width: two on phones, four on tablets, all of them on a wide screen. */
 const COLS = { xs: 2, sm: 4, lg: PARTNERS.length } as const;
 
+type Breakpoint = keyof typeof COLS;
+const BREAKPOINTS = Object.keys(COLS) as Breakpoint[];
+
+/**
+ * Empty slots that finish the last row at each width, so every line of the
+ * grid runs edge to edge (Niko 2026-11-16: "the lines dont complette"): seven
+ * marks leave one slot on phones and one on tablets. They take the hatch, the
+ * site's texture for an empty cell of the grid.
+ */
+const fillersAt = (bp: Breakpoint) => (COLS[bp] - (PARTNERS.length % COLS[bp])) % COLS[bp];
+const FILLERS = Math.max(...BREAKPOINTS.map(fillersAt));
+
 const HAIRLINE = `1px solid ${HAIRLINE_COLOR}`;
+
+/** A cell's lines at every width, by its place in the grid: above it unless in the first row, and to its left unless first in its row. */
+const cellLines = (index: number) => ({
+  borderTop: Object.fromEntries(
+    BREAKPOINTS.map((bp) => [bp, index >= COLS[bp] ? HAIRLINE : 'none'])
+  ),
+  borderLeft: Object.fromEntries(
+    BREAKPOINTS.map((bp) => [bp, index % COLS[bp] > 0 ? HAIRLINE : 'none'])
+  ),
+});
 
 function Mark({ partner }: { partner: Partner }) {
   const img = (src: string, theme: 'light' | 'dark' | 'both') => (
@@ -148,29 +172,7 @@ export function PartnerStrip() {
       }}
     >
       {PARTNERS.map((partner, index) => (
-        <Box
-          component="li"
-          key={partner.name}
-          sx={{
-            display: 'flex',
-            // Two to a row on phones: an odd last cell takes the whole row.
-            gridColumn: {
-              xs: index === PARTNERS.length - 1 && PARTNERS.length % COLS.xs ? 'span 2' : 'auto',
-              sm: 'auto',
-            },
-            // A line above every row but the first, and between the cells of a row.
-            borderTop: {
-              xs: index >= COLS.xs ? HAIRLINE : 'none',
-              sm: index >= COLS.sm ? HAIRLINE : 'none',
-              lg: 'none',
-            },
-            borderLeft: {
-              xs: index % COLS.xs > 0 ? HAIRLINE : 'none',
-              sm: index % COLS.sm > 0 ? HAIRLINE : 'none',
-              lg: index > 0 ? HAIRLINE : 'none',
-            },
-          }}
-        >
+        <Box component="li" key={partner.name} sx={{ display: 'flex', ...cellLines(index) }}>
           <Box
             component="a"
             href={partner.href}
@@ -211,6 +213,20 @@ export function PartnerStrip() {
             </Box>
           </Box>
         </Box>
+      ))}
+      {Array.from({ length: FILLERS }, (_, n) => (
+        <Box
+          component="li"
+          key={`filler-${n}`}
+          aria-hidden="true"
+          sx={{
+            display: Object.fromEntries(
+              BREAKPOINTS.map((bp) => [bp, n < fillersAt(bp) ? 'block' : 'none'])
+            ),
+            ...HATCH_SX,
+            ...cellLines(PARTNERS.length + n),
+          }}
+        />
       ))}
     </Box>
   );

@@ -62,6 +62,7 @@ const SITE_FILES = [
   'components/_common/reveal.tsx',
   'components/_common/brand.tsx',
   'components/_common/partner-strip.tsx',
+  'components/_common/store-badges.tsx',
 ];
 
 /** Files allowed background blur, each with its reason. */

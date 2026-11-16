@@ -138,7 +138,8 @@ export function HomeAutoinvest() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: '7fr 5fr' },
+          // Side by side only where the demo keeps its width; stacked below that.
+          gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' },
           ...COLUMN_SX,
           color: violet.deep,
           bgcolor: violet.tint,
@@ -206,8 +207,8 @@ export function HomeAutoinvest() {
             alignItems: 'center',
             justifyContent: 'center',
             p: { xs: 3, md: 5 },
-            borderLeft: { md: `1px solid ${HAIRLINE_COLOR}` },
-            borderTop: { xs: `1px solid ${HAIRLINE_COLOR}`, md: 'none' },
+            borderLeft: { lg: `1px solid ${HAIRLINE_COLOR}` },
+            borderTop: { xs: `1px solid ${HAIRLINE_COLOR}`, lg: 'none' },
           }}
         >
           <AutoinvestDemo />

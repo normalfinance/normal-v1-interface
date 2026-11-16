@@ -17,18 +17,12 @@ import ExpandMoreRounded from '@mui/icons-material/ExpandMoreRounded';
 
 import { Logo } from '@/components/template/logo';
 import { FrameLines } from '@/components/_common/frame-lines';
-import {
-  Eyebrow,
-  HAIRLINE,
-  COLUMN_SX,
-  GUTTER_SX,
-  INK_BUTTON_SX,
-  OUTLINED_BUTTON_SX,
-} from '@/components/_common/brand';
+import { Eyebrow, HAIRLINE, COLUMN_SX, GUTTER_SX, INK_BUTTON_SX } from '@/components/_common/brand';
 
 import { menusFor, navLinksFor } from './site-nav';
 import { ThemeToggleButton } from './theme-toggle';
 import { useSessionHint } from './use-session-hint';
+import { SiteMobileMenu } from './site-mobile-menu';
 
 import type { SessionHint } from './use-session-hint';
 import type { NavMenu, SiteLink, NavMenuLink } from './site-nav';
@@ -450,58 +444,17 @@ export function SiteHeader() {
       </Box>
 
       {/*
-        The phone menu: the whole screen under the bar (Niko 2026-11-16: "full
-        height"), fading in and out on the shared curve. Always mounted so it
-        can fade both ways; hidden, it is out of reach of focus and readers.
+        The phone menu: the whole screen under the bar, fading in and out on
+        the shared curve (site-mobile-menu.tsx). Always mounted so it can fade
+        both ways; hidden, it is out of reach of focus and readers.
       */}
-      <Box
-        id="site-menu"
-        component="nav"
-        aria-label="Main"
-        aria-hidden={!mobileOpen}
-        sx={{
-          display: { md: 'none' },
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          right: 0,
-          height: { xs: 'calc(100dvh - 64px)', md: 0 },
-          overflowY: 'auto',
-          overscrollBehavior: 'contain',
-          bgcolor: PAPER,
-          opacity: mobileOpen ? 1 : 0,
-          visibility: mobileOpen ? 'visible' : 'hidden',
-          transition: ease(['opacity', 'visibility']),
-        }}
-      >
-        {/* The frame lines run the whole list, however far it scrolls. */}
-        <Box sx={{ position: 'relative', minHeight: '100%', pb: 4 }}>
-          <FrameLines />
-          <Box sx={COLUMN_SX}>
-            {menus.map((menu) => (
-              <MenuGroups key={menu.label} menu={menu} onNavigate={closeAll} />
-            ))}
-            <Box sx={{ display: 'grid', gap: 1, px: 2, pt: 1, borderTop: HAIRLINE }}>
-              {phoneLinks.map((link) => (
-                <Button key={link.label} {...linkProps(link)} onClick={closeAll} sx={NAV_BUTTON_SX}>
-                  {link.label}
-                </Button>
-              ))}
-              {!session.signedIn && (
-                <Button
-                  component={RouterLink}
-                  href={paths.auth.login}
-                  variant="outlined"
-                  size="large"
-                  sx={OUTLINED_BUTTON_SX}
-                >
-                  Log in
-                </Button>
-              )}
-            </Box>
-          </Box>
-        </Box>
-      </Box>
+      <SiteMobileMenu
+        open={mobileOpen}
+        menus={menus}
+        links={phoneLinks}
+        session={session}
+        onNavigate={closeAll}
+      />
     </Box>
   );
 }

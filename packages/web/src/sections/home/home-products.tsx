@@ -252,12 +252,16 @@ export function HomeProducts() {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+          // Two products to a row only where each still has room for its words
+          // beside its card (at 900px the titles broke a word a line).
+          gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' },
           ...GRID_FRAME_SX,
         }}
       >
         {PRODUCTS.map((product, index) => {
-          const flip = index >= 2;
+          // One to a row: every other one flips. Two to a row: the bottom row flips.
+          const flipOne = index % 2 === 1;
+          const flipTwo = index >= 2;
           return (
             <Box
               key={product.id}
@@ -268,16 +272,18 @@ export function HomeProducts() {
                 scrollMarginTop: 96,
                 borderTop: {
                   xs: index > 0 ? `1px solid ${HAIRLINE_COLOR}` : 'none',
-                  md: index > 1 ? `1px solid ${HAIRLINE_COLOR}` : 'none',
+                  lg: index > 1 ? `1px solid ${HAIRLINE_COLOR}` : 'none',
                 },
-                borderLeft: { md: index % 2 === 1 ? `1px solid ${HAIRLINE_COLOR}` : 'none' },
+                borderLeft: { lg: index % 2 === 1 ? `1px solid ${HAIRLINE_COLOR}` : 'none' },
               }}
             >
-              {/* On phones the words always come first; on wider screens the bottom row flips. */}
-              <Box sx={{ order: { xs: 1, sm: flip ? 2 : 1 } }}>
+              {/* On phones the words always come first; wider, the cards zig-zag. */}
+              <Box sx={{ order: { xs: 1, sm: flipOne ? 2 : 1, lg: flipTwo ? 2 : 1 } }}>
                 <Words product={product} />
               </Box>
-              <Box sx={{ order: { xs: 2, sm: flip ? 1 : 2 }, display: 'grid' }}>
+              <Box
+                sx={{ order: { xs: 2, sm: flipOne ? 1 : 2, lg: flipTwo ? 1 : 2 }, display: 'grid' }}
+              >
                 {product.slice}
               </Box>
             </Box>
