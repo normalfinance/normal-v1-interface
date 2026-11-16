@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import type { Theme, SxProps } from '@mui/material/styles';
 
+import { ease } from '@/theme/motion';
 import { useRef, useState, useLayoutEffect } from 'react';
 
 import Box from '@mui/material/Box';
@@ -56,7 +57,7 @@ export function Reveal({
       sx={[
         {
           opacity: shown ? 1 : 0,
-          transition: `opacity 800ms cubic-bezier(0.2, 0.8, 0.2, 1) ${delay}ms`,
+          transition: ease('opacity', 'reveal', delay),
         },
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}

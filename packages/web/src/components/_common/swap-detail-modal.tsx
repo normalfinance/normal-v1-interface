@@ -577,7 +577,7 @@ export function SwapDetailModal({
                 {transfer.direction === INDEX_DIRECTION ? (
                   <>
                     {fmt(transfer.srcAmount)} {transfer.srcAsset} →{' '}
-                    {indexOfTransfer(transfer)?.name ?? t('an index')}
+                    {indexOfTransfer(transfer)?.name ?? t('Autoinvest')}
                   </>
                 ) : (
                   <>
@@ -836,7 +836,7 @@ export function SwapDetailModal({
               component={RouterLink}
               href={
                 transfer.direction === INDEX_DIRECTION
-                  ? paths.indexes.purchase(transferId)
+                  ? paths.autoinvest.purchase(transferId)
                   : paths.swapTransfer(transferId)
               }
               onClick={onClose}

@@ -3,10 +3,11 @@ import { CRYPTO_INDEX } from './basket';
 import type { IndexDef } from './basket';
 
 // ---------------------------------------------------------------------------
-// Every index Normal offers, in the order the Indexes page shows them. One
+// Every Autoinvest plan Normal offers, in the order the Autoinvest page shows
+// them (the product was called the crypto index until 2026-11-16). One
 // today; the page and the routes are built for many (Niko 2026-11-09). An
 // index's `id` is stored on its purchases (quoteJson.index), so it never
-// changes; its `slug` is its address in the app, /app/indexes/<slug>.
+// changes; its `slug` is its address in the app, /app/autoinvest/<slug>.
 // ---------------------------------------------------------------------------
 
 export interface IndexMeta {
@@ -23,7 +24,7 @@ export const TOP_3: IndexMeta = {
   id: CRYPTO_INDEX.id,
   slug: 'top-3',
   name: 'Top 3',
-  tagline: 'Bitcoin, Ethereum and Solana, the three largest coins, in one purchase.',
+  tagline: 'Bitcoin, Ethereum and Solana in one purchase, each by its market size.',
   def: CRYPTO_INDEX,
 };
 

@@ -731,7 +731,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
       <FlowHost>
         <ButtonBase
           component={RouterLink}
-          href={paths.indexes.root}
+          href={paths.autoinvest.root}
           sx={{
             alignSelf: 'flex-start',
             gap: 0.75,
@@ -746,7 +746,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
           }}
         >
           <ArrowBackOutlined sx={{ fontSize: 16 }} />
-          {t('Indexes')}
+          {t('Autoinvest')}
         </ButtonBase>
         {/* The index's picture first: the coins it holds, as on its card. */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, mb: 3 }}>

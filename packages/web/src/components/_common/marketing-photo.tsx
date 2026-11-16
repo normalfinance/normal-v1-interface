@@ -52,11 +52,12 @@ export const MARKETING_PHOTOS: Record<PhotoSlot, PhotoSpec> = {
     eager: true,
   },
   savings: {
-    alt: 'A woman relaxing on her sofa at home, checking her phone',
-    brief: 'Someone relaxed on the sofa at home, checking their phone. Calm, unhurried.',
+    alt: 'A smiling family on their sofa at home, the mother holding a phone',
+    // Niko 2026-11-16: "replace it with happy family image".
+    brief: 'A happy family together on the sofa at home, a phone in hand. Warm, unhurried.',
     size: '2400 × 1200',
-    src: pexels(27176011),
-    focus: '60% 40%',
+    src: pexels(9885415),
+    focus: '50% 45%',
   },
   everyday: {
     alt: 'A woman smiling at her phone',
@@ -65,26 +66,31 @@ export const MARKETING_PHOTOS: Record<PhotoSlot, PhotoSpec> = {
     src: pexels(7984828),
     focus: '50% 25%',
   },
+  // The three steps show three different people and moments (Niko
+  // 2026-11-16: not three women with a phone and a card): a man signing up at
+  // home, cash handed over a counter (MoneyGram takes cash), an older man out
+  // and about.
   signup: {
-    alt: 'A young woman signing up on her phone',
+    alt: 'A man on his sofa at home, signing up on his phone',
     brief: 'Someone calm at home, phone in hand, in soft light: the sign-up moment.',
     size: '1600 × 2000',
-    src: pexels(36812954),
-    focus: '50% 30%',
+    src: pexels(39219515),
+    focus: '45% 40%',
   },
   addMoney: {
-    alt: 'A woman smiling at her phone with her bank card in the other hand',
-    brief: 'Someone holding a bank card and a phone, pleased: adding money for the first time.',
+    alt: 'A customer handing cash to a cashier at a shop counter',
+    brief:
+      'Cash handed over a shop counter: adding money with cash at a MoneyGram location, or a card.',
     size: '1600 × 2000',
-    src: pexels(6214139),
-    focus: '50% 30%',
+    src: pexels(4921262),
+    focus: '50% 45%',
   },
   enjoy: {
-    alt: 'A woman outdoors, relaxed, her phone in her hand',
+    alt: 'An older man outdoors, smiling, his phone in his hand',
     brief: 'Someone outdoors with their phone, at ease: money sorted, life going on.',
     size: '1600 × 2000',
-    src: pexels(3775085),
-    focus: '45% 30%',
+    src: pexels(4894558),
+    focus: '42% 30%',
   },
   about: {
     alt: 'A big group photo in front of the Meridian 2026 Lisbon backdrop',

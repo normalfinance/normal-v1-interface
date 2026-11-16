@@ -7,18 +7,18 @@ import { INK, HAIRLINE_COLOR } from '@/theme/brand-colors';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
-import { Backers } from '@/components/_common/backers';
+import { PartnerStrip } from '@/components/_common/partner-strip';
 import { StatementWord as Word } from '@/components/_common/brand';
 
 // ----------------------------------------------------------------------
 
-/** Who backs Normal, straight under the hero; then what Normal is, in one statement. */
+/** Who backs Normal and what it is built on, straight under the hero; then what Normal is, in one statement. */
 export function HomeIntro() {
   return (
     <>
       <Box
         component="section"
-        aria-label="Backers and auditors"
+        aria-label="Backers and partners"
         sx={{
           // On phones the hero's words sit above the strip, so it draws its own
           // top line; on wider screens the photo's edge is that line.
@@ -27,7 +27,7 @@ export function HomeIntro() {
         }}
       >
         <Box sx={COLUMN_SX}>
-          <Backers />
+          <PartnerStrip />
         </Box>
       </Box>
 

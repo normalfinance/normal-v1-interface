@@ -26,10 +26,28 @@ import { PageSection, GRID_FRAME_SX, SectionHeader } from '@/components/_common/
 
 // Four products as one grid of cells spanning the column. Each cell shows a
 // slice of its real screen on a pale wash; the top row has words then slice,
-// the bottom row slice then words. Figures are examples.
+// the bottom row slice then words. Figures are examples. Send gave its cell to
+// cash in (Niko 2026-11-16: "replace send with deposit cash and show moneygram
+// stripe coinbase").
 
 const BTC = cdn('tokens/bitcoin.webp');
 const USDC = cdn('tokens/USDC.webp');
+
+// The ways money comes in, as the app's Add money lists them (onramp-dialog):
+// the same partners, the same words.
+const PROVIDERS = [
+  {
+    name: 'MoneyGram',
+    detail: 'Cash at a location',
+    icon: cdn('icons/moneygram/mgi.webp'),
+  },
+  { name: 'Stripe', detail: 'Card or bank', icon: '/marketing/providers/stripe.svg' },
+  {
+    name: 'Coinbase',
+    detail: 'Card or bank',
+    icon: '/marketing/providers/coinbase.png',
+  },
+];
 
 /** A card cut from the app, on the cell's pale wash. */
 function Slice({ hue, children }: { hue: HueShades; children: ReactNode }) {
@@ -73,40 +91,19 @@ function TokenRow({ icon, name, value }: { icon: string; name: string; value: st
   );
 }
 
-function Person({
-  initial,
-  name,
-  place,
-  amount,
-}: {
-  initial: string;
-  name: string;
-  place: string;
-  amount: string;
-}) {
+function ProviderRow({ name, detail, icon }: { name: string; detail: string; icon: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 36,
-          height: 36,
-          fontSize: 14,
-          fontWeight: 500,
-          borderRadius: '50%',
-          color: INK,
-          bgcolor: CANVAS,
-        }}
-      >
-        {initial}
-      </Box>
-      <Box sx={{ flexGrow: 1 }}>
+        component="img"
+        src={icon}
+        alt=""
+        sx={{ width: 36, height: 36, flexShrink: 0, borderRadius: '50%', objectFit: 'cover' }}
+      />
+      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Typography sx={{ fontSize: 16, fontWeight: 500 }}>{name}</Typography>
-        <Label>{place}</Label>
+        <Label>{detail}</Label>
       </Box>
-      <Typography sx={{ fontSize: 16, fontWeight: 500 }}>{amount}</Typography>
     </Box>
   );
 }
@@ -170,17 +167,28 @@ const SWAP = (
     <Box sx={{ mt: '10px' }}>
       <TokenRow icon={BTC} name="Bitcoin" value="0.00114" />
     </Box>
-    <Typography sx={{ mt: '12px', fontSize: 13, color: MUTED }}>
-      Rate and fee shown before you confirm
-    </Typography>
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        mt: '14px',
+        pt: '12px',
+        borderTop: `1px solid ${HAIRLINE_COLOR}`,
+      }}
+    >
+      <Typography sx={{ fontSize: 13, color: MUTED }}>Normal fee</Typography>
+      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>0.5%</Typography>
+    </Box>
   </Slice>
 );
 
-const SEND = (
+const CASH = (
   <Slice hue={BRAND_COLORS.sky}>
-    <Person initial="A" name="Ana" place="Lisbon" amount="$50.00" />
-    <Box sx={{ mt: '14px' }}>
-      <Person initial="M" name="Mom" place="Manila" amount="$120.00" />
+    <Label>Add money with</Label>
+    <Box sx={{ display: 'grid', gap: '14px', mt: '12px' }}>
+      {PROVIDERS.map((provider) => (
+        <ProviderRow key={provider.name} {...provider} />
+      ))}
     </Box>
     <Box
       sx={{
@@ -193,7 +201,7 @@ const SEND = (
       }}
     >
       <CheckRounded sx={{ fontSize: 18, color: BRAND_COLORS.mint.deep }} />
-      <Typography sx={{ fontSize: 13.5, color: INK_SOFT }}>Delivered in 4 seconds</Typography>
+      <Typography sx={{ fontSize: 13.5, color: INK_SOFT }}>Lands in your own wallet</Typography>
     </Box>
   </Slice>
 );
@@ -211,23 +219,26 @@ const PRODUCTS: Product[] = [
   {
     id: 'buy',
     label: 'Buy',
-    title: 'Add money in seconds',
-    body: 'Use your card or a bank transfer, through our licensed partners.',
+    title: 'Own the top crypto',
+    body: 'Bitcoin, Ethereum, Solana and Stellar, bought with your card or bank in a few taps.',
     slice: BUY,
   },
   {
     id: 'swap',
     label: 'Swap',
-    title: 'Switch between dollars and crypto',
-    body: 'See the rate and the fee before you confirm. Nothing happens until you do.',
+    // Niko 2026-11-16 asked for "cheapest fees". Not claimed: Stellar swaps go
+    // through Soroswap alone (api/swap/quote), so nothing is compared and
+    // "cheapest" can't be shown. The low fee is a fact: 0.5% (utils/normal-fees).
+    title: 'Swap with low fees',
+    body: 'Our fee is 0.5%, and you see the rate and every fee before you confirm.',
     slice: SWAP,
   },
   {
-    id: 'wallet',
-    label: 'Send',
-    title: 'Send money anywhere, in seconds',
-    body: 'Pay friends and family on Stellar, Bitcoin, Ethereum or Solana.',
-    slice: SEND,
+    id: 'cash',
+    label: 'Cash to crypto',
+    title: 'Turn cash into crypto',
+    body: 'Pay in cash at a MoneyGram location, or use your card or bank with Stripe or Coinbase.',
+    slice: CASH,
   },
 ];
 

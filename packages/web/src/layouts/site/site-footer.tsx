@@ -119,6 +119,11 @@ export function SiteFooter() {
             and its value can go down. Savings yield is variable and never guaranteed. Buying,
             selling and identity checks are provided by our licensed partners.
           </Typography>
+          {/* The owners' attribution lines for the marks the site shows (Google's badge rules, Circle's Brand Use Policy). */}
+          <Typography sx={{ maxWidth: 820, fontSize: 13, lineHeight: 1.6 }}>
+            Google Play and the Google Play logo are trademarks of Google LLC. All other trademarks
+            are the property of their respective owners.
+          </Typography>
           <Typography sx={{ fontSize: 13, lineHeight: 1.6 }}>
             {COMPANY}, {ADDRESS}
           </Typography>

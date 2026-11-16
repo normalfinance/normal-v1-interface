@@ -1,3 +1,5 @@
+import { indexEnabled } from '@/lib/index/flag';
+
 import { Reveal } from '@/components/_common/reveal';
 import { HatchRail } from '@/components/_common/hatch';
 
@@ -9,6 +11,7 @@ import { FaqAccordion } from './home-faq';
 import { HomeSavings } from './home-savings';
 import { HomeProducts } from './home-products';
 import { HomeSecurity } from './home-security';
+import { HomeAutoinvest } from './home-autoinvest';
 import { HomeTestimonials } from './home-testimonials';
 
 // ----------------------------------------------------------------------
@@ -36,6 +39,12 @@ export default function HomeView() {
       <Reveal>
         <HomeSavings />
       </Reveal>
+      {/* Only where Autoinvest is switched on, as in the app (lib/index/flag.ts). */}
+      {indexEnabled() && (
+        <Reveal>
+          <HomeAutoinvest />
+        </Reveal>
+      )}
       <Reveal>
         <HomeSteps />
       </Reveal>

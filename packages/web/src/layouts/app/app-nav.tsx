@@ -56,10 +56,10 @@ export const APP_NAV_MAIN: AppNavItem[] = [
   { title: 'Swap', href: paths.swap, icon: <SwapHorizOutlined /> },
 ];
 
-/** Indexes: in the sidebar's Products and the phone's tabs, where switched on. */
+/** Autoinvest: in the sidebar's Products and the phone's tabs, where switched on. */
 export const INDEXES_NAV: AppNavItem = {
-  title: 'Indexes',
-  href: paths.indexes.root,
+  title: 'Autoinvest',
+  href: paths.autoinvest.root,
   icon: <DonutSmallOutlined />,
   activeIcon: <DonutSmallIcon />,
 };
@@ -83,7 +83,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   { items: [HOME, ASSETS, ACTIVITY] },
   {
     title: 'Products',
-    // The crypto index shows only where it is switched on (lib/index/flag.ts).
+    // Autoinvest shows only where it is switched on (lib/index/flag.ts).
     items: indexEnabled() ? [SAVINGS, SWAP, INDEXES_NAV] : [SAVINGS, SWAP],
   },
   { title: 'Account', items: [SETTINGS, HELP] },

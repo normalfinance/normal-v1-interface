@@ -22,17 +22,17 @@ const STEPS: { title: string; body: string; photo: PhotoSlot }[] = [
   },
   {
     title: 'Add money',
-    body: 'Use your card or a bank transfer, through our licensed partners.',
+    body: 'Pay in cash at a MoneyGram location, or use your card or bank through Stripe or Coinbase.',
     photo: 'addMoney',
   },
   {
     title: 'Save, buy or send',
-    body: 'Grow your dollars, own some Bitcoin, or pay someone back. Your call.',
+    body: 'Grow your dollars, own the top crypto, or pay someone back. Your call.',
     photo: 'enjoy',
   },
 ];
 
-/** Three steps: a real person in each cell, the step written under the photo. */
+/** Three steps: a different real person and moment in each cell, the step written under the photo. */
 export function HomeSteps() {
   return (
     <PageSection

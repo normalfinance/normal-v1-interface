@@ -5,6 +5,7 @@ import type { ReactNode, ComponentType, KeyboardEvent } from 'react';
 
 import { useRef, useState } from 'react';
 import { TYPE } from '@/theme/type-scale';
+import { EASE, ease } from '@/theme/motion';
 import { TWO_FACTOR_ENABLED } from '@/lib/auth/two-factor';
 import { INK, HOVER, MUTED, CANVAS, INK_SOFT, BRAND_COLORS } from '@/theme/brand-colors';
 
@@ -174,7 +175,7 @@ export function HomeSecurity() {
                     textAlign: 'left',
                     borderTop: index > 0 ? HAIRLINE : 'none',
                     bgcolor: selected ? CANVAS : 'transparent',
-                    transition: 'background-color 200ms ease',
+                    transition: ease('background-color', 'quick'),
                     '&:hover': { bgcolor: selected ? CANVAS : HOVER },
                     '&.Mui-focusVisible': { outline: `2px solid ${INK}`, outlineOffset: -2 },
                   }}
@@ -225,7 +226,7 @@ export function HomeSecurity() {
             borderTop: { xs: HAIRLINE, md: 'none' },
             borderLeft: { md: HAIRLINE },
             bgcolor: BRAND_COLORS[point.hue].tint,
-            transition: 'background-color 300ms ease',
+            transition: ease('background-color'),
             '&:focus-visible': { outline: `2px solid ${INK}`, outlineOffset: -2 },
           }}
         >
@@ -239,7 +240,7 @@ export function HomeSecurity() {
               display: 'flex',
               justifyContent: 'center',
               width: '100%',
-              animation: 'nf-demo-in 400ms ease',
+              animation: `nf-demo-in 400ms ${EASE}`,
               '@keyframes nf-demo-in': { from: { opacity: 0 }, to: { opacity: 1 } },
               '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
             }}

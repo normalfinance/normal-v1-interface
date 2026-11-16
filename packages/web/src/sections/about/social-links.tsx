@@ -2,6 +2,7 @@
 
 import type { SvgIconComponent } from '@mui/icons-material';
 
+import { ease } from '@/theme/motion';
 import { HOVER, HAIRLINE_STRONG } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
@@ -57,7 +58,7 @@ export function SocialLinks({
                 color: 'inherit',
                 border: `1px solid ${HAIRLINE_STRONG}`,
                 borderRadius: 'var(--radius-site)',
-                transition: 'background-color 150ms ease',
+                transition: ease('background-color', 'quick'),
                 '&:hover': { bgcolor: HOVER },
                 '&:focus-visible': { outline: '2px solid currentColor', outlineOffset: 2 },
                 '& svg': { fontSize: size === 40 ? 20 : 17 },

@@ -1,5 +1,6 @@
 'use client';
 
+import { ease } from '@/theme/motion';
 import { paths } from '@/routes/paths';
 import { usePathname } from '@/routes/hooks';
 import { RouterLink } from '@/routes/components';
@@ -25,7 +26,7 @@ import {
   OUTLINED_BUTTON_SX,
 } from '@/components/_common/brand';
 
-import { menusFor, NAV_LINKS } from './site-nav';
+import { menusFor, navLinksFor } from './site-nav';
 import { ThemeToggleButton } from './theme-toggle';
 import { useSessionHint } from './use-session-hint';
 
@@ -45,6 +46,7 @@ const NAV_BUTTON_SX = {
   fontWeight: 500,
   color: INK,
   borderRadius: 'var(--radius-md)',
+  transition: ease('background-color', 'quick'),
   '&:hover': { bgcolor: HOVER },
 } as const;
 
@@ -73,6 +75,7 @@ function MenuLinkRow({ link, onNavigate }: { link: NavMenuLink; onNavigate: () =
         color: 'inherit',
         textDecoration: 'none',
         borderRadius: 'var(--radius-md)',
+        transition: ease('background-color', 'quick'),
         '&:hover': { bgcolor: HOVER },
       }}
     >
@@ -206,7 +209,7 @@ function MenuGroups({ menu, onNavigate }: { menu: NavMenu; onNavigate: () => voi
   );
 }
 
-/** The dropdown under a menu button. It fades in place; nothing slides. */
+/** The dropdown under a menu button. It fades in place on the shared curve; nothing slides. */
 function Dock({
   open,
   menu,
@@ -230,7 +233,7 @@ function Dock({
         bgcolor: PAPER,
         opacity: open ? 1 : 0,
         visibility: open ? 'visible' : 'hidden',
-        transition: 'opacity 120ms, visibility 120ms',
+        transition: ease(['opacity', 'visibility'], 'quick'),
       }}
     >
       <MenuGroups menu={menu} onNavigate={onNavigate} />
@@ -287,6 +290,13 @@ export function SiteHeader() {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const menus = menusFor(session.signedIn);
+  const navLinks = navLinksFor(session.signedIn);
+  // The phone menu lists the dropdowns' links too: a plain link already in
+  // them (Savings) is not shown twice.
+  const menuHrefs = new Set(
+    menus.flatMap((menu) => menu.groups.flatMap((g) => g.links.map((l) => l.href)))
+  );
+  const phoneLinks = navLinks.filter((link) => !menuHrefs.has(link.href));
 
   const closeAll = () => {
     setOpenMenu(null);
@@ -297,6 +307,22 @@ export function SiteHeader() {
     setOpenMenu(null);
     setMobileOpen(false);
   }, [pathname]);
+
+  // The phone menu covers the page: the page under it stays still, and
+  // Escape closes it.
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [mobileOpen]);
 
   useEffect(() => {
     if (!openMenu) return undefined;
@@ -378,14 +404,20 @@ export function SiteHeader() {
                 >
                   {menu.label}
                   <ExpandMoreRounded
-                    sx={{ fontSize: 18, color: MUTED, transform: open ? 'rotate(180deg)' : 'none' }}
+                    sx={{
+                      fontSize: 18,
+                      color: MUTED,
+                      transform: open ? 'rotate(180deg)' : 'none',
+                      // The second thing that turns (DESIGN.md): a half turn as its menu opens.
+                      transition: ease('transform', 'quick'),
+                    }}
                   />
                 </Button>
                 <Dock open={open} menu={menu} onNavigate={closeAll} />
               </Box>
             );
           })}
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <Button key={link.label} {...linkProps(link)} onClick={closeAll} sx={NAV_BUTTON_SX}>
               {link.label}
             </Button>
@@ -417,31 +449,40 @@ export function SiteHeader() {
         </IconButton>
       </Box>
 
-      {mobileOpen && (
-        <Box
-          id="site-menu"
-          component="nav"
-          aria-label="Main"
-          sx={{
-            display: { md: 'none' },
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            maxHeight: 'calc(100dvh - 64px)',
-            overflowY: 'auto',
-            pb: 2,
-            bgcolor: PAPER,
-            borderBottom: HAIRLINE,
-          }}
-        >
+      {/*
+        The phone menu: the whole screen under the bar (Niko 2026-11-16: "full
+        height"), fading in and out on the shared curve. Always mounted so it
+        can fade both ways; hidden, it is out of reach of focus and readers.
+      */}
+      <Box
+        id="site-menu"
+        component="nav"
+        aria-label="Main"
+        aria-hidden={!mobileOpen}
+        sx={{
+          display: { md: 'none' },
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          height: { xs: 'calc(100dvh - 64px)', md: 0 },
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          bgcolor: PAPER,
+          opacity: mobileOpen ? 1 : 0,
+          visibility: mobileOpen ? 'visible' : 'hidden',
+          transition: ease(['opacity', 'visibility']),
+        }}
+      >
+        {/* The frame lines run the whole list, however far it scrolls. */}
+        <Box sx={{ position: 'relative', minHeight: '100%', pb: 4 }}>
           <FrameLines />
           <Box sx={COLUMN_SX}>
             {menus.map((menu) => (
               <MenuGroups key={menu.label} menu={menu} onNavigate={closeAll} />
             ))}
             <Box sx={{ display: 'grid', gap: 1, px: 2, pt: 1, borderTop: HAIRLINE }}>
-              {NAV_LINKS.map((link) => (
+              {phoneLinks.map((link) => (
                 <Button key={link.label} {...linkProps(link)} onClick={closeAll} sx={NAV_BUTTON_SX}>
                   {link.label}
                 </Button>
@@ -460,7 +501,7 @@ export function SiteHeader() {
             </Box>
           </Box>
         </Box>
-      )}
+      </Box>
     </Box>
   );
 }

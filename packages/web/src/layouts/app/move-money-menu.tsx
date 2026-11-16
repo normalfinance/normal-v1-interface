@@ -67,12 +67,12 @@ const ITEMS: MoveItem[] = [
   },
 ];
 
-// Indexes, only where they are switched on (lib/index/flag.ts): buying one
-// is a way money moves, beside the Indexes tab and sidebar entry.
+// Autoinvest, only where it is switched on (lib/index/flag.ts): a purchase
+// is a way money moves, beside the Autoinvest tab and sidebar entry.
 const INDEX_ITEM: MoveItem = {
-  key: 'indexes',
-  label: 'Buy an index',
-  detail: 'Several coins in one purchase',
+  key: 'autoinvest',
+  label: 'Autoinvest',
+  detail: 'The top coins in one purchase',
   icon: <DonutSmallOutlined />,
 };
 
@@ -90,7 +90,7 @@ export function MoveMoneyMenu({ variant = 'button' }: { variant?: 'button' | 'ou
   const select = (key: string) => {
     close();
     if (key === 'swap') router.push(paths.swap);
-    else if (key === 'indexes') router.push(paths.indexes.root);
+    else if (key === 'autoinvest') router.push(paths.autoinvest.root);
     else startAction(key as 'buy' | 'sell' | 'send' | 'receive');
   };
 

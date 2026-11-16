@@ -18,13 +18,17 @@ import HelpOutlineOutlined from '@mui/icons-material/HelpOutlineOutlined';
 
 // ----------------------------------------------------------------------
 
-export type SiteLink = { label: string; href: string; external?: boolean };
+export type SiteLink = {
+  label: string;
+  href: string;
+  external?: boolean;
+  /** A page of the app: signed out, the link goes through login and back (`viaLogin`). */
+  app?: boolean;
+};
 
 export type NavMenuLink = SiteLink & {
   description: string;
   icon: SvgIconComponent;
-  /** A page of the app: signed out, the link goes through login and back (`menusFor`). */
-  app?: boolean;
 };
 
 export type NavMenu = {
@@ -169,27 +173,39 @@ export function menusFor(signedIn: boolean): NavMenu[] {
     ...menu,
     groups: menu.groups.map((group) => ({
       ...group,
-      links: group.links.map((link) =>
-        link.app ? { ...link, href: authHref('login', link.href) } : link
-      ),
+      links: group.links.map((link) => viaLogin(link)),
     })),
   }));
 }
 
-/** Plain links beside the dropdowns. */
+/** Signed out, an app link goes through login and comes back (login's `next`). */
+function viaLogin<T extends SiteLink>(link: T): T {
+  return link.app ? { ...link, href: authHref('login', link.href) } : link;
+}
+
+/**
+ * Plain links beside the dropdowns. Savings opens the app's Savings (Niko
+ * 2026-11-16), like the Product menu's links; the Savings page of the site
+ * stays in the footer.
+ */
 export const NAV_LINKS: SiteLink[] = [
-  { label: 'Savings', href: paths.site.savings },
+  { label: 'Savings', href: paths.savings, app: true },
   { label: 'Security', href: paths.site.security },
 ];
+
+/** The plain links for the visitor: app links straight there signed in, through login when not. */
+export function navLinksFor(signedIn: boolean): SiteLink[] {
+  return signedIn ? NAV_LINKS : NAV_LINKS.map((link) => viaLogin(link));
+}
 
 export const FOOTER_COLUMNS: { title: string; links: SiteLink[] }[] = [
   {
     title: 'Product',
     links: [
       { label: 'Savings', href: paths.site.savings },
-      { label: 'Add money', href: paths.site.buy },
+      { label: 'Buy crypto', href: paths.site.buy },
       { label: 'Swap', href: paths.site.swap },
-      { label: 'Send', href: paths.site.wallet },
+      { label: 'Cash to crypto', href: paths.site.cash },
       { label: 'Security', href: paths.site.security },
       { label: 'Open the app', href: paths.portfolio },
     ],

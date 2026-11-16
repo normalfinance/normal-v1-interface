@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 
 import { cdn } from '@/utils/cdn';
+import { ease } from '@/theme/motion';
 import { useState, useEffect } from 'react';
 import { SITE_THEME_ATTR } from '@/theme/site-theme';
 import { INK, MUTED, PAPER, CANVAS, BRAND_COLORS } from '@/theme/brand-colors';
@@ -56,7 +57,7 @@ export function useDemoStep(times: readonly number[], loopMs: number): number {
 /** Shown, or faded out in place. */
 export const fade = (visible: boolean) => ({
   opacity: visible ? 1 : 0,
-  transition: 'opacity 300ms ease',
+  transition: ease('opacity'),
 });
 
 /** The card every demo is drawn on, like a dialog in the app. Decorative. */
@@ -296,7 +297,7 @@ export function ApproveDemo() {
               position: 'absolute',
               inset: 0,
               opacity: approved ? 0 : step >= 1 ? 1 : 0.35,
-              transition: 'opacity 300ms ease',
+              transition: ease('opacity'),
             }}
           >
             <FaceGlyph />

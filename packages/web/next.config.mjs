@@ -129,6 +129,10 @@ const nextConfig = {
         destination: '/savings',
         permanent: true,
       },
+      // The crypto index became Autoinvest (2026-11-16): old app addresses
+      // land on the new ones, query kept.
+      { source: '/app/indexes', destination: '/app/autoinvest', permanent: false },
+      { source: '/app/indexes/:path*', destination: '/app/autoinvest/:path*', permanent: false },
       {
         source: '/indexes/:path*',
         destination: '/',

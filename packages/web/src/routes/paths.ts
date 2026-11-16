@@ -24,7 +24,7 @@ export const paths = {
   docs: 'https://normalfi.gitbook.io/normal',
   // The marketing site's sections, until each has a page of its own.
   site: {
-    wallet: '/#wallet',
+    cash: '/#cash',
     savings: '/#savings',
     swap: '/#swap',
     buy: '/#buy',
@@ -41,12 +41,16 @@ export const paths = {
   /** Same destination as the /invest → /app/swap permanent redirect */
   invest: '/app/swap',
   savings: '/app/savings',
-  /** Indexes (behind NEXT_PUBLIC_INDEX_ENABLED): the list, then one index by its slug. */
-  indexes: {
-    root: '/app/indexes',
-    details: (slug: string) => `/app/indexes/${slug}`,
+  /**
+   * Autoinvest (behind NEXT_PUBLIC_INDEX_ENABLED): the plans, then one plan by
+   * its slug. Was /app/indexes until 2026-11-16 (Niko: "dont call it crypto
+   * index anymore but autoinvest"); next.config redirects the old addresses.
+   */
+  autoinvest: {
+    root: '/app/autoinvest',
+    details: (slug: string) => `/app/autoinvest/${slug}`,
     /** One purchase, followed after its page closed (Niko 2026-11-10). */
-    purchase: (id: string) => `/app/indexes/purchases/${id}`,
+    purchase: (id: string) => `/app/autoinvest/purchases/${id}`,
   },
   activity: '/app/activity',
   assets: {

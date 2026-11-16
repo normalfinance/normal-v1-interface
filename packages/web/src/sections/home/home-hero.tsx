@@ -15,6 +15,55 @@ import { HeroPhone } from './hero-phone';
 
 // ----------------------------------------------------------------------
 
+const GOOGLE_PLAY = 'https://play.google.com/store/apps/details?id=io.normalfinance.app';
+
+/**
+ * Where to get the app (Niko 2026-11-16): Google's own Play badge, unmodified,
+ * linked to the listing, and a plain note for iPhone. Apple's badge may only
+ * point at an app that is on the App Store or open for pre-order (App Store
+ * Marketing Guidelines), so iPhone gets words until the app is approved; then
+ * the note becomes Apple's "Download on the App Store" badge.
+ */
+function StoreBadges({ tone }: { tone: 'light' | 'dark' }) {
+  const dark = tone === 'dark';
+
+  return (
+    <Stack direction="row" alignItems="center" flexWrap="wrap" gap={2} sx={{ mt: 3 }}>
+      <Box
+        component="a"
+        href={GOOGLE_PLAY}
+        target="_blank"
+        rel="noopener noreferrer"
+        // The file's transparent margin is the badge's clear space: the badge
+        // itself lines up with the words above.
+        sx={{ display: 'block', ml: '-10px', lineHeight: 0 }}
+      >
+        <Box
+          component="img"
+          src="/marketing/google-play-badge.png"
+          alt="Get it on Google Play"
+          sx={{ display: 'block', height: 60, width: 'auto' }}
+        />
+      </Box>
+      <Typography
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          height: 40,
+          px: 2,
+          fontSize: 14,
+          fontWeight: 500,
+          border: `1px solid ${dark ? 'rgba(255,255,255,0.6)' : INK}`,
+          borderRadius: 'var(--radius-md)',
+          color: dark ? FIXED.white : INK,
+        }}
+      >
+        iPhone: coming soon
+      </Typography>
+    </Stack>
+  );
+}
+
 // Over the photo the words are white in both modes; under it (phones) they
 // take the page's colours.
 function HeroCopy({ tone }: { tone: 'light' | 'dark' }) {
@@ -37,7 +86,7 @@ function HeroCopy({ tone }: { tone: 'light' | 'dark' }) {
           color: dark ? 'rgba(255,255,255,0.88)' : INK_SOFT,
         }}
       >
-        Save in digital dollars and own Bitcoin. One simple app, without the memecoins or the
+        Save in digital dollars and own the top crypto. One simple app, without the memecoins or the
         jargon.
       </Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} sx={{ mt: 4 }}>
@@ -48,6 +97,7 @@ function HeroCopy({ tone }: { tone: 'light' | 'dark' }) {
           How it works
         </BrandButton>
       </Stack>
+      <StoreBadges tone={tone} />
     </>
   );
 }
