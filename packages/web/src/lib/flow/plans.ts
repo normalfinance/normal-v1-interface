@@ -998,7 +998,8 @@ export interface IndexPlanLeg {
 /** The step id for buying one coin of an index: "buy-btc". */
 export const indexBuyStepId = (symbol: string) => `buy-${symbol.toLowerCase()}`;
 
-const listWords = (t: Translate, words: string[]) =>
+/** "Bitcoin", "Bitcoin and Ethereum", "Bitcoin, Ethereum and Solana". */
+export const listWords = (t: Translate, words: string[]) =>
   words.length <= 1
     ? (words[0] ?? '')
     : t('{{head}} and {{last}}', {

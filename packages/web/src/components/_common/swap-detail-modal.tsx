@@ -17,6 +17,7 @@ import { useTranslate } from '@/locales';
 import { buildAuthHeaders } from '@/utils/http';
 import { indexById } from '@/lib/index/indexes';
 import { RouterLink } from '@/routes/components';
+import { heldWords } from '@/lib/index/held-words';
 import { abortTimeout } from '@/utils/abort-timeout';
 import { useInProgress } from '@/lib/cctp/in-progress';
 import { assetName } from '@/lib/portfolio/asset-names';
@@ -24,8 +25,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { transferEnding } from '@/lib/cctp/transfer-ending';
 import { autoFinishAhead } from '@/sections/swap/cctp-phase';
 import { autopilotActiveFor } from '@/lib/cctp/autopilot-active';
-import { heldSymbolOf, INDEX_DIRECTION } from '@/lib/index/legs';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
+import { heldSymbolOf, INDEX_DIRECTION, heldReasonOfLeg } from '@/lib/index/legs';
 import {
   INK,
   WELL,
@@ -122,7 +123,12 @@ function indexOfTransfer(tr: CctpTransferDetail) {
  * @param arrived  a swap in's digital dollars were seen at the person's Base
  *                 address (the swap page's keeper, when it is on the page)
  */
-function buildSteps(tr: CctpTransferDetail, t: Translate, arrived = false): Step[] {
+function buildSteps(
+  tr: CctpTransferDetail,
+  t: Translate,
+  arrived = false,
+  heldMissing = false
+): Step[] {
   const attested = !!tr.eventNonce || !!tr.mintTxHash || tr.status === 'COMPLETED';
   // How it ended, if it has: a step not reached by then is not waiting.
   const ending = transferEnding(t, tr);
@@ -159,7 +165,9 @@ function buildSteps(tr: CctpTransferDetail, t: Translate, arrived = false): Step
         key: 'buy',
         label: t('Buy the coins'),
         sub: held
-          ? t('{{coin}} is waiting for you to try it again', { coin: assetName(held) })
+          ? heldMissing
+            ? t('{{coin}} could not be bought. Contact us.', { coin: assetName(held) })
+            : t('{{coin}} is waiting for you to try it again', { coin: assetName(held) })
           : tr.dstSwapTxHash
             ? t('Every coin bought')
             : t('Buying each coin'),
@@ -304,6 +312,13 @@ export function SwapDetailModal({
   const [loading, setLoading] = useState(false);
   const [retryNote, setRetryNote] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  // Why the held coin of an index purchase was not bought, and which coins
+  // were: read from the purchase's own coins, since the row only says which
+  // coin is held (lib/index/held-words.ts).
+  const [heldInfo, setHeldInfo] = useState<{
+    reason: ReturnType<typeof heldReasonOfLeg>;
+    bought: string[];
+  } | null>(null);
   // Is auto-finish on? Asked only for a swap out waiting on its last swap.
   const [autopilotOn, setAutopilotOn] = useState<boolean | null>(null);
 
@@ -315,6 +330,7 @@ export function SwapDetailModal({
     let timer: ReturnType<typeof setTimeout> | undefined;
     setTransfer(null);
     setRetryNote(null);
+    setHeldInfo(null);
     setLoading(true);
 
     // LIVE VIEW, not a snapshot (#66 follow-up, observed live): this dialog
@@ -377,7 +393,9 @@ export function SwapDetailModal({
   // The swap page's keeper, when it is on this page, knows where a swap in's
   // digital dollars are and who it waits on.
   const known = useInProgress().items.find((i) => i.id === transferId);
-  const steps = transfer ? buildSteps(transfer, t, !!known?.onBase) : [];
+  const steps = transfer
+    ? buildSteps(transfer, t, !!known?.onBase, heldInfo?.reason === 'missing')
+    : [];
   // First not-yet-done step is the "active" one (unless the whole thing is done).
   // Outbound COMPLETED means "minted on Base", not "delivered" — the pivot is
   // its own step and must earn its own green (live 2026-08-26: a stuck swap
@@ -452,6 +470,38 @@ export function SwapDetailModal({
               }
             : STATUS_CHIP[transfer.status]
     : undefined;
+
+  // The held coin's reason decides what this offers: "Try again" only when its
+  // share is still at the Base address. Until it is known, no button.
+  useEffect(() => {
+    if (!transferId || !heldCoin) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/index/purchases/${transferId}`, {
+          headers: await buildAuthHeaders(),
+          credentials: 'include',
+          signal: abortTimeout(12_000),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          legs?: { symbol: string; status: string; errorDetail?: string | null }[];
+        };
+        const legs = data.legs ?? [];
+        const leg = legs.find((l) => l.status === 'HELD' && l.symbol === heldCoin);
+        if (cancelled || !leg) return;
+        setHeldInfo({
+          reason: heldReasonOfLeg(leg.errorDetail),
+          bought: legs.filter((l) => l.status === 'SENT').map((l) => l.symbol),
+        });
+      } catch {
+        /* no reason known: the button stays hidden, the step still names the coin */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [transferId, heldCoin]);
 
   // Put a held coin back in line from here (recovery reachable from wherever
   // the person already is): the same request and words as the buy page.
@@ -713,7 +763,41 @@ export function SwapDetailModal({
               {t('See where it stands')}
             </Box>
           )}
-          {heldCoin && !retrying && (
+          {heldCoin && heldInfo?.reason === 'missing' && (
+            <>
+              <Typography
+                sx={{ mt: '12px', fontSize: '13px', lineHeight: 1.5, color: 'text.secondary' }}
+              >
+                {heldWords(t, { coin: heldCoin, reason: 'missing', bought: heldInfo.bought }).body}
+              </Typography>
+              <Box
+                component={RouterLink}
+                href={paths.core.contact}
+                onClick={onClose}
+                sx={{
+                  display: 'block',
+                  boxSizing: 'border-box',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  mt: '12px',
+                  borderRadius: 'var(--radius-md)',
+                  px: '16px',
+                  py: '10px',
+                  width: '100%',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  bgcolor: INK,
+                  color: PAPER,
+                  '&:hover': { opacity: 0.85 },
+                }}
+              >
+                {t('Contact us')}
+              </Box>
+            </>
+          )}
+          {heldCoin && heldInfo?.reason === 'route' && !retrying && (
             <Box
               component="button"
               onClick={retryHeld}

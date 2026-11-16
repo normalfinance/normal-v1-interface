@@ -83,6 +83,22 @@ export const heldDetail = (symbol: string) => `${HELD_MARK}${symbol}`;
 export const heldSymbolOf = (errorDetail: string | null | undefined): string | null =>
   errorDetail?.startsWith(HELD_MARK) ? errorDetail.slice(HELD_MARK.length) || null : null;
 
+/** What a leg records when its share was not at the Base address (server/index-legs.ts). */
+export const NO_FUNDS_DETAIL = 'no USDC found on Base for this leg';
+
+/**
+ * Why a coin is held, from its leg's errorDetail.
+ * - 'route': its exchange kept failing. Its share is still digital dollars at
+ *   the person's own Base address, and trying again can buy it.
+ * - 'missing': its share was not at the Base address when its turn came (live
+ *   2026-11-11: an earlier coin had taken 5% over its share). Trying again
+ *   cannot buy it; the person needs us.
+ */
+export type HeldReason = 'route' | 'missing';
+
+export const heldReasonOfLeg = (errorDetail: string | null | undefined): HeldReason =>
+  errorDetail?.startsWith(NO_FUNDS_DETAIL) ? 'missing' : 'route';
+
 /** How the whole purchase reads, from its row and its legs. */
 export type PurchasePhase =
   | 'record' // created, nothing signed yet

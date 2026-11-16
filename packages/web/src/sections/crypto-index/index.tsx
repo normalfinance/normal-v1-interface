@@ -9,12 +9,12 @@ import type { TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
-import { mintLanded } from '@/lib/index/legs';
 import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { CCTP_DOMAIN } from '@/lib/cctp/config';
 import { RouterLink } from '@/routes/components';
 import { useFlowRun } from '@/hooks/use-flow-run';
+import { heldWords } from '@/lib/index/held-words';
 import { useNetworkStore } from '@normalfinance/state';
 import { assetDisplay } from '@/lib/portfolio/display';
 import { confirmAction } from '@/lib/auth/action-code';
@@ -24,6 +24,7 @@ import { readBridgeStatus } from '@/lib/flow/lifi-status';
 import { CoinStack } from '@/sections/indexes/index-parts';
 import { useIndexWeights } from '@/hooks/use-index-weights';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
+import { mintLanded, heldReasonOfLeg } from '@/lib/index/legs';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
@@ -35,6 +36,7 @@ import { IndexPurchasesInProgress } from '@/sections/indexes/purchases-in-progre
 import { INK, FAINT, MUTED, CANVAS, DANGER, HAIRLINE_STRONG } from '@/theme/brand-colors';
 import {
   weightLabel,
+  parseWeights,
   splitPurchase,
   purchaseVerdict,
   wireToUsdNumber,
@@ -108,6 +110,8 @@ type LegRead = {
   dstSwapTxHash: string | null;
   dstAmount: string | null;
   amountWire: string;
+  /** Why a held or waiting coin stopped (the route only returns it for those). */
+  errorDetail?: string | null;
 };
 type PurchaseRead = {
   purchase: {
@@ -139,7 +143,14 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   const network = useNetworkStore((s) => s.network);
   // Each coin’s share follows its market size (lib/index/basket.ts), read
   // from the same market data the purchase is split by.
-  const { weights, markets } = useIndexWeights(meta.def);
+  const { weights: marketShares, markets } = useIndexWeights(meta.def);
+  // The server's own split, after it refused a review whose market sizes had
+  // moved (409 weights-changed). Our market read can lag the server's (the CDN
+  // keeps it up to a minute, SWR five), so the review went back to the old
+  // split and the next try was refused again. Its split is shown and sent from
+  // then on, until a purchase is saved.
+  const [serverShares, setServerShares] = useState<IndexWeight[] | null>(null);
+  const weights = serverShares ?? marketShares;
   const weightOf = (symbol: string) => weights?.find((w) => w.symbol === symbol)?.weightBps;
   const { assets, refresh } = useWalletBalances(true);
   const flow = useFlowRun();
@@ -154,7 +165,14 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   const [setupChain, setSetupChain] = useState<TurnkeyChain | null>(null);
   const [busy, setBusy] = useState(false);
   // A coin whose exchange kept failing: its purchase and name, for Try again.
-  const [held, setHeld] = useState<{ id: string; coin: string } | null>(null);
+  // A coin that was not bought: its name, the panel's title, and whether
+  // trying again can buy it (lib/index/held-words.ts).
+  const [held, setHeld] = useState<{
+    id: string;
+    coin: string;
+    title: string;
+    canRetry: boolean;
+  } | null>(null);
   const [retryNote, setRetryNote] = useState<string | null>(null);
   const movedRef = useRef(false);
   const cancelled = useRef(false);
@@ -397,13 +415,22 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
         const legs = read?.legs ?? [];
         const heldLeg = legs.find((l) => l.status === 'HELD');
         if (heldLeg) {
-          setHeld({ id, coin: assetName(heldLeg.symbol) });
-          throw new Error(
-            t(
-              'The exchange for {{coin}} kept failing, so its share is safe as digital dollars at your own Base address. You can try it again on another route.',
-              { coin: assetName(heldLeg.symbol) }
-            )
-          );
+          // Say which coin, what did arrive, and the real reason: an exchange
+          // that kept failing (try again) or a share that was not there
+          // (contact us), never "this did not go through" for the whole buy.
+          const words = heldWords(t, {
+            coin: heldLeg.symbol,
+            reason: heldReasonOfLeg(heldLeg.errorDetail),
+            // Coins whose swap is out: bought, though delivery may still run.
+            bought: legs.filter((l) => l.status === 'SENT').map((l) => l.symbol),
+          });
+          setHeld({
+            id,
+            coin: assetName(heldLeg.symbol),
+            title: words.title,
+            canRetry: words.canRetry,
+          });
+          throw new Error(words.body);
         }
         if (refusal.reason === 'autopilot-disabled') {
           flow.handOff(
@@ -561,7 +588,16 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
         body: JSON.stringify({ amountWire: liveWire.toString(), weights: liveWeights }),
       });
       const created = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(created?.error ?? t('This purchase could not be saved.'));
+      if (!res.ok) {
+        // The market sizes moved since the review: take the server's split,
+        // so "go back to see the new split" shows it and the next try matches.
+        if (created?.code === 'weights-changed') {
+          const fresh = parseWeights(meta.def, created.weights);
+          if (fresh) setServerShares(fresh);
+        }
+        throw new Error(created?.error ?? t('This purchase could not be saved.'));
+      }
+      setServerShares(null);
       const id: string = created.purchase.id;
       purchaseId = id;
       const destAddress: string = created.purchase.destAddress;
@@ -653,6 +689,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
     info,
     t,
     follow,
+    meta.def,
   ]);
 
   // Put a held coin back in line: the server retries it on another route
@@ -1017,7 +1054,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                 review: t('Review your purchase'),
                 running: t('Buying'),
                 done: t('Purchase complete'),
-                failed: t('Purchase stopped'),
+                failed: held ? t('Not every coin was bought') : t('Purchase stopped'),
                 stopped: t('Purchase ended'),
                 'handed-off': t('On its way'),
               }}
@@ -1037,14 +1074,17 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
               ]}
               doneNote={t('Your Bitcoin, Ethereum and Solana are in your wallets.')}
               notice={retryNote ? <FlowNotice>{retryNote}</FlowNotice> : undefined}
+              failTitle={held?.title}
               failActions={
                 held
                   ? [
-                      {
-                        label: t('Try {{coin}} again', { coin: held.coin }),
-                        primary: true,
-                        onClick: () => retryHeld(held),
-                      },
+                      held.canRetry
+                        ? {
+                            label: t('Try {{coin}} again', { coin: held.coin }),
+                            primary: true,
+                            onClick: () => retryHeld(held),
+                          }
+                        : { label: t('Contact us'), primary: true, href: paths.core.contact },
                       { label: t('See it in Activity'), href: paths.activity },
                     ]
                   : movedRef.current
