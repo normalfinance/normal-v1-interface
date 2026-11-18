@@ -189,10 +189,10 @@ export function friendlyTurnkeyError(e: unknown): string {
     return lastPromptWasRestricted
       ? // We DID pin the id, yet the browser returned another one — the page
         // running the pinning code is not the page that made this request.
-        'Your browser signed with a passkey from a different account even though this one was requested — the page is running an older version. Reload it (Ctrl+Shift+R) and try again.'
+        'Your browser signed with a passkey from a different account even though this one was requested: the page is running an older version. Reload it (Ctrl+Shift+R) and try again.'
       : // No pin: the lookup failed, so every passkey on the device was on
         // offer and an older account's was used.
-        'We could not confirm which passkey belongs to this account, so your browser offered all of them and used the wrong one. Reload the page and try again — passkeys also do not carry across web addresses, so a wallet created on another address cannot sign here.';
+        'We could not confirm which passkey belongs to this account, so your browser offered all of them and used the wrong one. Reload the page and try again. Passkeys also do not carry across web addresses, so a wallet created on another address cannot sign here.';
   }
   if (
     /NotAllowedError|operation (was )?not allowed|timed out|passkey confirmation did not complete/i.test(
@@ -221,13 +221,13 @@ export function friendlyTurnkeyError(e: unknown): string {
       // live 2026-08-22, and it cost real debugging time. So point at the
       // account row explicitly, and only then at the phone.
       return lastTransports.includes('hybrid')
-        ? 'Pick the entry listed under "On this device" (your email, saved in Google Password Manager) — not "Use a phone, tablet or security key", which leads to a USB prompt this wallet cannot use. If your email is not listed there, open this page on the phone signed in to that Google account.'
-        : 'This device does not have the passkey for this account — use the device you set the wallet up on, or dismiss and try again if you cancelled the prompt.';
+        ? 'Pick the entry listed under "On this device" (your email, saved in Google Password Manager), not "Use a phone, tablet or security key", which leads to a USB prompt this wallet cannot use. If your email is not listed there, open this page on the phone signed in to that Google account.'
+        : 'This device does not have the passkey for this account. Use the device you set the wallet up on, or dismiss and try again if you cancelled the prompt.';
     }
     return 'The passkey prompt was dismissed or timed out. Try again and confirm with your fingerprint, face or device PIN.';
   }
   if (/InvalidStateError|already registered/i.test(raw)) {
-    return 'This device already has a passkey for this account — use it to continue instead of creating a new one.';
+    return 'This device already has a passkey for this account. Use it to continue instead of creating a new one.';
   }
   if (/NotSupportedError|not supported/i.test(raw)) {
     return 'This browser or device cannot use passkeys. Try another browser, or a device with fingerprint/face unlock.';
@@ -236,7 +236,7 @@ export function friendlyTurnkeyError(e: unknown): string {
     return 'This site cannot use your passkey here (domain mismatch). If you are on a preview or test URL, use the main app address.';
   }
   if (/rate ?limit|429/i.test(raw)) {
-    return 'Too many attempts in a row — wait a moment and try again.';
+    return 'Too many attempts in a row. Wait a moment and try again.';
   }
   return raw;
 }

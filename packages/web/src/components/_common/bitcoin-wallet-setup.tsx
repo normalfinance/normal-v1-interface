@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ensureChainAccount } from '@/lib/turnkey/add-account';
+import { FAINT, DANGER, BRAND_COLORS } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -53,12 +54,12 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
           width: '100%',
           py: '13px',
           px: '20px',
-          borderRadius: '14px',
+          borderRadius: 'var(--radius-md)',
           border: '1px solid rgba(247,147,26,0.25)',
           bgcolor: 'rgba(247,147,26,0.06)',
-          color: '#B45309',
+          color: BRAND_COLORS.yellow.deep,
           fontSize: '14px',
-          fontWeight: 600,
+          fontWeight: 500,
           fontFamily: 'inherit',
           cursor: loading ? 'not-allowed' : 'pointer',
           opacity: loading ? 0.7 : 1,
@@ -70,9 +71,9 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
         }}
       >
         {loading ? (
-          <CircularProgress size={16} sx={{ color: '#B45309' }} />
+          <CircularProgress size={16} sx={{ color: BRAND_COLORS.yellow.deep }} />
         ) : (
-          <FingerprintIcon sx={{ fontSize: 18, color: '#B45309' }} />
+          <FingerprintIcon sx={{ fontSize: 18, color: BRAND_COLORS.yellow.deep }} />
         )}
         {loading ? 'Setting up…' : 'Set up Bitcoin wallet'}
       </Box>
@@ -80,7 +81,7 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
       <Box
         sx={{
           fontSize: '11.5px',
-          color: 'rgba(10,10,15,0.4)',
+          color: FAINT,
           textAlign: 'center',
           lineHeight: 1.5,
         }}
@@ -92,10 +93,10 @@ export function BitcoinWalletSetup({ userEmail, userId, onSuccess }: BitcoinWall
         <Box
           sx={{
             fontSize: '12px',
-            color: '#B91C1C',
+            color: DANGER,
             bgcolor: 'rgba(185,28,28,0.06)',
             border: '1px solid rgba(185,28,28,0.15)',
-            borderRadius: '10px',
+            borderRadius: 'var(--radius-md)',
             px: '12px',
             py: '8px',
           }}

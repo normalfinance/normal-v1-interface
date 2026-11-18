@@ -16,6 +16,10 @@
     "NEXT_PUBLIC_CDN_URL",
     "CDN_ORIGIN",
 
+    // Oldest app build the API supports (server only, /api/app/min-version)
+    "APP_MIN_BUILD_IOS",
+    "APP_MIN_BUILD_ANDROID",
+
     // Stripe fiat-to-crypto onramp (server only)
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
@@ -63,6 +67,7 @@
 
     // CloudFlare
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+    "NEXT_PUBLIC_TWO_FACTOR_ENABLED",
 
     // Missing
     "POSTHOG_TESTNET_ENV_ID",
@@ -109,6 +114,9 @@
     "AUTOPILOT_MAX_DAILY_USD",
     "AUTOPILOT_MAX_TX_USD",
     "NEXT_PUBLIC_AUTOPILOT_PUBLIC_KEY",
+
+    // Crypto index (ships off; lib/index/flag.ts)
+    "NEXT_PUBLIC_INDEX_ENABLED",
 
     // CCTP bridge + relayer
     "CCTP_PILOT_MAX_USD",

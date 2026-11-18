@@ -3,6 +3,13 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { getAccessToken } from '@/utils/http';
 import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
+import {
+  needsActionCode,
+  needsSecondFactor,
+  MFA_REQUIRED_ERROR,
+  ACTION_CODE_REQUIRED_ERROR,
+  ACTION_CODE_EXPIRED_MESSAGE,
+} from '@/lib/auth/two-factor';
 
 // ---------------------------------------------------------------------------
 // Authentication as the DEFAULT for API routes, not something each route must
@@ -24,6 +31,11 @@ import { getAuthenticatedUser } from '@/lib/createSupabaseServerClient';
 // deduplicated path, so the wrapper adds no meaningful latency on top of what
 // authed routes already paid.
 //
+// Two-factor sign-in is enforced here for the same reason: one check that no
+// route can forget. Hiding screens in the browser would stop nobody calling the
+// API directly, and the enrol-a-passkey routes are exactly what an attacker
+// holding someone's inbox would call.
+//
 // Route inventory + migration status: docs/audit/50-ci-and-withauth-plan.md.
 // ---------------------------------------------------------------------------
 
@@ -40,7 +52,16 @@ export interface AuthedContext {
 
 type AuthedHandler = (request: NextRequest, context: AuthedContext) => Promise<Response> | Response;
 
-export function withAuth(handler: AuthedHandler) {
+type WithAuthOptions = {
+  /**
+   * Lets a login that still owes its 6-digit code through. Only the recovery
+   * route may set this (route-auth-conformance enforces it): someone who lost
+   * their authenticator has no other way to prove who they are.
+   */
+  allowPartialLogin?: boolean;
+};
+
+export function withAuth(handler: AuthedHandler, options: WithAuthOptions = {}) {
   return async (
     request: NextRequest,
     routeContext?: { params?: Record<string, string> }
@@ -50,6 +71,28 @@ export function withAuth(handler: AuthedHandler) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    // 403, not 401: this session is valid, and authedFetch treats a 401 as an
+    // expired session to refresh and report.
+    if (!options.allowPartialLogin && needsSecondFactor(user, accessToken)) {
+      return NextResponse.json({ error: MFA_REQUIRED_ERROR }, { status: 403 });
+    }
     return handler(request, { user, params: routeContext?.params ?? {}, accessToken });
   };
+}
+
+/**
+ * The first line of every route that spends. An account with 2FA enters its code
+ * before each action, so a token whose code is old never came through that
+ * screen. Called in the handler, not an option on withAuth, because some routes
+ * only need it for part of what they do. route-auth-conformance lists them.
+ */
+export function actionCodeRefusal(
+  user: AuthedUser,
+  accessToken: string | undefined
+): Response | null {
+  if (!needsActionCode(user, accessToken)) return null;
+  return NextResponse.json(
+    { success: false, error: ACTION_CODE_EXPIRED_MESSAGE, code: ACTION_CODE_REQUIRED_ERROR },
+    { status: 403 }
+  );
 }

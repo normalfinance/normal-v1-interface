@@ -1,11 +1,13 @@
 'use client';
 
 import type { ChainId } from '@/lib/chains/registry';
+import type { BridgeProgress } from '@/lib/flow/lifi-status';
 
 import { useSnackbar } from 'notistack';
 import { logger } from '@/utils/logger';
 import { buildAuthHeaders } from '@/utils/http';
 import { useRef, useState, useEffect } from 'react';
+import { readBridgeStatus } from '@/lib/flow/lifi-status';
 import { ETH_RPC_URLS, SOL_RPC_URLS } from '@/lib/chains/rpc-fallback';
 import { clearSwapOutflow, registerSwapOutflow } from '@/lib/spendable';
 import { registerLifiStatusOverride } from '@/lib/lifi/status-overrides';
@@ -140,7 +142,8 @@ async function pollBridge(
   txHash: string,
   fromChainId: number,
   toChainId: number,
-  stop: () => boolean
+  stop: () => boolean,
+  onPoll?: (progress: BridgeProgress) => void
 ): Promise<'DONE' | 'FAILED' | 'REFUNDED' | null> {
   for (let i = 0; i < 80 && !stop(); i++) {
     try {
@@ -150,6 +153,8 @@ async function pollBridge(
       );
       if (res.ok) {
         const data = await res.json();
+        // Every reading, for the page: where the bridge has the money now.
+        onPoll?.(readBridgeStatus(data?.status));
         const s = data?.status?.status as string | undefined;
         const sub = String(data?.status?.substatus ?? '').toUpperCase();
         log('bridge status', `${s} / ${sub}`);
@@ -178,6 +183,10 @@ export interface LifiTrackerHandlers {
    * looks like lost funds.
    */
   onArrival?: () => Promise<void> | void;
+  /** The sending chain confirmed the transaction: the bridge has the money. */
+  onSourceConfirmed?: () => void;
+  /** Every status reading from the bridge, for the review page's steps. */
+  onBridge?: (progress: BridgeProgress) => void;
 }
 
 // Safety valve for onArrival: the funds ARE on-chain once the bridge says
@@ -240,6 +249,7 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
         return;
       }
       log('source confirmed');
+      handlersRef.current.onSourceConfirmed?.();
 
       // 2) Record now (source landed) so it shows as one Swap row, then refresh.
       // Doc 90 W2: the record is the swap's ONLY activity row — funds left
@@ -262,7 +272,9 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
 
       // 3) Track the bridge until it delivers.
       setStage('bridging');
-      const bridge = await pollBridge(txHash, fromChainId, toChainId, stop);
+      const bridge = await pollBridge(txHash, fromChainId, toChainId, stop, (p) =>
+        handlersRef.current.onBridge?.(p)
+      );
       if (cancelled) return;
       const final: Stage =
         bridge === 'DONE'
@@ -309,7 +321,7 @@ export function useLifiTracker(tx: LifiTrackedTx | null, handlers: LifiTrackerHa
         // own address and the activity row keeps tracking delivery.
         log('bridge still pending after poll budget — honest handoff');
         enqueueSnackbar(
-          `Your ${toSymbol} is still on its way — this route can take a while. It arrives automatically; you can track it in Activity.`,
+          `Your ${toSymbol} is still on its way. This route can take a while. It arrives automatically; you can track it in Activity.`,
           { variant: 'info', autoHideDuration: 12000 }
         );
       }

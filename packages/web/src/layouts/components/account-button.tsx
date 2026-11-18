@@ -1,15 +1,12 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import { m } from 'framer-motion';
+import { PAPER } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import NoSsr from '@mui/material/NoSsr';
 import Avatar from '@mui/material/Avatar';
 import SvgIcon from '@mui/material/SvgIcon';
 import IconButton from '@mui/material/IconButton';
-
-import { varTap, varHover, transitionTap } from '@/components/template/animate';
-
 // ----------------------------------------------------------------------
 
 export type AccountButtonProps = IconButtonProps & {
@@ -41,10 +38,6 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
 
   return (
     <IconButton
-      component={m.button}
-      whileTap={varTap(0.96)}
-      whileHover={varHover(1.04)}
-      transition={transitionTap()}
       aria-label="Account button"
       sx={[{ p: 0 }, ...(Array.isArray(sx) ? sx : [sx])]}
       {...other}
@@ -56,12 +49,8 @@ export function AccountButton({ photoURL, displayName, sx, ...other }: AccountBu
             borderRadius: '50%',
             width: 40,
             height: 40,
-            background: 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(16px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(16px) saturate(160%)',
-            border: '1px solid rgba(10,10,15,0.08)',
-            boxShadow:
-              '0 1px 0 rgba(255,255,255,0.9) inset, 0 10px 32px rgba(10,10,15,0.07), 0 2px 6px rgba(10,10,15,0.04)',
+            background: PAPER,
+            border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
           }}
         >
           <Avatar src={photoURL} alt={displayName} sx={{ width: 1, height: 1 }}>

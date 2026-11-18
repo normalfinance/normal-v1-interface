@@ -11,6 +11,7 @@ import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { createStellarExpertUrl } from '@/utils/transactions.utils';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { logger, isTestnet, createCoinbasePayOnrampURL } from '@normalfinance/utils';
+import { INK, WELL, FAINT, MUTED, PAPER, CANVAS, INK_SOFT } from '@/theme/brand-colors';
 
 import {
   Box,
@@ -160,9 +161,9 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
     <Box
       sx={{
         p: '16px',
-        borderRadius: '16px',
-        bgcolor: '#FAFAFB',
-        border: '1px solid rgba(10,10,15,0.08)',
+        borderRadius: 'var(--radius-lg)',
+        bgcolor: WELL,
+        border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -170,17 +171,17 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
       }}
     >
       {isGeneratingQR ? (
-        <CircularProgress size={36} sx={{ color: 'rgba(10,10,15,0.3)' }} />
+        <CircularProgress size={36} sx={{ color: FAINT }} />
       ) : qrCodeUrl ? (
         <Box
           component="img"
           src={qrCodeUrl}
           alt="Wallet Address QR Code"
-          sx={{ maxWidth: '100%', height: 'auto', borderRadius: '4px' }}
+          sx={{ maxWidth: '100%', height: 'auto', borderRadius: 'var(--radius-xs)' }}
         />
       ) : (
-        <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.4)' }}>
-          {t('QR unavailable — copy the address below.')}
+        <Typography sx={{ fontSize: '13px', color: FAINT }}>
+          {t('QR unavailable. Copy the address below.')}
         </Typography>
       )}
     </Box>
@@ -194,9 +195,9 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         sx={{
           px: '14px',
           py: '12px',
-          borderRadius: '12px',
-          bgcolor: '#FAFAFB',
-          border: '1px solid rgba(10,10,15,0.08)',
+          borderRadius: 'var(--radius-md)',
+          bgcolor: WELL,
+          border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
           width: '100%',
           wordBreak: 'break-all',
         }}
@@ -204,8 +205,8 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         <Typography
           sx={{
             fontSize: '12px',
-            color: '#0A0A0F',
-            fontFamily: '"Geist Mono", "Courier New", monospace',
+            color: INK,
+            fontFamily: '"Geist Mono", ui-monospace, monospace',
             lineHeight: 1.6,
           }}
         >
@@ -224,16 +225,16 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
             gap: '6px',
             px: '14px',
             py: '8px',
-            borderRadius: '10px',
-            border: '1px solid rgba(10,10,15,0.12)',
-            bgcolor: '#FFFFFF',
-            color: '#0A0A0F',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid rgba(var(--nf-ink-rgb),0.14)',
+            bgcolor: PAPER,
+            color: INK,
             fontSize: '13px',
             fontWeight: 500,
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'background 150ms ease',
-            '&:hover': { bgcolor: '#F4F4F7' },
+            '&:hover': { bgcolor: CANVAS },
           }}
         >
           <Iconify icon="solar:copy-outline" width={15} />
@@ -249,16 +250,16 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
             gap: '6px',
             px: '14px',
             py: '8px',
-            borderRadius: '10px',
-            border: '1px solid rgba(10,10,15,0.12)',
-            bgcolor: '#FFFFFF',
-            color: '#0A0A0F',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid rgba(var(--nf-ink-rgb),0.14)',
+            bgcolor: PAPER,
+            color: INK,
             fontSize: '13px',
             fontWeight: 500,
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'background 150ms ease',
-            '&:hover': { bgcolor: '#F4F4F7' },
+            '&:hover': { bgcolor: CANVAS },
           }}
         >
           <Iconify icon="eva:external-link-outline" width={15} />
@@ -267,7 +268,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
       </Stack>
 
       <Divider sx={{ width: '100%' }}>
-        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.4)' }}>{t('or')}</Typography>
+        <Typography sx={{ fontSize: '12px', color: FAINT }}>{t('or')}</Typography>
       </Divider>
 
       {/* Coinbase CTA */}
@@ -288,15 +289,15 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
           )
         }
         sx={{
-          borderRadius: '12px',
-          bgcolor: '#0A0A0F',
-          fontWeight: 700,
+          borderRadius: 'var(--radius-md)',
+          bgcolor: INK,
+          fontWeight: 500,
           fontSize: '15px',
           py: '13px',
           textTransform: 'none',
           letterSpacing: '-0.01em',
-          '&:hover': { bgcolor: '#1a1a25' },
-          '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+          '&:hover': { bgcolor: INK_SOFT },
+          '&.Mui-disabled': { bgcolor: 'rgba(var(--nf-ink-rgb),0.08)', color: FAINT },
         }}
       >
         {isCoinbaseLoading ? t('Opening Coinbase…') : t('Buy XLM via Coinbase')}
@@ -310,7 +311,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
     >
       <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box
@@ -325,8 +326,8 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
           <Typography
             sx={{
               fontSize: '17px',
-              fontWeight: 700,
-              color: '#0A0A0F',
+              fontWeight: 500,
+              color: INK,
               letterSpacing: '-0.02em',
               textAlign: 'center',
             }}
@@ -341,17 +342,17 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
               right: 0,
               width: 28,
               height: 28,
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: 'rgba(10,10,15,0.06)',
-              color: '#0A0A0F',
+              bgcolor: 'rgba(var(--nf-ink-rgb),0.06)',
+              color: INK,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               fontFamily: 'inherit',
               transition: 'background 150ms ease',
-              '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+              '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.1)' },
             }}
           >
             <Iconify icon="mingcute:close-line" width={16} />
@@ -359,16 +360,12 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         </Box>
 
         {!isCheckingAccount && accountExists && (
-          <Typography
-            sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}
-          >
+          <Typography sx={{ fontSize: '13px', color: MUTED, textAlign: 'center', mt: '4px' }}>
             {t('Scan the QR code or copy your account ID below')}
           </Typography>
         )}
         {!isCheckingAccount && !accountExists && !accountStatusError && (
-          <Typography
-            sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}
-          >
+          <Typography sx={{ fontSize: '13px', color: MUTED, textAlign: 'center', mt: '4px' }}>
             {t(
               isReceiveContext
                 ? 'Activate your Stellar account first, then receive other Stellar assets'
@@ -382,8 +379,8 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
         {/* Loading */}
         {isCheckingAccount && (
           <Stack alignItems="center" justifyContent="center" sx={{ py: '32px' }}>
-            <CircularProgress size={32} sx={{ color: 'rgba(10,10,15,0.3)' }} />
-            <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', mt: '12px' }}>
+            <CircularProgress size={32} sx={{ color: FAINT }} />
+            <Typography sx={{ fontSize: '13px', color: MUTED, mt: '12px' }}>
               {t('Checking account status...')}
             </Typography>
           </Stack>
@@ -396,13 +393,13 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
               sx={{
                 px: '14px',
                 py: '12px',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: 'rgba(239,68,68,0.05)',
                 border: '1px solid rgba(239,68,68,0.15)',
                 width: '100%',
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
+              <Typography sx={{ fontSize: '13px', color: INK_SOFT, lineHeight: 1.55 }}>
                 {t(
                   'We could not check your Stellar account right now. Please try again in a moment.'
                 )}
@@ -417,15 +414,15 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
                 gap: '6px',
                 px: '14px',
                 py: '8px',
-                borderRadius: '10px',
-                border: '1px solid rgba(10,10,15,0.12)',
-                bgcolor: '#FFFFFF',
-                color: '#0A0A0F',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid rgba(var(--nf-ink-rgb),0.14)',
+                bgcolor: PAPER,
+                color: INK,
                 fontSize: '13px',
                 fontWeight: 500,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                '&:hover': { bgcolor: '#F4F4F7' },
+                '&:hover': { bgcolor: CANVAS },
               }}
             >
               <Iconify icon="solar:copy-outline" width={15} />
@@ -441,18 +438,16 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
               sx={{
                 px: '14px',
                 py: '12px',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: 'rgba(59,130,246,0.05)',
                 border: '1px solid rgba(59,130,246,0.15)',
                 width: '100%',
               }}
             >
-              <Typography
-                sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55, mb: '6px' }}
-              >
+              <Typography sx={{ fontSize: '13px', color: INK_SOFT, lineHeight: 1.55, mb: '6px' }}>
                 {t('This Stellar account is not active on-chain yet.')}
               </Typography>
-              <Typography sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.7)', lineHeight: 1.55 }}>
+              <Typography sx={{ fontSize: '13px', color: INK_SOFT, lineHeight: 1.55 }}>
                 {t(
                   'Send at least 1 XLM to this account ID first. Once the account is funded, you can receive USDC and other Stellar assets here.'
                 )}
@@ -491,7 +486,7 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
                 gap: '8px',
                 px: '12px',
                 py: '10px',
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-md)',
                 bgcolor: 'rgba(245,158,11,0.06)',
                 border: '1px solid rgba(245,158,11,0.2)',
                 width: '100%',
@@ -502,9 +497,9 @@ export default function ReceiveModal({ open, onClose, context = 'deposit' }: Rec
                 width={15}
                 sx={{ color: 'warning.main', flexShrink: 0 }}
               />
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.5 }}>
+              <Typography sx={{ fontSize: '12px', color: INK_SOFT, lineHeight: 1.5 }}>
                 {t(
-                  'This is a Stellar address — only send assets on the Stellar network here (XLM, USDC). Assets sent from other networks cannot be recovered.'
+                  'This is a Stellar address. Only send assets on the Stellar network here (XLM, USDC). Assets sent from other networks cannot be recovered.'
                 )}
               </Typography>
             </Box>

@@ -63,12 +63,21 @@ Routes the app needs (path under `/api/`):
   (errors: `no_wallet` / `no_email` / `email_mismatch` / `too_many_authenticators` 409,
   `invalid_code` / `login_failed` / `bad_request` 400, `not_found` 404, `turnkey_error` 502), `turnkey/btc-pubkey`, `turnkey/build-btc-tx`,
   `turnkey/broadcast-btc`, `turnkey/import`, `turnkey/import-init`, `wallets/check-limit`,
-  `wallets/link`, `wallets/linked`.
+  `wallets/link`, `wallets/linked`. Since 2026-11-04 linking any address other than the user's own
+  Normal wallet needs proof: `POST wallets/link/challenge { walletAddress }` returns
+  `{ required, challengeXdr, networkPassphrase }`; the wallet signs `challengeXdr` (sequence 0, never
+  submittable) and `POST wallets/link` sends `{ walletAddress, walletName?, signedChallengeXdr }`.
+  Without it: 403 `ownership_proof_required` / `_expired` / `_invalid`. The challenge lasts 5 minutes
+  and works once.
 - **Portfolio / activity**: `wallet/portfolio`, `wallet/activity`, `portfolio/activity`,
   `activity/{bitcoin|ethereum|solana|stellar}`, `prices/history`.
 - **Savings**: `savings/vault-info`, `savings/user-position`, `savings/deposit`,
-  `savings/withdraw`, `savings/log-transaction`, `savings/earnings-history`.
-- **Swap**: `swap/quote` (Soroswap), `swap/submit-single`, `swap/log-transaction`,
+  `savings/withdraw`, `savings/earnings-history`. (`savings/log-transaction` and
+  `swap/log-transaction` were removed 2026-11-04: they wrote amounts from the request body. The
+  server records both from the signed transactions in `fees/execute-pair` and
+  `swap/submit-single`, which accept the transaction's own valid signature as proof of the wallet,
+  so a connected wallet needs no link.)
+- **Swap**: `swap/quote` (Soroswap), `swap/submit-single`,
   `lifi/quote`, `lifi/status`, `lifi/statuses`, `lifi/record`,
   `cctp/quote`, `cctp/transfers` (POST create / GET list, `?history=1`),
   `cctp/transfers/[id]` (GET advances the state machine; `?noAdvance=1` for a fast read;
@@ -228,3 +237,42 @@ or simply create a fresh account from the app.
   `POST /api/turnkey/wallet` already expects. Same route, no server change.
 - Extract a shared `core` package from `packages/web` (API client, engines, signers) so web
   and mobile share one implementation.
+
+## Two-factor sign-in (web shipped first; the app must add this before any public release)
+
+Added 2026-10-31. Accounts can turn on authenticator-app 2FA on the web (Supabase TOTP). **The app has
+no code screen yet, so a user with 2FA on gets `403 { "error": "mfa_required" }` from every private
+route.** Installed apps can't be force-updated, so this ships in the app before a public release.
+
+- **Detect:** after any sign-in call `supabase.auth.mfa.getAuthenticatorAssuranceLevel()`. If
+  `nextLevel === 'aal2'` and `currentLevel === 'aal1'`, show the code screen before anything else.
+  Treat `403 mfa_required` from the API the same way (2FA may have been turned on elsewhere).
+- **Verify:** `supabase.auth.mfa.listFactors()` then `mfa.challengeAndVerify({ factorId: data.totp[0].id,
+  code })`. Supabase saves the upgraded session itself.
+- **Lost phone:** `POST /api/auth/two-factor/recover` with `{ code }` and the bearer token. This is the
+  one route that works before the code. 200 means 2FA is gone and every session ended, so sign in again.
+  (The route signs out globally itself: deleting a factor alone only drops sessions to aal1.)
+  400 `invalid_code`, 429 too many tries, 503 nothing changed. Never add an email-based reset: a stolen
+  inbox is what 2FA stops.
+- **Turning it on in the app:** `mfa.enroll({ factorType: 'totp', friendlyName: 'Authenticator app',
+  issuer: 'Normal' })`. On a phone show `totp.uri` as an "open in authenticator" link, since a QR code
+  can't be scanned on its own screen. Then `POST /api/auth/two-factor/recovery-codes` and show the codes once.
+- **Saving the phrase first:** the web requires the recovery phrase to be saved for every wallet before
+  turning 2FA on, because it's the only way back for someone who loses their phone and recovery codes.
+  Do the same on the phone.
+- **The code before every action:** an account with 2FA enters a fresh code before each send, swap,
+  deposit, withdrawal, cash-out, phrase export and autopilot grant. Call `mfa.challengeAndVerify` as above
+  at the start of the action, once per press, not per signature. Accounts without 2FA skip this.
+  `cctp/transfers`, `fees/execute-pair`, `savings/deposit`, `savings/withdraw`, `send/execute`,
+  `send/stellar`, `swap/submit-single`, `turnkey/broadcast-btc` and `turnkey/build-btc-tx` refuse a code
+  older than 5 minutes with `403 { "code": "action_code_required", "error": "<message to show>" }`, having
+  sent nothing. CCTP refunds, finishing a swap and autopilot never ask, so a lost phone can't strand funds.
+  2FA accounts submit Stellar sends through `POST /api/send/stellar` with `{ signedXdr }` instead of going
+  straight to Horizon. Answers: 200 `{ hash }`; 400 `{ resultCodes }`; 502 means no verdict, so check the
+  chain before retrying.
+- **Passkey emails:** `notifyNewDevice` still only logs. It's deferred to the mobile work; Supabase can't
+  send it because passkeys live in Turnkey, so use the same email provider as Supabase's SMTP.
+- **Oldest supported build:** `GET /api/app/min-version` (public) answers `{ ios, android }`, the lowest
+  build number (iOS CFBundleVersion, Android versionCode) the API still supports. The app reads it on
+  launch and on foreground and shows "Update Normal" when its own build is lower; a failed read blocks
+  nothing. Set with `APP_MIN_BUILD_IOS` / `APP_MIN_BUILD_ANDROID`; unset or not a whole number means 0.

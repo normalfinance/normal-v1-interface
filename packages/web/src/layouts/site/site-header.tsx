@@ -1,0 +1,460 @@
+'use client';
+
+import { ease } from '@/theme/motion';
+import { paths } from '@/routes/paths';
+import { usePathname } from '@/routes/hooks';
+import { RouterLink } from '@/routes/components';
+import { useRef, useState, useEffect } from 'react';
+import { INK, HOVER, MUTED, PAPER, CANVAS } from '@/theme/brand-colors';
+
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+import MenuRounded from '@mui/icons-material/MenuRounded';
+import CloseRounded from '@mui/icons-material/CloseRounded';
+import ExpandMoreRounded from '@mui/icons-material/ExpandMoreRounded';
+
+import { Logo } from '@/components/template/logo';
+import { FrameLines } from '@/components/_common/frame-lines';
+import { Eyebrow, HAIRLINE, COLUMN_SX, GUTTER_SX, INK_BUTTON_SX } from '@/components/_common/brand';
+
+import { menusFor, navLinksFor } from './site-nav';
+import { ThemeToggleButton } from './theme-toggle';
+import { useSessionHint } from './use-session-hint';
+import { SiteMobileMenu } from './site-mobile-menu';
+
+import type { SessionHint } from './use-session-hint';
+import type { NavMenu, SiteLink, NavMenuLink } from './site-nav';
+
+// ----------------------------------------------------------------------
+
+const NAV_BUTTON_SX = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '2px',
+  minWidth: 0,
+  px: '12px',
+  py: '6px',
+  fontSize: 14,
+  fontWeight: 500,
+  color: INK,
+  borderRadius: 'var(--radius-md)',
+  transition: ease('background-color', 'quick'),
+  '&:hover': { bgcolor: HOVER },
+} as const;
+
+/** A link that may leave the site: external ones open in a new tab. */
+const linkProps = (link: SiteLink) =>
+  link.external
+    ? { href: link.href, target: '_blank', rel: 'noopener noreferrer' }
+    : { component: RouterLink, href: link.href };
+
+// ----------------------------------------------------------------------
+
+function MenuLinkRow({ link, onNavigate }: { link: NavMenuLink; onNavigate: () => void }) {
+  const Icon = link.icon;
+
+  return (
+    <Box
+      component="a"
+      {...linkProps(link)}
+      onClick={onNavigate}
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        px: '12px',
+        py: '9px',
+        color: 'inherit',
+        textDecoration: 'none',
+        borderRadius: 'var(--radius-md)',
+        transition: ease('background-color', 'quick'),
+        '&:hover': { bgcolor: HOVER },
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          width: 34,
+          height: 34,
+          border: HAIRLINE,
+          borderRadius: 'var(--radius-md)',
+          bgcolor: CANVAS,
+        }}
+      >
+        <Icon sx={{ fontSize: 18, color: INK }} />
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ fontSize: 14, fontWeight: 500, color: INK }}>{link.label}</Typography>
+        <Typography sx={{ fontSize: 12.5, color: MUTED }}>{link.description}</Typography>
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * The dropdown's foot: a dark block, never plain white or grey (Niko
+ * 2026-11-10: "maybe the blocks in dropdown should just be dark"). Ink with
+ * page-coloured words and a page-coloured button; the tokens swap in dark
+ * mode, so it stays the strongest thing in the dropdown there too.
+ */
+function MenuBanner({ banner, onNavigate }: { banner: NavMenu['banner']; onNavigate: () => void }) {
+  const surface = INK;
+  const words = PAPER;
+
+  if (banner.image) {
+    return (
+      <Box
+        component="a"
+        {...linkProps(banner)}
+        onClick={onNavigate}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          p: '12px 14px',
+          color: words,
+          bgcolor: surface,
+          textDecoration: 'none',
+          borderTop: HAIRLINE,
+          '&:hover .nf-banner-title': { textDecoration: 'underline' },
+        }}
+      >
+        <Box
+          component="img"
+          src={banner.image}
+          alt=""
+          sx={{
+            width: 60,
+            height: 42,
+            flexShrink: 0,
+            objectFit: 'cover',
+            borderRadius: 'var(--radius-sm)',
+          }}
+        />
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            className="nf-banner-title"
+            sx={{ fontSize: 13.5, fontWeight: 500, color: 'inherit' }}
+          >
+            {banner.title}
+          </Typography>
+          {banner.meta && (
+            <Typography sx={{ fontSize: 12, color: 'inherit' }}>{banner.meta}</Typography>
+          )}
+        </Box>
+      </Box>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 2,
+        p: '14px 16px',
+        borderTop: HAIRLINE,
+        color: words,
+        bgcolor: surface,
+      }}
+    >
+      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+        <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'inherit' }}>
+          {banner.title}
+        </Typography>
+        {banner.subtitle && (
+          <Typography sx={{ fontSize: 12.5, color: 'inherit' }}>{banner.subtitle}</Typography>
+        )}
+      </Box>
+      <Button
+        {...linkProps(banner)}
+        onClick={onNavigate}
+        variant="contained"
+        size="small"
+        sx={[
+          INK_BUTTON_SX,
+          // On the dark block: a page-coloured button with an ink word.
+          { color: surface, bgcolor: words, '&:hover': { bgcolor: words, opacity: 0.88 } },
+        ]}
+      >
+        {banner.label}
+      </Button>
+    </Box>
+  );
+}
+
+function MenuGroups({ menu, onNavigate }: { menu: NavMenu; onNavigate: () => void }) {
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: { md: 'repeat(2, 1fr)' }, gap: 0.5, p: 1 }}>
+      {menu.groups.map((group) => (
+        <Box key={group.title}>
+          <Eyebrow sx={{ px: '12px', pt: 1, pb: 0.5, color: MUTED }}>{group.title}</Eyebrow>
+          {group.links.map((link) => (
+            <MenuLinkRow key={link.label} link={link} onNavigate={onNavigate} />
+          ))}
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+/** The dropdown under a menu button. It fades in place on the shared curve; nothing slides. */
+function Dock({
+  open,
+  menu,
+  onNavigate,
+}: {
+  open: boolean;
+  menu: NavMenu;
+  onNavigate: () => void;
+}) {
+  return (
+    <Box
+      sx={{
+        position: 'absolute',
+        top: 'calc(100% + 8px)',
+        left: 0,
+        zIndex: (theme) => theme.zIndex.appBar + 1,
+        width: 520,
+        overflow: 'hidden',
+        border: HAIRLINE,
+        borderRadius: 'var(--radius-lg)',
+        bgcolor: PAPER,
+        opacity: open ? 1 : 0,
+        visibility: open ? 'visible' : 'hidden',
+        transition: ease(['opacity', 'visibility'], 'quick'),
+      }}
+    >
+      <MenuGroups menu={menu} onNavigate={onNavigate} />
+      <MenuBanner banner={menu.banner} onNavigate={onNavigate} />
+    </Box>
+  );
+}
+
+function Avatar({ session, size = 22 }: { session: SessionHint; size?: number }) {
+  if (session.avatarUrl) {
+    return (
+      <Box
+        component="img"
+        src={session.avatarUrl}
+        alt=""
+        sx={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover' }}
+      />
+    );
+  }
+
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        fontSize: Math.round(size * 0.5),
+        fontWeight: 500,
+        color: INK,
+        bgcolor: PAPER,
+      }}
+    >
+      {(session.name ?? 'N').trim().charAt(0).toUpperCase()}
+    </Box>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+/**
+ * The marketing header: the mark, the Product and Resources dropdowns, and on
+ * the right either sign-in or, when signed in, the way back to the dashboard
+ * with the user's avatar on it; the light/dark switch beside it. A solid
+ * page-coloured bar: nothing scrolls under it.
+ */
+export function SiteHeader() {
+  const session = useSessionHint();
+  const pathname = usePathname();
+  const headerRef = useRef<HTMLElement>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const menus = menusFor(session.signedIn);
+  const navLinks = navLinksFor(session.signedIn);
+  // The phone menu lists the dropdowns' links too: a plain link already in
+  // them (Savings) is not shown twice.
+  const menuHrefs = new Set(
+    menus.flatMap((menu) => menu.groups.flatMap((g) => g.links.map((l) => l.href)))
+  );
+  const phoneLinks = navLinks.filter((link) => !menuHrefs.has(link.href));
+
+  const closeAll = () => {
+    setOpenMenu(null);
+    setMobileOpen(false);
+  };
+
+  useEffect(() => {
+    setOpenMenu(null);
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // The phone menu covers the page: the page under it stays still, and
+  // Escape closes it.
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!openMenu) return undefined;
+    const onPointer = (event: MouseEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) setOpenMenu(null);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenMenu(null);
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [openMenu]);
+
+  const primary = session.signedIn ? (
+    <Button
+      component={RouterLink}
+      href={paths.portfolio}
+      variant="contained"
+      size="medium"
+      startIcon={<Avatar session={session} />}
+      sx={INK_BUTTON_SX}
+    >
+      Dashboard
+    </Button>
+  ) : (
+    <Button
+      component={RouterLink}
+      href={paths.auth.signup}
+      variant="contained"
+      size="medium"
+      sx={INK_BUTTON_SX}
+    >
+      Open account
+    </Button>
+  );
+
+  return (
+    <Box
+      ref={headerRef}
+      component="header"
+      sx={{
+        position: 'sticky',
+        top: 0,
+        zIndex: (theme) => theme.zIndex.appBar,
+        bgcolor: PAPER,
+        borderBottom: HAIRLINE,
+      }}
+    >
+      <FrameLines />
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          height: { xs: 64, md: 72 },
+          ...COLUMN_SX,
+          ...GUTTER_SX,
+        }}
+      >
+        <Logo sx={{ width: 32, height: 32, mr: { md: 2 } }} onClick={closeAll} />
+
+        <Box
+          component="nav"
+          aria-label="Main"
+          sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.5 }}
+        >
+          {menus.map((menu) => {
+            const open = openMenu === menu.label;
+            return (
+              <Box key={menu.label} sx={{ position: 'relative' }}>
+                <Button
+                  aria-expanded={open}
+                  onClick={() => setOpenMenu(open ? null : menu.label)}
+                  sx={[NAV_BUTTON_SX, open && { bgcolor: HOVER }]}
+                >
+                  {menu.label}
+                  <ExpandMoreRounded
+                    sx={{
+                      fontSize: 18,
+                      color: MUTED,
+                      transform: open ? 'rotate(180deg)' : 'none',
+                      // The second thing that turns (DESIGN.md): a half turn as its menu opens.
+                      transition: ease('transform', 'quick'),
+                    }}
+                  />
+                </Button>
+                <Dock open={open} menu={menu} onNavigate={closeAll} />
+              </Box>
+            );
+          })}
+          {navLinks.map((link) => (
+            <Button key={link.label} {...linkProps(link)} onClick={closeAll} sx={NAV_BUTTON_SX}>
+              {link.label}
+            </Button>
+          ))}
+        </Box>
+
+        <Box sx={{ flexGrow: 1 }} />
+
+        {!session.signedIn && (
+          <Button
+            component={RouterLink}
+            href={paths.auth.login}
+            sx={[NAV_BUTTON_SX, { display: { xs: 'none', md: 'inline-flex' } }]}
+          >
+            Log in
+          </Button>
+        )}
+        <ThemeToggleButton />
+        {primary}
+
+        <IconButton
+          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileOpen}
+          aria-controls="site-menu"
+          onClick={() => setMobileOpen((open) => !open)}
+          sx={{ display: { md: 'none' }, color: INK }}
+        >
+          {mobileOpen ? <CloseRounded /> : <MenuRounded />}
+        </IconButton>
+      </Box>
+
+      {/*
+        The phone menu: the whole screen under the bar, fading in and out on
+        the shared curve (site-mobile-menu.tsx). Always mounted so it can fade
+        both ways; hidden, it is out of reach of focus and readers.
+      */}
+      <SiteMobileMenu
+        open={mobileOpen}
+        menus={menus}
+        links={phoneLinks}
+        session={session}
+        onNavigate={closeAll}
+      />
+    </Box>
+  );
+}

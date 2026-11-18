@@ -120,6 +120,9 @@ export interface SwapActivity extends ActivityBase {
   failed?: boolean;
   /** Bridge returned the funds — the swap didn't deliver (funds are safe). */
   refunded?: boolean;
+  /** An index purchase with a coin that stopped retrying: it waits for the
+   *  person to try it again (lib/index/legs.ts heldSymbolOf). */
+  needsYou?: boolean;
 }
 
 // -----------------------------------------------------------------------------

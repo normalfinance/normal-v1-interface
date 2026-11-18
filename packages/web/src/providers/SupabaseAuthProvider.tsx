@@ -4,6 +4,10 @@ import type { User, Session } from '@supabase/supabase-js';
 
 import { clearLoginIntent } from '@/lib/loginIntent';
 import { supabase } from '@/lib/createSupabaseClient';
+import { MFA_REQUIRED_EVENT } from '@/utils/authed-fetch';
+import { needsSecondFactor } from '@/lib/auth/two-factor';
+import { clearStoredSession } from '@/lib/supabase-config';
+import { isAuthPage, loginHrefFrom } from '@/lib/auth/auth-routes';
 import {
   useMemo,
   useState,
@@ -18,6 +22,8 @@ type SupabaseAuthContextValue = {
   supabase: typeof supabase;
   session: Session | null;
   user: User | null;
+  /** The first login step is done, but the account's 6-digit code isn't. */
+  mfaRequired: boolean;
   isLoading: boolean;
   signOut: () => Promise<void>;
 };
@@ -68,10 +74,30 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
     const onExpired = () => setSessionExpired(true);
     window.addEventListener('nf:session-expired', onExpired);
 
+    // 2FA was turned on in another browser, so this one's copy of the user is
+    // stale and it believes it's signed in. Refreshing brings the factor in, and
+    // only then is it safe to go to /login: it would bounce straight back before.
+    const onMfaRequired = async () => {
+      const {
+        data: { session: current },
+      } = await supabase.auth.getSession();
+      if (!current || needsSecondFactor(current.user, current.access_token)) return;
+
+      const {
+        data: { session: refreshed },
+      } = await supabase.auth.refreshSession();
+      if (!refreshed || !needsSecondFactor(refreshed.user, refreshed.access_token)) return;
+
+      const { pathname, search } = window.location;
+      if (!isAuthPage(pathname)) window.location.assign(loginHrefFrom(pathname, search));
+    };
+    window.addEventListener(MFA_REQUIRED_EVENT, onMfaRequired);
+
     return () => {
       active = false;
       subscription.unsubscribe();
       window.removeEventListener('nf:session-expired', onExpired);
+      window.removeEventListener(MFA_REQUIRED_EVENT, onMfaRequired);
     };
   }, []);
 
@@ -81,19 +107,42 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
     // deletes every session the user has — logging out on one device killed
     // prod/localhost/mobile sessions everywhere, and tabs holding the dead
     // token then 401'd on every API call.
-    await supabase.auth.signOut({ scope: 'local' });
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    if (error) {
+      // The logout request failed (offline, a server error): supabase-js then
+      // keeps the session, and the next page would sign straight back in.
+      // Logging out must log this browser out:
+      // 1. pause the token refresh, so a refresh landing now can't write the
+      //    session back;
+      // 2. drop the stored session;
+      // 3. sign out again: with nothing stored there is no request, and the
+      //    client drops its in-memory session and tells its listeners;
+      // 4. restart the refresh (stopping it also removed supabase-js's
+      //    visibility hook), so a sign-in on this page keeps its token fresh.
+      await supabase.auth.stopAutoRefresh();
+      clearStoredSession();
+      await supabase.auth.signOut({ scope: 'local' });
+      await supabase.auth.startAutoRefresh();
+    }
     clearLoginIntent();
   }, []);
+
+  // Until the code is entered this session counts as signed out everywhere, so
+  // no page loads a wallet and the login form doesn't move on. The API refuses
+  // it regardless (with-auth.ts); this is what makes the app match.
+  const mfaRequired = !!session && needsSecondFactor(session.user, session.access_token);
+  const signedInSession = mfaRequired ? null : session;
 
   const value = useMemo(
     () => ({
       supabase,
-      session,
-      user: session?.user ?? null,
+      session: signedInSession,
+      user: signedInSession?.user ?? null,
+      mfaRequired,
       isLoading,
       signOut,
     }),
-    [session, isLoading, signOut]
+    [signedInSession, mfaRequired, isLoading, signOut]
   );
 
   return (
@@ -117,7 +166,7 @@ export const SupabaseAuthProvider = ({ children }: SupabaseAuthProviderProps) =>
             fontFamily: 'inherit',
           }}
         >
-          Your session expired — please sign in again to continue.
+          Your session expired. Please sign in again to continue.
           <button
             type="button"
             onClick={() => window.location.assign('/')}

@@ -2,6 +2,8 @@ import type { ButtonProps } from '@mui/material/Button';
 import type { Theme, CSSObject, Components, ComponentsVariants } from '@mui/material/styles';
 
 import { varAlpha } from 'minimal-shared/utils';
+import { RouterLink } from '@/routes/components';
+import { INK, PAPER, INK_SOFT, HAIRLINE_STRONG } from '@/theme/brand-colors';
 
 import { buttonClasses } from '@mui/material/Button';
 import { loadingButtonClasses } from '@mui/lab/LoadingButton';
@@ -40,9 +42,24 @@ function styleColors(ownerState: ButtonProps, styles: (val: PaletteColor) => CSS
 
 const MuiButtonBase: Components<Theme>['MuiButtonBase'] = {
   /** **************************************
+   * DEFAULT PROPS
+   *************************************** */
+  // A button with an href navigates through Next's router. Nothing ripples: a
+  // press changes colour, it never grows a circle (DESIGN.md: nothing moves).
+  defaultProps: { LinkComponent: RouterLink, disableRipple: true },
+  /** **************************************
    * STYLE
    *************************************** */
-  styleOverrides: { root: ({ theme }) => ({ fontFamily: theme.typography.fontFamily }) },
+  styleOverrides: {
+    root: ({ theme }) => ({
+      fontFamily: theme.typography.fontFamily,
+      // The ripple also marked keyboard focus; this outline does that job now.
+      '&.Mui-focusVisible': {
+        outline: `2px solid ${theme.vars.palette.text.primary}`,
+        outlineOffset: 2,
+      },
+    }),
+  },
 };
 
 // ----------------------------------------------------------------------
@@ -90,34 +107,25 @@ const MuiButton: Components<Theme>['MuiButton'] = {
    * STYLE
    *************************************** */
   styleOverrides: {
-    root: { variants: [softVariant.base, softVariant.colors].flat() },
+    root: {
+      borderRadius: 'var(--radius-md)',
+      variants: [softVariant.base, softVariant.colors].flat(),
+    },
     /**
      * @variant contained
      */
-    contained: ({ theme, ownerState }) => {
-      const styled = {
-        colors: styleColors(ownerState, (color) => ({
-          '&:hover': { boxShadow: theme.vars.customShadows[color] },
-        })),
-        inheritColor: {
-          ...(ownerState.color === 'inherit' &&
-            !ownerState.disabled && {
-              color: theme.vars.palette.common.white,
-              backgroundColor: theme.vars.palette.grey[800],
-              '&:hover': {
-                boxShadow: theme.vars.customShadows.z8,
-                backgroundColor: theme.vars.palette.grey[700],
-              },
-              ...theme.applyStyles('dark', {
-                color: theme.vars.palette.grey[800],
-                backgroundColor: theme.vars.palette.common.white,
-                '&:hover': { backgroundColor: theme.vars.palette.grey[400] },
-              }),
-            }),
-        },
-      };
-      return { ...styled.inheritColor, ...styled.colors };
-    },
+    contained: ({ theme, ownerState }) => ({
+      boxShadow: 'none',
+      '&:hover': { boxShadow: 'none' },
+      ...(ownerState.color === 'inherit' &&
+        !ownerState.disabled && {
+          // The ink button, from the tokens so it turns with the page in dark
+          // mode (the same values as grey 900 and 800 in light mode).
+          color: PAPER,
+          backgroundColor: INK,
+          '&:hover': { boxShadow: 'none', backgroundColor: INK_SOFT },
+        }),
+    }),
     /**
      * @variant outlined
      */
@@ -129,12 +137,12 @@ const MuiButton: Components<Theme>['MuiButton'] = {
         inheritColor: {
           ...(ownerState.color === 'inherit' &&
             !ownerState.disabled && {
-              borderColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.32),
+              borderColor: HAIRLINE_STRONG,
               '&:hover': { backgroundColor: theme.vars.palette.action.hover },
             }),
         },
         base: {
-          '&:hover': { borderColor: 'currentColor', boxShadow: '0 0 0 0.75px currentColor' },
+          '&:hover': { borderColor: 'currentColor' },
         },
       };
       return { ...styled.base, ...styled.inheritColor, ...styled.colors };
@@ -157,12 +165,13 @@ const MuiButton: Components<Theme>['MuiButton'] = {
      * @sizes
      */
     sizeSmall: ({ ownerState }) => ({
-      height: 30,
+      height: 32,
       ...(ownerState.variant === 'text'
         ? { paddingLeft: '4px', paddingRight: '4px' }
         : { paddingLeft: '8px', paddingRight: '8px' }),
     }),
     sizeMedium: ({ ownerState }) => ({
+      minHeight: 40,
       ...(ownerState.variant === 'text'
         ? { paddingLeft: '8px', paddingRight: '8px' }
         : { paddingLeft: '12px', paddingRight: '12px' }),

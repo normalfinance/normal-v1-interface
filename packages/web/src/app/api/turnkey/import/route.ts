@@ -35,7 +35,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
   const row = await prisma.turnkeyWallet.findUnique({ where: { supabaseUid: user.id } });
   if (!row) {
     return NextResponse.json(
-      { error: 'No import in progress — call import-init first' },
+      { error: 'No import in progress. Call import-init first' },
       { status: 409 }
     );
   }

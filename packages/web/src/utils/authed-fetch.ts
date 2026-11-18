@@ -8,8 +8,10 @@
 
 import { buildAuthHeaders } from '@/utils/http';
 import { supabase } from '@/lib/createSupabaseClient';
+import { MFA_REQUIRED_ERROR } from '@/lib/auth/two-factor';
 
 export const SESSION_EXPIRED_EVENT = 'nf:session-expired';
+export const MFA_REQUIRED_EVENT = 'nf:mfa-required';
 
 let lastSignalMs = 0;
 
@@ -37,6 +39,13 @@ export async function authedFetch(input: string, init?: RequestInit): Promise<Re
         window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
       }
     }
+  }
+  if (res.status === 403 && typeof window !== 'undefined') {
+    const body = await res
+      .clone()
+      .json()
+      .catch(() => null);
+    if (body?.error === MFA_REQUIRED_ERROR) window.dispatchEvent(new Event(MFA_REQUIRED_EVENT));
   }
   return res;
 }

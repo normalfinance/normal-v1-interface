@@ -2,14 +2,15 @@ import type { NextRequest } from 'next/server';
 
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { withAuth } from '@/lib/with-auth';
 import { rateLimiter } from '@/server/rateLimiter';
+import { isSignedBy } from '@/lib/stellar/wallet-proof';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { networkFromCookie } from '@/server/network-cookie';
+import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 import { getFeesDepositAddress } from '@/lib/build-fee-payment';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
 import { settleRecord, createPendingRecord } from '@/server/tx-records';
-import { StrKey, Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
+import { StrKey, Horizon, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 
 // #33 Stage 1 — the single-transaction swap submit (embedded Soroswap fee).
 // The #27 property is preserved: the SwapLog row is written 'pending' BEFORE
@@ -21,7 +22,9 @@ export const dynamic = 'force-dynamic';
 // every other Stellar path honours — the embedded-fee leg and the fee-pair leg
 // could talk to different Horizons in one deployment. Use the shared config.
 
-export const POST = withAuth(async (request: NextRequest, { user }) => {
+export const POST = withAuth(async (request: NextRequest, { user, accessToken }) => {
+  const refusal = actionCodeRefusal(user, accessToken);
+  if (refusal) return refusal;
   // Doc 95 Wave 2: this route broadcasts a signed transaction and writes a
   // money row — it needs the same ceiling as its sibling execute-pair.
   const { success: withinLimit } = await rateLimiter.limit(user.id);
@@ -48,7 +51,10 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     // against the caller — an authenticated user could have us broadcast a
     // transaction signed by someone else's account and write a swap_logs row
     // against their wallet. execute-pair:236 has always done this check.
-    if (!walletAddress || !(await userOwnsWallet(user.id, walletAddress))) {
+    // A valid signature from the source proves control of it, as in
+    // execute-pair (security report, 2026-11-04).
+    const signedBySource = tx instanceof Transaction && isSignedBy(tx, walletAddress);
+    if (!walletAddress || !(signedBySource || (await userOwnsWallet(user.id, walletAddress)))) {
       return NextResponse.json(
         { success: false, error: 'Wallet is not linked to your account' },
         { status: 403 }
@@ -72,7 +78,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
           {
             success: false,
             embedded_unavailable: true,
-            error: 'Single-signature swap unavailable right now — using the standard flow',
+            error: 'Single-signature swap unavailable right now. Using the standard flow',
           },
           { status: 409 }
         );

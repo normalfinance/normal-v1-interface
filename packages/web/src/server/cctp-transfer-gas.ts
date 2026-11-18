@@ -37,7 +37,9 @@ export async function ensureTransferGas(transferId: string): Promise<EnsureTrans
   // mint (so the pivot swap can pay for itself).
   const outbound = transfer.direction.startsWith('stellar');
   const evmTarget = outbound ? transfer.destAddress : transfer.srcAddress;
-  if (outbound && !transfer.mintTxHash)
+  // A mint someone else ran leaves the row COMPLETED with no mint hash of
+  // ours; the USDC is on Base all the same (the rule autopilot-outbound uses).
+  if (outbound && !transfer.mintTxHash && transfer.status !== 'COMPLETED')
     return { outcome: 'invalid', reason: 'mint not yet executed' };
   if (!outbound && transfer.burnTxHash)
     return { outcome: 'invalid', reason: 'burn already executed' };

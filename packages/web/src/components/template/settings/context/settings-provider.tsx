@@ -1,7 +1,10 @@
 'use client';
 
 import { isEqual } from 'es-toolkit';
-import { useBoolean } from '@/hooks';
+// Straight from the file: the @/hooks barrel also exports the Stellar wallet
+// hooks, and this provider sits in the root layout, so the barrel put the wallet
+// kit (WalletConnect, Ledger, stellar-sdk) on every page, marketing included.
+import { useBoolean } from '@/hooks/use-boolean';
 import { useMemo, useEffect, useCallback } from 'react';
 import { getCookie, getStorage } from 'minimal-shared/utils';
 import { useCookies, useLocalStorage } from 'minimal-shared/hooks';

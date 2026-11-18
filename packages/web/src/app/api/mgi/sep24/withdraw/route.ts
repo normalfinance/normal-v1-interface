@@ -111,6 +111,6 @@ export const POST = withAuth(async (req: Request, { user }) => {
     });
   } catch (e: any) {
     console.error('[MGI] route crashed:', e); // detail stays in logs (doc 90 1c)
-    return j(500, { error: 'MoneyGram is temporarily unavailable — please try again.' });
+    return j(500, { error: 'MoneyGram is temporarily unavailable. Please try again.' });
   }
 });

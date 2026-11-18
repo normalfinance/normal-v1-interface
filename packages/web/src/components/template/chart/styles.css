@@ -4,24 +4,23 @@
   */
   .apexcharts-tooltip {
     min-width: 80px;
-    border-radius: 10px;
-    backdrop-filter: blur(6px);
+    border-radius: var(--radius-md);
     color: var(--palette-text-primary);
-    box-shadow: var(--customShadows-dropdown);
-    background-color: rgba(var(--palette-background-defaultChannel) / 0.9);
+    box-shadow: none;
+    border: 1px solid var(--palette-divider);
+    background-color: var(--palette-background-paper);
   }
   .apexcharts-xaxistooltip {
-    border-radius: 10px;
-    border-color: transparent;
-    backdrop-filter: blur(6px);
+    border-radius: var(--radius-sm);
+    border-color: var(--palette-divider);
     color: var(--palette-text-primary);
-    box-shadow: var(--customShadows-dropdown);
-    background-color: rgba(var(--palette-background-defaultChannel) / 0.9);
+    box-shadow: none;
+    background-color: var(--palette-background-paper);
     &::before {
       border-bottom-color: rgba(var(--palette-grey-500Channel) / 0.16);
     }
     &::after {
-      border-bottom-color: rgba(var(--palette-background-defaultChannel) / 0.9);
+      border-bottom-color: var(--palette-background-paper);
     }
   }
   .apexcharts-tooltip-title {

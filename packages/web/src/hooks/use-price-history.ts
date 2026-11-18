@@ -48,6 +48,36 @@ export function usePriceHistory(symbol: string, range: PriceRange, enabled = tru
 }
 
 /**
+ * Several assets' histories over one range, read together (an index's coins,
+ * whose line needs every coin): one request per asset through the same cached
+ * route, held as one entry, so the line changes only when all have arrived.
+ */
+export function usePriceHistories(symbols: readonly string[], range: PriceRange) {
+  const { data, error, isLoading, isValidating } = useSWR(
+    symbols.length ? (['price-histories', symbols.join(','), range] as const) : null,
+    async ([, list, r]: readonly [string, string, PriceRange]) => {
+      const entries = await Promise.all(
+        list.split(',').map(async (symbol) => {
+          const res = await fetcher(`/api/prices/history?symbol=${symbol}&range=${r}`);
+          return [symbol, res.prices] as const;
+        })
+      );
+      return Object.fromEntries(entries) as Record<string, [number, number][]>;
+    },
+    // As one asset's history: the old line stays while a new range loads, and
+    // a cold upstream's first failure is retried.
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      errorRetryCount: 4,
+    }
+  );
+
+  return { histories: data ?? null, isLoading, isValidating, error };
+}
+
+/**
  * Latest USD price for an asset (last point of the cached 1d series).
  * Used to price synthesized zero-balance tokens (BTC/ETH/SOL before the
  * user has an address) — the token store only knows Stellar assets.

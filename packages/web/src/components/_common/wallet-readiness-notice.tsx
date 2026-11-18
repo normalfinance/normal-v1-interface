@@ -3,6 +3,7 @@
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
 import { useState, useEffect } from 'react';
+import { WARNING } from '@/theme/brand-colors';
 import { usePersistStore } from '@normalfinance/state';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
@@ -16,7 +17,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { useSnackbar } from '@/components/template/snackbar';
 import ExternalWalletSetupDialog from '@/components/_common/external-wallet-setup-dialog';
-
 // ---------------------------------------------------------------------------
 // #74: the one notice for "this wallet can't hold USDC yet". Self-contained:
 // probes the address, maps through deriveWalletReadiness, renders NOTHING
@@ -71,7 +71,7 @@ export function PostConnectReadinessToast() {
           localStorage.setItem(seenKey, '1');
           enqueueSnackbar(
             t(
-              '{{wallet}} connected — it is not active on Stellar yet. Open your wallet drawer to set it up.',
+              '{{wallet}} connected. It is not active on Stellar yet. Open your wallet drawer to set it up.',
               { wallet: label }
             ),
             { variant: 'warning', autoHideDuration: 10_000 }
@@ -83,7 +83,7 @@ export function PostConnectReadinessToast() {
         localStorage.setItem(seenKey, '1');
         enqueueSnackbar(
           t(
-            '{{wallet}} connected — it has no USDC trustline yet, so USDC sent to it would bounce. You can add one from the wallet menu.',
+            '{{wallet}} connected. It has no USDC trustline yet, so USDC sent to it would bounce. You can add one from the wallet menu.',
             { wallet: label }
           ),
           { variant: 'warning', autoHideDuration: 10_000 }
@@ -144,7 +144,7 @@ export default function WalletReadinessNotice({
     try {
       setBusy(true);
       await addTrustLine('USDC', config.USDC_ISSUER);
-      enqueueSnackbar(t('USDC trustline added — this wallet can now hold USDC.'), {
+      enqueueSnackbar(t('USDC trustline added. This wallet can now hold USDC.'), {
         variant: 'success',
       });
       await probe.refetch();
@@ -157,10 +157,10 @@ export default function WalletReadinessNotice({
 
   const isActivation = readiness === 'not-activated';
   const message = isActivation
-    ? t('{{wallet}} is not active on Stellar yet — send it at least 1 XLM to activate it.', {
+    ? t('{{wallet}} is not active on Stellar yet. Send it at least 1 XLM to activate it.', {
         wallet: walletLabel,
       })
-    : t('{{wallet}} has no USDC trustline — USDC sent to it would bounce back to the sender.', {
+    : t('{{wallet}} has no USDC trustline: USDC sent to it would bounce back to the sender.', {
         wallet: walletLabel,
       });
 
@@ -185,12 +185,12 @@ export default function WalletReadinessNotice({
         justifyContent: 'space-between',
         gap: '10px',
         p: '10px 12px',
-        borderRadius: '12px',
+        borderRadius: 'var(--radius-md)',
         bgcolor: 'rgba(245,158,11,0.08)',
         border: '1px solid rgba(245,158,11,0.35)',
       }}
     >
-      <Typography sx={{ fontSize: '12px', color: '#92400E', lineHeight: 1.5 }}>
+      <Typography sx={{ fontSize: '12px', color: WARNING, lineHeight: 1.5 }}>
         {message}
         {!isActivation && (
           <Box component="span" sx={{ color: 'rgba(146,64,14,0.7)' }}>
@@ -207,22 +207,22 @@ export default function WalletReadinessNotice({
             flexShrink: 0,
             appearance: 'none',
             border: '1px solid rgba(146,64,14,0.4)',
-            borderRadius: '999px',
+            borderRadius: 'var(--radius-sm)',
             px: '12px',
             py: '5px',
             fontSize: '11.5px',
-            fontWeight: 700,
+            fontWeight: 500,
             fontFamily: 'inherit',
             cursor: action.busy ? 'default' : 'pointer',
             bgcolor: 'transparent',
-            color: '#92400E',
+            color: WARNING,
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
             '&:hover': action.busy ? {} : { bgcolor: 'rgba(245,158,11,0.12)' },
           }}
         >
-          {action.busy && <CircularProgress size={12} sx={{ color: '#92400E' }} />}
+          {action.busy && <CircularProgress size={12} sx={{ color: WARNING }} />}
           {action.label}
         </Box>
       )}

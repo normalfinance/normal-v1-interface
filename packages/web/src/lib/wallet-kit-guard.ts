@@ -36,7 +36,7 @@ const SETTLE_MS = 750;
 const PENDING_RETRY_DELAY_MS = 2_500;
 
 export const WALLET_REQUEST_PENDING_MESSAGE =
-  'Your wallet has an unanswered request. Open your wallet app (e.g. Lobstr on your phone) and approve or dismiss it — or disconnect and reconnect your wallet — then try again.';
+  'Your wallet has an unanswered request. Open your wallet app (e.g. Lobstr on your phone) and approve or dismiss it, or disconnect and reconnect your wallet, then try again.';
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 

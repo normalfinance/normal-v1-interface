@@ -34,7 +34,8 @@ export const baseTheme: ThemeOptions = {
   mixins,
   components,
   typography,
-  shape: { borderRadius: 8 },
+  // Square, like every corner (global.css): MUI needs a number here.
+  shape: { borderRadius: 0 },
   direction: themeConfig.direction,
   cssVariables: themeConfig.cssVariables,
   defaultColorScheme: themeConfig.defaultMode,

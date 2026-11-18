@@ -190,6 +190,7 @@ export async function purgeAccountRows(supabaseUid: string, facts: WalletFacts) 
       tx.turnkeyWalletSeed.deleteMany({ where: { supabaseUid } }).catch(() => ({ count: 0 })),
       tx.turnkeyWallet.deleteMany({ where: { supabaseUid } }),
     ]);
+    await tx.mfaRecoveryCode.deleteMany({ where: { supabaseUid } });
     const [cctp, ramp, mgi] = await Promise.all([
       tx.cctpTransfer.updateMany({ where: { userId: supabaseUid }, data: { userId: anon } }),
       tx.rampTransfer.updateMany({ where: { supabaseUid }, data: { supabaseUid: anon } }),

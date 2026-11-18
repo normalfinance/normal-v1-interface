@@ -287,7 +287,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
       slotProps={{
         paper: {
           sx: {
-            borderRadius: 2,
+            borderRadius: 'var(--radius-lg)',
           },
         },
       }}
@@ -338,8 +338,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
             />
 
             <Alert severity="error">
-              <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-                {t('IMPORTANT — READ THIS')}
+              <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>
+                {t('IMPORTANT: READ THIS')}
               </Typography>
               <Typography variant="body2">
                 {t(
@@ -370,8 +370,8 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         {stage === 'backup' && mnemonic && (
           <Stack spacing={3}>
             <Alert severity="error">
-              <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-                {t('Your Recovery Phrase — NEVER SHARE')}
+              <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>
+                {t('Your Recovery Phrase: NEVER SHARE')}
               </Typography>
               <Typography variant="body2">
                 {t(
@@ -401,7 +401,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
                     <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
                       {item.index}.
                     </Typography>
-                    <Typography variant="body2" fontWeight={600} component="span">
+                    <Typography variant="body2" fontWeight={500} component="span">
                       {item.word}
                     </Typography>
                   </Paper>
@@ -433,7 +433,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
                 disabled={!backupAcknowledged}
                 onClick={startVerification}
               >
-                {t("I've Written It Down — Verify Now")}
+                {t("I've written it down, verify now")}
               </Button>
               <Button variant="outlined" fullWidth onClick={handleCopyMnemonic}>
                 {t('Copy Recovery Phrase (clears in ') + CLIPBOARD_CLEAR_SECONDS + t('s)')}
@@ -445,7 +445,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
         {stage === 'verify' && verificationQuestions.length > 0 && (
           <Stack spacing={3}>
             <Alert severity="warning" sx={{ mb: 2 }}>
-              <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+              <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>
                 {t('Final Step')}
               </Typography>
               <Typography variant="body2">
@@ -473,7 +473,7 @@ export default function NormalWalletCreate({ open, onClose, onSuccess }: NormalW
                     sx={{
                       flex: 1,
                       height: 4,
-                      borderRadius: 1,
+                      borderRadius: 'var(--radius-md)',
                       backgroundColor:
                         index === currentQuestionIndex
                           ? 'primary.main'

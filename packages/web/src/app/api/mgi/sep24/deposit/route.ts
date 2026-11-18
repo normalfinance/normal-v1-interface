@@ -138,6 +138,6 @@ export const POST = withAuth(async (req: Request, { user }) => {
     });
   } catch (e: any) {
     console.error('[MGI] /api/mgi/sep24/deposit crashed:', e);
-    return j(500, { error: 'MoneyGram is temporarily unavailable — please try again.' });
+    return j(500, { error: 'MoneyGram is temporarily unavailable. Please try again.' });
   }
 });

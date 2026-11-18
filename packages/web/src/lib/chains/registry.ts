@@ -53,6 +53,8 @@ export interface ChainDef {
   /** Brand colour, for chain dots/badges in the UI. */
   brandColor: string;
   explorerTx: (hash: string) => string;
+  /** A wallet address on the same explorer. */
+  explorerAddress: (address: string) => string;
   /** Typical cross-chain settlement window, minutes. Every delivery ETA
    *  label and polling cap derives from THIS — a chain's timing lives here,
    *  never hardcoded in UI copy (lesson 2026-08-19: "a few minutes" was
@@ -72,6 +74,7 @@ export const CHAINS = {
     turnkeyAddressFormat: 'ADDRESS_FORMAT_BITCOIN_MAINNET_P2WPKH',
     brandColor: '#F7931A',
     explorerTx: (h: string) => `https://mempool.space/tx/${h}`,
+    explorerAddress: (a: string) => `https://mempool.space/address/${a}`,
     settlement: { minMinutes: 10, maxMinutes: 60 },
   },
   ethereum: {
@@ -87,6 +90,7 @@ export const CHAINS = {
     evmChainId: 1,
     cctpDomain: 0,
     explorerTx: (h: string) => `https://etherscan.io/tx/${h}`,
+    explorerAddress: (a: string) => `https://etherscan.io/address/${a}`,
     settlement: { minMinutes: 1, maxMinutes: 5 },
   },
   solana: {
@@ -101,6 +105,7 @@ export const CHAINS = {
     brandColor: '#9945FF',
     cctpDomain: 5,
     explorerTx: (h: string) => `https://solscan.io/tx/${h}`,
+    explorerAddress: (a: string) => `https://solscan.io/account/${a}`,
     settlement: { minMinutes: 1, maxMinutes: 3 },
   },
   stellar: {
@@ -114,6 +119,7 @@ export const CHAINS = {
     turnkeyAddressFormat: 'ADDRESS_FORMAT_XLM',
     brandColor: '#14B8A6',
     explorerTx: (h: string) => `https://stellar.expert/explorer/public/tx/${h}`,
+    explorerAddress: (a: string) => `https://stellar.expert/explorer/public/account/${a}`,
     settlement: { minMinutes: 1, maxMinutes: 3 },
   },
 } as const satisfies Record<string, ChainDef>;

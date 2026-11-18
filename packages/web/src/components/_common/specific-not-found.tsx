@@ -25,8 +25,8 @@ const notFoundConfig = {
   asset: assetOrPairNotFound,
   index: {
     src: cdn('placeholders/index-not-found.svg'),
-    defaultTitle: 'Index Not Found',
-    defaultDescription: "The index you're looking for doesn't exist",
+    defaultTitle: 'Plan not found',
+    defaultDescription: "The Autoinvest plan you're looking for doesn't exist",
   },
   default: {
     src: cdn('placeholders/404.svg'),
@@ -40,7 +40,7 @@ export function SpecificNotFound({ type, title, description }: SpecificNotFoundP
   const config = notFoundConfig[type];
 
   return (
-    <DashboardContent maxWidth="xl">
+    <DashboardContent>
       <Box
         sx={{
           display: 'flex',
@@ -66,7 +66,7 @@ export function SpecificNotFound({ type, title, description }: SpecificNotFoundP
           sx={{
             mb: 1,
             color: 'text.primary',
-            fontWeight: 600,
+            fontWeight: 500,
           }}
         >
           {title ? t(title) : t(config.defaultTitle)}

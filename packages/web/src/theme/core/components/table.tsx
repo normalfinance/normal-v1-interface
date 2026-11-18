@@ -63,8 +63,7 @@ const MuiTableCell: Components<Theme>['MuiTableCell'] = {
       backgroundColor: theme.vars.palette.background.neutral,
     }),
     stickyHeader: ({ theme }) => ({
-      backgroundColor: theme.vars.palette.background.paper,
-      backgroundImage: `linear-gradient(to bottom, ${theme.vars.palette.background.neutral}, ${theme.vars.palette.background.neutral})`,
+      backgroundColor: theme.vars.palette.background.neutral,
     }),
     paddingCheckbox: ({ theme }) => ({ paddingLeft: theme.spacing(1) }),
   },
@@ -93,7 +92,7 @@ const MuiTablePagination: Components<Theme>['MuiTablePagination'] = {
       paddingLeft: 8,
       display: 'flex',
       alignItems: 'center',
-      '&:focus': { borderRadius: theme.shape.borderRadius },
+      '&:focus': { borderRadius: 'var(--radius-md)' },
     }),
     selectIcon: {
       right: 4,

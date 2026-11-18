@@ -62,7 +62,7 @@ async function probeOnChain(server: Horizon.Server, hash: string): Promise<OnCha
 }
 
 /** Poll Horizon until the tx appears (or we give up after ~40s). */
-async function awaitOnChain(server: Horizon.Server, hash: string): Promise<OnChainStatus> {
+export async function awaitOnChain(server: Horizon.Server, hash: string): Promise<OnChainStatus> {
   for (let i = 0; i < POLL_ATTEMPTS; i += 1) {
     try {
       const status = await probeOnChain(server, hash);
@@ -123,7 +123,7 @@ export async function submitFeePair(params: {
       throw new Error('Transaction failed on-chain. No fee was charged.');
     }
     throw new Error(
-      'Could not confirm submission. Check your activity in a minute — if nothing appears, it is safe to try again.'
+      'Could not confirm it was sent. Check your activity in a minute: if nothing appears, it is safe to try again.'
     );
   }
 

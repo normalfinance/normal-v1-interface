@@ -27,10 +27,12 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TextField from '@mui/material/TextField';
-import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
+
+import { PageSection } from '@/components/_common/brand';
+import { PageHero } from '@/components/_common/page-hero';
 
 import {
   fUtc,
@@ -378,12 +380,13 @@ function ActivityTable({ rows: allRows }: { rows: ActivityLogRow[] }) {
 
 function Message({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Container maxWidth="md" sx={{ py: { xs: 6, md: 10 } }}>
-      <Typography variant="h3" component="h1">
-        {title}
-      </Typography>
-      <Typography sx={{ color: 'text.secondary', mt: 1.5 }}>{children}</Typography>
-    </Container>
+    <PageHero
+      id="team-title"
+      eyebrow="Dashboard · team only"
+      title={title}
+      lede={children}
+      compact
+    />
   );
 }
 
@@ -460,76 +463,84 @@ export function TeamMetricsView() {
   const log = snapshot.private.activityLog;
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 } }}>
-      <Stack spacing={1} sx={{ mb: 4 }}>
-        <Typography variant="h3" component="h1">
-          Team dashboard
-        </Typography>
-        <Typography sx={{ color: 'text.secondary' }}>
-          For the team only. Last update: {fUtc(snapshot.generatedAt)}. The public numbers are on{' '}
-          <Link href="/dashboard">the dashboard</Link>.
-        </Typography>
-      </Stack>
+    <>
+      <PageHero
+        id="team-title"
+        eyebrow="Dashboard · team only"
+        title="Team dashboard"
+        compact
+        lede={
+          <>
+            For the team only. Last update: {fUtc(snapshot.generatedAt)}. The public numbers are on{' '}
+            <Link href="/dashboard" color="inherit">
+              the dashboard
+            </Link>
+            .
+          </>
+        }
+      />
 
-      <PanelGrid>
-        <Panel
-          wide
-          title="Sync health"
-          subheader="When each source last refreshed. A stale source keeps its last numbers on both pages."
-        >
-          <SyncHealth snapshot={snapshot} />
-        </Panel>
+      <PageSection divider hatchFoot aria-labelledby="team-title">
+        <PanelGrid>
+          <Panel
+            wide
+            title="Sync health"
+            subheader="When each source last refreshed. A stale source keeps its last numbers on both pages."
+          >
+            <SyncHealth snapshot={snapshot} />
+          </Panel>
 
-        <Panel
-          wide
-          title="Relayer gas"
-          subheader="The wallets that pay gas for cross-chain transfers, what is left in each and whether it needs topping up. If one runs dry, a user's money is burned on the source chain and waits."
-        >
-          <GasTable rows={snapshot.private.gasFloat} />
-        </Panel>
+          <Panel
+            wide
+            title="Relayer gas"
+            subheader="The wallets that pay gas for cross-chain transfers, what is left in each and whether it needs topping up. If one runs dry, a user's money is burned on the source chain and waits."
+          >
+            <GasTable rows={snapshot.private.gasFloat} />
+          </Panel>
 
-        <Panel
-          wide
-          title="Monthly report"
-          subheader="One row per calendar month (UTC), for SDF and investor updates. The current month is still running. Revenue is fees recorded per action; savings is the vault at the month's last reading."
-          action={
-            <Button
-              variant="outlined"
-              size="small"
-              disabled={!report.length}
-              onClick={() =>
-                downloadCsv(`normal-monthly-report-${stamp}.csv`, monthlyReportCsv(report))
-              }
-            >
-              Download CSV
-            </Button>
-          }
-        >
-          <MonthlyTable rows={report} />
-        </Panel>
+          <Panel
+            wide
+            title="Monthly report"
+            subheader="One row per calendar month (UTC), for SDF and investor updates. The current month is still running. Revenue is fees recorded per action; savings is the vault at the month's last reading."
+            action={
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={!report.length}
+                onClick={() =>
+                  downloadCsv(`normal-monthly-report-${stamp}.csv`, monthlyReportCsv(report))
+                }
+              >
+                Download CSV
+              </Button>
+            }
+          >
+            <MonthlyTable rows={report} />
+          </Panel>
 
-        <Panel
-          wide
-          title="Activity"
-          subheader={
-            log.total > log.rows.length
-              ? `Every completed action, newest first. Showing the latest ${fNumber(log.rows.length)} of ${fNumber(log.total)}.`
-              : `Every completed action, newest first (${fNumber(log.total)}).`
-          }
-          action={
-            <Button
-              variant="outlined"
-              size="small"
-              disabled={!log.rows.length}
-              onClick={() => downloadCsv(`normal-activity-${stamp}.csv`, activityCsv(log.rows))}
-            >
-              Download CSV
-            </Button>
-          }
-        >
-          <ActivityTable rows={log.rows} />
-        </Panel>
-      </PanelGrid>
-    </Container>
+          <Panel
+            wide
+            title="Activity"
+            subheader={
+              log.total > log.rows.length
+                ? `Every completed action, newest first. Showing the latest ${fNumber(log.rows.length)} of ${fNumber(log.total)}.`
+                : `Every completed action, newest first (${fNumber(log.total)}).`
+            }
+            action={
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={!log.rows.length}
+                onClick={() => downloadCsv(`normal-activity-${stamp}.csv`, activityCsv(log.rows))}
+              >
+                Download CSV
+              </Button>
+            }
+          >
+            <ActivityTable rows={log.rows} />
+          </Panel>
+        </PanelGrid>
+      </PageSection>
+    </>
   );
 }

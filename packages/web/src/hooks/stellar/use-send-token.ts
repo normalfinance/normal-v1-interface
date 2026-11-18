@@ -12,6 +12,8 @@ import { usePersistStore } from '@normalfinance/state';
 import { logger, detectMemoType } from '@normalfinance/utils';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
+import { submitSendThroughServer } from '@/lib/stellar/submit-send';
+import { confirmAction, usesSecondFactor } from '@/lib/auth/action-code';
 import { spendableXlm, stellarMinReserve } from '@/utils/stellar-reserve';
 import { planStellarSend, MIN_ACTIVATION_XLM } from '@/lib/stellar/send-plan';
 import { Memo, Asset, Horizon, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
@@ -161,7 +163,7 @@ export function useSendToken(): ReturnType {
         const sym = args.token.symbol;
         const messages = {
           'activation-minimum': t(
-            'This account isn’t active on Stellar yet — the first transfer must be at least {{min}} XLM to activate it.',
+            'This account isn’t active on Stellar yet. The first transfer must be at least {{min}} XLM to activate it.',
             { min: MIN_ACTIVATION_XLM }
           ),
           'destination-not-active': t(
@@ -169,7 +171,7 @@ export function useSendToken(): ReturnType {
             { min: MIN_ACTIVATION_XLM, sym }
           ),
           'destination-needs-trustline': t(
-            'That wallet can’t hold {{sym}} yet — it needs a {{sym}} trustline. Add the asset in that wallet’s app, then try again.',
+            'That wallet can’t hold {{sym}} yet: it needs a {{sym}} trustline. Add the asset in that wallet’s app, then try again.',
             { sym }
           ),
         } as const;
@@ -229,6 +231,9 @@ export function useSendToken(): ReturnType {
 
       const unsignedXDR = builtTx.toXDR();
 
+      // Every check above has passed, so the code can't be wasted on a doomed send.
+      if (!(await confirmAction())) return '';
+
       // Override → universal signer routes by the tx's SOURCE account.
       // Lazy import: kit-signer pulls the wallets-kit ESM graph, which jsdom
       // suites can't parse — same pattern as use-swap.
@@ -243,12 +248,20 @@ export function useSendToken(): ReturnType {
           : await signTransaction(unsignedXDR);
 
       if (!signedXDR) {
-        throw new Error('Transaction signing failed — no signed XDR returned');
+        throw new Error('Transaction signing failed: no signed XDR returned');
       }
 
       const transaction = TransactionBuilder.fromXDR(signedXDR, config.NETWORK_PASSPHRASE);
 
-      const result = await horizonServer.submitTransaction(transaction);
+      // Only accounts with 2FA detour through the server, so it can check the
+      // code. Everyone else keeps the path they've always had.
+      const result = (await usesSecondFactor())
+        ? await submitSendThroughServer(
+            horizonServer,
+            signedXDR,
+            transaction.hash().toString('hex')
+          )
+        : await horizonServer.submitTransaction(transaction);
 
       // Announce at the primitive, not the UI: every caller (send modal,
       // withdraw card, off-ramp) gets the pending row + cache-bypassed

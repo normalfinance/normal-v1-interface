@@ -82,10 +82,9 @@ export default function AmountDialog({
       maxWidth="xs"
       PaperProps={{
         sx: {
-          borderRadius: '24px',
-          p: { xs: '18px', sm: '22px' },
+          borderRadius: 'var(--radius-lg)',
+          p: { xs: '20px', md: '24px' },
           maxWidth: 400,
-          boxShadow: '0 1px 2px rgba(10,10,15,0.04), 0 30px 60px -20px rgba(10,10,15,0.18)',
         },
       }}
     >
@@ -97,7 +96,7 @@ export default function AmountDialog({
         sx={{ mb: '6px' }}
       >
         <Box>
-          <Typography sx={{ fontSize: '17px', fontWeight: 600, color: '#0A0A0F', lineHeight: 1.3 }}>
+          <Typography sx={{ fontSize: '17px', fontWeight: 500, color: '#0A0A0F', lineHeight: 1.3 }}>
             {title}
           </Typography>
           <Typography sx={{ fontSize: '13px', color: '#6B6B76', mt: '3px' }}>{subtitle}</Typography>
@@ -105,7 +104,7 @@ export default function AmountDialog({
         <IconButton
           onClick={onCancel}
           size="small"
-          sx={{ color: 'rgba(10,10,15,0.4)', mt: '-4px', mr: '-6px' }}
+          sx={{ color: '#9A9AA3', mt: '-4px', mr: '-6px' }}
         >
           <Iconify icon="mingcute:close-line" width={20} />
         </IconButton>
@@ -116,7 +115,7 @@ export default function AmountDialog({
         sx={{
           mt: '14px',
           p: '16px',
-          borderRadius: '16px',
+          borderRadius: 'var(--radius-lg)',
           bgcolor: '#FAFAFB',
           border: '1px solid',
           borderColor: err ? 'error.main' : 'rgba(10,10,15,0.08)',
@@ -126,11 +125,11 @@ export default function AmountDialog({
       >
         <Typography
           sx={{
-            fontSize: '12px',
+            fontSize: '11px',
             fontWeight: 500,
-            color: 'rgba(10,10,15,0.45)',
+            color: '#9A9AA3',
             textTransform: 'uppercase',
-            letterSpacing: '0.08em',
+            letterSpacing: '0.16em',
             mb: '10px',
           }}
         >
@@ -140,8 +139,8 @@ export default function AmountDialog({
           <Typography
             sx={{
               fontSize: '24px',
-              fontWeight: 600,
-              color: 'rgba(10,10,15,0.35)',
+              fontWeight: 500,
+              color: '#9A9AA3',
               letterSpacing: '-0.02em',
               lineHeight: 1,
             }}
@@ -168,10 +167,10 @@ export default function AmountDialog({
               outline: 'none',
               bgcolor: 'transparent',
               fontSize: '24px',
-              fontWeight: 600,
+              fontWeight: 500,
               color: err ? 'error.main' : '#0A0A0F',
               letterSpacing: '-0.02em',
-              fontFamily: '"Geist Mono", "Courier New", monospace',
+              fontFamily: '"Geist Mono", ui-monospace, monospace',
               width: '100%',
               minWidth: 0,
               '&::placeholder': { color: 'rgba(10,10,15,0.2)' },
@@ -186,7 +185,7 @@ export default function AmountDialog({
               gap: '6px',
               px: '10px',
               py: '6px',
-              borderRadius: '100px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: '#FFFFFF',
               border: '1px solid rgba(10,10,15,0.08)',
               flexShrink: 0,
@@ -199,7 +198,7 @@ export default function AmountDialog({
               height={18}
               style={{ objectFit: 'contain' }}
             />
-            <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F' }}>
+            <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#0A0A0F' }}>
               {tokenLabel}
             </Typography>
           </Box>
@@ -212,7 +211,7 @@ export default function AmountDialog({
           {err}
         </Typography>
       ) : (
-        <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.45)', mt: '10px', px: '2px' }}>
+        <Typography sx={{ fontSize: '12px', color: '#9A9AA3', mt: '10px', px: '2px' }}>
           {t('Min {{min}} · Max {{max}} · No MoneyGram fees', { min: fmt(min), max: fmt(max) })}
         </Typography>
       )}
@@ -227,15 +226,15 @@ export default function AmountDialog({
           width: '100%',
           mt: '16px',
           padding: '14px 16px',
-          borderRadius: '14px',
+          borderRadius: 'var(--radius-md)',
           bgcolor: '#0A0A0F',
           color: '#FFFFFF',
           fontSize: '14px',
-          fontWeight: 600,
+          fontWeight: 500,
           textAlign: 'center',
           cursor: 'pointer',
-          transition: 'background 150ms ease, transform 150ms ease',
-          '&:hover': { bgcolor: '#1A1A28', transform: 'translateY(-1px)' },
+          transition: 'background 150ms ease',
+          '&:hover': { bgcolor: '#2A2A33' },
         }}
       >
         {t('Continue')}

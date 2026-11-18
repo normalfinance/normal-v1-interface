@@ -55,6 +55,8 @@ export interface EvmBurnParams {
   /** Final recipient on Stellar (G…). Trustline must already exist. */
   stellarRecipient: string;
   onStep?: (step: 'approve' | 'burn') => void;
+  /** Fires once a signed transaction is on the network, before its receipt. */
+  onSent?: (step: 'approve' | 'burn', hash: `0x${string}`) => void;
 }
 
 /** Runs approve (if needed) + depositForBurnWithHook. Returns the burn hash. */
@@ -78,6 +80,8 @@ export async function burnUsdcOnEvm(params: EvmBurnParams): Promise<{
     'viem'
   );
   const { base, mainnet, sepolia, baseSepolia } = await import('viem/chains');
+  const { sendSignedEvmTransaction } = await import('@/lib/chains/evm-send');
+  const { tagUncertainStep } = await import('@/lib/chains/broadcast-safety');
   const chains = {
     mainnet: { base, ethereum: mainnet },
     testnet: { base: baseSepolia, ethereum: sepolia },
@@ -117,19 +121,19 @@ export async function burnUsdcOnEvm(params: EvmBurnParams): Promise<{
         maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
       });
       const raw = await signEvmTxWithTurnkey(unsigned, info.subOrgId!, params.evmAddress);
-      try {
-        hash = await client.sendRawTransaction({ serializedTransaction: raw });
-      } catch (sendErr: any) {
-        const m = String(sendErr?.shortMessage ?? sendErr?.message ?? '');
-        if (
-          attempt === 0 &&
-          /nonce too low|already known|replacement transaction underpriced/i.test(m)
-        ) {
-          continue;
-        }
-        throw sendErr;
-      }
+      // Re-sign only when the chain shows the nonce is held by another
+      // transaction, never ours (lib/chains/evm-send.ts). An unclear send says
+      // which leg it was, so the caller keeps only a burn's hash on the row.
+      const result = await sendSignedEvmTransaction(client, raw, {
+        chainLabel: chain.name,
+      }).catch((e: unknown) => {
+        throw tagUncertainStep(e, label === 'approve' ? 'approve' : 'burn');
+      });
+      if (result.sent) hash = result.hash;
+      else if (attempt === 0) continue;
+      else throw result.error;
     }
+    params.onSent?.(label === 'approve' ? 'approve' : 'burn', hash);
     const receipt = await client.waitForTransactionReceipt({ hash });
     if (receipt.status !== 'success') throw new Error(`${label} reverted (${hash})`);
     return hash;

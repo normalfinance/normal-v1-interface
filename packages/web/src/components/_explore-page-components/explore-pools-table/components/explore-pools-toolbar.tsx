@@ -70,7 +70,7 @@ export function ExplorePoolsTableToolbar({ filters, onResetPage }: Props) {
             maxWidth: 200,
 
             '& .MuiOutlinedInput-root': {
-              borderRadius: 9999,
+              borderRadius: 'var(--radius-md)',
               bgcolor: theme.palette.grey[100],
               ...theme.applyStyles('dark', { bgcolor: theme.palette.grey[800] }),
 

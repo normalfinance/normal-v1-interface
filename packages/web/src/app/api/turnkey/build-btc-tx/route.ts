@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
-import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { Psbt, networks, payments } from 'bitcoinjs-lib';
+import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -42,7 +42,9 @@ function p2wpkhOutputScript(addr: string): Buffer {
 // Body: { destination: string, amountSat: number }
 // Response: { psbtHex, subOrgId, estimatedFeeSat, feeRateSatPerVbyte, changeAmountSat }
 // ---------------------------------------------------------------------------
-export const POST = withAuth(async (request: NextRequest, { user }) => {
+export const POST = withAuth(async (request: NextRequest, { user, accessToken }) => {
+  const refusal = actionCodeRefusal(user, accessToken);
+  if (refusal) return refusal;
   let body: { destination: string; amountSat: number };
   try {
     body = await request.json();

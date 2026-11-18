@@ -2,10 +2,10 @@ import type { MnemonicStrength } from '@normalfinance/utils';
 
 import { shouldRestoreTurnkeyStellar } from '@/lib/wallet-slot';
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { linkWallet, updateLastUsed } from '@/services/linked-wallets';
 import { useWalletPassword } from '@/providers/WalletPasswordProvider';
 import { logger, createKeypairFromSecret } from '@normalfinance/utils';
 import { usePersistStore, useNormalWalletStore } from '@normalfinance/state';
+import { linkWallet, updateLastUsed, type LinkChallengeSigner } from '@/services/linked-wallets';
 import {
   getTurnkeyWalletInfo,
   isTurnkeyStellarAddress,
@@ -24,6 +24,11 @@ const NORMAL_WALLET_STORAGE_KEY = 'normal-wallet-private-key';
 
 export const NORMAL_WALLET_REIMPORT_REQUIRED_MESSAGE =
   'No local wallet key found. Please re-import your wallet using your recovery phrase to continue signing.';
+
+// Linking needs proof the wallet is yours. This wallet holds its key in the
+// browser, so it signs the challenge itself, with no prompt.
+const signWithBrowserKey: LinkChallengeSigner = (challengeXdr, networkPassphrase) =>
+  useNormalWalletStore.getState().signTransaction(challengeXdr, networkPassphrase);
 
 /**
  * Encrypt and store private key in localStorage using password-derived key (v2).
@@ -242,7 +247,7 @@ export const useNormalWallet = () => {
         // Connect to persist store
         await normalWalletStore.connectWallet(persistStore);
 
-        await linkWallet(result.publicKey, walletName);
+        await linkWallet(result.publicKey, walletName, signWithBrowserKey);
 
         return result;
       } catch (error) {
@@ -268,7 +273,7 @@ export const useNormalWallet = () => {
           await storePrivateKey(stateToStore.keypair.secret(), password);
         }
         await normalWalletStore.connectWallet(persistStore);
-        await linkWallet(result.publicKey, walletName);
+        await linkWallet(result.publicKey, walletName, signWithBrowserKey);
         return result;
       } catch (error) {
         logger.error('[NORMAL WALLET] Failed to import wallet from mnemonic:', error);
@@ -288,7 +293,7 @@ export const useNormalWallet = () => {
           await storePrivateKey(stateToStore.keypair.secret(), password);
         }
         await normalWalletStore.connectWallet(persistStore);
-        await linkWallet(result.publicKey, walletName);
+        await linkWallet(result.publicKey, walletName, signWithBrowserKey);
         return result;
       } catch (error) {
         logger.error('[NORMAL WALLET] Failed to import wallet from private key:', error);

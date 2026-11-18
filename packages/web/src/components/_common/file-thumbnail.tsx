@@ -92,7 +92,7 @@ const ItemRoot = styled('span')(({ theme }) => ({
   position: 'relative',
   display: 'inline-flex',
   justifyContent: 'center',
-  borderRadius: theme.shape.borderRadius * 1.25,
+  borderRadius: 'var(--radius-md)',
 }));
 
 const ItemIcon = styled('img')(() => ({

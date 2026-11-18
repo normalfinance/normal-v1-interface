@@ -6,6 +6,7 @@ import type { ChainId } from '@/lib/chains/registry';
 import { BigNumber } from 'bignumber.js';
 import { getChain } from '@/lib/chains/registry';
 import { announceTransaction } from '@/lib/tx-events';
+import { confirmAction } from '@/lib/auth/action-code';
 import { ETH_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
@@ -67,7 +68,7 @@ export function createEthereumAdapter(
         const info = await getTurnkeyWalletInfo();
         if (!info?.subOrgId)
           throw new Error(
-            'Could not load your wallet just now — check your connection and try again.'
+            'Could not load your wallet just now. Check your connection and try again.'
           );
         const subOrgId = info.subOrgId;
 
@@ -99,7 +100,7 @@ export function createEthereumAdapter(
           gasEstimate = await client.estimateGas({ account: from, to, value });
         } catch {
           throw new Error(
-            'This address cannot accept ETH directly. Double-check the destination — if it is an exchange, use its ETH deposit address, not a contract address.'
+            'This address cannot accept ETH directly. Double-check the destination. If it is an exchange, use its ETH deposit address, not a contract address.'
           );
         }
         const gas = (gasEstimate * 12n) / 10n; // 20% headroom
@@ -135,6 +136,8 @@ export function createEthereumAdapter(
           maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
         });
 
+        if (!(await confirmAction())) return '';
+
         // Sign with Turnkey via the user's passkey (WebAuthn prompt)
         const { TurnkeyClient } = await import('@turnkey/http');
         const turnkeyClient = new TurnkeyClient(
@@ -160,7 +163,7 @@ export function createEthereumAdapter(
         );
 
         const signedTx = signResult?.activity?.result?.signTransactionResult?.signedTransaction;
-        if (!signedTx) throw new Error('Signing failed — no signed transaction returned');
+        if (!signedTx) throw new Error('Signing failed: no signed transaction returned');
 
         const rawTx = signedTx.startsWith('0x') ? signedTx : `0x${signedTx}`;
 

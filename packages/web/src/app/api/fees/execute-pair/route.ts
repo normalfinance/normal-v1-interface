@@ -3,11 +3,12 @@ import type { FeeEscrowKind, FeeEscrowEntry } from '@/server/fee-escrow';
 import type { TxRecordInput, SwapRecordInput, SavingsRecordInput } from '@/server/tx-records';
 
 import { cookies } from 'next/headers';
-import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { rateLimiter } from '@/server/rateLimiter';
+import { isSignedBy } from '@/lib/stellar/wallet-proof';
 import { userOwnsWallet } from '@/lib/wallet-ownership';
 import { networkFromCookie } from '@/server/network-cookie';
+import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 import { getFeesDepositAddress } from '@/lib/build-fee-payment';
 import { isValidStellarAddress } from '@/utils/stellar-address';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
@@ -130,7 +131,9 @@ function formatResultCodes(resultCodes: unknown): string {
   return parts.length ? parts.join(', ') : 'transaction rejected';
 }
 
-export const POST = withAuth(async (request: NextRequest, { user }) => {
+export const POST = withAuth(async (request: NextRequest, { user, accessToken }) => {
+  const refusal = actionCodeRefusal(user, accessToken);
+  if (refusal) return refusal;
   const { success: withinLimit } = await rateLimiter.limit(user.id);
   if (!withinLimit) {
     return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
@@ -221,7 +224,7 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
         return NextResponse.json(
           {
             success: false,
-            error: 'Fee transaction window is missing or too short — rebuild the pair',
+            error: 'Fee transaction window is missing or too short. Rebuild the pair',
           },
           { status: 400 }
         );
@@ -231,9 +234,13 @@ export const POST = withAuth(async (request: NextRequest, { user }) => {
     const serviceExpiresAtMs = serviceMaxTime > 0 ? serviceMaxTime * 1000 : feeExpiresAtMs;
 
     // The address inside the signed txs is what gets ownership-checked — the
-    // body carries no separate wallet field an attacker could vary.
+    // body carries no separate wallet field an attacker could vary. A valid
+    // signature from that address proves control of it, which a link row alone
+    // didn't until links needed proof (security report, 2026-11-04), so a
+    // connected wallet can transact without one.
     const walletAddress = serviceTx.source;
-    const owns = await userOwnsWallet(user.id, walletAddress);
+    const owns =
+      isSignedBy(serviceTx, walletAddress) || (await userOwnsWallet(user.id, walletAddress));
     if (!owns) {
       return NextResponse.json(
         { success: false, error: 'Wallet is not linked to your account' },

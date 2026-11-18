@@ -1,19 +1,29 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import type { Bucket } from '@/lib/metrics/periods';
+import type { Theme, SxProps } from '@mui/material/styles';
+import type { Bucket, PeriodKey } from '@/lib/metrics/periods';
 
+import { TYPE } from '@/theme/type-scale';
+import { PERIODS } from '@/lib/metrics/periods';
 import { fCurrency } from '@/utils/format-number';
 import { CHAINS, isChainId } from '@/lib/chains/registry';
 import { PRE_RECORDING_FEES } from '@/lib/metrics/snapshot';
+import { GUTTER_SX, GRID_FRAME_SX } from '@/theme/site-grid';
+import { useSiteTheme } from '@/layouts/site/use-site-theme';
+import { INK, MUTED, PAPER, PALETTE, BRAND_COLORS, HAIRLINE_COLOR } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
 import Typography from '@mui/material/Typography';
-import { useColorScheme } from '@mui/material/styles';
+
+import { HATCH_SX } from '@/components/_common/hatch';
+import { SegmentedControl, VISUALLY_HIDDEN_SX } from '@/components/_common/brand';
 
 // ----------------------------------------------------------------------
-// Pieces shared by /dashboard and /dashboard/team.
+// Pieces shared by /dashboard and /dashboard/team, in the marketing site's
+// style (DESIGN.md): content in the column between the frame lines, set as
+// cells that share their hairlines and reach the lines, the site's type ladder,
+// and colours from the tokens, so both modes are right.
 // ----------------------------------------------------------------------
 
 export const PRODUCT_LABEL: Record<string, string> = {
@@ -26,45 +36,41 @@ export const PRODUCT_LABEL: Record<string, string> = {
   [PRE_RECORDING_FEES]: 'LI.FI, before recording',
 };
 
-// One colour per product, the same on every chart, from the validated
-// categorical order (dataviz reference palette; light and dark steps).
-const PRODUCT_COLOR: Record<'light' | 'dark', Record<string, string>> = {
-  light: {
-    savings: '#2a78d6',
-    cctp: '#eb6834',
-    soroswap: '#1baf7a',
-    lifi: '#eda100',
-    send: '#e87ba4',
-    ramp: '#008300',
-    [PRE_RECORDING_FEES]: '#6250d6',
-  },
-  dark: {
-    savings: '#3987e5',
-    cctp: '#d95926',
-    soroswap: '#199e70',
-    lifi: '#c98500',
-    send: '#d55181',
-    ramp: '#008300',
-    [PRE_RECORDING_FEES]: '#9085e9',
-  },
-};
-
-const FALLBACK_COLOR = '#8a8a8a';
-
 export const productLabel = (product: string) => PRODUCT_LABEL[product] ?? product;
-export const chainColor = (chain: string) =>
-  isChainId(chain) ? CHAINS[chain].brandColor : FALLBACK_COLOR;
+export const chainColor = (chain: string) => (isChainId(chain) ? CHAINS[chain].brandColor : INK);
 export const chainLabel = (chain: string) => (isChainId(chain) ? CHAINS[chain].name : chain);
 
-function useIsDark(): boolean {
-  const { mode, systemMode } = useColorScheme();
-  return (mode === 'system' ? systemMode : mode) === 'dark';
+// ---------------------------------------------------------------------- chart colours
+
+export type ChartTokens = {
+  ink: string;
+  muted: string;
+  faint: string;
+  paper: string;
+  grid: string;
+  hairline: string;
+};
+
+/**
+ * The neutrals a chart draws with, as values for the visitor's mode. The chart
+ * library needs real colours, so it takes these rather than the CSS tokens;
+ * the page redraws when the mode changes.
+ */
+export function useChartTokens(): ChartTokens {
+  const palette = PALETTE[useSiteTheme().mode];
+  return {
+    ink: palette.ink,
+    muted: palette.muted,
+    faint: palette.faint,
+    paper: palette.paper,
+    grid: palette.grid,
+    hairline: palette.hairlineStrong,
+  };
 }
 
-export function useProductColor() {
-  const palette = PRODUCT_COLOR[useIsDark() ? 'dark' : 'light'];
-  return (product: string) => palette[product] ?? FALLBACK_COLOR;
-}
+/** A colour for the chart library: the ink token (Stellar's coin, a plain mark) as a value. */
+export const chartColor = (color: string, tokens: ChartTokens) =>
+  color === INK ? tokens.ink : color;
 
 // ---------------------------------------------------------------------- formats
 
@@ -119,8 +125,114 @@ export function downloadCsv(filename: string, csv: string): void {
   URL.revokeObjectURL(url);
 }
 
-// ---------------------------------------------------------------------- layout
+// ---------------------------------------------------------------------- the grid of cells
 
+type Columns = { xs: number; sm?: number; md?: number };
+
+const templateOf = (columns: Columns) => ({
+  xs: `repeat(${columns.xs}, minmax(0, 1fr))`,
+  ...(columns.sm && { sm: `repeat(${columns.sm}, minmax(0, 1fr))` }),
+  ...(columns.md && { md: `repeat(${columns.md}, minmax(0, 1fr))` }),
+});
+
+/**
+ * Cells that share their lines, across the column. Like the roadmap's board,
+ * the lines are 1px gaps over the hairline colour, so they stay straight
+ * whatever a cell holds; the grid reaches the frame lines and lets them be its
+ * sides (GRID_FRAME_SX). Fill an unfinished last row with `HatchCell`s.
+ */
+export function CellGrid({
+  columns,
+  children,
+  sx,
+}: {
+  columns: Columns;
+  children: ReactNode;
+  sx?: SxProps<Theme>;
+}) {
+  return (
+    <Box
+      sx={[
+        {
+          ...GRID_FRAME_SX,
+          display: 'grid',
+          gap: '1px',
+          bgcolor: HAIRLINE_COLOR,
+          gridTemplateColumns: templateOf(columns),
+        },
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
+    >
+      {children}
+    </Box>
+  );
+}
+
+type Span = { xs?: number; sm?: number; md?: number };
+
+const spanOf = (span?: Span) =>
+  span && {
+    gridColumn: {
+      ...(span.xs && { xs: `span ${span.xs}` }),
+      ...(span.sm && { sm: `span ${span.sm}` }),
+      ...(span.md && { md: `span ${span.md}` }),
+    },
+  };
+
+/** One cell of a CellGrid: white, the gutter inside, nothing touching a line. */
+export function Cell({
+  span,
+  children,
+  sx,
+}: {
+  span?: Span;
+  children: ReactNode;
+  sx?: SxProps<Theme>;
+}) {
+  return (
+    <Box
+      sx={[
+        {
+          ...GUTTER_SX,
+          ...spanOf(span),
+          minWidth: 0,
+          py: { xs: 3, md: 4 },
+          bgcolor: PAPER,
+        },
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
+    >
+      {children}
+    </Box>
+  );
+}
+
+/** An empty place in a CellGrid's last row: hatched, as the site fills its grids. */
+export function HatchCell({ span }: { span?: Span }) {
+  return (
+    <Box aria-hidden="true" sx={{ ...spanOf(span), bgcolor: PAPER, ...HATCH_SX, minHeight: 48 }} />
+  );
+}
+
+// ---------------------------------------------------------------------- a chapter's grid
+
+/**
+ * Every chapter of the dashboard sits on one grid, so its figures and its
+ * charts share their lines: one column on phones, two on tablets, four on
+ * wide screens. A chart takes half the row there (a whole row on tablets), a
+ * wide chart the whole row; a figure a half or a quarter.
+ */
+export const CHAPTER_COLUMNS: Columns = { xs: 1, sm: 2, md: 4 };
+export const SPAN = {
+  chart: { sm: 2, md: 2 },
+  wide: { sm: 2, md: 4 },
+  half: { sm: 1, md: 2 },
+  quarter: { sm: 1, md: 1 },
+} as const satisfies Record<string, Span>;
+
+// ---------------------------------------------------------------------- what a cell holds
+
+/** A chart in its cell: its title and what it shows, a control opposite, the chart under. */
 export function Panel({
   title,
   subheader,
@@ -129,100 +241,98 @@ export function Panel({
   wide,
 }: {
   title: string;
-  subheader?: string;
+  subheader?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   wide?: boolean;
 }) {
   return (
-    <Card
-      sx={{
-        p: { xs: 2, md: 3 },
-        minWidth: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        gridColumn: wide ? { md: '1 / -1' } : undefined,
-      }}
-    >
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+    <Cell span={wide ? SPAN.wide : SPAN.chart} sx={{ display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: 'flex-start',
+          gap: 2,
+          mb: 3,
+        }}
+      >
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="h6" component="h3">
+          <Typography component="h3" sx={{ ...TYPE.h4, color: INK }}>
             {title}
           </Typography>
           {subheader && (
-            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+            <Typography sx={{ ...TYPE.small, color: MUTED, mt: 1, maxWidth: 560 }}>
               {subheader}
             </Typography>
           )}
         </Box>
-        {action}
+        {action && <Box sx={{ flexShrink: 0 }}>{action}</Box>}
       </Box>
-      {children}
-    </Card>
+      <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
+    </Cell>
   );
 }
 
+/** A grid of panels on the chapter grid. */
 export function PanelGrid({ children }: { children: ReactNode }) {
-  return (
-    <Box
-      sx={{
-        display: 'grid',
-        gap: { xs: 2, md: 3 },
-        gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
-      }}
-    >
-      {children}
-    </Box>
-  );
+  return <CellGrid columns={CHAPTER_COLUMNS}>{children}</CellGrid>;
 }
 
-export function KpiGrid({ children }: { children: ReactNode }) {
+/** A figure in its cell: what it counts, the figure, and one line under it. */
+export function Figure({
+  label,
+  value,
+  foot,
+  span,
+}: {
+  label: string;
+  value: string;
+  foot?: string;
+  span?: Span;
+}) {
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gap: { xs: 2, md: 3 },
-        gridTemplateColumns: {
-          xs: '1fr',
-          sm: 'repeat(2, minmax(0, 1fr))',
-          lg: 'repeat(3, minmax(0, 1fr))',
-        },
-        mb: { xs: 2, md: 3 },
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
-
-export function Kpi({ label, value, foot }: { label: string; value: string; foot?: string }) {
-  return (
-    <Card sx={{ p: { xs: 2, md: 3 }, minWidth: 0 }}>
-      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+    <Cell span={span}>
+      <Typography component="p" sx={{ ...TYPE.caption, color: MUTED }}>
         {label}
       </Typography>
-      <Typography variant="h4" component="p" sx={{ mt: 1, overflowWrap: 'anywhere' }}>
+      <Typography
+        component="p"
+        sx={{
+          ...TYPE.h3,
+          mt: 0.75,
+          color: INK,
+          fontVariantNumeric: 'tabular-nums',
+          overflowWrap: 'anywhere',
+        }}
+      >
         {value}
       </Typography>
       {foot && (
-        <Typography variant="caption" component="p" sx={{ color: 'text.secondary', mt: 0.5 }}>
+        <Typography component="p" sx={{ ...TYPE.small, color: MUTED, mt: 1 }}>
           {foot}
         </Typography>
       )}
-    </Card>
+    </Cell>
   );
 }
 
-export function SectionTitle({ title, intro }: { title: string; intro?: string }) {
+/** A filled notice in the highlight's wash (pending, not broken): words in its deep shade. */
+export function Notice({ children }: { children: ReactNode }) {
   return (
-    <Box sx={{ mt: { xs: 5, md: 7 }, mb: { xs: 2, md: 3 } }}>
-      <Typography variant="h4" component="h2">
-        {title}
-      </Typography>
-      {intro && (
-        <Typography sx={{ color: 'text.secondary', mt: 1, maxWidth: 760 }}>{intro}</Typography>
-      )}
+    <Box
+      role="status"
+      sx={{
+        ...TYPE.small,
+        mt: 4,
+        px: 2.5,
+        py: 2,
+        maxWidth: 600,
+        bgcolor: BRAND_COLORS.yellow.tint,
+        color: BRAND_COLORS.yellow.deep,
+      }}
+    >
+      {children}
     </Box>
   );
 }
@@ -231,15 +341,53 @@ export function NoData({ text = 'No data yet' }: { text?: string }) {
   return (
     <Box
       sx={{
-        height: 220,
+        height: 240,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: 'text.disabled',
         textAlign: 'center',
       }}
     >
-      <Typography variant="body2">{text}</Typography>
+      <Typography sx={{ ...TYPE.small, color: MUTED }}>{text}</Typography>
     </Box>
+  );
+}
+
+// ---------------------------------------------------------------------- the period switch
+
+const PERIOD_SHORT: Record<PeriodKey, string> = {
+  '7d': '7D',
+  '30d': '30D',
+  '90d': '90D',
+  '12m': '12M',
+  all: 'All',
+};
+
+/** A chart's own period, as the app's price ranges: 7D, 30D, 90D, 12M, All. */
+export function PeriodSwitch({
+  value,
+  onChange,
+}: {
+  value: PeriodKey;
+  onChange: (key: PeriodKey) => void;
+}) {
+  return (
+    <SegmentedControl
+      value={value}
+      onChange={onChange}
+      options={PERIODS.map((p) => ({
+        value: p.key,
+        label: (
+          <>
+            <Box component="span" aria-hidden="true">
+              {PERIOD_SHORT[p.key]}
+            </Box>
+            <Box component="span" sx={VISUALLY_HIDDEN_SX}>
+              {p.label}
+            </Box>
+          </>
+        ),
+      }))}
+    />
   );
 }

@@ -64,7 +64,7 @@ export const POST = withAuth(async (req: NextRequest) => {
   } catch (err: any) {
     logger.error('Coinbase session exception:', err);
     return NextResponse.json(
-      { error: 'Coinbase is temporarily unavailable — please try again.' },
+      { error: 'Coinbase is temporarily unavailable. Please try again.' },
       { status: 500 }
     );
   }

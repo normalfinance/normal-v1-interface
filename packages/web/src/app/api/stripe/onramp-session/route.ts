@@ -101,7 +101,7 @@ export const POST = withAuth(async (req: NextRequest, { user }) => {
   } catch (e: any) {
     console.error('[stripe/onramp-session] exception:', e?.message ?? e);
     return NextResponse.json(
-      { success: false, error: 'Stripe is temporarily unavailable — please try again.' },
+      { success: false, error: 'Stripe is temporarily unavailable. Please try again.' },
       { status: 502 }
     );
   }

@@ -27,9 +27,7 @@ export function DownloadButton({ sx, ...other }: ButtonBaseProps) {
           borderRadius: 'inherit',
           transition: theme.transitions.create(['opacity']),
           '&:hover': {
-            ...theme.mixins.bgBlur({
-              color: varAlpha(theme.vars.palette.grey['900Channel'], 0.64),
-            }),
+            backgroundColor: varAlpha(theme.vars.palette.grey['900Channel'], 0.64),
             opacity: 1,
           },
         }),

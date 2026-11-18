@@ -4,6 +4,7 @@ import type { Token } from '@normalfinance/types';
 
 import { BigNumber } from 'bignumber.js';
 import { announceTransaction } from '@/lib/tx-events';
+import { confirmAction } from '@/lib/auth/action-code';
 import { SOL_RPC_URL } from '@/hooks/use-chain-portfolio';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
@@ -98,7 +99,7 @@ export function createSolanaAdapter(
         const info = await getTurnkeyWalletInfo();
         if (!info?.subOrgId)
           throw new Error(
-            'Could not load your wallet just now — check your connection and try again.'
+            'Could not load your wallet just now. Check your connection and try again.'
           );
         const subOrgId = info.subOrgId;
 
@@ -111,6 +112,9 @@ export function createSolanaAdapter(
         const toPubkey = new PublicKey(params.destination);
         const lamports = Math.round(parseFloat(params.amount) * 1e9);
         if (!lamports || lamports <= 0) throw new Error('Invalid amount');
+
+        // Before the blockhash below, which expires while a code is being typed.
+        if (!(await confirmAction())) return '';
 
         const tx = new Transaction().add(
           SystemProgram.transfer({ fromPubkey, toPubkey, lamports })
@@ -151,7 +155,7 @@ export function createSolanaAdapter(
         );
 
         const result = signResult?.activity?.result?.signRawPayloadResult;
-        if (!result?.r || !result?.s) throw new Error('Signing failed — no signature returned');
+        if (!result?.r || !result?.s) throw new Error('Signing failed: no signature returned');
 
         const signature = new Uint8Array(64);
         signature.set(hexToBytes(result.r.padStart(64, '0')), 0);

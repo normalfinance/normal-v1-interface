@@ -3,8 +3,7 @@
 import './styles.css';
 
 import NProgress from 'nprogress';
-import { useAppStore } from '@normalfinance/state';
-import { useRef, Suspense, useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { usePathname, useSearchParams } from '@/routes/hooks';
 
 // ----------------------------------------------------------------------
@@ -28,20 +27,9 @@ const handleMutation = () => {
   filteredAnchors.forEach((anchor) => anchor.addEventListener('click', handleAnchorClick));
 };
 
+// Page navigation only. The app's own loading flag drives the bar from the
+// app frame (AppLoadingProgress), so this root-layout part never loads the store.
 export function ProgressBar() {
-  const { globalIsLoading } = useAppStore();
-  const prevIsLoading = useRef(globalIsLoading);
-
-  useEffect(() => {
-    if (globalIsLoading && !prevIsLoading.current) {
-      NProgress.start();
-    }
-    if (!globalIsLoading && prevIsLoading.current) {
-      NProgress.done();
-    }
-    prevIsLoading.current = globalIsLoading;
-  }, [globalIsLoading]);
-
   useEffect(() => {
     NProgress.configure({ showSpinner: false });
 

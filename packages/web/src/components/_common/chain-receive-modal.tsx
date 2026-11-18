@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { useTranslate } from '@/locales';
 import { useState, useEffect } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
+import { INK, WELL, MUTED, FAINT, PAPER, CANVAS, INK_SOFT } from '@/theme/brand-colors';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -15,7 +16,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { Iconify } from '@/components/template/iconify';
 import { useSnackbar } from '@/components/template/snackbar';
-
 // ---------------------------------------------------------------------------
 // Generic single-chain receive modal (QR + copyable address) for chains that
 // don't need extra ceremony — Ethereum, Solana. Bitcoin keeps its own modal
@@ -74,7 +74,7 @@ export function ChainReceiveModal({
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
     >
       <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box
@@ -86,7 +86,7 @@ export function ChainReceiveModal({
           }}
         >
           <Typography
-            sx={{ fontSize: '17px', fontWeight: 700, color: '#0A0A0F', letterSpacing: '-0.02em' }}
+            sx={{ fontSize: '17px', fontWeight: 500, color: INK, letterSpacing: '-0.02em' }}
           >
             {t('Receive {{symbol}}', { symbol })}
           </Typography>
@@ -98,24 +98,22 @@ export function ChainReceiveModal({
               right: 0,
               width: 28,
               height: 28,
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: 'rgba(10,10,15,0.06)',
-              color: '#0A0A0F',
+              bgcolor: 'rgba(var(--nf-ink-rgb),0.06)',
+              color: INK,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               fontFamily: 'inherit',
-              '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+              '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.1)' },
             }}
           >
             <Iconify icon="mingcute:close-line" width={16} />
           </Box>
         </Box>
-        <Typography
-          sx={{ fontSize: '13px', color: 'rgba(10,10,15,0.5)', textAlign: 'center', mt: '4px' }}
-        >
+        <Typography sx={{ fontSize: '13px', color: MUTED, textAlign: 'center', mt: '4px' }}>
           {t('Scan the QR code or copy your {{chain}} address', { chain: chainLabel })}
         </Typography>
       </DialogTitle>
@@ -126,9 +124,9 @@ export function ChainReceiveModal({
           <Box
             sx={{
               p: '16px',
-              borderRadius: '16px',
-              bgcolor: '#FAFAFB',
-              border: '1px solid rgba(10,10,15,0.08)',
+              borderRadius: 'var(--radius-lg)',
+              bgcolor: WELL,
+              border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
@@ -141,16 +139,14 @@ export function ChainReceiveModal({
                 component="img"
                 src={qrCodeUrl}
                 alt={`${chainLabel} address QR`}
-                sx={{ maxWidth: '100%', borderRadius: '4px' }}
+                sx={{ maxWidth: '100%', borderRadius: 'var(--radius-xs)' }}
               />
             ) : qrFailed ? (
-              <Typography
-                sx={{ fontSize: '12.5px', color: 'rgba(10,10,15,0.45)', textAlign: 'center' }}
-              >
-                {t('QR unavailable — copy the address below.')}
+              <Typography sx={{ fontSize: '12.5px', color: FAINT, textAlign: 'center' }}>
+                {t('QR unavailable. Copy the address below.')}
               </Typography>
             ) : (
-              <CircularProgress size={36} sx={{ color: 'rgba(10,10,15,0.3)' }} />
+              <CircularProgress size={36} sx={{ color: FAINT }} />
             )}
           </Box>
 
@@ -162,7 +158,7 @@ export function ChainReceiveModal({
               gap: '8px',
               px: '12px',
               py: '10px',
-              borderRadius: '10px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: 'rgba(245,158,11,0.06)',
               border: '1px solid rgba(245,158,11,0.2)',
               width: '100%',
@@ -173,7 +169,7 @@ export function ChainReceiveModal({
               width={15}
               sx={{ color: 'warning.main', flexShrink: 0 }}
             />
-            <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.65)', lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: '12px', color: INK_SOFT, lineHeight: 1.5 }}>
               {warning}
             </Typography>
           </Box>
@@ -183,9 +179,9 @@ export function ChainReceiveModal({
             sx={{
               px: '14px',
               py: '12px',
-              borderRadius: '12px',
-              bgcolor: '#FAFAFB',
-              border: '1px solid rgba(10,10,15,0.08)',
+              borderRadius: 'var(--radius-md)',
+              bgcolor: WELL,
+              border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
               width: '100%',
               wordBreak: 'break-all',
             }}
@@ -193,8 +189,8 @@ export function ChainReceiveModal({
             <Typography
               sx={{
                 fontSize: '12px',
-                color: '#0A0A0F',
-                fontFamily: '"Geist Mono", "Courier New", monospace',
+                color: INK,
+                fontFamily: '"Geist Mono", ui-monospace, monospace',
                 lineHeight: 1.6,
               }}
             >
@@ -211,15 +207,15 @@ export function ChainReceiveModal({
               gap: '6px',
               px: '14px',
               py: '8px',
-              borderRadius: '10px',
-              border: '1px solid rgba(10,10,15,0.12)',
-              bgcolor: '#FFFFFF',
-              color: '#0A0A0F',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(var(--nf-ink-rgb),0.14)',
+              bgcolor: PAPER,
+              color: INK,
               fontSize: '13px',
               fontWeight: 500,
               cursor: 'pointer',
               fontFamily: 'inherit',
-              '&:hover': { bgcolor: '#F4F4F7' },
+              '&:hover': { bgcolor: CANVAS },
             }}
           >
             <Iconify icon="solar:copy-outline" width={15} />

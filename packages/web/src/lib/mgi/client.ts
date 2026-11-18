@@ -107,7 +107,7 @@ export async function fetchMgiChallenge(userAccount: string) {
     const body = await r.json().catch(() => null);
     throw new Error(
       (typeof body?.error === 'string' && body.error) ||
-        'MoneyGram sign-in failed — please try again.'
+        'MoneyGram sign-in failed. Please try again.'
     );
   }
   return r.json() as Promise<{ transaction: string; network_passphrase?: string }>;
@@ -131,7 +131,7 @@ export async function completeMgiAuth(userSignedXDR: string): Promise<string> {
   if (!r.ok) {
     // Never stringify diagnostics into a user-facing Error (doc 90 1c).
     const clean = typeof data === 'object' && typeof data?.error === 'string' ? data.error : null;
-    throw new Error(clean || 'MoneyGram sign-in failed — please try again.');
+    throw new Error(clean || 'MoneyGram sign-in failed. Please try again.');
   }
 
   const token = (typeof data === 'string' ? undefined : data?.token) ?? data?.access_token ?? data;
@@ -178,7 +178,7 @@ export async function startMgiDeposit(token: string, userAccount: string, amount
     // Clean anchor rejection (e.g. amount below MoneyGram's minimum) — show
     // the message, not a JSON diagnostics dump.
     if (typeof data?.error === 'string' && data.error) throw new Error(data.error);
-    throw new Error('MoneyGram is temporarily unavailable — please try again.');
+    throw new Error('MoneyGram is temporarily unavailable. Please try again.');
   }
 
   return data as { url: string; id: string | null };
@@ -306,7 +306,7 @@ async function fetchMoreInfoUrlWithSep10(token: string, txId: string): Promise<s
   if (!r.ok || !data?.more_info_url) {
     throw new Error(
       (typeof data?.error === 'string' && data.error) ||
-        'MoneyGram is temporarily unavailable — please try again.'
+        'MoneyGram is temporarily unavailable. Please try again.'
     );
   }
   return data.more_info_url as string;
@@ -363,7 +363,7 @@ export async function openTxInAnchorUI(
   }
   if (tries >= maxTries) {
     // Doc 90 W2: the poll used to exhaust in silence after ~3 minutes.
-    enqueueSnackbar?.('Still processing — check Activity for the latest MoneyGram status.', {
+    enqueueSnackbar?.('Still processing. Check Activity for the latest MoneyGram status.', {
       variant: 'info',
     });
   }

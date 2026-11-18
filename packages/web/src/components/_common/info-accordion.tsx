@@ -94,7 +94,7 @@ const InfoAccordion: React.FC<InfoAccordionProps> = ({
                 gap: 1,
                 border: `1px solid ${theme.palette.divider}`,
                 backgroundColor: alpha(theme.palette.grey[500], 0.08),
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
               }}
             >
               <Iconify icon={alert.icon} width={14} sx={{ color: theme.palette.text.secondary }} />

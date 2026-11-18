@@ -8,6 +8,7 @@ import { ETH_RPC_URLS, SOL_RPC_URLS } from '@/lib/chains/rpc-fallback';
 import { fetchStellarBalancesFromPool } from '@/lib/stellar/horizon-pool';
 
 import { buildAsset } from './normalize';
+import { btcBalanceSats } from './btc-balance';
 
 // Pure normalization + stale-fallback live in ./normalize (unit-tested).
 export { applyStaleFallback } from './normalize';
@@ -129,10 +130,8 @@ async function rpc(url: string, method: string, params: unknown[]): Promise<any>
 async function fetchBtcBalance(address: string): Promise<number> {
   const res = await withTimeout(fetch(`https://mempool.space/api/address/${address}`));
   if (!res.ok) throw new Error(`btc ${res.status}`);
-  const d = await res.json();
-  const funded: number = d.chain_stats?.funded_txo_sum ?? 0;
-  const spent: number = d.chain_stats?.spent_txo_sum ?? 0;
-  return (funded - spent) / 1e8;
+  // A payment out leaves at once, one in counts once confirmed (btc-balance.ts).
+  return btcBalanceSats(await res.json()) / 1e8;
 }
 
 /** Warn only when the primary did NOT answer — a silent failover reads as

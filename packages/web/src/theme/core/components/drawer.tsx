@@ -1,10 +1,13 @@
 import type { Theme, Components } from '@mui/material/styles';
 
-import { varAlpha } from 'minimal-shared/utils';
-
 // ----------------------------------------------------------------------
 
 const MuiDrawer: Components<Theme>['MuiDrawer'] = {
+  /** **************************************
+   * DEFAULT PROPS
+   *************************************** */
+  // A drawer appears in place: MUI's default slides it in (DESIGN.md: nothing moves).
+  defaultProps: { transitionDuration: 0 },
   /** **************************************
    * STYLE
    *************************************** */
@@ -12,19 +15,15 @@ const MuiDrawer: Components<Theme>['MuiDrawer'] = {
     paperAnchorRight: ({ ownerState, theme }) => ({
       ...(ownerState.variant === 'temporary' && {
         ...theme.mixins.paperStyles(theme),
-        boxShadow: `-40px 40px 80px -8px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.24)}`,
-        ...theme.applyStyles('dark', {
-          boxShadow: `-40px 40px 80px -8px ${varAlpha(theme.vars.palette.common.blackChannel, 0.24)}`,
-        }),
+        boxShadow: 'none',
+        borderLeft: `1px solid ${theme.vars.palette.divider}`,
       }),
     }),
     paperAnchorLeft: ({ ownerState, theme }) => ({
       ...(ownerState.variant === 'temporary' && {
         ...theme.mixins.paperStyles(theme),
-        boxShadow: `40px 40px 80px -8px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.24)}`,
-        ...theme.applyStyles('dark', {
-          boxShadow: `40px 40px 80px -8px  ${varAlpha(theme.vars.palette.common.blackChannel, 0.24)}`,
-        }),
+        boxShadow: 'none',
+        borderRight: `1px solid ${theme.vars.palette.divider}`,
       }),
     }),
   },

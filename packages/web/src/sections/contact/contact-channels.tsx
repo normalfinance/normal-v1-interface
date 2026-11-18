@@ -1,198 +1,67 @@
 'use client';
 
-import React from 'react';
 import { Icon } from '@iconify/react';
+import { paths } from '@/routes/paths';
+import { SOCIAL_COLORS } from '@/theme/brand-colors';
 
-import { Box, Link, Typography } from '@mui/material';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { PageSection, SectionHeader } from '@/components/_common/brand';
 
-type Channel = {
-  icon: React.ReactNode;
-  name: string;
-  handle: string;
-  href: string;
-};
+import { LinkCells } from './link-cells';
 
-const CHANNELS: Channel[] = [
+import type { LinkCell } from './link-cells';
+
+// ----------------------------------------------------------------------
+
+// Each channel in its own network's colours, at the owner's request, like
+// Roadmap's principles and About's values. X, Telegram and Discord are the
+// site's own links (paths.socials), the same ones the footer uses. LinkedIn is
+// not in paths.ts yet.
+const CHANNELS: LinkCell[] = [
   {
-    icon: <Icon icon="fa6-brands:x-twitter" width={18} height={18} />,
+    icon: <Icon icon="fa6-brands:x-twitter" />,
     name: 'X / Twitter',
-    handle: '@normalfinance',
-    href: 'https://x.com/normalfinance',
+    detail: '@normalfi',
+    href: paths.socials.twitter,
+    external: true,
+    colors: SOCIAL_COLORS.x,
   },
   {
-    icon: <Icon icon="fa6-brands:telegram" width={18} height={18} />,
+    icon: <Icon icon="fa6-brands:telegram" />,
     name: 'Telegram',
-    handle: '@normalfinance',
-    href: 'https://t.me/normalfinance',
+    detail: '@normalfinance',
+    href: paths.socials.telegram,
+    external: true,
+    colors: SOCIAL_COLORS.telegram,
   },
   {
-    icon: <Icon icon="fa6-brands:discord" width={18} height={18} />,
+    icon: <Icon icon="fa6-brands:discord" />,
     name: 'Discord',
-    handle: 'normalfinance',
-    href: 'https://discord.gg/normalfinance',
+    detail: 'Normal server',
+    href: paths.socials.discord,
+    external: true,
+    colors: SOCIAL_COLORS.discord,
   },
   {
-    icon: <Icon icon="fa6-brands:linkedin-in" width={18} height={18} />,
+    icon: <Icon icon="fa6-brands:linkedin" />,
     name: 'LinkedIn',
-    handle: 'Normal Finance',
+    detail: 'Normal Finance',
     href: 'https://linkedin.com/company/normalfinance',
+    external: true,
+    colors: SOCIAL_COLORS.linkedin,
   },
 ];
 
-const ChannelCard: React.FC<{ channel: Channel }> = ({ channel }) => (
-  <Link
-    href={channel.href}
-    target="_blank"
-    rel="noopener noreferrer"
-    underline="none"
-    sx={{
-      display: 'flex',
-      flexDirection: 'column',
-      bgcolor: '#FFFFFF',
-      border: '1px solid rgba(10,10,15,0.08)',
-      borderRadius: '20px',
-      p: '24px',
-      boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 16px rgba(10,10,15,0.05)',
-      transition: 'box-shadow 180ms ease, transform 180ms ease',
-      '&:hover': {
-        boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 28px rgba(10,10,15,0.1)',
-        '& .arrow-btn': {
-          bgcolor: '#0A0A0F',
-          color: '#fff',
-        },
-      },
-    }}
-  >
-    {/* Top row: icon + arrow */}
-    <Box
-      sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        mb: '20px',
-      }}
-    >
-      {/* Icon box */}
-      <Box
-        sx={{
-          width: 48,
-          height: 48,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#F4F4F7',
-          borderRadius: '10px',
-          color: '#0A0A0F',
-        }}
-      >
-        {channel.icon}
-      </Box>
-
-      {/* Arrow button */}
-      <Box
-        className="arrow-btn"
-        sx={{
-          width: 32,
-          height: 32,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#F4F4F7',
-          borderRadius: '8px',
-          color: '#0A0A0F',
-          transition: 'bgcolor 150ms ease, color 150ms ease',
-        }}
-      >
-        <ArrowForwardIcon sx={{ fontSize: 14 }} />
-      </Box>
-    </Box>
-
-    <Typography
-      sx={{
-        fontSize: '17px',
-        fontWeight: 600,
-        color: '#0A0A0F',
-        letterSpacing: '-0.01em',
-        mb: '4px',
-      }}
-    >
-      {channel.name}
-    </Typography>
-
-    <Typography
-      sx={{
-        fontSize: '13px',
-        color: '#6B6B76',
-        fontFamily: '"Geist Mono", "Courier New", monospace',
-      }}
-    >
-      {channel.handle}
-    </Typography>
-  </Link>
-);
-
-export const ContactChannels: React.FC = () => (
-  <Box
-    component="section"
-    sx={{ bgcolor: '#FAFAFB', pt: { xs: '80px', md: '110px' }, pb: { xs: '40px', md: '56px' } }}
-  >
-    <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: { xs: '40px', md: '48px' } }}>
-        <Typography
-          sx={{
-            fontSize: '11px',
-            letterSpacing: '0.16em',
-            textTransform: 'uppercase',
-            color: '#6B6B76',
-            mb: 1.5,
-          }}
-        >
-          — Find Us
-        </Typography>
-        <Typography
-          component="h2"
-          sx={{
-            fontWeight: 500,
-            fontSize: 'clamp(32px, 4vw, 52px)',
-            lineHeight: 1.15,
-            letterSpacing: '-0.03em',
-            color: '#0A0A0F',
-            mb: '16px',
-          }}
-        >
-          Other ways to reach us
-        </Typography>
-        <Typography
-          sx={{
-            fontSize: '16px',
-            color: '#6B6B76',
-            lineHeight: 1.55,
-            maxWidth: '480px',
-          }}
-        >
-          Join our community channels for the fastest updates, announcements, and real-time support.
-        </Typography>
-      </Box>
-
-      {/* Grid */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr 1fr',
-            md: 'repeat(4, 1fr)',
-          },
-          gap: { xs: '16px', md: '24px' },
-        }}
-      >
-        {CHANNELS.map((channel) => (
-          <ChannelCard key={channel.name} channel={channel} />
-        ))}
-      </Box>
-    </Box>
-  </Box>
-);
-
-export default ContactChannels;
+/** The community channels: one row of link cells between the frame lines. */
+export function ContactChannels() {
+  return (
+    <PageSection divider hatchFoot aria-labelledby="channels-title">
+      <SectionHeader
+        id="channels-title"
+        eyebrow="Find us"
+        title="Other ways to reach us"
+        subtitle="Join our community channels for the fastest updates, announcements, and real-time support."
+      />
+      <LinkCells items={CHANNELS} />
+    </PageSection>
+  );
+}

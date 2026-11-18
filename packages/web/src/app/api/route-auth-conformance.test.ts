@@ -23,6 +23,8 @@ const PUBLIC_ROUTES: Record<string, string> = {
   'lifi/quote': 'prices shown before a wallet is connected (decision); IP rate-limited',
   'swap/quote': 'prices shown before a wallet is connected (decision); IP rate-limited',
   'prices/history': 'public market data; rate-limited',
+  'prices/markets':
+    'public market data, no user data; one shared copy (Redis, 5 min) behind a 60s edge cache, so CoinGecko sees one call per 5 min',
   'savings/user-position': 'address-keyed on-chain read; rate-limited (Block C #2 scoping pending)',
   'savings/earnings-history':
     'address-keyed append-only vault history; same exposure class as user-position (Block C #2)',
@@ -32,6 +34,8 @@ const PUBLIC_ROUTES: Record<string, string> = {
   // the chain, so it is now withAuth + ownership-checked and must never
   // return to this list.
   'mgi/info': 'static SEP anchor info, cached 300s, no user data',
+  'app/min-version':
+    'oldest supported app build from env, no user data; an old build must read it before sign-in',
   'cron/cctp-advance': 'cron-secret auth, not user sessions',
   'cron/dune-sync': 'cron-secret auth, not user sessions',
   'cron/fee-escrow-sweep': 'cron-secret auth, not user sessions',
@@ -41,6 +45,32 @@ const PUBLIC_ROUTES: Record<string, string> = {
   'stripe/webhook':
     'Stripe → us; authenticated by the Stripe-Signature HMAC (STRIPE_WEBHOOK_SECRET), not a user session; 503 when unconfigured',
 };
+
+/**
+ * Routes reachable by a login that hasn't entered its 6-digit code. Every entry
+ * here is a way past two-factor sign-in, so this list should stay this short.
+ */
+const PARTIAL_LOGIN_ROUTES: Record<string, string> = {
+  'auth/two-factor/recover': 'a lost authenticator leaves a recovery code as the only proof',
+};
+
+/**
+ * Routes an action must pass on its way to the chain. An account with 2FA enters
+ * its code before each one, so these refuse a token whose code is old. A new
+ * route that builds or broadcasts a user's transaction belongs here.
+ */
+const ACTION_CODE_ROUTES = [
+  'cctp/transfers',
+  'fees/execute-pair',
+  'index/purchases',
+  'savings/deposit',
+  'savings/withdraw',
+  'send/execute',
+  'send/stellar',
+  'swap/submit-single',
+  'turnkey/broadcast-btc',
+  'turnkey/build-btc-tx',
+];
 
 const API_DIR = path.join(__dirname);
 
@@ -88,6 +118,26 @@ describe('route auth conformance', () => {
       expect(wrapped || allowlisted).toBe(true);
     }
   );
+
+  it.each(routeFiles.map((f) => [routeKey(f), f]))(
+    '%s only skips the 6-digit code if it is on the short list',
+    (key, file) => {
+      const skips = fs.readFileSync(file as string, 'utf-8').includes('allowPartialLogin');
+      expect(skips).toBe(key in PARTIAL_LOGIN_ROUTES);
+    }
+  );
+
+  it.each(ACTION_CODE_ROUTES)('%s refuses an old 6-digit code', (key) => {
+    const source = fs.readFileSync(path.join(API_DIR, key, 'route.ts'), 'utf-8');
+    expect(source).toContain('actionCodeRefusal(user, accessToken)');
+  });
+
+  it('no other route asks for the code by accident', () => {
+    const asking = routeFiles
+      .filter((file) => fs.readFileSync(file, 'utf-8').includes('actionCodeRefusal('))
+      .map(routeKey);
+    expect(asking.sort()).toEqual([...ACTION_CODE_ROUTES].sort());
+  });
 
   it('every allowlist entry corresponds to an existing route', () => {
     const existing = new Set(routeFiles.map(routeKey));

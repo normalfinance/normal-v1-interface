@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import type { BigNumber } from 'bignumber.js';
+import type { FlowAction } from '@/components/_common/flow';
+import type { RunState, FlowPlan, FlowSummary } from '@/lib/flow/types';
 
 // ---------------------------------------------------------------------------
 // Unified swap asset registry. Two routing groups that can never be paired with
@@ -22,8 +24,8 @@ export interface SwapAsset {
 }
 
 export const SWAP_ASSETS: SwapAsset[] = [
-  { symbol: 'XLM', name: 'Stellar Lumens', group: 'stellar', decimals: 7 },
-  { symbol: 'USDC', name: 'USD Coin', group: 'stellar', decimals: 7 },
+  { symbol: 'XLM', name: 'Stellar', group: 'stellar', decimals: 7 },
+  { symbol: 'USDC', name: 'Digital dollars', group: 'stellar', decimals: 7 },
   { symbol: 'BTC', name: 'Bitcoin', group: 'crosschain', decimals: 8 },
   { symbol: 'ETH', name: 'Ethereum', group: 'crosschain', decimals: 18 },
   { symbol: 'SOL', name: 'Solana', group: 'crosschain', decimals: 9 },
@@ -77,6 +79,42 @@ export interface SwapEngineButton {
   loading: boolean;
   /** rendered above the CTA (e.g. trustline / activation notices) */
   helper?: ReactNode;
+  /**
+   * This button would start the swap itself. The shell opens the review page
+   * instead (`flow`), and only the confirm button there runs it. Setup actions
+   * (a trustline, a wallet) leave this off and run straight away.
+   */
+  review?: boolean;
+}
+
+/**
+ * The review page and the live journey of one swap (components/_common/flow).
+ * `plan` and `summary` follow the quote while the person reviews, and freeze
+ * the moment they confirm, so the page keeps its numbers after the form
+ * clears.
+ */
+export interface SwapFlow {
+  plan: FlowPlan;
+  summary: FlowSummary;
+  run: RunState;
+  /** One sentence under the title: "25 USDC for about 0.00029 BTC". */
+  lede: string;
+  /** Start the swap: the 2FA code (if on), then the signatures. */
+  confirm: () => void;
+  /** Why confirm cannot be pressed right now; null when it can. */
+  blocked: string | null;
+  /** Confirm was pressed and the first prompt is on its way. */
+  busy: boolean;
+  /** While running: can the person leave this page without parking the money? */
+  leave: { safe: boolean; message: string };
+  /** After a failure: the ways out ("Try again", "Bring back as USDC"). */
+  failActions?: FlowAction[];
+  /** Above the steps: an offer or explanation for this run. */
+  notice?: ReactNode;
+  /** Words for the ending ("Your Bitcoin is in your wallet"), when there is one. */
+  doneNote?: string;
+  /** Forget the run: back to a fresh review of the current quote. */
+  reset: () => void;
 }
 
 export interface SwapEngineResult {
@@ -93,4 +131,6 @@ export interface SwapEngineResult {
   modals: ReactNode;
   /** max spendable amount in *token* units — performs live reads (gas, reserves) */
   getMaxToken: () => Promise<BigNumber>;
+  /** The review page and live journey; absent until there is a quote to review. */
+  flow?: SwapFlow | null;
 }

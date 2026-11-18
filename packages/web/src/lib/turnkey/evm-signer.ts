@@ -38,6 +38,6 @@ export async function signEvmTxWithTurnkey(
   );
 
   const signed = result?.activity?.result?.signTransactionResult?.signedTransaction;
-  if (!signed) throw new Error('Turnkey signing failed — no signed transaction returned');
+  if (!signed) throw new Error('Turnkey signing failed: no signed transaction returned');
   return (signed.startsWith('0x') ? signed : `0x${signed}`) as `0x${string}`;
 }

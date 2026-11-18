@@ -136,7 +136,7 @@ export async function getLifiQuote(input: {
     const raw = String(err.message ?? '');
     const noRoute = res.status === 404 || /no (available )?(quote|route)/i.test(raw);
     const message = noRoute
-      ? 'No route found for this amount — try a larger amount or a different pair.'
+      ? 'No route found for this amount. Try a larger amount or a different pair.'
       : (err.message ?? `Quote failed (${res.status})`);
     throw new LifiQuoteError(message, res.status);
   }

@@ -6,6 +6,7 @@ import { paths } from '@/routes/paths';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useRouter } from 'next/navigation';
+import { INK, MUTED } from '@/theme/brand-colors';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { fNumber, fCurrency } from '@/utils/format-number';
 
@@ -100,9 +101,9 @@ export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsPr
                 width: '100%',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                borderRadius: '12px',
+                borderRadius: 'var(--radius-md)',
                 cursor: 'pointer',
-                '&:hover': { bgcolor: 'rgba(10,10,15,0.03)' },
+                '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.03)' },
               }}
             >
               <Box display="flex" alignItems="center" gap="12px">
@@ -115,8 +116,8 @@ export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsPr
                   <Typography
                     sx={{
                       fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#0A0A0F',
+                      fontWeight: 500,
+                      color: INK,
                       letterSpacing: '-0.01em',
                       lineHeight: 1.3,
                     }}
@@ -126,16 +127,16 @@ export default function TokensTab({ tokens = [], loading = false }: ToeknsTabsPr
                     )}{' '}
                     {token.symbol.replace('sn', '')}
                   </Typography>
-                  <Typography sx={{ fontSize: '12px', color: '#6B6B76', mt: '2px' }}>
+                  <Typography sx={{ fontSize: '12px', color: MUTED, mt: '2px' }}>
                     {token.name}
                   </Typography>
                 </Box>
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                <Typography sx={{ fontSize: '14px', fontWeight: 400, color: '#0A0A0F', ...MONO }}>
+                <Typography sx={{ fontSize: '14px', fontWeight: 400, color: INK, ...MONO }}>
                   {fCurrency(BigNumber(token.price).multipliedBy(token.balance))}
                 </Typography>
-                <Typography sx={{ fontSize: '11.5px', color: '#6B6B76', mt: '2px', ...MONO }}>
+                <Typography sx={{ fontSize: '11.5px', color: MUTED, mt: '2px', ...MONO }}>
                   {fNumber(token.balance)} {token.symbol.replace('sn', '')}
                 </Typography>
               </Box>

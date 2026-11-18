@@ -34,7 +34,7 @@ export function SearchNotFound({ query, sx, slotProps, ...other }: SearchNotFoun
         {
           gap: 1,
           display: 'flex',
-          borderRadius: 1.5,
+          borderRadius: 'var(--radius-md)',
           textAlign: 'center',
           flexDirection: 'column',
         },

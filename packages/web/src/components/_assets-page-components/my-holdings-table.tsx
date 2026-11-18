@@ -34,7 +34,7 @@ export default function MyHoldingsTable({ holdingsData }: MyHoldingsTableProps) 
   const table = useTable({ defaultRowsPerPage: 10 });
 
   return (
-    <Card sx={{ borderRadius: 2, height: '100%' }}>
+    <Card sx={{ borderRadius: 'var(--radius-lg)', height: '100%' }}>
       <CardHeader title={t('Holdings')} sx={{ mb: 2 }} />
 
       <Scrollbar sx={{ maxHeight: 400 }}>

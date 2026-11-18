@@ -104,7 +104,7 @@ export async function signLifiBtcPsbt(
   const ourPayment = payments.p2wpkh({ pubkey: publicKey, network });
   if (ourPayment.address !== bitcoinAddress) {
     throw new Error(
-      `Public key does not match ${bitcoinAddress} (derives ${ourPayment.address}) — refusing to sign`
+      `Public key does not match ${bitcoinAddress} (derives ${ourPayment.address}). Refusing to sign`
     );
   }
   const ourScript = ourPayment.output;
@@ -184,8 +184,8 @@ export async function signLifiBtcPsbt(
         const prevOut = prevTx.outs[vout];
         if (prevOut && isOurs(prevOut.script)) {
           throw new Error(
-            `Refusing to sign: input ${index} is ours but carries no witness_utxo — ` +
-              `this wallet can only sign segwit (P2WPKH) inputs`
+            `Refusing to sign: input ${index} is ours but carries no witness_utxo. ` +
+              `This wallet can only sign segwit (P2WPKH) inputs`
           );
         }
       }
@@ -204,7 +204,7 @@ export async function signLifiBtcPsbt(
   });
 
   if (toSign.length === 0) {
-    throw new Error(`No PSBT inputs belong to ${bitcoinAddress} — nothing to sign`);
+    throw new Error(`No PSBT inputs belong to ${bitcoinAddress}: nothing to sign`);
   }
 
   // ONE activity for all inputs, so the user sees a single passkey prompt
@@ -252,8 +252,7 @@ export async function signLifiBtcPsbt(
     const valid = psbt.validateSignaturesOfInput(index, (pubkey, msghash, signature) =>
       secp256k1.verify(signature, msghash, pubkey)
     );
-    if (!valid)
-      throw new Error(`Signature for input ${index} failed validation — not broadcasting`);
+    if (!valid) throw new Error(`Signature for input ${index} failed validation. Not broadcasting`);
   });
 
   return psbt.toHex();

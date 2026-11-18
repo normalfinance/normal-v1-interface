@@ -29,7 +29,7 @@ const dotBaseStyles = (theme: Theme): CSSObject => ({
   transform: 'scale(1) translate(50%, 50%)',
   '&::before, &::after': {
     content: "''",
-    borderRadius: 1,
+    borderRadius: 'var(--radius-xs)',
     backgroundColor: theme.vars.palette.common.white,
   },
 });

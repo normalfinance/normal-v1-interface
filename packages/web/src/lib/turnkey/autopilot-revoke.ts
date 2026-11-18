@@ -5,6 +5,7 @@
 // bound to it die with it. Authoritative instantly (status reads Turnkey,
 // not our DB). Mirror of the consent ceremony's stamping pattern.
 
+import { forgetAutopilotActive } from '@/lib/cctp/autopilot-active';
 import { createPasskeyStamper } from '@/lib/turnkey/passkey-stamper';
 
 import { getTurnkeyWalletInfo } from './wallet-info';
@@ -25,4 +26,6 @@ export async function revokeAutopilotConsent(autopilotUserId: string): Promise<v
   });
   const deleted = activity?.activity?.result?.deleteUsersResult?.userIds;
   if (!deleted?.includes(autopilotUserId)) throw new Error('Turnkey did not delete the user');
+  // The swap pages say who a swap waits on: they read it again now.
+  forgetAutopilotActive();
 }

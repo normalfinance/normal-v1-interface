@@ -34,7 +34,7 @@ export const NavDropdown = styled(
   }),
   [`& .${megaMenuClasses.dropdown.paper}`]: {
     ...theme.mixins.paperStyles(theme, { dropdown: true }),
-    borderRadius: theme.shape.borderRadius * 2,
+    borderRadius: 'var(--radius-lg)',
     padding: theme.spacing(isMultiList ? 2.5 : 2),
   },
   variants: [

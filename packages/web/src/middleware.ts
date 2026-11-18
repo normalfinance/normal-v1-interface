@@ -364,15 +364,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/assets',
-    '/assets/:path*',
-    '/invest',
-    '/earn',
-    '/indexes',
-    '/indexes/:path*',
-    '/indexes/create',
-    '/trx/:path*',
-    '/api/:path*',
-  ],
+  // The app and its API. The old app URLs redirect to /app before this runs.
+  matcher: ['/app', '/app/:path*', '/api/:path*'],
 };

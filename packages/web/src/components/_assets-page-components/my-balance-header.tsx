@@ -29,7 +29,7 @@ export default function MyBalanceHeader({
     <Stack
       sx={{
         p: 2,
-        borderRadius: 2,
+        borderRadius: 'var(--radius-lg)',
         bgcolor: alpha(theme.palette.grey[500], 0.08),
       }}
     >
@@ -42,7 +42,7 @@ export default function MyBalanceHeader({
           variant="h2"
           sx={{
             fontSize: { xs: '32px', md: '48px' },
-            fontWeight: 600,
+            fontWeight: 500,
             lineHeight: 1.2,
           }}
         >

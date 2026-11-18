@@ -8,6 +8,7 @@ import {
   principalFromEvents,
   PENDING_ROW_WINDOW_MS,
   reconcileTotalDeposited,
+  totalDepositedWithoutHistory,
 } from '@/server/savings-deposits';
 
 const NOW = 1_760_000_000_000;
@@ -157,6 +158,32 @@ describe('eventTxId', () => {
   });
 });
 
+describe('totalDepositedWithoutHistory (security report, 2026-11-04)', () => {
+  const deposit = (amount: string) => ({ type: 'deposit', amount });
+  const withdraw = (amount: string) => ({ type: 'withdraw', amount });
+
+  it('with no rows, counts what is in the vault: no earnings invented', () => {
+    expect(totalDepositedWithoutHistory([], 120)).toBe(120);
+  });
+
+  it('never reports less than the vault holds, so a partial history cannot inflate earnings', () => {
+    // A pre-#27 deposit of 100 has no row here; the vault holds 150.
+    expect(totalDepositedWithoutHistory([deposit('50')], 150)).toBe(150);
+  });
+
+  it('keeps the recorded figure when the vault holds less (a loss)', () => {
+    expect(totalDepositedWithoutHistory([deposit('100'), withdraw('10')], 85)).toBe(90);
+  });
+
+  it('a just-made deposit counts while the vault balance still reads 0', () => {
+    expect(totalDepositedWithoutHistory([deposit('25')], 0)).toBe(25);
+  });
+
+  it('never goes below zero', () => {
+    expect(totalDepositedWithoutHistory([withdraw('40')], 0)).toBe(0);
+  });
+});
+
 // A DeFindex event as the live API returns it: 7-decimal integer strings,
 // USDC in assets[0].amount, vault shares in dfTokenAmount.
 const event = (type: 'deposit' | 'withdraw', usdc: number, shares: number | null, at: string) => ({
@@ -233,7 +260,7 @@ describe('principalFromEvents: "You put in" is the money still invested', () => 
     expect(principalFromEvents(unordered)).toBe(47.5);
   });
 
-  it('no history is null, so the caller falls back to its own records', () => {
+  it('no history is null, so the caller uses totalDepositedWithoutHistory', () => {
     expect(principalFromEvents([])).toBeNull();
     expect(principalFromEvents([{ type: 'rebalance' }])).toBeNull();
   });

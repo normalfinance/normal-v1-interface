@@ -5,10 +5,14 @@ import type { Point, Period, PeriodKey, StackedDaily } from '@/lib/metrics/perio
 import type { SectionKey, DistinctSeries, PublicMetricsSnapshot } from '@/lib/metrics/snapshot';
 
 import { useState } from 'react';
+import { TYPE } from '@/theme/type-scale';
 import { fNumber } from '@/utils/format-number';
+import { assetColor } from '@/lib/portfolio/display';
 import { SECTION_KEYS } from '@/lib/metrics/snapshot';
+import { SAVINGS_COLOR } from '@/lib/portfolio/allocation';
+import { INK, MUTED, BRAND_COLORS } from '@/theme/brand-colors';
+import { BRIDGE_COLOR, productColor } from '@/lib/metrics/colors';
 import {
-  PERIODS,
   addDays,
   bucketOf,
   periodOf,
@@ -22,34 +26,39 @@ import {
   aggregateStacked,
 } from '@/lib/metrics/periods';
 
-import Alert from '@mui/material/Alert';
-import Stack from '@mui/material/Stack';
-import MenuItem from '@mui/material/MenuItem';
-import TextField from '@mui/material/TextField';
-import Container from '@mui/material/Container';
+import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+
+import { Reveal } from '@/components/_common/reveal';
+import { HatchRail } from '@/components/_common/hatch';
+import { PageHero } from '@/components/_common/page-hero';
+import { HAIRLINE, PageSection, SectionHeader } from '@/components/_common/brand';
 
 import { Donut, BucketArea, BucketBars, RankedBars, StackedBuckets } from './charts';
 import {
-  Kpi,
+  SPAN,
+  Cell,
   fUtc,
   Panel,
+  Figure,
   fMoney,
-  KpiGrid,
-  PanelGrid,
+  CellGrid,
   chainColor,
   chainLabel,
-  SectionTitle,
+  PeriodSwitch,
   productLabel,
-  useProductColor,
+  CHAPTER_COLUMNS,
 } from './parts';
 
 // ----------------------------------------------------------------------
-// normalfinance.io/dashboard: public, kept out of search. Every chart over
-// time has its own period dropdown (Niko, 2026-11-13: "make the time per
-// graph"); changing it redraws that chart only, with no trip to the server.
-// The tiles show all-time numbers with the last 30 days underneath. The
-// relayer gas table and the per-wallet activity log live on /dashboard/team.
+// normalfinance.io/dashboard: public, kept out of search. A page of the
+// marketing site (DESIGN.md): it opens like the roadmap, the promise on the
+// left and where Normal stands on the sky wash beside it, then one chapter per
+// subject on the hairline grid, each its figures and its charts as cells that
+// share their lines. Every chart over time has its own period (Niko,
+// 2026-11-13: "make the time per graph"); changing it redraws that chart only,
+// with no trip to the server. The relayer gas table and the per-wallet
+// activity log live on /dashboard/team.
 // ----------------------------------------------------------------------
 
 const SECTION_LABEL: Record<SectionKey, string> = {
@@ -63,11 +72,11 @@ const SECTION_LABEL: Record<SectionKey, string> = {
 
 const ASSET_LABEL: Record<string, string> = { SAVINGS: 'Savings' };
 
-const STELLAR_IN = '#14B8A6';
-const STELLAR_OUT = '#8a8a8a';
+/** A holding's colour: Savings its mint, a coin the colour it is known by. */
+const holdingColor = (asset: string) => (asset === 'SAVINGS' ? SAVINGS_COLOR : assetColor(asset));
 
-/** The window the tiles' second line covers. */
-const TILE_PERIOD = periodOf('30d');
+/** The window the figures' second line covers. */
+const RECENT = periodOf('30d');
 
 const sum = (rows: { value: number }[]) => rows.reduce((total, r) => total + r.value, 0);
 
@@ -124,34 +133,7 @@ function bridgedSeries(inDays: Point[], outDays: Point[]): StackedDaily {
 
 // ---------------------------------------------------------------------- per-chart period
 
-function PeriodSelect({
-  value,
-  onChange,
-  label,
-}: {
-  value: PeriodKey;
-  onChange: (key: PeriodKey) => void;
-  label: string;
-}) {
-  return (
-    <TextField
-      select
-      size="small"
-      value={value}
-      onChange={(event) => onChange(event.target.value as PeriodKey)}
-      slotProps={{ htmlInput: { 'aria-label': label } }}
-      sx={{ minWidth: 150, flexShrink: 0 }}
-    >
-      {PERIODS.map((p) => (
-        <MenuItem key={p.key} value={p.key}>
-          {p.label}
-        </MenuItem>
-      ))}
-    </TextField>
-  );
-}
-
-/** A chart panel with its own period dropdown; only this chart follows it. */
+/** A chart in its cell with its own period; only this chart follows it. */
 function PeriodPanel({
   title,
   subheader,
@@ -172,7 +154,7 @@ function PeriodPanel({
       wide={wide}
       title={title}
       subheader={subheader(period)}
-      action={<PeriodSelect value={key} onChange={setKey} label={`Period for ${title}`} />}
+      action={<PeriodSwitch value={key} onChange={setKey} />}
     >
       {children(period)}
     </Panel>
@@ -188,27 +170,157 @@ const quietText = (period: Period) => (period.key === 'all' ? undefined : 'None 
 
 const fileOf = (name: string, period: Period) => `normal-${name}-${period.key}`;
 
+// ---------------------------------------------------------------------- the page's parts
+
+/** One subject of the page: its heading, then its figures and charts on one grid. */
+function Chapter({
+  id,
+  eyebrow,
+  title,
+  subtitle,
+  children,
+}: {
+  id: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+}) {
+  return (
+    <Reveal>
+      <PageSection
+        id={id}
+        divider
+        hatchFoot
+        aria-labelledby={`${id}-title`}
+        sx={{ scrollMarginTop: 72 }}
+      >
+        <SectionHeader id={`${id}-title`} eyebrow={eyebrow} title={title} subtitle={subtitle} />
+        <CellGrid columns={CHAPTER_COLUMNS}>{children}</CellGrid>
+      </PageSection>
+    </Reveal>
+  );
+}
+
+type GlanceRow = { href: string; label: string; value: string };
+
+/**
+ * The hero's right-hand cell, on the sky wash like the roadmap's: a figure
+ * for each chapter, each a link down to it, then when the numbers were taken.
+ */
+function AtAGlance({
+  rows,
+  updatedAt,
+  stale,
+}: {
+  rows: GlanceRow[];
+  updatedAt: string;
+  stale?: string;
+}) {
+  const sky = BRAND_COLORS.sky;
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        gap: 4,
+        flex: 1,
+        p: { xs: 3, md: 5 },
+        color: sky.deep,
+        bgcolor: sky.tint,
+      }}
+    >
+      <Box>
+        <Typography component="h2" sx={{ ...TYPE.eyebrow, color: 'inherit' }}>
+          At a glance
+        </Typography>
+        <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, mt: 2 }}>
+          {rows.map((row) => (
+            <Box component="li" key={row.href} sx={{ borderBottom: HAIRLINE }}>
+              <Box
+                component="a"
+                href={row.href}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                  py: 1.5,
+                  color: 'inherit',
+                  textDecoration: 'none',
+                  '&:hover .glance-label': { textDecoration: 'underline' },
+                }}
+              >
+                <Typography className="glance-label" sx={{ ...TYPE.body, color: 'inherit' }}>
+                  {row.label}
+                </Typography>
+                <Typography
+                  sx={{
+                    ...TYPE.h4,
+                    color: 'inherit',
+                    fontVariantNumeric: 'tabular-nums',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {row.value}
+                </Typography>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+      <Box>
+        <Typography sx={{ ...TYPE.eyebrow, color: 'inherit' }}>Last update</Typography>
+        <Typography sx={{ ...TYPE.body, color: 'inherit', mt: 1.5 }}>{fUtc(updatedAt)}</Typography>
+        <Typography sx={{ ...TYPE.small, color: 'inherit', mt: 0.5 }}>
+          The numbers refresh once a day. Every chart has its own period.
+        </Typography>
+        {stale && (
+          <Typography sx={{ ...TYPE.small, color: 'inherit', mt: 1.5 }}>{stale}</Typography>
+        )}
+      </Box>
+    </Box>
+  );
+}
+
+/** The notes on how the numbers are counted, as the last chapter's cells. */
+const HOW_WE_COUNT = [
+  {
+    title: 'Completed only',
+    body: 'Volume and revenue count actions that finished. Pending and failed ones are left out.',
+  },
+  {
+    title: "Today's prices",
+    body: "Dollar values for BTC, ETH, SOL and XLM use the price on the day of each update, so older actions show today's value. USDC is exact.",
+  },
+  {
+    title: 'Settled on Stellar',
+    body: 'An action counts as on Stellar when it settles there, CCTP bridges into Stellar included.',
+  },
+  {
+    title: 'Each wallet once',
+    body: 'Stellar wallets include those made before passkey wallets launched in June 2026 and wallets people connected, each counted once. Days are UTC.',
+  },
+];
+
 // ---------------------------------------------------------------------- page
 
 export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | null }) {
-  const productColor = useProductColor();
-
   if (!snapshot) {
     return (
-      <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 } }}>
-        <Typography variant="h3" component="h1">
-          Dashboard
-        </Typography>
-        <Typography sx={{ color: 'text.secondary', mt: 1 }}>
-          No numbers yet. They appear after the first daily sync.
-        </Typography>
-      </Container>
+      <PageHero
+        id="dashboard-title"
+        eyebrow="Dashboard · updated daily"
+        title="Normal in numbers."
+        lede="No numbers yet. They appear after the first daily update."
+      />
     );
   }
 
   const { users, activity, revenue, savings, stellar, walletsByChain } = snapshot;
   const today = snapshot.generatedAt.slice(0, 10);
-  const recent = windowStart(TILE_PERIOD, today);
+  const recent = windowStart(RECENT, today);
   const beforeRecent = recent ? addDays(recent, -1) : today;
   // Only sections the last update could not refresh at all; a partial note
   // (fresh but incomplete) is for the team page's sync health.
@@ -216,6 +328,13 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
     (key) =>
       snapshot.sections[key]?.error && snapshot.sections[key]?.updatedAt !== snapshot.generatedAt
   );
+  const staleText = stale.length
+    ? `The last update could not refresh ${stale
+        .map(
+          (key) => `${SECTION_LABEL[key]} (shown as of ${fUtc(snapshot.sections[key].updatedAt)})`
+        )
+        .join(', ')}.`
+    : undefined;
 
   const volumeAll = sum(stackedTotals(activity.volumeByProduct, null));
   const tvlBefore = lastOnOrBefore(savings.tvlByDay, beforeRecent);
@@ -224,73 +343,54 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
   const bridged = bridgedSeries(stellar.cctpInByDay, stellar.cctpOutByDay);
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 } }}>
-      <Stack spacing={1} sx={{ mb: 4 }}>
-        <Typography variant="h3" component="h1">
-          Dashboard
-        </Typography>
-        <Typography sx={{ color: 'text.secondary' }}>
-          Normal in numbers, refreshed once a day. Last update: {fUtc(snapshot.generatedAt)}. Each
-          chart has its own period.
-        </Typography>
-      </Stack>
+    <>
+      {/* Without JavaScript nothing waits to be revealed. */}
+      <noscript>
+        <style>{'[data-reveal]{opacity:1!important}'}</style>
+      </noscript>
 
-      {stale.length > 0 && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          The last update could not refresh{' '}
-          {stale
-            .map(
-              (key) =>
-                `${SECTION_LABEL[key]} (shown as of ${fUtc(snapshot.sections[key].updatedAt)})`
-            )
-            .join(', ')}
-          .
-        </Alert>
-      )}
+      <PageHero
+        id="dashboard-title"
+        eyebrow="Dashboard · updated daily"
+        title="Normal in numbers."
+        lede="Who uses Normal, the money that moves through it, what it earns and what savers earn. Counted from our own records and the networks themselves."
+        aside={
+          <AtAGlance
+            updatedAt={snapshot.generatedAt}
+            stale={staleText}
+            rows={[
+              { href: '#users', label: 'Accounts', value: fNumber(users.total) },
+              { href: '#money', label: 'Moved through Normal', value: fMoney(volumeAll) },
+              { href: '#savings', label: 'In savings now', value: fMoney(savings.tvlUsd) },
+              {
+                href: '#stellar',
+                label: 'Stellar wallets',
+                value: fNumber(stellarChain?.total ?? 0),
+              },
+            ]}
+          />
+        }
+      />
+      <HatchRail />
 
-      <KpiGrid>
-        <Kpi
-          label="Registered users"
+      <Chapter
+        id="users"
+        eyebrow="Users"
+        title="People on Normal."
+        subtitle="Accounts opened, and the wallets that completed at least one action."
+      >
+        <Figure
+          span={SPAN.half}
+          label="Accounts"
           value={fNumber(users.total)}
           foot={`+${fNumber(sumSince(users.signupsByDay, recent))} in the last 30 days`}
         />
-        <Kpi
+        <Figure
+          span={SPAN.half}
           label="Active wallets, last 30 days"
           value={fNumber(activity.activeWallets.window['30d'])}
           foot={`${fNumber(activity.activeWallets.window.all)} active since launch`}
         />
-        <Kpi
-          label="Volume"
-          value={fMoney(volumeAll)}
-          foot={`${signedMoney(sum(stackedTotals(activity.volumeByProduct, recent)))} in the last 30 days`}
-        />
-        <Kpi
-          label="Revenue"
-          value={fMoney(revenue.totalUsd)}
-          foot={`${signedMoney(sum(stackedTotals(revenue.dailyByProduct, recent)))} recorded in the last 30 days`}
-        />
-        <Kpi
-          label="In savings now"
-          value={fMoney(savings.tvlUsd)}
-          foot={
-            tvlBefore === null
-              ? 'In the Normal Savings vault'
-              : `${signedMoney(savings.tvlUsd - tvlBefore)} over the last 30 days`
-          }
-        />
-        <Kpi
-          label="Yield earned by savers"
-          value={fMoney(savings.yieldEarnedUsd)}
-          foot={
-            yieldBefore === null
-              ? 'Since launch'
-              : `${signedMoney(savings.yieldEarnedUsd - yieldBefore)} over the last 30 days`
-          }
-        />
-      </KpiGrid>
-
-      <SectionTitle title="Users" />
-      <PanelGrid>
         <PeriodPanel
           title="Sign-ups"
           subheader={(p) => `New accounts, ${bucketPhrase(p.bucket)}, ${spanOf(p)}.`}
@@ -321,10 +421,26 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
             />
           )}
         </PeriodPanel>
-      </PanelGrid>
+      </Chapter>
 
-      <SectionTitle title="Volume and revenue" />
-      <PanelGrid>
+      <Chapter
+        id="money"
+        eyebrow="Volume and revenue"
+        title="Money moving through Normal."
+        subtitle="Completed actions in dollars, by product, and the fees they paid."
+      >
+        <Figure
+          span={SPAN.half}
+          label="Moved through Normal"
+          value={fMoney(volumeAll)}
+          foot={`${signedMoney(sum(stackedTotals(activity.volumeByProduct, recent)))} in the last 30 days`}
+        />
+        <Figure
+          span={SPAN.half}
+          label="Revenue"
+          value={fMoney(revenue.totalUsd)}
+          foot={`${signedMoney(sum(stackedTotals(revenue.dailyByProduct, recent)))} recorded in the last 30 days`}
+        />
         <PeriodPanel
           title="Volume by product"
           subheader={(p) => `Completed actions in USD, ${bucketPhrase(p.bucket)}, ${spanOf(p)}.`}
@@ -377,7 +493,7 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
           initial="all"
           subheader={(p) =>
             p.key === 'all'
-              ? 'Revenue by product since launch. “LI.FI, before recording” is the part of the on-chain fee wallets that predates per-swap fee recording.'
+              ? 'Revenue by product since launch. “LI.FI, before recording” is the part of the fee wallets that predates per-swap fee recording.'
               : `Fees recorded by product, ${spanOf(p)}.`
           }
         >
@@ -411,10 +527,10 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
           )}
         </PeriodPanel>
         <PeriodPanel
-          title="Cumulative revenue"
+          title="Revenue to date"
           initial="all"
           subheader={(p) =>
-            `Recorded fees as a running total since launch, shown ${bucketPhrase(p.bucket)} for the ${spanOf(p)}. It ends below the all-time revenue by the LI.FI fees collected before per-swap recording began.`
+            `Recorded fees as a running total, ${bucketPhrase(p.bucket)}, ${spanOf(p)}. It ends below the all-time revenue by the LI.FI fees collected before per-swap recording began.`
           }
         >
           {(p) => (
@@ -427,10 +543,34 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
             />
           )}
         </PeriodPanel>
-      </PanelGrid>
+      </Chapter>
 
-      <SectionTitle title="Savings and wallets" />
-      <PanelGrid>
+      <Chapter
+        id="savings"
+        eyebrow="Savings and wallets"
+        title="Savings, wallets and holdings."
+        subtitle="What sits in the Normal Savings vault, the wallets people hold on each network, and what those wallets hold today."
+      >
+        <Figure
+          span={SPAN.half}
+          label="In savings now"
+          value={fMoney(savings.tvlUsd)}
+          foot={
+            tvlBefore === null
+              ? 'In the Normal Savings vault'
+              : `${signedMoney(savings.tvlUsd - tvlBefore)} over the last 30 days`
+          }
+        />
+        <Figure
+          span={SPAN.half}
+          label="Yield earned by savers"
+          value={fMoney(savings.yieldEarnedUsd)}
+          foot={
+            yieldBefore === null
+              ? 'Since launch'
+              : `${signedMoney(savings.yieldEarnedUsd - yieldBefore)} over the last 30 days`
+          }
+        />
         <PeriodPanel
           wide
           title="In savings over time"
@@ -445,15 +585,16 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
               bucket={p.bucket}
               name="In savings"
               money
+              color={SAVINGS_COLOR}
               filename={fileOf('savings', p)}
             />
           )}
         </PeriodPanel>
         <PeriodPanel
-          title="Wallets by chain"
+          title="Wallets by network"
           initial="all"
           subheader={(p) =>
-            `Wallets on each chain since launch${p.key === 'all' ? '' : `; in brackets, how many are new in the ${spanOf(p)}`}. Stellar counts every Stellar wallet: passkey wallets plus the earlier Normal wallets and connected wallets from before June 2026.`
+            `Wallets on each network since launch${p.key === 'all' ? '' : `; in brackets, how many are new in the ${spanOf(p)}`}. Stellar counts every Stellar wallet: passkey wallets, and the earlier Normal and connected wallets from before June 2026.`
           }
         >
           {(p) => {
@@ -476,7 +617,7 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
           }}
         </PeriodPanel>
         <Panel
-          title="Holdings by asset, right now"
+          title="Holdings, right now"
           subheader="What all user wallets hold today, per asset, plus savings."
         >
           <RankedBars
@@ -484,19 +625,22 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
               label: ASSET_LABEL[h.asset] ?? h.asset,
               value: h.usd,
             }))}
+            colors={snapshot.holdings.byAsset.map((h) => holdingColor(h.asset))}
             name="Holdings"
             money
             filename="normal-holdings-now"
           />
         </Panel>
-      </PanelGrid>
+      </Chapter>
 
-      <SectionTitle
-        title="On Stellar"
-        intro="Normal is built on Stellar. Savings, Soroswap swaps, MoneyGram cash in and out, and every CCTP bridge into Stellar settle there."
-      />
-      <KpiGrid>
-        <Kpi
+      <Chapter
+        id="stellar"
+        eyebrow="On Stellar"
+        title="Built on Stellar."
+        subtitle="Savings, Soroswap swaps, MoneyGram cash in and out, and every CCTP bridge into Stellar settle there."
+      >
+        <Figure
+          span={SPAN.quarter}
           label="Stellar wallets"
           value={fNumber(stellarChain?.total ?? 0)}
           foot={
@@ -505,39 +649,42 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
               : `+${fNumber(stellarChain?.added ?? 0)} in the last 30 days`
           }
         />
-        <Kpi
+        <Figure
+          span={SPAN.quarter}
           label="Active on Stellar, last 30 days"
           value={fNumber(stellar.activeWallets.window['30d'])}
           foot={`${fNumber(stellar.activeWallets.window.all)} active on Stellar since launch`}
         />
-        <Kpi
+        <Figure
+          span={SPAN.quarter}
           label="Actions on Stellar"
           value={fNumber(sumSince(stellar.actionsByDay, null))}
           foot={`+${fNumber(sumSince(stellar.actionsByDay, recent))} in the last 30 days`}
         />
-        <Kpi
+        <Figure
+          span={SPAN.quarter}
           label="Volume on Stellar"
           value={fMoney(sumSince(stellar.volumeByDay, null))}
           foot={`${signedMoney(sumSince(stellar.volumeByDay, recent))} in the last 30 days`}
         />
-        <Kpi
+        <Figure
+          span={SPAN.half}
           label="Bridged into Stellar"
           value={fMoney(sumSince(stellar.cctpInByDay, null))}
-          foot={`USDC via CCTP since launch; ${fMoney(sumSince(stellar.cctpOutByDay, null))} out`}
+          foot={`USDC with CCTP since launch; ${fMoney(sumSince(stellar.cctpOutByDay, null))} out`}
         />
-        <Kpi
+        <Figure
+          span={SPAN.half}
           label="MoneyGram cash in and out"
           value={fMoney(
             sumSince(stellar.moneygramInByDay, null) + sumSince(stellar.moneygramOutByDay, null)
           )}
           foot={`${fMoney(sumSince(stellar.moneygramInByDay, null))} in, ${fMoney(sumSince(stellar.moneygramOutByDay, null))} out, since launch`}
         />
-      </KpiGrid>
-      <PanelGrid>
         <PeriodPanel
-          title="Volume by chain"
+          title="Volume by network"
           subheader={(p) =>
-            `Completed actions in USD by the chain they started on, ${bucketPhrase(p.bucket)}, ${spanOf(p)}.`
+            `Completed actions in USD by the network they started on, ${bucketPhrase(p.bucket)}, ${spanOf(p)}.`
           }
         >
           {(p) => (
@@ -563,7 +710,7 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
               data={aggregateStacked(bridged, p, today, 'sum')}
               bucket={p.bucket}
               stacked={false}
-              colorOf={(name) => (name === 'in' ? STELLAR_IN : STELLAR_OUT)}
+              colorOf={(name) => (name === 'in' ? BRIDGE_COLOR.in : BRIDGE_COLOR.out)}
               labelOf={(name) => (name === 'in' ? 'Into Stellar' : 'Out of Stellar')}
               money
               filename={fileOf('cctp-bridged', p)}
@@ -571,15 +718,23 @@ export function MetricsView({ snapshot }: { snapshot: PublicMetricsSnapshot | nu
             />
           )}
         </PeriodPanel>
-      </PanelGrid>
+      </Chapter>
 
-      <Typography variant="caption" component="p" sx={{ color: 'text.secondary', mt: 4 }}>
-        Volume and revenue count completed actions only. Dollar values for BTC, ETH, SOL and XLM use
-        the price on the day of each update, so older actions show today&apos;s value; USDC is
-        exact. An action counts as on Stellar when it settles there, including CCTP bridges into
-        Stellar. Stellar wallets include those created before passkey (Turnkey) wallets launched in
-        June 2026 and wallets users connected, each counted once. Days are UTC.
-      </Typography>
-    </Container>
+      <Reveal>
+        <PageSection divider hatchFoot aria-labelledby="counting-title">
+          <SectionHeader id="counting-title" eyebrow="Fine print" title="How we count." />
+          <CellGrid columns={{ xs: 1, sm: 2, md: 4 }}>
+            {HOW_WE_COUNT.map((note) => (
+              <Cell key={note.title}>
+                <Typography component="h3" sx={{ ...TYPE.h4, color: INK }}>
+                  {note.title}
+                </Typography>
+                <Typography sx={{ ...TYPE.small, mt: 1, color: MUTED }}>{note.body}</Typography>
+              </Cell>
+            ))}
+          </CellGrid>
+        </PageSection>
+      </Reveal>
+    </>
   );
 }

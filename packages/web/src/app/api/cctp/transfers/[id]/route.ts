@@ -81,7 +81,7 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   if (body.markRefunded && transfer!.status !== 'REFUNDED') {
     data.status = 'REFUNDED';
     if (!transfer!.errorDetail)
-      data.errorDetail = 'Refunded — USDC is returning to your Stellar wallet (usually ~20 min)';
+      data.errorDetail = 'Refunded: USDC is returning to your Stellar wallet (usually ~20 min)';
   }
   // Source-leg refund/failure (scenario sweep 2026-08-21): an inbound LI.FI
   // leg that terminally refunded/failed leaves a row with srcSwapTxHash set
@@ -112,8 +112,8 @@ export const PATCH = withAuth(async (req, { user, params }) => {
           if (!transfer!.errorDetail)
             data.errorDetail =
               verdict === 'REFUNDED'
-                ? 'Source swap refunded — funds returned to the sender; nothing was bridged'
-                : 'Source transaction reverted on-chain — funds never left the sender; nothing was bridged';
+                ? 'Source swap refunded: funds returned to the sender; nothing was bridged'
+                : 'Source transaction reverted on-chain: funds never left the sender; nothing was bridged';
         }
       }
     } catch {
@@ -132,7 +132,7 @@ export const PATCH = withAuth(async (req, { user, params }) => {
   ) {
     data.status = 'FAILED';
     if (!transfer!.errorDetail)
-      data.errorDetail = 'Cancelled before any transaction was sent — no funds moved';
+      data.errorDetail = 'Cancelled before any transaction was sent. No funds moved';
   }
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: 'nothing to update' }, { status: 400 });

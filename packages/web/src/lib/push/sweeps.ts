@@ -105,6 +105,8 @@ export async function notifyTerminalCctp(): Promise<SweepCounts> {
     where: {
       notifiedAt: null,
       updatedAt: { gt: new Date(Date.now() - WINDOW_MS) },
+      // An index purchase is many coins: the single-swap words would be wrong.
+      direction: { not: 'stellar_to_index' },
       OR: [
         { status: { in: ['COMPLETED', 'REFUNDED', 'FAILED'] } },
         { dstSwapTxHash: { not: null } },

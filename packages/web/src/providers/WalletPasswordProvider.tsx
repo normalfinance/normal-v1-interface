@@ -85,7 +85,7 @@ export function WalletPasswordProvider({ children }: { children: React.ReactNode
     persistStore.disconnectWallet();
 
     if (pendingRef.current) {
-      pendingRef.current.reject(new Error('Password reset — wallet cleared'));
+      pendingRef.current.reject(new Error('Password reset: wallet cleared'));
       pendingRef.current = null;
     }
 

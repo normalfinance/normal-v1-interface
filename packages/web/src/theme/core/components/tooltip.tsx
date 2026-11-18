@@ -1,22 +1,29 @@
 import type { Theme, Components } from '@mui/material/styles';
 
+import Fade from '@mui/material/Fade';
 import { tooltipClasses } from '@mui/material/Tooltip';
 
 // ----------------------------------------------------------------------
 
 const MuiTooltip: Components<Theme>['MuiTooltip'] = {
   /** **************************************
+   * DEFAULT PROPS
+   *************************************** */
+  // Fade in place; MUI's default Grow scales the tooltip open.
+  defaultProps: { TransitionComponent: Fade },
+  /** **************************************
    * STYLE
    *************************************** */
   styleOverrides: {
     tooltip: ({ theme }) => ({
-      backgroundColor: theme.vars.palette.grey[800],
+      borderRadius: 'var(--radius-sm)',
+      backgroundColor: theme.vars.palette.grey[900],
       ...theme.applyStyles('dark', {
         backgroundColor: theme.vars.palette.grey[700],
       }),
     }),
     arrow: ({ theme }) => ({
-      color: theme.vars.palette.grey[800],
+      color: theme.vars.palette.grey[900],
       ...theme.applyStyles('dark', {
         color: theme.vars.palette.grey[700],
       }),

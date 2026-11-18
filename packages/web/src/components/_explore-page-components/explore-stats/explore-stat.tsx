@@ -44,7 +44,7 @@ export function ExploreStat({ title, total, percent, formatter }: Props) {
               backgroundColor: 'grey.100',
               border: 1,
               borderColor: 'divider',
-              borderRadius: 9999,
+              borderRadius: 'var(--radius-sm)',
             }}
           >
             <Iconify
@@ -57,7 +57,7 @@ export function ExploreStat({ title, total, percent, formatter }: Props) {
               sx={{ color: percent < 0 ? 'error.main' : 'success.main' }}
             />
 
-            <Box component="span" sx={{ typography: 'subtitle2', fontWeight: 700 }}>
+            <Box component="span" sx={{ typography: 'subtitle2', fontWeight: 500 }}>
               {percent > 0 && '+'}
               {fPercent(percent)}
             </Box>

@@ -10,6 +10,7 @@ import { fCurrency } from '@/utils/format-number';
 import { getCryptoIconUrl } from '@normalfinance/utils';
 import { useStellarTokens } from '@/hooks/use-stellar-tokens';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
+import { INK, WELL, MUTED, FAINT, INK_SOFT } from '@/theme/brand-colors';
 
 import { LoadingButton } from '@mui/lab';
 import {
@@ -26,10 +27,9 @@ import {
 } from '@mui/material';
 
 import { Iconify } from '../template/iconify';
-import { NetworkBadge, getAssetNetwork } from './network-badge';
+import { getAssetNetwork } from './network-badge';
 
 import type { SendParams } from './send-adapters';
-
 // ----------------------------------------------------------------------
 
 const STELLAR_NETWORK_FEE_XLM = 0.0002;
@@ -137,15 +137,15 @@ const SendReview: React.FC<SendReviewProps> = ({
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      slotProps={{ paper: { sx: { borderRadius: '22px' } } }}
+      slotProps={{ paper: { sx: { borderRadius: 'var(--radius-lg)' } } }}
     >
       <DialogTitle sx={{ px: '22px', pt: '22px', pb: '12px' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography
             sx={{
               fontSize: '15px',
-              fontWeight: 600,
-              color: '#0A0A0F',
+              fontWeight: 500,
+              color: INK,
               letterSpacing: '-0.01em',
               lineHeight: '28px',
             }}
@@ -158,17 +158,17 @@ const SendReview: React.FC<SendReviewProps> = ({
             sx={{
               width: 28,
               height: 28,
-              borderRadius: '8px',
+              borderRadius: 'var(--radius-md)',
               border: 'none',
-              bgcolor: 'rgba(10,10,15,0.06)',
-              color: '#0A0A0F',
+              bgcolor: 'rgba(var(--nf-ink-rgb),0.06)',
+              color: INK,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               fontFamily: 'inherit',
               transition: 'background 150ms ease',
-              '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+              '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.1)' },
             }}
           >
             <Iconify icon="mingcute:close-line" width={16} />
@@ -185,9 +185,9 @@ const SendReview: React.FC<SendReviewProps> = ({
               flexDirection: 'column',
               alignItems: 'center',
               py: '20px',
-              borderRadius: '16px',
-              bgcolor: '#FAFAFB',
-              border: '1px solid rgba(10,10,15,0.08)',
+              borderRadius: 'var(--radius-lg)',
+              bgcolor: WELL,
+              border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
               gap: '8px',
             }}
           >
@@ -199,16 +199,16 @@ const SendReview: React.FC<SendReviewProps> = ({
             <Typography
               sx={{
                 fontSize: '28px',
-                fontWeight: 700,
-                color: '#0A0A0F',
+                fontWeight: 500,
+                color: INK,
                 letterSpacing: '-0.02em',
-                fontFamily: '"Geist Mono", "Courier New", monospace',
+                fontFamily: '"Geist Mono", ui-monospace, monospace',
               }}
             >
               {BigNumber(tokenValue).toFixed(isBtc ? 6 : 4, BigNumber.ROUND_DOWN)}{' '}
               {sendToken.symbol}
             </Typography>
-            <Typography sx={{ fontSize: '14px', color: 'rgba(10,10,15,0.5)' }}>
+            <Typography sx={{ fontSize: '14px', color: MUTED }}>
               ≈ {fCurrency(fiatValue)}
             </Typography>
           </Box>
@@ -216,8 +216,8 @@ const SendReview: React.FC<SendReviewProps> = ({
           {/* Details */}
           <Box
             sx={{
-              borderRadius: '16px',
-              border: '1px solid rgba(10,10,15,0.08)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid rgba(var(--nf-ink-rgb),0.08)',
               overflow: 'hidden',
             }}
           >
@@ -227,9 +227,9 @@ const SendReview: React.FC<SendReviewProps> = ({
                 sx={{
                   fontSize: '11px',
                   fontWeight: 500,
-                  color: 'rgba(10,10,15,0.45)',
+                  color: FAINT,
                   textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
+                  letterSpacing: '0.16em',
                   mb: '6px',
                 }}
               >
@@ -246,8 +246,8 @@ const SendReview: React.FC<SendReviewProps> = ({
                 <Typography
                   sx={{
                     fontSize: '13px',
-                    color: '#0A0A0F',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    color: INK,
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                     wordBreak: 'break-all',
                   }}
                 >
@@ -261,16 +261,16 @@ const SendReview: React.FC<SendReviewProps> = ({
                       width: 28,
                       height: 28,
                       border: 'none',
-                      bgcolor: 'rgba(10,10,15,0.06)',
-                      borderRadius: '8px',
+                      bgcolor: 'rgba(var(--nf-ink-rgb),0.06)',
+                      borderRadius: 'var(--radius-md)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
                       flexShrink: 0,
-                      color: copied ? 'success.main' : 'rgba(10,10,15,0.5)',
+                      color: copied ? 'success.main' : MUTED,
                       transition: 'background 150ms ease',
-                      '&:hover': { bgcolor: 'rgba(10,10,15,0.1)' },
+                      '&:hover': { bgcolor: 'rgba(var(--nf-ink-rgb),0.1)' },
                     }}
                   >
                     <Iconify
@@ -284,15 +284,15 @@ const SendReview: React.FC<SendReviewProps> = ({
 
             {memo && (
               <>
-                <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+                <Box sx={{ height: '1px', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }} />
                 <Box sx={{ px: '16px', py: '12px' }}>
                   <Typography
                     sx={{
                       fontSize: '11px',
                       fontWeight: 500,
-                      color: 'rgba(10,10,15,0.45)',
+                      color: FAINT,
                       textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
+                      letterSpacing: '0.16em',
                       mb: '6px',
                     }}
                   >
@@ -301,8 +301,8 @@ const SendReview: React.FC<SendReviewProps> = ({
                   <Typography
                     sx={{
                       fontSize: '13px',
-                      color: '#0A0A0F',
-                      fontFamily: '"Geist Mono", "Courier New", monospace',
+                      color: INK,
+                      fontFamily: '"Geist Mono", ui-monospace, monospace',
                     }}
                   >
                     {memo}
@@ -311,7 +311,7 @@ const SendReview: React.FC<SendReviewProps> = ({
               </>
             )}
 
-            <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+            <Box sx={{ height: '1px', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }} />
 
             {/* Network — every asset in Normal lives on exactly ONE network, so
                 the confirm screen states it plainly (Niko 2026-08-26): the
@@ -325,13 +325,14 @@ const SendReview: React.FC<SendReviewProps> = ({
                 alignItems: 'center',
               }}
             >
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-                {t('Network')}
+              <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Network')}</Typography>
+              {/* In plain words, not a coloured chip (Niko 2026-11-09). */}
+              <Typography sx={{ fontSize: '14px', fontWeight: 500, color: INK }}>
+                {getAssetNetwork(sendToken)}
               </Typography>
-              <NetworkBadge network={getAssetNetwork(sendToken)} />
             </Box>
 
-            <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+            <Box sx={{ height: '1px', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }} />
 
             {/* Network fee */}
             <Box
@@ -344,9 +345,7 @@ const SendReview: React.FC<SendReviewProps> = ({
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.5)' }}>
-                  {t('Network fee')}
-                </Typography>
+                <Typography sx={{ fontSize: '12px', color: MUTED }}>{t('Network fee')}</Typography>
                 <Tooltip
                   title={
                     isBtc
@@ -362,7 +361,7 @@ const SendReview: React.FC<SendReviewProps> = ({
                           : t('Fixed Stellar network fee paid to validators.')
                   }
                 >
-                  <Box sx={{ display: 'flex', color: 'rgba(10,10,15,0.3)', cursor: 'help' }}>
+                  <Box sx={{ display: 'flex', color: FAINT, cursor: 'help' }}>
                     <Iconify icon="eva:info-outline" width={13} />
                   </Box>
                 </Tooltip>
@@ -371,14 +370,14 @@ const SendReview: React.FC<SendReviewProps> = ({
                 <Typography
                   sx={{
                     fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#0A0A0F',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontWeight: 500,
+                    color: INK,
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                   }}
                 >
-                  {estimatedFeeSat != null ? `~${estimatedFeeSat.toLocaleString()} sat` : '—'}{' '}
+                  {estimatedFeeSat != null ? `~${estimatedFeeSat.toLocaleString()} sat` : ''}{' '}
                   {btcFeeFiat && (
-                    <Box component="span" sx={{ color: 'rgba(10,10,15,0.45)', fontWeight: 400 }}>
+                    <Box component="span" sx={{ color: FAINT, fontWeight: 400 }}>
                       ({fCurrency(btcFeeFiat)})
                     </Box>
                   )}
@@ -387,9 +386,9 @@ const SendReview: React.FC<SendReviewProps> = ({
                 <Typography
                   sx={{
                     fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#0A0A0F',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontWeight: 500,
+                    color: INK,
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                   }}
                 >
                   {t('Estimated at signing')}
@@ -398,9 +397,9 @@ const SendReview: React.FC<SendReviewProps> = ({
                 <Typography
                   sx={{
                     fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#0A0A0F',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontWeight: 500,
+                    color: INK,
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                   }}
                 >
                   0.000005 SOL
@@ -409,20 +408,20 @@ const SendReview: React.FC<SendReviewProps> = ({
                 <Typography
                   sx={{
                     fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#0A0A0F',
-                    fontFamily: '"Geist Mono", "Courier New", monospace',
+                    fontWeight: 500,
+                    color: INK,
+                    fontFamily: '"Geist Mono", ui-monospace, monospace',
                   }}
                 >
                   {STELLAR_NETWORK_FEE_XLM} XLM{' '}
-                  <Box component="span" sx={{ color: 'rgba(10,10,15,0.45)', fontWeight: 400 }}>
+                  <Box component="span" sx={{ color: FAINT, fontWeight: 400 }}>
                     ({fCurrency(stellarFeeFiat)})
                   </Box>
                 </Typography>
               )}
             </Box>
 
-            <Box sx={{ height: '1px', bgcolor: 'rgba(10,10,15,0.06)' }} />
+            <Box sx={{ height: '1px', bgcolor: 'rgba(var(--nf-ink-rgb),0.06)' }} />
 
             {/* Total deducted */}
             <Box
@@ -432,10 +431,10 @@ const SendReview: React.FC<SendReviewProps> = ({
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                bgcolor: '#FAFAFB',
+                bgcolor: WELL,
               }}
             >
-              <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#0A0A0F' }}>
+              <Typography sx={{ fontSize: '13px', fontWeight: 500, color: INK }}>
                 {t('Total deducted')}
               </Typography>
               <Box sx={{ textAlign: 'right' }}>
@@ -444,15 +443,15 @@ const SendReview: React.FC<SendReviewProps> = ({
                     <Typography
                       sx={{
                         fontSize: '13px',
-                        fontWeight: 700,
-                        color: '#0A0A0F',
-                        fontFamily: '"Geist Mono", "Courier New", monospace',
+                        fontWeight: 500,
+                        color: INK,
+                        fontFamily: '"Geist Mono", ui-monospace, monospace',
                       }}
                     >
                       {BigNumber(tokenValue).toFixed(6, BigNumber.ROUND_DOWN)} BTC
                     </Typography>
                     {estimatedFeeSat != null && (
-                      <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.45)' }}>
+                      <Typography sx={{ fontSize: '11px', color: FAINT }}>
                         + ~{estimatedFeeSat.toLocaleString()} sat {t('fee')}
                       </Typography>
                     )}
@@ -462,14 +461,14 @@ const SendReview: React.FC<SendReviewProps> = ({
                     <Typography
                       sx={{
                         fontSize: '13px',
-                        fontWeight: 700,
-                        color: '#0A0A0F',
-                        fontFamily: '"Geist Mono", "Courier New", monospace',
+                        fontWeight: 500,
+                        color: INK,
+                        fontFamily: '"Geist Mono", ui-monospace, monospace',
                       }}
                     >
                       {BigNumber(tokenValue).toFixed(6, BigNumber.ROUND_DOWN)} {sendToken.symbol}
                     </Typography>
-                    <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.45)' }}>
+                    <Typography sx={{ fontSize: '11px', color: FAINT }}>
                       + {t('network fee')}
                     </Typography>
                   </>
@@ -477,9 +476,9 @@ const SendReview: React.FC<SendReviewProps> = ({
                   <Typography
                     sx={{
                       fontSize: '13px',
-                      fontWeight: 700,
-                      color: '#0A0A0F',
-                      fontFamily: '"Geist Mono", "Courier New", monospace',
+                      fontWeight: 500,
+                      color: INK,
+                      fontFamily: '"Geist Mono", ui-monospace, monospace',
                     }}
                   >
                     {BigNumber(tokenValue)
@@ -492,14 +491,14 @@ const SendReview: React.FC<SendReviewProps> = ({
                     <Typography
                       sx={{
                         fontSize: '13px',
-                        fontWeight: 700,
-                        color: '#0A0A0F',
-                        fontFamily: '"Geist Mono", "Courier New", monospace',
+                        fontWeight: 500,
+                        color: INK,
+                        fontFamily: '"Geist Mono", ui-monospace, monospace',
                       }}
                     >
                       {BigNumber(tokenValue).toFixed(4, BigNumber.ROUND_DOWN)} {sendToken.symbol}
                     </Typography>
-                    <Typography sx={{ fontSize: '11px', color: 'rgba(10,10,15,0.45)' }}>
+                    <Typography sx={{ fontSize: '11px', color: FAINT }}>
                       + {STELLAR_NETWORK_FEE_XLM} XLM {t('fee')}
                     </Typography>
                   </>
@@ -513,7 +512,7 @@ const SendReview: React.FC<SendReviewProps> = ({
             sx={{
               px: '14px',
               py: '12px',
-              borderRadius: '14px',
+              borderRadius: 'var(--radius-md)',
               bgcolor: 'rgba(245,158,11,0.06)',
               border: '1px solid rgba(245,158,11,0.2)',
             }}
@@ -524,13 +523,13 @@ const SendReview: React.FC<SendReviewProps> = ({
                 width={16}
                 sx={{ color: 'warning.main', flexShrink: 0, mt: '1px' }}
               />
-              <Typography sx={{ fontSize: '12px', color: 'rgba(10,10,15,0.6)', lineHeight: 1.55 }}>
+              <Typography sx={{ fontSize: '12px', color: MUTED, lineHeight: 1.55 }}>
                 {isNative
                   ? t(
                       'Blockchain transactions are irreversible. Your device biometrics will be required to authorise the transaction. Double-check the destination address.'
                     )
                   : t(
-                      'Blockchain transactions are irreversible. Double-check the destination address — funds sent to the wrong address cannot be recovered.'
+                      'Blockchain transactions are irreversible. Double-check the destination address: funds sent to the wrong address cannot be recovered.'
                     )}
               </Typography>
             </Box>
@@ -540,11 +539,11 @@ const SendReview: React.FC<SendReviewProps> = ({
                   checked={confirmed}
                   onChange={(e) => setConfirmed(e.target.checked)}
                   size="small"
-                  sx={{ py: 0, color: 'rgba(10,10,15,0.3)', '&.Mui-checked': { color: '#0A0A0F' } }}
+                  sx={{ py: 0, color: FAINT, '&.Mui-checked': { color: INK } }}
                 />
               }
               label={
-                <Typography sx={{ fontSize: '12px', color: '#0A0A0F' }}>
+                <Typography sx={{ fontSize: '12px', color: INK }}>
                   {t('I have verified the address and amount')}
                 </Typography>
               }
@@ -563,15 +562,15 @@ const SendReview: React.FC<SendReviewProps> = ({
           loading={loading}
           disabled={!confirmed}
           sx={{
-            borderRadius: '12px',
-            bgcolor: '#0A0A0F',
-            fontWeight: 700,
+            borderRadius: 'var(--radius-md)',
+            bgcolor: INK,
+            fontWeight: 500,
             fontSize: '15px',
             py: '13px',
             textTransform: 'none',
             letterSpacing: '-0.01em',
-            '&:hover': { bgcolor: '#1a1a25' },
-            '&.Mui-disabled': { bgcolor: 'rgba(10,10,15,0.08)', color: 'rgba(10,10,15,0.3)' },
+            '&:hover': { bgcolor: INK_SOFT },
+            '&.Mui-disabled': { bgcolor: 'rgba(var(--nf-ink-rgb),0.08)', color: FAINT },
           }}
         >
           {isNative ? (

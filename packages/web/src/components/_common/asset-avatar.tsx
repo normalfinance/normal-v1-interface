@@ -1,12 +1,12 @@
 'use client';
 
+import { PAPER } from '@/theme/brand-colors';
 import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
 
 import { getAssetNetwork } from './network-badge';
-
 // ---------------------------------------------------------------------------
 // Asset icon with a small network logo overlaid bottom-right (the familiar
 // wallet pattern: USDC icon + Stellar mini-badge). Only USDC gets the badge —
@@ -32,22 +32,30 @@ export function AssetAvatar({ token, size = 32 }: AssetAvatarProps) {
         sx={{ width: size, height: size }}
       />
       {showOverlay && (
+        // The disc and its ring sit on a wrapper and the logo inside it has no
+        // fill: dark mode inverts Stellar's black logo (SITE_THEME_CSS), and an
+        // invert turns the image's own fill white too (an empty white disc).
         <Box
-          component="img"
-          src={cdn('tokens/XLM.webp')}
-          alt="Stellar"
           sx={{
             position: 'absolute',
             right: -1,
             bottom: -1,
+            display: 'flex',
             width: overlaySize,
             height: overlaySize,
+            overflow: 'hidden',
             borderRadius: '50%',
-            border: '1.5px solid #fff',
-            bgcolor: '#fff',
-            objectFit: 'cover',
+            border: `1.5px solid ${PAPER}`,
+            bgcolor: PAPER,
           }}
-        />
+        >
+          <Box
+            component="img"
+            src={cdn('tokens/XLM.webp')}
+            alt="Stellar"
+            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </Box>
       )}
     </Box>
   );

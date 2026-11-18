@@ -1,99 +1,31 @@
 import type { MetadataRoute } from 'next';
 
+// The marketing site only. The app lives under /app behind sign-in, so it has
+// nothing for a search engine to read.
+const BASE_URL = 'https://normalfinance.io';
+
+const PAGES: {
+  path: string;
+  changeFrequency: NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>;
+  priority: number;
+}[] = [
+  { path: '', changeFrequency: 'monthly', priority: 1 },
+  // Business pages
+  { path: '/about', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/contact', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/roadmap', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/blocked', changeFrequency: 'never', priority: 0.3 },
+  // Legal
+  { path: '/legal/tos', changeFrequency: 'yearly', priority: 0.3 },
+  { path: '/legal/pp', changeFrequency: 'yearly', priority: 0.3 },
+  { path: '/legal/disclaimer', changeFrequency: 'yearly', priority: 0.3 },
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [
-    {
-      url: 'https://normalfinance.io',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 1,
-    },
-    // Business pages
-    {
-      url: 'https://normalfinance.io/about',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: 'https://normalfinance.io/contact',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: 'https://normalfinance.io/roadmap',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: 'https://normalfinance.io/blocked',
-      lastModified: new Date(),
-      changeFrequency: 'never',
-      priority: 0.3,
-    },
-    // App pages
-    {
-      url: 'https://normalfinance.io/assets',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: 'https://normalfinance.io/portfolio',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: 'https://normalfinance.io/earn',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: 'https://normalfinance.io/invest',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: 'https://normalfinance.io/indexes',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: 'https://normalfinance.io/indexes/create',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: 'https://normalfinance.io/settings',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    // Legal
-    {
-      url: 'https://normalfinance.io/legal/tos',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: 'https://normalfinance.io/legal/pp',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: 'https://normalfinance.io/legal/disclaimer',
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-  ];
+  return PAGES.map(({ path, changeFrequency, priority }) => ({
+    url: `${BASE_URL}${path}`,
+    lastModified: new Date(),
+    changeFrequency,
+    priority,
+  }));
 }

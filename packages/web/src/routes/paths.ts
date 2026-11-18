@@ -22,20 +22,50 @@ export const paths = {
   },
   blog: 'https://normalfi.substack.com/',
   docs: 'https://normalfi.gitbook.io/normal',
-  // main
-  swap: '/swap',
-  /** Same destination as the /invest → /swap permanent redirect */
-  invest: '/swap',
-  savings: '/savings',
-  portfolio: '/portfolio',
-  assets: {
-    root: '/assets',
-    details: (symbol: string) => `/assets/${symbol}`,
+  // The marketing site's sections, until each has a page of its own.
+  site: {
+    cash: '/#cash',
+    savings: '/#savings',
+    swap: '/#swap',
+    buy: '/#buy',
+    security: '/#security',
+    how: '/#how',
   },
-  settings: '/settings',
+  // The app. It lives under /app (the marketing site owns the root); the old
+  // URLs redirect in next.config.mjs.
+  /** Home: the signed-in overview */
+  portfolio: '/app',
+  swap: '/app/swap',
+  /** One Circle swap's own page: every step, where the money is, what it needs. */
+  swapTransfer: (id: string) => `/app/swap/transfers/${id}`,
+  /** Same destination as the /invest → /app/swap permanent redirect */
+  invest: '/app/swap',
+  savings: '/app/savings',
+  /**
+   * Autoinvest (behind NEXT_PUBLIC_INDEX_ENABLED): the plans, then one plan by
+   * its slug. Was /app/indexes until 2026-11-16 (Niko: "dont call it crypto
+   * index anymore but autoinvest"); next.config redirects the old addresses.
+   */
+  autoinvest: {
+    root: '/app/autoinvest',
+    details: (slug: string) => `/app/autoinvest/${slug}`,
+    /** One purchase, followed after its page closed (Niko 2026-11-10). */
+    purchase: (id: string) => `/app/autoinvest/purchases/${id}`,
+  },
+  activity: '/app/activity',
+  assets: {
+    root: '/app/assets',
+    details: (symbol: string) => `/app/assets/${symbol}`,
+  },
+  settings: '/app/settings',
+  auth: {
+    login: '/login',
+    signup: '/signup',
+    callback: '/auth/callback',
+  },
   transaction: {
-    root: '/trx',
-    details: (hash: string) => `/trx/${hash}`,
+    root: '/app/activity',
+    details: (hash: string) => `/app/activity/${hash}`,
   },
   legal: {
     root: '/legal',

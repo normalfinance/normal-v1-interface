@@ -30,6 +30,7 @@ import { autopilotBurnUsdc } from '@/server/autopilot-burn';
 import { autopilotEnabled } from '@/server/autopilot-signer';
 import { ensureTransferGas } from '@/server/cctp-transfer-gas';
 import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
+import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
 
 export type FinishInboundOutcome =
   | { ok: true; burnTxHash: `0x${string}` }
@@ -164,6 +165,19 @@ export async function finishInboundBurn(tr: CctpTransfer): Promise<FinishInbound
 
     return { ok: true, burnTxHash };
   } catch (e: any) {
+    // A burn whose send stayed unclear may be on its way: keep its hash
+    // exactly as onBroadcast would (a lost burn hash strands the money). The
+    // hash also closes the interactive path: the gas top-up refuses a row
+    // that already has a burn, so no second burn is signed for it.
+    const unclear = uncertainBurnHash(e);
+    if (unclear) {
+      await prisma.cctpTransfer
+        .updateMany({
+          where: { id: tr.id, burnTxHash: null },
+          data: { burnTxHash: unclear, status: 'BURN_SUBMITTED' },
+        })
+        .catch(() => {});
+    }
     // Turnkey rejecting the delegate (user never granted autopilot) lands
     // here too — the caller records it and the interactive path stays open.
     return { ok: false, reason: 'burn-failed', detail: String(e?.message ?? e).slice(0, 400) };

@@ -28,7 +28,7 @@ export function UploadBox({ placeholder, error, disabled, className, sx, ...othe
           height: 64,
           flexShrink: 0,
           display: 'flex',
-          borderRadius: 1,
+          borderRadius: 'var(--radius-md)',
           cursor: 'pointer',
           alignItems: 'center',
           color: 'text.disabled',

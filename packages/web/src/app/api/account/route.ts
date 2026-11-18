@@ -146,7 +146,7 @@ export const DELETE = withAuth(async (req: NextRequest, { user }) => {
     console.error('[account/delete] purge failed (nothing deleted):', e?.message ?? e);
     return NextResponse.json(
       {
-        error: 'Deletion did not complete. Nothing was removed — please try again.',
+        error: 'Deletion did not complete. Nothing was removed. Please try again.',
         code: 'UNAVAILABLE',
       },
       { status: 503 }

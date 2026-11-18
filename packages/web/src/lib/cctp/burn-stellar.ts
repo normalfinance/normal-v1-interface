@@ -26,6 +26,7 @@ import {
 } from '@stellar/stellar-sdk';
 
 import { wireToStellar7 } from './decimals';
+import { type StellarLeg, submitStellarLeg } from './stellar-submit';
 import { STELLAR_CCTP, CCTP_MAX_FEE, CCTP_MIN_FINALITY_THRESHOLD } from './config';
 
 // Persist the burn approval so repeat swaps skip its extra signature: approve a
@@ -84,40 +85,46 @@ export interface StellarBurnParams {
    *  caller flips its step to "approve in your wallet" exactly then, never
    *  during the silent prepare/simulate window. */
   onSigning?: () => void;
+  /** Fires once a signed transaction is on the network, before its result is
+   *  known: the money is moving from that moment (the review page's step). */
+  onSubmitted?: (step: 'approve' | 'burn', hash: string) => void;
 }
 
+// Send and follow one signed leg (lib/cctp/stellar-submit.ts holds the rules).
+// The id is the signed envelope's own hash, known before it is sent. A burn
+// whose fate stays unclear ends as BroadcastUncertainError('stellar', hash):
+// the caller keeps that hash on the row and offers no second send.
 async function submitSigned(
   server: rpc.Server,
   signedXdr: string,
   passphrase: string,
-  label: string
+  label: string,
+  leg: StellarLeg,
+  onSubmitted?: (hash: string) => void
 ) {
   const tx = TransactionBuilder.fromXDR(signedXdr, passphrase);
-  const sent = await server.sendTransaction(tx);
-  if (sent.status === 'ERROR') {
-    throw new Error(`${label} submit failed: ${JSON.stringify(sent.errorResult ?? sent)}`);
-  }
-  for (let i = 0; i < 60; i++) {
-    await new Promise((res) => setTimeout(res, 2000));
-
-    const res = await server.getTransaction(sent.hash);
-    if (res.status === 'SUCCESS') return sent.hash;
-    if (res.status === 'FAILED') {
-      const err: any = new Error(`${label} failed on-chain (${sent.hash})`);
-      err.txHash = sent.hash;
-      throw err;
-    }
-  }
-  // The tx may STILL land after our polling window — hand the hash to the
-  // caller so the row keeps it (doc 90 W2: a lost hash strands funds).
-  const timeoutErr: any = new Error(`${label} timed out (${sent.hash})`);
-  timeoutErr.txHash = sent.hash;
-  timeoutErr.mayStillLand = true;
-  throw timeoutErr;
+  const hash = tx.hash().toString('hex');
+  return submitStellarLeg({
+    hash,
+    leg,
+    label,
+    onSubmitted,
+    node: {
+      send: async () => {
+        const sent = await server.sendTransaction(tx);
+        return {
+          status: sent.status,
+          detail: sent.status === 'ERROR' ? JSON.stringify(sent.errorResult ?? sent) : undefined,
+        };
+      },
+      status: async () => (await server.getTransaction(hash)).status,
+    },
+  });
 }
 
 async function invokeAsUser(params: {
   onSigning?: () => void;
+  onSubmitted?: (hash: string) => void;
   server: rpc.Server;
   passphrase: string;
   source: string;
@@ -125,6 +132,7 @@ async function invokeAsUser(params: {
   method: string;
   args: xdr.ScVal[];
   label: string;
+  leg: StellarLeg;
 }) {
   const account = await params.server.getAccount(params.source);
   const contract = new Contract(params.contractId);
@@ -142,7 +150,14 @@ async function invokeAsUser(params: {
   // the silent prepare window (doc 93 0a).
   params.onSigning?.();
   const signed = await signStellarTxForMgi(tx.toXDR(), params.passphrase, params.source);
-  return submitSigned(params.server, signed, params.passphrase, params.label);
+  return submitSigned(
+    params.server,
+    signed,
+    params.passphrase,
+    params.label,
+    params.leg,
+    params.onSubmitted
+  );
 }
 
 /** Runs approve + deposit_for_burn. Returns both tx hashes. */
@@ -195,7 +210,9 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
         nativeToScVal(sequence + APPROVE_EXPIRY_LEDGERS, { type: 'u32' }),
       ],
       onSigning: params.onSigning,
+      onSubmitted: (hash) => params.onSubmitted?.('approve', hash),
       label: 'approve',
+      leg: 'approve',
     });
   }
 
@@ -218,7 +235,9 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
       nativeToScVal(CCTP_MIN_FINALITY_THRESHOLD, { type: 'u32' }),
     ],
     onSigning: params.onSigning,
+    onSubmitted: (hash) => params.onSubmitted?.('burn', hash),
     label: 'deposit_for_burn',
+    leg: 'burn',
   });
 
   return { approveTxHash, burnTxHash };
