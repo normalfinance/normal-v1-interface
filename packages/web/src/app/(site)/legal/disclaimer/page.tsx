@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
+        url: '/og/home.jpg', // replace with image you want to show when sharing link on other socials than twitter
         width: 1200,
         height: 630,
         alt: 'Normal Legal - Disclaimer',
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Legal - Disclaimer | Normal',
     description: 'View our official Disclaimer.',
-    images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
+    images: ['/og/home.jpg'], // replace with image you want to show when sharing link on Twitter
   },
   robots: {
     index: true,

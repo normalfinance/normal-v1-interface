@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import SwapView from '@/sections/swap';
+import { paths } from '@/routes/paths';
 import { CONFIG } from '@/global-config';
 
 // ----------------------------------------------------------------------
@@ -10,21 +11,23 @@ export const metadata: Metadata = {
     default: 'Swap | Normal',
     template: '%s · Normal',
   },
-  description: 'Swap XLM and USDC instantly on Normal.',
+  description:
+    'Swap between digital dollars, Bitcoin, Ethereum, Solana and Stellar. It all lands in your own wallet.',
   alternates: {
     canonical: '/swap',
   },
   openGraph: {
     title: 'Swap | Normal',
-    description: 'Swap XLM and USDC instantly on Normal.',
-    url: `${CONFIG.siteUrl}/swap`,
+    description:
+      'Swap between digital dollars, Bitcoin, Ethereum, Solana and Stellar. It all lands in your own wallet.',
+    url: `${CONFIG.siteUrl}${paths.swap}`,
     siteName: 'Normal',
     images: [
       {
-        url: '/og/swap.png',
+        url: '/og/swap.jpg',
         width: 1200,
         height: 630,
-        alt: 'Normal Swap',
+        alt: 'Swap with low fees. A swap in the Normal app.',
       },
     ],
     locale: 'en_US',
@@ -33,8 +36,9 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Swap | Normal',
-    description: 'Swap XLM and USDC instantly on Normal.',
-    images: ['/og/swap.png'],
+    description:
+      'Swap between digital dollars, Bitcoin, Ethereum, Solana and Stellar. It all lands in your own wallet.',
+    images: ['/og/swap.jpg'],
   },
   robots: {
     index: true,
