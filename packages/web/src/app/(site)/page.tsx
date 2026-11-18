@@ -24,7 +24,7 @@ export const metadata: Metadata = {
         url: '/og/home.png',
         width: 1200,
         height: 630,
-        alt: 'Normal landing page',
+        alt: 'Crypto, made normal. The Normal app on a phone.',
       },
     ],
     locale: 'en_US',

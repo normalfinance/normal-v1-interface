@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { paths } from '@/routes/paths';
 import { CONFIG } from '@/global-config';
 import SavingsView from '@/sections/savings';
 
@@ -17,14 +18,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Savings | Normal',
     description: 'Earn yield on your USDC savings with Normal.',
-    url: `${CONFIG.siteUrl}/savings`,
+    url: `${CONFIG.siteUrl}${paths.savings}`,
     siteName: 'Normal',
     images: [
       {
         url: '/og/savings.png',
         width: 1200,
         height: 630,
-        alt: 'Normal Savings',
+        alt: 'Earn on your digital dollars. Savings in the Normal app.',
       },
     ],
     locale: 'en_US',

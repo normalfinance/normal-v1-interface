@@ -24,7 +24,7 @@ export const metadata: Metadata = {
         url: '/og/about.png',
         width: 1200,
         height: 630,
-        alt: 'Normal – About Us',
+        alt: 'Making crypto normal. The Normal team at Meridian 2026 in Lisbon.',
       },
     ],
     locale: 'en_US',

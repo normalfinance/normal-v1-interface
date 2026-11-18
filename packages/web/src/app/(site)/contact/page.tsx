@@ -22,7 +22,7 @@ export const metadata: Metadata = {
         url: '/og/contact.png',
         width: 1200,
         height: 630,
-        alt: 'Normal – Contact',
+        alt: "Let's talk. hello@normalfinance.io",
       },
     ],
     locale: 'en_US',
