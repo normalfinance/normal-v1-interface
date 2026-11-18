@@ -58,6 +58,7 @@ const TURN_EXCEPTIONS: Record<string, string> = {
 const SITE_FILES = [
   'sections/home/',
   'sections/about/',
+  'sections/metrics/',
   'layouts/site/',
   'components/_common/reveal.tsx',
   'components/_common/brand.tsx',
@@ -289,6 +290,7 @@ const SITE_SOURCES = [
   'sections/contact/',
   'sections/legal/',
   'sections/roadmap/',
+  'sections/metrics/',
   'sections/blocked/',
   'sections/error/',
   'components/_common/brand.tsx',

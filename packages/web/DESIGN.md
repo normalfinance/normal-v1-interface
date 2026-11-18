@@ -8,11 +8,11 @@ The model is a bank: a calm marketing site with real people on it, and a separat
 
 ## Two sites, one domain
 
-| Site      | URL                                               | Frame                                     | Code                              |
-| --------- | ------------------------------------------------- | ----------------------------------------- | --------------------------------- |
-| Marketing | `/`, `/about`, `/contact`, `/roadmap`, `/legal/*` | Header, deep-violet footer; light or dark | `app/(site)`, `layouts/site`      |
-| App       | `/app/*`                                          | Grey sidebar, white page, tabs on phones  | `app/(wallet)/app`, `layouts/app` |
-| Sign-in   | `/login`, `/signup`, `/auth/*`                    | Its own full screen                       | `app/(wallet)`                    |
+| Site      | URL                                                             | Frame                                     | Code                              |
+| --------- | --------------------------------------------------------------- | ----------------------------------------- | --------------------------------- |
+| Marketing | `/`, `/about`, `/contact`, `/roadmap`, `/dashboard`, `/legal/*` | Header, deep-violet footer; light or dark | `app/(site)`, `layouts/site`      |
+| App       | `/app/*`                                                        | Grey sidebar, white page, tabs on phones  | `app/(wallet)/app`, `layouts/app` |
+| Sign-in   | `/login`, `/signup`, `/auth/*`                                  | Its own full screen                       | `app/(wallet)`                    |
 
 - The marketing site loads no auth or wallet code. The app's providers live in `app/(wallet)`.
 - The app is signed-in only. A signed-out visitor goes to `/login?next=` and comes back.
@@ -153,18 +153,18 @@ Satoshi for words, Geist Mono for numbers and addresses. Medium (500) is the hea
 
 **The marketing site** uses the nine-step ladder in `src/theme/type-scale.ts` (`TYPE`) and no other size. Phone / desktop:
 
-| Step        | Size                           | Job                                                                     |
-| ----------- | ------------------------------ | ----------------------------------------------------------------------- |
-| `display`   | 50 / clamp(68px, 6.4vw, 92px)  | The hero's one line                                                     |
-| `statement` | 32 / clamp(40px, 4vw, 56px)    | A statement set as a paragraph: the intro, the Savings line             |
-| `h2`        | 38 / clamp(46px, 4.4vw, 62px)  | Every section title                                                     |
-| `h3`        | 26 / 32                        | A cell's title: a product, a step                                       |
-| `h4`        | 20 / 23                        | A smaller cell's title: an asset, a security point, a question, a quote |
-| `lead`      | 18 / 21                        | The paragraph under a title                                             |
-| `body`      | 16 / 17                        | Body text in a cell                                                     |
-| `small`     | 15                             | Notes, roles, the line under a figure                                   |
-| `caption`   | 13                             | Fine print and labels                                                   |
-| `eyebrow`   | 12, uppercase, 0.14em          | The label above a title, plain grey                                     |
+| Step        | Size                          | Job                                                                     |
+| ----------- | ----------------------------- | ----------------------------------------------------------------------- |
+| `display`   | 50 / clamp(68px, 6.4vw, 92px) | The hero's one line                                                     |
+| `statement` | 32 / clamp(40px, 4vw, 56px)   | A statement set as a paragraph: the intro, the Savings line             |
+| `h2`        | 38 / clamp(46px, 4.4vw, 62px) | Every section title                                                     |
+| `h3`        | 26 / 32                       | A cell's title: a product, a step                                       |
+| `h4`        | 20 / 23                       | A smaller cell's title: an asset, a security point, a question, a quote |
+| `lead`      | 18 / 21                       | The paragraph under a title                                             |
+| `body`      | 16 / 17                       | Body text in a cell                                                     |
+| `small`     | 15                            | Notes, roles, the line under a figure                                   |
+| `caption`   | 13                            | Fine print and labels                                                   |
+| `eyebrow`   | 12, uppercase, 0.14em         | The label above a title, plain grey                                     |
 
 Drawings of the app (the hero phone, the product slices) keep the app's own sizes: they are the app.
 
@@ -197,6 +197,7 @@ Eyebrows never start with a dash or line **(tested)**.
 - **Hatching** fills empty strips of the grid, never space behind words or a photo: fine diagonal lines 8px apart, in the strong hairline colour so they weigh what the grid lines weigh (`HATCH_SX`). Every hatched strip is one height (`HATCH_HEIGHT`: 48px, 32px on phones), so they read as one system. A section that ends on a grid of cells has a hatched foot instead of empty padding under it (`PageSection hatchFoot`): the strip between the grid's last line and the next section's first. Where a page changes chapter without one (after its opening, before its close), a `HatchRail` draws the strip. Never two strips in a row.
 - The close (`HomeCta`, on Home, About and Contact) is a carousel of five asks: one fills the column at a time, its neighbours showing past the frame lines. It moves only when the visitor moves it, with previous and next under it (off at the ends) and a swipe on phones. Nothing plays on its own.
 - Roadmap's milestones are a board in three chapters, oldest first, each a zone of one colour (the owner's call, 2026-11-10: the header darker, the cards lighter, every chapter coloured): blue, pink and yellow, the logo's first, middle and last colours in its order: sky for what shipped, magenta for what is being built now, yellow for what is ahead. Each chapter's header row is a block of its colour (`BLOCK_COLORS`), its cards the colour's wash with words in its deep shade, its empty cells hatched tone on tone (`hatchIn`). Hatched cells finish a chapter's last row at each width. The board draws its lines as 1px gaps over the hairline colour (`gap: 1px` on a `HAIRLINE_COLOR` grid), so they stay straight whatever the filter shows.
+- The dashboard (`/dashboard`, public but kept out of search; `sections/metrics`) opens like the roadmap: the h1 on the left and, on the sky wash beside it, a figure for each chapter (each a link down to it) with when the numbers were taken. Then one chapter per subject (users, money, savings, Stellar, how we count), each its figures and its charts as cells on one grid (`CHAPTER_COLUMNS`: four columns wide, a chart takes half, a figure a half or a quarter), so the lines run on from the figures through the charts. A chart's period is a `SegmentedControl` (7D, 30D, 90D, 12M, All), like the app's price ranges. Charts are flat and square with the scale on the right: ink for a plain count, a product's colour for a product (`lib/metrics/colors.ts`, checked for colour blindness on both pages, Savings in its mint), a coin's or a network's own colour; their neutrals follow the mode (`useChartTokens`). The team page (`/dashboard/team`) wears the same frame but lives in `app/(wallet)`, which has the sign-in.
 - **A section has one focal point.** Equal cells of grey text read as bland; equal cells each in its own colour read as too much. Feature one thing (one wash, one figure) and set the rest calmly beside it, laid out the way the section's words read.
 - A token drawn on the page sits on a white coin, the same in both modes: some marks are black and would vanish on the dark page. A token's network is a badge on its coin and is named in words too (USDC on Stellar).
 - A case-study card (Savings) reads top to bottom: the label right above the statement, then the figures and the ask at the foot, the fine print last.

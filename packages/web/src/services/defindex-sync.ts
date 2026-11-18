@@ -138,6 +138,28 @@ export async function fetchSavingsVolume(): Promise<VolumeDailyRow[]> {
 // on-chain without going through Normal's app (and thus missing from the DB).
 // ---------------------------------------------------------------------------
 
+/**
+ * Every wallet that ever deposited into the vault, from DeFindex's own
+ * depositors list (18 on 2026-11-13). This is the list to ask about: the
+ * Horizon scan below returns every account with ANY operation near the
+ * vault (payments, offers), 432 accounts for 18 depositors, and asking
+ * DeFindex about each one, one at a time, ran past Vercel's 5-minute limit.
+ */
+export async function fetchVaultDepositors(): Promise<string[]> {
+  const wallets: string[] = [];
+  const LIMIT = 100;
+  for (let offset = 0, page = 0; page < 50; offset += LIMIT, page++) {
+    const url = `${DEFINDEX_API}/vault/${VAULT_ADDRESS}/depositors?network=${NETWORK}&limit=${LIMIT}&offset=${offset}`;
+    const res = await fetch(url, { headers: defindexHeaders(), cache: 'no-store' });
+    if (!res.ok) throw new Error(`DeFindex depositors failed: ${res.status}`);
+    const json = await res.json();
+    const batch: any[] = json.depositors ?? [];
+    for (const d of batch) if (typeof d?.walletAddress === 'string') wallets.push(d.walletAddress);
+    if (batch.length < LIMIT || wallets.length >= Number(json.total ?? 0)) break;
+  }
+  return wallets;
+}
+
 const HORIZON_URL = 'https://horizon.stellar.org';
 
 export async function fetchVaultWalletsFromHorizon(): Promise<string[]> {
@@ -166,55 +188,83 @@ export async function fetchVaultWalletsFromHorizon(): Promise<string[]> {
 }
 
 // ---------------------------------------------------------------------------
-// Per-wallet yield — fetches all wallets that ever deposited
+// Per-wallet yield: every wallet that ever deposited.
+//
+// Fixed 2026-11-13 (the dashboard showed $31 of interest; the vault had paid
+// about $477). Two bugs: batches of 5 parallel calls hit DeFindex's
+// throttle, and a 429 was read as "no position", silently dropping the
+// biggest saver; and wallets that had withdrawn everything were skipped,
+// although DeFindex still reports what they earned. Now: one call at a time,
+// 429s retried, closed positions kept, and a wallet that still cannot be read
+// is reported as failed so the dashboard keeps its last known number.
 // ---------------------------------------------------------------------------
 
-export async function fetchYieldSnapshots(walletAddresses: string[]): Promise<YieldSnapshotRow[]> {
+const YIELD_GAP_MS = 500;
+const YIELD_RETRY_MS = [2_000, 5_000, 10_000]; // waits after a 429
+
+/** One account answer as a yield row; null when the wallet never saved. */
+export function parseYieldAccount(
+  json: any,
+  wallet: string,
+  snapshotDate: string,
+  vault: string = VAULT_ADDRESS
+): YieldSnapshotRow | null {
+  const perf = json?.performance ?? {};
+  const totalDeposited = Number(perf.totalDeposited ?? 0) / 1e7;
+  const interest = Number(perf.totalInterestEarned ?? 0) / 1e7;
+  const position = Number(json?.currentPosition?.estimatedValue ?? 0) / 1e7;
+  if (!(totalDeposited > 0) && !(position > 0) && interest === 0) return null;
+  return {
+    snapshot_date: snapshotDate,
+    wallet_address: wallet,
+    vault_address: vault,
+    network: NETWORK,
+    total_interest_earned: Number.isFinite(interest) ? interest : 0,
+    total_deposited: Number.isFinite(totalDeposited) ? totalDeposited : 0,
+    current_position: Number.isFinite(position) ? position : 0,
+    roi: Number(perf.roi ?? 0),
+  };
+}
+
+export interface YieldFetchResult {
+  rows: YieldSnapshotRow[];
+  /** Wallets DeFindex would not answer for (throttled or down) after retries. */
+  failed: string[];
+  total: number;
+}
+
+export async function fetchYieldSnapshots(walletAddresses: string[]): Promise<YieldFetchResult> {
   const snapshotDate = new Date().toISOString();
   const rows: YieldSnapshotRow[] = [];
-  const BATCH_SIZE = 5;
-  const BATCH_DELAY_MS = 500;
+  const failed: string[] = [];
 
-  for (let i = 0; i < walletAddresses.length; i += BATCH_SIZE) {
-    const batch = walletAddresses.slice(i, i + BATCH_SIZE);
-
-    await Promise.allSettled(
-      batch.map(async (wallet) => {
-        try {
-          const url = `${DEFINDEX_API}/account/${wallet}/vault/${VAULT_ADDRESS}?network=${NETWORK}`;
-          const res = await fetch(url, { headers: defindexHeaders(), cache: 'no-store' });
-          if (!res.ok) return; // wallet has no position — skip
-
-          const json = await res.json();
-          const perf = json.performance ?? {};
-          const pos = json.currentPosition ?? {};
-
-          // Only record wallets with an actual position
-          const currentPosition = Number(pos.estimatedValue ?? 0) / 1e7;
-          if (currentPosition <= 0) return;
-
-          rows.push({
-            snapshot_date: snapshotDate,
-            wallet_address: wallet,
-            vault_address: VAULT_ADDRESS,
-            network: NETWORK,
-            total_interest_earned: Number(perf.totalInterestEarned ?? 0) / 1e7,
-            total_deposited: Number(perf.totalDeposited ?? 0) / 1e7,
-            current_position: currentPosition,
-            roi: Number(perf.roi ?? 0),
-          });
-        } catch {
-          // skip wallets with no vault history
+  for (const [i, wallet] of walletAddresses.entries()) {
+    const url = `${DEFINDEX_API}/account/${wallet}/vault/${VAULT_ADDRESS}?network=${NETWORK}`;
+    let done = false;
+    for (let attempt = 0; !done; attempt++) {
+      try {
+        const res = await fetch(url, { headers: defindexHeaders(), cache: 'no-store' });
+        if (res.status === 429 && attempt < YIELD_RETRY_MS.length) {
+          await new Promise((r) => setTimeout(r, YIELD_RETRY_MS[attempt]));
+          continue;
         }
-      })
-    );
-
-    if (i + BATCH_SIZE < walletAddresses.length) {
-      await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
+        done = true;
+        if (res.status === 404) break; // never touched the vault
+        if (!res.ok) {
+          failed.push(wallet);
+          break;
+        }
+        const row = parseYieldAccount(await res.json(), wallet, snapshotDate);
+        if (row) rows.push(row);
+      } catch {
+        done = true;
+        failed.push(wallet);
+      }
     }
+    if (i < walletAddresses.length - 1) await new Promise((r) => setTimeout(r, YIELD_GAP_MS));
   }
 
-  return rows;
+  return { rows, failed, total: walletAddresses.length };
 }
 
 export async function fetchSavingsWalletActivity(): Promise<WalletActivityRow[]> {
