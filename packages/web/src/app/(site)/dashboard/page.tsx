@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/dashboard.png',
+        url: '/og/dashboard.jpg',
         width: 1200,
         height: 630,
         alt: 'Normal in numbers. The dashboard, updated daily.',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Dashboard | Normal',
     description: 'Normal in numbers, refreshed daily.',
-    images: ['/og/dashboard.png'],
+    images: ['/og/dashboard.jpg'],
   },
   robots: {
     index: false,

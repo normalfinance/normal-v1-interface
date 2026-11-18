@@ -25,7 +25,7 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 //     siteName: 'Normal',
 //     images: [
 //       {
-//         url: '/og/home.png', // replace with image you want to show when sharing link on other socials than twitter
+//         url: '/og/home.jpg', // replace with image you want to show when sharing link on other socials than twitter
 //         width: 1200,
 //         height: 630,
 //         alt: 'Normal Settings',
@@ -38,7 +38,7 @@ import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 //     card: 'summary_large_image',
 //     title: 'Settings | Normal',
 //     description: 'View and manage your Normal account settings.',
-//     images: ['/og/home.png'], // replace with image you want to show when sharing link on Twitter
+//     images: ['/og/home.jpg'], // replace with image you want to show when sharing link on Twitter
 //   },
 //   robots: {
 //     index: true,

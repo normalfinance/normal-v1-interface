@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/roadmap.png',
+        url: '/og/roadmap.jpg',
         width: 1200,
         height: 630,
         alt: "Where we're headed next. Normal's roadmap.",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     title: 'Roadmap | Normal',
     description:
       'See what’s next on the Normal roadmap – new features, DeFi integrations, and savings yield improvements.',
-    images: ['/og/roadmap.png'],
+    images: ['/og/roadmap.jpg'],
   },
   robots: {
     index: true,

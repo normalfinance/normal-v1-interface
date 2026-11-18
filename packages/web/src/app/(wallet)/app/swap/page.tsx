@@ -24,10 +24,10 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/swap.png',
+        url: '/og/swap.jpg',
         width: 1200,
         height: 630,
-        alt: 'Swap with low fees. The swap in the Normal app.',
+        alt: 'Swap with low fees. A swap in the Normal app.',
       },
     ],
     locale: 'en_US',
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     title: 'Swap | Normal',
     description:
       'Swap between digital dollars, Bitcoin, Ethereum, Solana and Stellar. It all lands in your own wallet.',
-    images: ['/og/swap.png'],
+    images: ['/og/swap.jpg'],
   },
   robots: {
     index: true,

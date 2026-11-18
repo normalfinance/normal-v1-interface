@@ -21,10 +21,10 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/about.png',
+        url: '/og/about.jpg',
         width: 1200,
         height: 630,
-        alt: 'Making crypto normal. The Normal team at Meridian 2026 in Lisbon.',
+        alt: 'Making crypto normal. Normal at Meridian 2026 in Lisbon.',
       },
     ],
     locale: 'en_US',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'About Us | Normal',
     description: 'Get to know the people, mission, and values driving Normal.',
-    images: ['/og/about.png'],
+    images: ['/og/about.jpg'],
   },
   robots: {
     index: true,

@@ -21,10 +21,10 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/home.png',
+        url: '/og/home.jpg',
         width: 1200,
         height: 630,
-        alt: 'Crypto, made normal. The Normal app on a phone.',
+        alt: 'Crypto, made normal. The Normal app on a phone, among Bitcoin, Ethereum, Solana, Stellar and digital dollar coins.',
       },
     ],
     locale: 'en_US',
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     title: 'Home | Normal',
     description:
       'Normal gives your USDC a job. Earn real yield through self-custody savings powered by DeFindex and Blend on Stellar.',
-    images: ['/og/home.png'],
+    images: ['/og/home.jpg'],
   },
   robots: {
     index: true,

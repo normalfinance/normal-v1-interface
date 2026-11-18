@@ -22,10 +22,10 @@ export const metadata: Metadata = {
     siteName: 'Normal',
     images: [
       {
-        url: '/og/savings.png',
+        url: '/og/savings.jpg',
         width: 1200,
         height: 630,
-        alt: 'Earn on your digital dollars. Savings in the Normal app.',
+        alt: 'Savings that earn every day. Savings in the Normal app.',
       },
     ],
     locale: 'en_US',
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Savings | Normal',
     description: 'Earn yield on your USDC savings with Normal.',
-    images: ['/og/savings.png'],
+    images: ['/og/savings.jpg'],
   },
   robots: {
     index: true,
