@@ -2,10 +2,6 @@
   "ignoreCommand": "bash ./scripts/ignore-vercel-build.sh",
   "crons": [
     {
-      "path": "/api/cron/dune-sync/",
-      "schedule": "0 */4 * * *"
-    },
-    {
       "path": "/api/cron/cctp-advance/",
       "schedule": "*/2 * * * *"
     },
