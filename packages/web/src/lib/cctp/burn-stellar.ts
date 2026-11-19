@@ -76,6 +76,17 @@ export interface StellarBurnParams {
     build: () => Promise<string[]>;
     submit: (signed: string[]) => Promise<void>;
   };
+  /**
+   * Doc 129 Phase 5: the person's own transaction that must land BEFORE the
+   * transfer, because it makes the USDC the burn spends (XLM → exactly this
+   * USDC on Soroswap). Signed in the same prompt; the server sends it first
+   * and only then lets the relayer burn. Permission path only.
+   */
+  first?: {
+    build: () => Promise<string>;
+    /** The server has sent it (its hash), unless it was refused. */
+    onSent?: (hash: string) => void;
+  };
 }
 
 /** Doc 129 Phase 3 switch, default off. */
@@ -112,32 +123,39 @@ async function burnWithPermissions(
     transferId: params.transferId,
   })) as PermissionState & { steps: { id: string; kind: string; payloadHash: string }[] };
 
-  // The person's own transactions that go with it (doc 129: Core 4's XLM).
+  // The person's own transactions that go with it: one that must land first
+  // (doc 129 Phase 5: XLM → USDC), and any that follow (Core 4's XLM).
   const passphrase = params.network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+  const firstTx = params.first
+    ? TransactionBuilder.fromXDR(await params.first.build(), passphrase)
+    : null;
   const extras = params.alongside
     ? (await params.alongside.build()).map((x) => TransactionBuilder.fromXDR(x, passphrase))
     : [];
+  const ownTxs = [...(firstTx ? [firstTx] : []), ...extras];
 
-  // One prompt covers the approve (when there is one), the burn and the extras.
+  // One prompt covers the approve (when there is one), the burn and the person's own transactions.
   params.onStep?.('burn');
   params.onSigning?.();
   const { signStellarHashesWithTurnkey } = await import('@/lib/turnkey/stellar-signer');
   const all = await signStellarHashesWithTurnkey(
     [
       ...prepared.steps.map((st) => Buffer.from(st.payloadHash, 'hex')),
-      ...extras.map((tx) => tx.hash()),
+      ...ownTxs.map((tx) => tx.hash()),
     ],
     params.subOrgId,
     params.stellarAddress
   );
   const signatures = all.slice(0, prepared.steps.length);
   const hint = Keypair.fromPublicKey(params.stellarAddress).signatureHint();
-  const signedExtras = extras.map((tx, i) => {
+  const signedOwn = ownTxs.map((tx, i) => {
     tx.signatures.push(
       new xdr.DecoratedSignature({ hint, signature: all[prepared.steps.length + i] })
     );
     return tx.toXDR();
   });
+  const signedFirst = firstTx ? signedOwn[0] : null;
+  const signedExtras = firstTx ? signedOwn.slice(1) : signedOwn;
 
   let state = await post('/api/stellar/permissions/commit', {
     transferId: params.transferId,
@@ -145,7 +163,10 @@ async function burnWithPermissions(
       id: st.id,
       signature: signatures[i].toString('hex'),
     })),
+    // The server sends this first and waits for it to land.
+    ...(signedFirst ? { firstTx: signedFirst } : {}),
   });
+  if (firstTx && !state.failed) params.first?.onSent?.(firstTx.hash().toString('hex'));
   // The relayer sends the approve, then the burn; follow it until the burn lands.
   for (let i = 0; i < 40 && !state.burnTxHash && !state.failed; i++) {
     await new Promise((r) => setTimeout(r, 3_000));
@@ -262,6 +283,11 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
         subOrgId: tk.subOrgId,
       });
     }
+  }
+  // A transaction that must land before the burn only exists on that path:
+  // never run it any other way (doc 129 Phase 5).
+  if (params.first) {
+    throw new Error('This swap needs one-signature transfers, which are not available here.');
   }
 
   const cfg = STELLAR_CCTP[params.network];

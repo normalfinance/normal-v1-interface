@@ -149,4 +149,83 @@ jest.mock('@normalfinance/utils', () => ({
     expect(transfer.burnTxHash).toBe(state.burnTxHash);
     expect(transfer.status).toBe('BURN_SUBMITTED');
   }, 180_000);
+
+  it('doc 129 Phase 5: the person’s own first transaction lands before the relayer sends anything', async () => {
+    const sdk = await import('@stellar/stellar-sdk');
+    const spike = JSON.parse(
+      readFileSync(join(process.cwd(), '..', '..', 'scripts', 'cctp-spike', 'state.json'), 'utf8')
+    );
+    const person = sdk.Keypair.fromSecret(spike.stellarSecret);
+    const relayer = sdk.Keypair.random();
+    const funded = await fetch(`https://friendbot.stellar.org?addr=${relayer.publicKey()}`);
+    expect(funded.ok).toBe(true);
+    process.env.CCTP_RELAYER_STELLAR_SECRET = relayer.secret();
+
+    if (!tables.turnkeyWallet.some((w) => w.supabaseUid === 'u1')) {
+      tables.turnkeyWallet.push({
+        supabaseUid: 'u1',
+        stellarAddress: person.publicKey(),
+        ethereumAddress: spike.evmAddress,
+      });
+    }
+    tables.cctpTransfer.push({
+      id: 't2',
+      userId: 'u1',
+      network: 'testnet',
+      direction: 'stellar_to_crosschain',
+      sourceDomain: 27,
+      destDomain: 6,
+      status: 'CREATED',
+      burnTxHash: null,
+      srcSwapTxHash: null,
+      srcAsset: 'XLM',
+      srcAddress: person.publicKey(),
+      destAddress: spike.evmAddress.toLowerCase(),
+      amountWire: '1000000', // 1 USDC
+    });
+
+    const { preparePermissionBurn, commitPermissionSignatures } =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/server/relayed-steps') as typeof RelayedStepsModule;
+    const prepared = await preparePermissionBurn('u1', 't2');
+    if (!prepared.ok) throw new Error(prepared.error);
+
+    // The "first" transaction: one real Soroban call from the person (a 1 XLM
+    // transfer standing in for the XLM → USDC swap), signed in the same pass
+    // as the permissions.
+    const rpcServer = new sdk.rpc.Server('https://soroban-testnet.stellar.org');
+    const xlmSac = sdk.Asset.native().contractId(sdk.Networks.TESTNET);
+    const raw = new sdk.TransactionBuilder(await rpcServer.getAccount(person.publicKey()), {
+      fee: '1000000',
+      networkPassphrase: sdk.Networks.TESTNET,
+    })
+      .addOperation(
+        new sdk.Contract(xlmSac).call(
+          'transfer',
+          new sdk.Address(person.publicKey()).toScVal(),
+          new sdk.Address(relayer.publicKey()).toScVal(),
+          sdk.nativeToScVal(10_000_000n, { type: 'i128' })
+        )
+      )
+      .setTimeout(120)
+      .build();
+    const first = await rpcServer.prepareTransaction(raw);
+    first.sign(person);
+    const signatures = prepared.steps.map((st) => ({
+      id: st.id,
+      signature: person.sign(Buffer.from(st.payloadHash, 'hex')).toString('hex'),
+    }));
+
+    const state = await commitPermissionSignatures('u1', 't2', signatures, first.toXDR());
+    if (!state.ok) throw new Error(state.error);
+    console.log('[testnet e2e, first tx]', JSON.stringify(state));
+
+    const transfer = tables.cctpTransfer.find((t) => t.id === 't2')!;
+    expect(transfer.srcSwapTxHash).toBe(first.hash().toString('hex'));
+    expect((await rpcServer.getTransaction(transfer.srcSwapTxHash)).status).toBe('SUCCESS');
+    expect(state.failed).toBeNull();
+    expect(state.done).toBe(true);
+    expect(transfer.burnTxHash).toBe(state.burnTxHash);
+    expect(transfer.status).toBe('BURN_SUBMITTED');
+  }, 240_000);
 });

@@ -1,3 +1,4 @@
+import type * as StellarSdk from '@stellar/stellar-sdk';
 // Doc 129 Phase 3: which transfers may be sent as pre-signed permissions, and
 // how the steps' state reads back to the page. The custody pins (the person's
 // own Stellar account and own Base address, from the wallet row) are the
@@ -11,7 +12,7 @@ import { it, jest, expect, describe } from '@jest/globals';
 jest.mock('@/lib/prisma', () => ({ prisma: {} }));
 jest.mock('@normalfinance/utils', () => ({ getStellarConfigForNetwork: () => ({}) }));
 
-const { relayStateOf, permissionBurnRefusal } =
+const { relayStateOf, firstTxRefusal, permissionBurnRefusal } =
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@/server/relayed-steps') as typeof RelayedStepsModule;
 
@@ -108,5 +109,62 @@ describe('relayStateOf', () => {
 
   it('nothing prepared is not done', () => {
     expect(relayStateOf([]).done).toBe(false);
+  });
+});
+
+describe('firstTxRefusal (doc 129 Phase 5: the XLM swap that goes first)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const sdk = require('@stellar/stellar-sdk') as typeof StellarSdk;
+  const person = sdk.Keypair.random();
+  const other = sdk.Keypair.random();
+  const sac = sdk.Asset.native().contractId(sdk.Networks.TESTNET);
+  const call = () =>
+    new sdk.Contract(sac).call(
+      'transfer',
+      new sdk.Address(person.publicKey()).toScVal(),
+      new sdk.Address(other.publicKey()).toScVal(),
+      sdk.nativeToScVal(1n, { type: 'i128' })
+    );
+  const build = (source = person, ops = [call()], signer: typeof person | null = person) => {
+    const builder = new sdk.TransactionBuilder(new sdk.Account(source.publicKey(), '1'), {
+      fee: '100',
+      networkPassphrase: sdk.Networks.TESTNET,
+    });
+    ops.forEach((op) => builder.addOperation(op));
+    const tx = builder.setTimeout(60).build();
+    if (signer) tx.sign(signer);
+    return tx;
+  };
+  const xlmTransfer = { srcAddress: person.publicKey(), srcAsset: 'XLM', srcSwapTxHash: null };
+
+  it('accepts the person’s own signed Soroban call on an XLM transfer', () => {
+    expect(firstTxRefusal(build(), xlmTransfer)).toBeNull();
+  });
+
+  it('refuses another wallet, a missing signature, or a transfer not from XLM', () => {
+    expect(firstTxRefusal(build(other, [call()], other), xlmTransfer)?.status).toBe(403);
+    expect(firstTxRefusal(build(person, [call()], null), xlmTransfer)?.status).toBe(400);
+    expect(firstTxRefusal(build(person, [call()], other), xlmTransfer)?.status).toBe(400);
+    expect(firstTxRefusal(build(), { ...xlmTransfer, srcAsset: 'USDC' })?.status).toBe(400);
+  });
+
+  it('refuses anything but one Soroban call (a classic payment, two calls)', () => {
+    const pay = sdk.Operation.payment({
+      destination: other.publicKey(),
+      asset: sdk.Asset.native(),
+      amount: '1',
+    });
+    expect(firstTxRefusal(build(person, [pay]), xlmTransfer)?.status).toBe(400);
+    expect(firstTxRefusal(build(person, [call(), call()]), xlmTransfer)?.status).toBe(400);
+  });
+
+  it('a transfer keeps its first swap: a different one is refused, the same one is fine', () => {
+    const tx = build();
+    expect(firstTxRefusal(tx, { ...xlmTransfer, srcSwapTxHash: 'ab'.repeat(32) })?.status).toBe(
+      409
+    );
+    expect(
+      firstTxRefusal(tx, { ...xlmTransfer, srcSwapTxHash: tx.hash().toString('hex') })
+    ).toBeNull();
   });
 });

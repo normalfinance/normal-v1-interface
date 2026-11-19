@@ -228,6 +228,32 @@ describe('the steps each engine reports against', () => {
     expect(wallets?.assets).toEqual(['BTC', 'ETH', 'SOL', 'XLM']);
   });
 
+  it('doc 129 Phase 5: from XLM, one signature, then the swap to USDC, then Circle', () => {
+    const plan = cctpOutboundPlan({
+      t,
+      to: 'BTC',
+      amountUsdc: '24.75 USDC',
+      amountOut: '≈ 0.00028 BTC',
+      tool: 'NEAR',
+      autopilot: true,
+      fromXlm: { amountXlm: '100 XLM' },
+    });
+    const order = ids(plan);
+    expect(order.indexOf('src-swap')).toBe(order.indexOf('burn-sign') + 1);
+    expect(order.indexOf('burn')).toBe(order.indexOf('src-swap') + 1);
+    expect(placesOf(plan)[0]).toMatchObject({ id: 'stellar' });
+    expect(stepsOf(plan).find((s) => s.id === 'burn-sign')?.title).toBe('Approve the swap');
+    const plain = cctpOutboundPlan({
+      t,
+      to: 'BTC',
+      amountUsdc: '25 USDC',
+      amountOut: '≈ 0.00028 BTC',
+      tool: 'NEAR',
+      autopilot: true,
+    });
+    expect(ids(plain)).not.toContain('src-swap');
+  });
+
   it('cross-chain swap: wallet, exchange, other wallet', () => {
     const plan = ALL[4][1];
     expect(ids(plan)).toEqual([

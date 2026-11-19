@@ -50,17 +50,22 @@ export const counterpartOf = (symbol: SwapSymbol): SwapSymbol =>
 // run ~20 min later (post-bridge) when the user may be away. We only advertise
 // what we deliver in one flow — USDC. Users swap USDC→XLM separately if they
 // want it (a normal same-group Soroswap swap).
-// XLM as a direct outbound source is likewise excluded: the Soroswap leg would
-// stack a second 0.5% fee on top of the LI.FI one — swap XLM→USDC first
-// (identical total cost) until the composite can run that leg fee-exempt.
+// XLM as a direct outbound source was likewise excluded: the Soroswap leg would
+// stack a second 0.5% fee on top of the LI.FI one. Doc 129 Phase 5 runs that
+// leg fee-exempt, signed in the same prompt as the transfer (pre-signed
+// permissions): XLM → BTC/ETH/SOL is offered wherever those are switched on.
 // ---------------------------------------------------------------------------
+
+/** Doc 129 Phase 5: XLM → BTC/ETH/SOL rides on one-signature transfers. */
+export const XLM_TO_CROSSCHAIN = process.env.NEXT_PUBLIC_STELLAR_PERMISSIONS === '1';
 
 export type PairType = SwapGroup | 'cctp';
 
 export const canPair = (from: SwapSymbol, to: SwapSymbol): boolean =>
   groupOf(from) === groupOf(to) ||
   (groupOf(from) === 'crosschain' && to === 'USDC') ||
-  (from === 'USDC' && groupOf(to) === 'crosschain');
+  (from === 'USDC' && groupOf(to) === 'crosschain') ||
+  (XLM_TO_CROSSCHAIN && from === 'XLM' && groupOf(to) === 'crosschain');
 
 export const pairTypeOf = (from: SwapSymbol, to: SwapSymbol): PairType =>
   groupOf(from) === groupOf(to) ? groupOf(from) : 'cctp';

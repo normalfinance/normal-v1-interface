@@ -575,6 +575,11 @@ export function cctpOutboundPlan(p: {
   autopilot: boolean;
   /** The USDC first moves from the person's external Stellar wallet. */
   funding?: { walletName: string; wallet?: WalletRef } | null;
+  /**
+   * Doc 129 Phase 5: the swap starts from XLM. One signature covers a
+   * Soroswap swap to exactly `amountUsdc` and the transfer to Circle.
+   */
+  fromXlm?: { amountXlm: string } | null;
 }): FlowPlan {
   const { t, tool, autopilot } = p;
   const destChain = chainName(p.to);
@@ -611,8 +616,8 @@ export function cctpOutboundPlan(p: {
           'stellar',
           t('Your Stellar wallet'),
           p.stellarWallet,
-          'USDC',
-          p.amountUsdc,
+          p.fromXlm ? 'XLM' : 'USDC',
+          p.fromXlm ? p.fromXlm.amountXlm : p.amountUsdc,
           'stellar'
         )
       ),
@@ -640,12 +645,29 @@ export function cctpOutboundPlan(p: {
       }),
       step({
         id: 'burn-sign',
-        title: t('Approve the transfer'),
-        detail: t('Your passkey signs the transfer to Circle.'),
+        title: p.fromXlm ? t('Approve the swap') : t('Approve the transfer'),
+        detail: p.fromXlm
+          ? t('Your passkey signs once: the swap on Stellar and the transfer to Circle.')
+          : t('Your passkey signs the transfer to Circle.'),
         actor: t('You'),
         money: 'here',
         signature: true,
       }),
+      ...(p.fromXlm
+        ? [
+            step({
+              id: 'src-swap',
+              title: t('Swap your XLM to USDC'),
+              detail: t(
+                'Soroswap exchanges up to {{xlm}} for exactly {{usdc}} in your own Stellar wallet. No Normal fee on this part: the one 0.5% is on the exchange at the end.',
+                { xlm: p.fromXlm.amountXlm, usdc: p.amountUsdc }
+              ),
+              actor: t('Soroswap'),
+              money: 'moving',
+              eta: t('Seconds'),
+            }),
+          ]
+        : []),
       step({
         id: 'burn',
         title: t('Hand it to Circle'),

@@ -24,6 +24,7 @@ import { logger } from '@/utils/logger';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
 import { useStellarConfig } from '@/hooks';
+import { Asset } from '@stellar/stellar-sdk';
 import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { fCurrency } from '@/utils/format-number';
@@ -38,7 +39,6 @@ import { confirmAction } from '@/lib/auth/action-code';
 import { assetNoun } from '@/lib/portfolio/asset-names';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { evmAddressToBytes } from '@/lib/cctp/addresses';
-import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { requestLifiQuote } from '@/lib/lifi/request-quote';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
@@ -52,6 +52,7 @@ import { useTrustLine } from '@/hooks/stellar/tokens/use-trustline';
 import { bridgeName, readBridgeStatus } from '@/lib/flow/lifi-status';
 import { useAccountStatus } from '@/hooks/stellar/use-account-status';
 import { INK, MUTED, FAINT, BRAND_COLORS } from '@/theme/brand-colors';
+import { EVM_USDC, CCTP_DOMAIN, STELLAR_CCTP } from '@/lib/cctp/config';
 import { driftVerdict, isQuoteStale } from '@/lib/lifi/quote-freshness';
 import { usePersistStore, useNetworkStore } from '@normalfinance/state';
 import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
@@ -60,8 +61,12 @@ import { useAssetActionsContext } from '@/providers/AssetActionsProvider';
 // (live 2026-11-09, the dev server went down mid-swap).
 import { maxAffordableEth, GasShortfallError } from '@/lib/lifi/gas-shortfall';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
-import { xlmAvailableForFees, MIN_XLM_FOR_SAVINGS_TX } from '@/utils/stellar-reserve';
 import { setActiveCctpTransfer, getActiveCctpTransfer } from '@/lib/cctp/active-transfer';
+import {
+  xlmAvailableForFees,
+  maxXlmForSorobanSwap,
+  MIN_XLM_FOR_SAVINGS_TX,
+} from '@/utils/stellar-reserve';
 import {
   uncertainBurnHash,
   isBroadcastUncertain,
@@ -343,6 +348,39 @@ export function useCctpEngine({
   const [autopilotOn, setAutopilotOn] = useState<boolean | null>(null);
 
   const evmAddress = addresses.ETH; // the Base pivot is always the user's own EVM address
+
+  // Doc 129 Phase 5: XLM → BTC/ETH/SOL. The typed XLM becomes the USDC it is
+  // guaranteed to buy on Soroswap (its minimum out), and that USDC is what
+  // Circle moves; one signature covers the swap and the transfer (the server
+  // sends the swap first, the relayer burns once it has landed).
+  const fromXlm = direction === 'out' && fromSymbol === 'XLM';
+  const [xlmUsdcWire, setXlmUsdcWire] = useState<bigint | null>(null);
+  const usdcSac = useMemo(
+    () => new Asset('USDC', STELLAR_CCTP[network].usdcIssuer).contractId(config.NETWORK_PASSPHRASE),
+    [network, config.NETWORK_PASSPHRASE]
+  );
+  /** The USDC (wire units) a Soroswap swap of `xlm` is guaranteed to buy; null for no route. */
+  const xlmToUsdcWire = useCallback(
+    async (xlm: BigNumber, signal?: AbortSignal): Promise<bigint | null> => {
+      const res = await fetch('/api/swap/quote', {
+        method: 'POST',
+        headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token_in_address: 'native',
+          token_out_address: usdcSac,
+          amount: xlm.multipliedBy(1e7).integerValue(BigNumber.ROUND_DOWN).toFixed(0),
+        }),
+        signal,
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success || !data.min_amount_out || data.min_amount_out === '0') {
+        return null;
+      }
+      // 7-decimal USDC → 6-decimal wire units, rounded down.
+      return BigInt(data.min_amount_out) / 10n;
+    },
+    [usdcSac]
+  );
   const nativeAddress =
     direction === 'in'
       ? addresses[fromSymbol as CrosschainSymbol]
@@ -409,7 +447,22 @@ export function useCctpEngine({
     setQuoteLoading(true);
     (async () => {
       try {
-        const got = await requestLifiQuote(quoteBody(value), {
+        // Doc 129 Phase 5: from XLM, first the USDC that XLM is guaranteed to buy.
+        let usdcValue = value;
+        if (fromXlm) {
+          const wire = await xlmToUsdcWire(value, controller.signal);
+          if (stale) return;
+          if (wire === null) {
+            setXlmUsdcWire(null);
+            setQuoteError(t('There is no XLM to USDC route right now. Try again in a moment.'));
+            return;
+          }
+          setXlmUsdcWire(wire);
+          usdcValue = BigNumber(wire.toString()).dividedBy(1e6);
+        } else {
+          setXlmUsdcWire(null);
+        }
+        const got = await requestLifiQuote(quoteBody(usdcValue), {
           signal: controller.signal,
           cancelled: () => stale,
         });
@@ -467,7 +520,8 @@ export function useCctpEngine({
   // reserve (Soroban fees are paid in XLM); inbound mirrors the LI.FI engine,
   // with BTC resolved live from the mempool rate.
   const getMaxToken = async (): Promise<BigNumber> => {
-    if (direction === 'out') return fromBalance;
+    // Doc 129 Phase 5: from XLM, keep the reserve and this swap's own fees.
+    if (direction === 'out') return fromXlm ? maxXlmForSorobanSwap(fromBalance) : fromBalance;
     // Leave the source-chain swap's gas behind. ETH: sized to live gas via the
     // shared helper, with a generous 400k bridge gas limit — the CCTP ETH leg is
     // a bridge, and under-reserving would fail the swap for gas. BTC: live from
@@ -1193,6 +1247,35 @@ export function useCctpEngine({
         const { approveTxHash, burnTxHash } = await burnUsdcOnStellar({
           network,
           transferId,
+          // Doc 129 Phase 5: from XLM, the swap to exactly this USDC goes first.
+          first: fromXlm
+            ? {
+                build: async () => {
+                  const res = await fetch('/api/swap/quote', {
+                    method: 'POST',
+                    headers: {
+                      ...(await buildAuthHeaders()),
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      token_in_address: 'native',
+                      token_out_address: usdcSac,
+                      amount: (amountWire * 10n).toString(), // 7-decimal USDC out
+                      mode: 'strict-receive',
+                      sender: stellarAddress,
+                    }),
+                  });
+                  const data = await res.json().catch(() => null);
+                  if (!res.ok || !data?.success || !data.xdr) {
+                    throw new Error(
+                      data?.error ?? t('The XLM swap could not be prepared. Nothing was sent.')
+                    );
+                  }
+                  return data.xdr as string;
+                },
+                onSent: (hash) => startStep('src-swap', { links: [stellarTxLink(t, hash)] }),
+              }
+            : undefined,
           stellarAddress: stellarAddress!,
           amountWire,
           destinationDomain: CCTP_DOMAIN.base,
@@ -1503,6 +1586,8 @@ export function useCctpEngine({
       nativeAddress,
       network,
       toSymbol,
+      fromXlm,
+      usdcSac,
       makePatcher,
       finish,
       t,
@@ -1597,10 +1682,18 @@ export function useCctpEngine({
       startStep('record');
 
       const headers = await buildAuthHeaders();
+      if (fromXlm && fundFromExternal) {
+        throw new Error(t('Swap XLM from your Normal wallet: switch to it first.'));
+      }
+      if (fromXlm && !xlmUsdcWire) {
+        throw new Error(t('Get a fresh price first: the XLM to USDC part has none yet.'));
+      }
       const amountWire =
         direction === 'in'
           ? BigInt(live.estimate.toAmountMin) // USDC that will reach Base
-          : usdcToWire(amount.toFixed(6, BigNumber.ROUND_DOWN));
+          : fromXlm
+            ? xlmUsdcWire! // what the XLM is guaranteed to buy, exactly
+            : usdcToWire(amount.toFixed(6, BigNumber.ROUND_DOWN));
       const res = await fetch('/api/cctp/transfers', {
         method: 'POST',
         headers,
@@ -1669,6 +1762,8 @@ export function useCctpEngine({
       setActiveCctpTransfer(null); // something went wrong → recovery banner returns
     }
   }, [
+    fromXlm,
+    xlmUsdcWire,
     quote,
     direction,
     amount,
@@ -2047,7 +2142,11 @@ export function useCctpEngine({
       ? cctpOutboundPlan({
           t,
           to: toSymbol as CrosschainSymbol,
-          amountUsdc: formatCoin(amount.toNumber(), 'USDC'),
+          amountUsdc: formatCoin(
+            fromXlm && xlmUsdcWire !== null ? Number(xlmUsdcWire) / 1e6 : amount.toNumber(),
+            'USDC'
+          ),
+          fromXlm: fromXlm ? { amountXlm: formatCoin(amount.toNumber(), 'XLM') } : null,
           amountOut: `≈ ${formatCoin(expectedOut.toNumber(), toSymbol)}`,
           tool: toolName,
           stellarWallet: stellarRef,

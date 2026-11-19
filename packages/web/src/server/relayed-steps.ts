@@ -7,21 +7,23 @@ import { CCTP_DOMAIN, STELLAR_CCTP } from '@/lib/cctp/config';
 import { type NetworkType, getStellarConfigForNetwork } from '@normalfinance/utils';
 import { approveArgs, readSacAllowance, depositForBurnArgs } from '@/lib/cctp/stellar-burn-calls';
 import {
-  rpc,
-  xdr,
-  Asset,
-  Keypair,
-  Networks,
-  Operation,
-  TransactionBuilder,
-} from '@stellar/stellar-sdk';
-import {
   contractCall,
   permittedCall,
   permissionHash,
   buildPermission,
   attachPermissionSignature,
 } from '@/lib/stellar/permissions';
+import {
+  rpc,
+  xdr,
+  Asset,
+  Keypair,
+  Networks,
+  Operation,
+  Transaction,
+  TransactionBuilder,
+  type FeeBumpTransaction,
+} from '@stellar/stellar-sdk';
 
 // ---------------------------------------------------------------------------
 // Doc 129 Phase 3: the Circle burn as pre-signed permissions.
@@ -148,6 +150,41 @@ export function permissionBurnRefusal(
   return null;
 }
 
+/**
+ * Doc 129 Phase 5: the person's own Stellar transaction that must land before
+ * the Circle steps (XLM → USDC on Soroswap, for an XLM → BTC/ETH/SOL swap).
+ * Relayed as signed, never altered: it must come from the transfer's own
+ * wallet and carry that wallet's signature, be one Soroban call, and belong to
+ * a transfer whose source is XLM. Pure.
+ */
+export function firstTxRefusal(
+  tx: Transaction | FeeBumpTransaction,
+  transfer: Pick<CctpTransfer, 'srcAddress' | 'srcAsset' | 'srcSwapTxHash'>
+): Refusal | null {
+  if (!(tx instanceof Transaction)) {
+    return { ok: false, status: 400, error: 'The swap must be a plain transaction' };
+  }
+  if (transfer.srcAsset !== 'XLM') {
+    return { ok: false, status: 400, error: 'Only a swap from XLM goes before the transfer' };
+  }
+  if (tx.source !== transfer.srcAddress) {
+    return { ok: false, status: 403, error: 'The swap must come from the transfer’s own wallet' };
+  }
+  if (tx.operations.length !== 1 || tx.operations[0].type !== 'invokeHostFunction') {
+    return { ok: false, status: 400, error: 'The swap must be one Soroban call' };
+  }
+  const hash = tx.hash();
+  const key = Keypair.fromPublicKey(tx.source);
+  const signed = tx.signatures.some(
+    (d) => d.hint().equals(key.signatureHint()) && key.verify(hash, d.signature())
+  );
+  if (!signed) return { ok: false, status: 400, error: 'The swap is not signed by its wallet' };
+  if (transfer.srcSwapTxHash && transfer.srcSwapTxHash !== hash.toString('hex')) {
+    return { ok: false, status: 409, error: 'This transfer already has its swap' };
+  }
+  return null;
+}
+
 /** Where a transfer's steps stand, for the page and the client. */
 export function relayStateOf(
   steps: Pick<RelayedStep, 'kind' | 'status' | 'txHash' | 'errorDetail'>[]
@@ -266,7 +303,8 @@ export async function preparePermissionBurn(
 export async function commitPermissionSignatures(
   userId: string,
   transferId: string,
-  signatures: unknown
+  signatures: unknown,
+  firstTxXdr?: unknown
 ): Promise<RelayState | Refusal> {
   const steps = await prisma.relayedStep.findMany({
     where: { transferId, userId },
@@ -274,6 +312,28 @@ export async function commitPermissionSignatures(
   });
   if (!steps.length) return { ok: false, status: 404, error: 'Nothing to sign for this transfer' };
   const given = Array.isArray(signatures) ? signatures : [];
+
+  // Doc 129 Phase 5: the person's own swap that goes first, checked before
+  // anything is stored or sent.
+  let firstTx: Transaction | null = null;
+  if (firstTxXdr != null) {
+    const transfer = await prisma.cctpTransfer.findUnique({ where: { id: transferId } });
+    if (!transfer || transfer.userId !== userId) {
+      return { ok: false, status: 404, error: 'Not found' };
+    }
+    let parsed: Transaction | FeeBumpTransaction;
+    try {
+      parsed = TransactionBuilder.fromXDR(
+        String(firstTxXdr),
+        passphraseOf(transfer.network as NetworkType)
+      );
+    } catch {
+      return { ok: false, status: 400, error: 'The swap could not be read' };
+    }
+    const refusal = firstTxRefusal(parsed, transfer);
+    if (refusal) return refusal;
+    firstTx = parsed as Transaction;
+  }
 
   // Check EVERY signature before marking any step signed: half a signed set
   // must never be relayed.
@@ -297,13 +357,87 @@ export async function commitPermissionSignatures(
       return { ok: false, status: 400, error: 'A signature does not match this transfer' };
     }
   }
+  // The first transaction's hash goes on the transfer BEFORE it is broadcast,
+  // so the relay gate (and Activity) can follow it whatever happens next.
+  if (firstTx) {
+    await prisma.cctpTransfer.updateMany({
+      where: { id: transferId, srcSwapTxHash: null },
+      data: { srcSwapTxHash: firstTx.hash().toString('hex') },
+    });
+  }
   for (const s of signed) {
     await prisma.relayedStep.updateMany({
       where: { id: s.id, status: 'AWAITING_SIGNATURE' },
       data: { signedXdr: s.signedXdr, status: 'READY' },
     });
   }
+  if (firstTx) {
+    const server = serverFor(steps[0].network as NetworkType);
+    try {
+      const sent = await server.sendTransaction(firstTx);
+      if (sent.status === 'ERROR') {
+        await failOpenSteps(
+          transferId,
+          'The swap from XLM was refused, so nothing moved: your XLM is still in your wallet.'
+        );
+        return relayStateOf(await stepsOf(transferId));
+      }
+    } catch {
+      // Unknown: the gate follows the recorded hash and decides.
+    }
+    // Give it a moment to land, so this request can often send the transfer too.
+    for (let i = 0; i < 10; i++) {
+      if ((await firstTxGate(transferId)) !== 'pending') break;
+      await sleep(2_000);
+    }
+  }
   return relayTransferSteps(transferId);
+}
+
+/** The first transaction's fate: none to wait for, landed, still out, or never will. */
+type FirstTxGate = 'none' | 'confirmed' | 'pending' | 'failed';
+
+/** A first transaction still unknown this long after commit never landed. */
+const FIRST_TX_NEVER_LANDS_MS = 10 * 60_000;
+
+async function firstTxGate(transferId: string): Promise<FirstTxGate> {
+  const transfer = await prisma.cctpTransfer.findUnique({
+    where: { id: transferId },
+    select: { srcSwapTxHash: true, network: true },
+  });
+  if (!transfer?.srcSwapTxHash) return 'none';
+  let status: string;
+  try {
+    status = (
+      await serverFor(transfer.network as NetworkType).getTransaction(transfer.srcSwapTxHash)
+    ).status;
+  } catch {
+    return 'pending';
+  }
+  if (status === 'SUCCESS') return 'confirmed';
+  if (status === 'FAILED') return 'failed';
+  // NOT_FOUND: still on its way, unless its window has long passed.
+  const first = await prisma.relayedStep.findFirst({
+    where: { transferId },
+    orderBy: { order: 'asc' },
+    select: { updatedAt: true, status: true },
+  });
+  if (
+    first &&
+    first.status === 'READY' &&
+    Date.now() - first.updatedAt.getTime() > FIRST_TX_NEVER_LANDS_MS
+  ) {
+    return 'failed';
+  }
+  return 'pending';
+}
+
+/** Stop every step not yet done: nothing more will be sent for this transfer. */
+async function failOpenSteps(transferId: string, detail: string) {
+  await prisma.relayedStep.updateMany({
+    where: { transferId, status: { in: ['AWAITING_SIGNATURE', 'READY', 'SUBMITTING'] } },
+    data: { status: 'FAILED', errorDetail: detail },
+  });
 }
 
 // ---- relay ------------------------------------------------------------------
@@ -321,6 +455,20 @@ export async function relayTransferSteps(transferId: string): Promise<RelayState
     });
     const next = steps.find((s) => s.status !== 'DONE');
     if (!next) return relayStateOf(steps);
+
+    // Doc 129 Phase 5: nothing of Circle's goes out before the person's own
+    // swap has landed (its USDC is what the burn spends).
+    if (next.status === 'READY' && steps.every((s) => s.status === 'READY')) {
+      const gate = await firstTxGate(transferId);
+      if (gate === 'pending') return relayStateOf(steps);
+      if (gate === 'failed') {
+        await failOpenSteps(
+          transferId,
+          'The swap from XLM did not go through, so nothing moved: your XLM is still in your wallet.'
+        );
+        return relayStateOf(await stepsOf(transferId));
+      }
+    }
 
     if (next.status === 'SUBMITTED') {
       const moved = await confirmStep(next, round === 0 ? 2_000 : 20_000);

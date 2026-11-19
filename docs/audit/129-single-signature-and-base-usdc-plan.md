@@ -501,6 +501,21 @@ Later: Base USDC arrivals from outside (an exchange withdrawal to the Base addre
     1. Send `index: 'core-4'`.
     2. Burn the response's `purchase.amountWire` (the bridged part), not the total.
     3. Run `stellarLegs` like `lib/index/stellar-leg.ts`.
+- 2026-11-19, **Phases 0 to 4 committed and pushed** (`b0b01d15` on `feat/single-signature-base-usdc`). The `relayed_steps` SQL was run by Niko.
+- 2026-11-19, **Phase 5a code done: XLM → BTC/ETH/SOL with one face scan** (behind `NEXT_PUBLIC_STELLAR_PERMISSIONS`, like Phase 3).
+  - **Server** (`server/relayed-steps.ts`): the commit step takes the person's own first transaction (`firstTx`).
+    - `firstTxRefusal`: it must come from the transfer's own wallet, be signed by it, be one Soroban call, and belong to a transfer whose source is XLM.
+    - Its hash goes on the transfer (`srcSwapTxHash`) BEFORE broadcast, then it is sent.
+    - The relay gate sends no Circle step until it has landed. If it fails or never lands (10 minutes), every step fails cleanly and nothing else moves.
+  - **Proven on testnet:** the real module ran a real Soroban transaction as the first transaction, confirmed it, then relayed approve `369affb1…` and burn `36970caa…`.
+  - **Client:**
+    - `burnUsdcOnStellar({ first })` signs the swap in the same prompt as the permissions (permission path only, otherwise a clear error).
+    - The engine quotes XLM → the USDC it is guaranteed to buy (Soroswap minimum out), then LI.FI for that USDC. At signing it builds the swap as "exactly that USDC" (strict-receive).
+    - `canPair` offers XLM → BTC/ETH/SOL only with the switch on.
+    - The plan has "Approve the swap", then "Swap your XLM to USDC", then Circle.
+    - No Normal fee on the Soroswap leg (locked rule).
+  - **Checks:** jest 1,411 passed + 2 opt-in skipped, tsc, prettier, eslint.
+  - **NOT yet seen on screen.** A temporary second dev server on :8093 shared `packages/web/.next` with Niko's running :8082 server and broke both (React "Missing ActionQueueContext", hydration errors). Lesson: never run a second `next dev` in `packages/web` while another one runs.
   - **Ops note:** `prisma generate` could not replace the query engine binary while Niko's dev server on 8082 held it. The client types and JS did regenerate, and the engine binary is unchanged. Run `yarn db:generate` once with the dev server stopped. About 17 old `.tmp` engine copies from earlier attempts sit in `node_modules/.prisma/client`. They are harmless and can be deleted.
 
 ## 12. In plain words
