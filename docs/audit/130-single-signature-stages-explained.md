@@ -241,9 +241,25 @@ The burn cannot be prepared until the approve has landed, so the two can never b
 
 ---
 
-## Stage 6 (later): bridge first, then Stellar
+## Stage 6: bridge first, then Stellar
 
-**What it is.** BTC/ETH/SOL → XLM or → Savings, with one face scan. The Stellar step happens about 15 to 20 minutes later, from a permission signed at the start, for the least amount the bridge guarantees. Anything over stays as digital dollars.
+**What it is.** BTC/ETH/SOL → XLM or → Savings. The Stellar step runs about 15 to 90 minutes later, when the money lands, from what you signed at the start, for the least amount the bridge guarantees. Anything over stays as digital dollars.
+
+**What you will see** (switch on, Normal wallet):
+- **Bitcoin → XLM** (or Ethereum, Solana) is a new pair.
+- **Bitcoin → Digital dollars** gets **Into: Wallet | Savings**.
+- **Two face scans at the start, nothing later** (your choice: the coin and Stellar are different keys, and Turnkey asks once per key). Stellar comes first, so turning it down costs nothing. Then the coin.
+- **When the USDC lands,** Normal sends the swap to XLM (on Stellar's own exchange, with the 0.5% fee inside it) or the deposit into Savings (then the Savings fee).
+
+**How it stays safe:**
+- The swap to XLM is one transaction signed at the start. It stays valid even if you use your wallet in between, and Normal pays its network fee.
+- If the price moved more than 3%, or the money did not land within 3 hours, nothing more is done and the money waits in your wallet as digital dollars.
+
+**How to test it** (mainnet, switch on, auto-finish on, small amounts):
+- Swap a little Bitcoin, Ethereum or Solana (about $15) to XLM. You will see two face scans now, and the XLM about 20 minutes after the coin arrives on Base.
+- Then the same into Savings.
+
+**Status (2026-11-19):** Built, checked on screen through the dev preview (`/app/dev/flow?s=btc-xlm` and `?s=btc-savings`). Not run anywhere live yet. No new SQL.
 
 ---
 

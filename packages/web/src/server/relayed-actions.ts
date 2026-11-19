@@ -1,6 +1,7 @@
 import type { RelayedStep, RelayedAction } from '@prisma/client';
 
 import { prisma } from '@/lib/prisma';
+import { STELLAR_CCTP } from '@/lib/cctp/config';
 import { SAVINGS_DEPOSIT_FEE_BPS } from '@/utils/normal-fees';
 import { permissionHash, buildPermission } from '@/lib/stellar/permissions';
 import { savingsVaultOf, vaultWithdrawOf } from '@/lib/stellar/vault-withdraw';
@@ -52,8 +53,22 @@ import type { Refusal } from './relayed-steps';
 // after the deposit.
 // ---------------------------------------------------------------------------
 
-export type ActionKind = 'xlm_to_savings' | 'savings_to_xlm';
-const KINDS: ActionKind[] = ['xlm_to_savings', 'savings_to_xlm'];
+export type ActionKind =
+  | 'xlm_to_savings'
+  | 'savings_to_xlm'
+  // Doc 129 Phase 6: what happens on Stellar once a coin's Circle transfer lands.
+  | 'bridge_to_xlm'
+  | 'bridge_to_savings';
+const KINDS: ActionKind[] = [
+  'xlm_to_savings',
+  'savings_to_xlm',
+  'bridge_to_xlm',
+  'bridge_to_savings',
+];
+const BRIDGE_KINDS = new Set<string>(['bridge_to_xlm', 'bridge_to_savings']);
+
+/** Doc 129 Phase 6: an action that waits for a Circle transfer instead of a first transaction. */
+export const isBridgeKind = (kind: string) => BRIDGE_KINDS.has(kind);
 
 /** A swap's fee: 0.5% of the coin paid with (utils/normal-fees getSwapFeeAmount). */
 const SWAP_FEE_BPS = 50n;
@@ -68,6 +83,18 @@ const PERMISSION_WINDOW_LEDGERS = 120;
 const FIRST_TX_TIMEOUT_S = 300;
 /** A chained transaction's window: 15 minutes, as the fee pairs'. */
 const CHAINED_TX_TIMEOUT_S = 900;
+/**
+ * Doc 129 Phase 6: a coin's route takes up to about an hour, then Circle about
+ * 20 minutes; the Stellar step is signed for about 3 hours, and the action
+ * stops waiting after that (anything that arrives later stays as dollars).
+ */
+const BRIDGE_WINDOW_LEDGERS = 2160;
+export const BRIDGE_ACTION_MAX_MS = 3 * 60 * 60_000;
+const BRIDGE_TX_TIMEOUT_S = 3 * 60 * 60;
+/** Its own sequence number this far ahead (CAP-21 `minAccountSequence`). */
+const BRIDGE_SEQUENCE_ROOM = 1000n;
+/** More room on a swap that runs 20 to 90 minutes after its price was quoted. */
+const BRIDGE_SWAP_ROOM_BPS = 300n;
 
 const passphraseOf = (network: NetworkType) =>
   network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
@@ -242,6 +269,9 @@ export async function createRelayedAction(
   const ctx = await contextFor(userId, network);
   if (isRefusal(ctx)) return ctx;
   try {
+    if (isBridgeKind(kind)) {
+      return await createBridgeAction(userId, ctx, kind, body as Record<string, unknown>);
+    }
     return kind === 'xlm_to_savings'
       ? await createXlmToSavings(userId, ctx, body as Record<string, unknown>)
       : await createSavingsToXlm(userId, ctx, body as Record<string, unknown>);
@@ -474,6 +504,194 @@ async function createSavingsToXlm(
   return { ok: true, id: action.id, kind: 'savings_to_xlm', plan: shown, steps, ownTxs: [] };
 }
 
+/**
+ * Doc 129 Phase 6: BTC/ETH/SOL → XLM or → Savings. Created right after the
+ * coin's Circle transfer row and before anything is signed: its Stellar step
+ * is signed first (declining it costs nothing), for exactly the bridge's
+ * quoted minimum (Circle's fee is zero, and the Base burn takes at least that
+ * whenever it arrived). It runs once the transfer has landed on Stellar.
+ */
+async function createBridgeAction(
+  userId: string,
+  ctx: Context,
+  kind: ActionKind,
+  body: Record<string, unknown>
+): Promise<CreatedAction | Refusal> {
+  const transferId = typeof body.transferId === 'string' ? body.transferId : '';
+  const transfer = transferId
+    ? await prisma.cctpTransfer.findUnique({ where: { id: transferId } })
+    : null;
+  if (!transfer || transfer.userId !== userId)
+    return { ok: false, status: 404, error: 'Not found' };
+  if (
+    transfer.direction !== 'crosschain_to_stellar' ||
+    !['BTC', 'ETH', 'SOL'].includes(transfer.srcAsset) ||
+    transfer.dstAsset !== 'USDC' ||
+    transfer.network !== ctx.network
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Only a swap from BTC, ETH or SOL can continue on Stellar',
+    };
+  }
+  // The money lands in the person's own Normal wallet: the one that signs.
+  if (transfer.destAddress !== ctx.account) {
+    return { ok: false, status: 403, error: 'It must arrive in your own Normal wallet' };
+  }
+  if (transfer.status !== 'CREATED') {
+    return { ok: false, status: 409, error: 'This swap has already started' };
+  }
+  const taken = await prisma.relayedAction.findFirst({
+    where: { userId, planJson: { contains: transfer.id } },
+    select: { id: true },
+  });
+  if (taken) return { ok: false, status: 409, error: 'This swap already has its next step' };
+
+  const amount = BigInt(transfer.amountWire) * 10n;
+  // What lands is Circle's own USDC; Savings must take that very token.
+  const circleUsdc = new Asset('USDC', STELLAR_CCTP[ctx.network].usdcIssuer);
+  if (kind === 'bridge_to_savings' && !ctx.usdc.equals(circleUsdc)) {
+    return { ok: false, status: 400, error: 'Savings does not take this USDC here' };
+  }
+  const { sequence: ledger } = await ctx.server.getLatestLedger();
+  const expires = ledger + BRIDGE_WINDOW_LEDGERS;
+
+  if (kind === 'bridge_to_savings') {
+    const depositFee = (amount * DEPOSIT_FEE_BPS) / 10_000n;
+    const toSave = amount - depositFee;
+    if (toSave < MIN_UNITS) {
+      return { ok: false, status: 400, error: 'Savings takes at least 1 USDC' };
+    }
+    const deposit = vaultDepositPermission(ctx.vault, ctx.usdcSac, ctx.account, toSave);
+    const permissions = [
+      {
+        kind: 'deposit',
+        entry: buildPermission(ctx.account, deposit.call, expires, undefined, deposit.inner),
+      },
+      ...(depositFee > 0n
+        ? [
+            {
+              kind: 'fee',
+              entry: buildPermission(
+                ctx.account,
+                sacTransferCall(ctx.usdcSac, ctx.account, ctx.feeAddress, depositFee),
+                expires
+              ),
+            },
+          ]
+        : []),
+    ];
+    const shown = {
+      usdc: unitsToAmount(amount),
+      depositFee: unitsToAmount(depositFee),
+      deposit: unitsToAmount(toSave),
+    };
+    const action = await prisma.relayedAction.create({
+      data: {
+        userId,
+        network: ctx.network,
+        kind,
+        account: ctx.account,
+        status: 'CREATED',
+        planJson: JSON.stringify({
+          ...shown,
+          afterTransferId: transfer.id,
+          vault: ctx.vault,
+          usdcSac: ctx.usdcSac,
+        }),
+      },
+    });
+    const steps = [];
+    for (const [i, p] of permissions.entries()) {
+      const payloadHash = permissionHash(p.entry, ctx.passphrase).toString('hex');
+      const row = await prisma.relayedStep.create({
+        data: {
+          userId,
+          network: ctx.network,
+          transferId: action.id,
+          order: i + 1,
+          kind: p.kind,
+          account: ctx.account,
+          entryXdr: p.entry.toXDR('base64'),
+          payloadHash,
+          expiresLedger: expires,
+        },
+      });
+      steps.push({ id: row.id, kind: p.kind, payloadHash });
+    }
+    return { ok: true, id: action.id, kind, plan: shown, steps, ownTxs: [] };
+  }
+
+  // → XLM: one classic transaction, signed now and sent when the USDC lands.
+  const swapFee = (amount * SWAP_FEE_BPS) / 10_000n;
+  const swapIn = amount - swapFee;
+  if (swapIn < MIN_UNITS) return { ok: false, status: 400, error: 'Swap at least 1 USDC' };
+  const quote = await bestSend(ctx.horizon, circleUsdc, swapIn, Asset.native());
+  if (!quote) return { ok: false, status: 409, error: 'There is no USDC to XLM route right now' };
+  const xlmMin = (quote.destUnits * (10_000n - BRIDGE_SWAP_ROOM_BPS)) / 10_000n;
+  const source = await ctx.horizon.loadAccount(ctx.account);
+  const current = BigInt(source.sequenceNumber());
+  const swapTx = classicSwapWithFeeTx({
+    source: ctx.account,
+    sequence: current + BRIDGE_SEQUENCE_ROOM,
+    minSequence: current,
+    networkPassphrase: ctx.passphrase,
+    path: quote.path,
+    mode: 'strict-send',
+    sendAsset: circleUsdc,
+    sendUnits: swapIn,
+    destAsset: Asset.native(),
+    destUnits: xlmMin,
+    fee: { asset: circleUsdc, units: swapFee, to: ctx.feeAddress },
+    timeoutSeconds: BRIDGE_TX_TIMEOUT_S,
+  });
+  const shown = {
+    usdc: unitsToAmount(amount),
+    swapIn: unitsToAmount(swapIn),
+    swapFee: unitsToAmount(swapFee),
+    xlmQuoted: unitsToAmount(quote.destUnits),
+    xlmMin: unitsToAmount(xlmMin),
+  };
+  const swapTxHash = swapTx.hash().toString('hex');
+  const action = await prisma.relayedAction.create({
+    data: {
+      userId,
+      network: ctx.network,
+      kind,
+      account: ctx.account,
+      status: 'CREATED',
+      planJson: JSON.stringify({
+        ...shown,
+        afterTransferId: transfer.id,
+        usdcSac: circleUsdc.contractId(ctx.passphrase),
+        swapTxHash,
+      }),
+    },
+  });
+  const row = await prisma.relayedStep.create({
+    data: {
+      userId,
+      network: ctx.network,
+      transferId: action.id,
+      order: 1,
+      kind: 'user_tx',
+      account: ctx.account,
+      entryXdr: swapTx.toXDR(),
+      payloadHash: swapTxHash,
+      expiresLedger: 0,
+    },
+  });
+  return {
+    ok: true,
+    id: action.id,
+    kind,
+    plan: shown,
+    steps: [{ id: row.id, kind: 'user_tx', payloadHash: swapTxHash }],
+    ownTxs: [],
+  };
+}
+
 // ---- commit: checks and records ---------------------------------------------------------
 
 /** An action's plan, as stored. */
@@ -577,6 +795,9 @@ export async function recordActionStart(action: RelayedAction): Promise<void> {
     });
     return;
   }
+  // Doc 129 Phase 6: a bridge action's records are written as its steps land
+  // (the reconciler would abandon a record pending for the bridge's hour).
+  if (action.kind !== 'savings_to_xlm') return;
   const commission = plan.commission && amountToUnits(plan.commission) > 0n;
   await createPendingRecord({
     input: {
@@ -643,6 +864,12 @@ export async function settleActionFirstTx(
 
 /** What the person reads when the first transaction did not go through. */
 export function actionFirstTxWords(kind: string): { refused: string; failed: string } {
+  if (isBridgeKind(kind)) {
+    // Doc 129 Phase 6: the coin's transfer did not land on Stellar in time.
+    const words =
+      'The money did not reach your Stellar wallet in time, so Normal did nothing more with it. Anything that arrives stays there as digital dollars.';
+    return { refused: words, failed: words };
+  }
   return kind === 'xlm_to_savings'
     ? {
         refused:
@@ -702,10 +929,33 @@ export async function onActionStepLanded(step: RelayedStep, action: RelayedActio
         data: { feeTxHash: step.txHash },
       });
     }
-  } else if (step.kind === 'user_tx' && step.txHash && step.txHash === plan.swapTxHash) {
+  } else if (step.kind === 'user_tx' && plan.swapTxHash && step.payloadHash === plan.swapTxHash) {
+    // The swap, by its own hash (Normal may have paid its fee from outside it).
+    if (action.kind === 'bridge_to_xlm') {
+      await records
+        .createPendingRecord({
+          input: {
+            kind: 'swap',
+            record: {
+              tokenInAddress: plan.usdcSac ?? '',
+              tokenOutAddress: 'native',
+              tokenInSymbol: 'USDC',
+              tokenOutSymbol: 'XLM',
+              amountIn: plan.swapIn ?? '0',
+              amountOut: plan.xlmMin ?? '0',
+              feeAmount: plan.swapFee ?? '0',
+            },
+          },
+          walletAddress: action.account,
+          network,
+          serviceHash: plan.swapTxHash,
+          feeHash: plan.swapTxHash,
+        })
+        .catch(() => {});
+    }
     await records.settleRecord({
       kind: 'swap',
-      serviceHash: step.txHash,
+      serviceHash: plan.swapTxHash,
       status: 'confirmed',
       walletAddress: action.account,
       network: action.network,

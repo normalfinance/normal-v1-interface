@@ -888,8 +888,16 @@ export function cctpInboundPlan(p: {
   baseWallet?: WalletRef;
   stellarWallet?: WalletRef;
   autopilot: boolean;
+  /**
+   * Doc 129 Phase 6: what happens on Stellar once the money lands, signed at
+   * the start (its own face scan, before the coin's), then sent by Normal.
+   */
+  onStellar?:
+    | { kind: 'xlm'; swapIn: string; swapFee: string; xlmOut: string; xlmMin: string }
+    | { kind: 'savings'; deposit: string; depositFee: string | null }
+    | null;
 }): FlowPlan {
-  const { t, tool, autopilot } = p;
+  const { t, tool, autopilot, onStellar } = p;
   const srcChain = chainName(p.from);
   const finalityMinutes = Math.round(CCTP_ETA_SECONDS.fromEvm / 60 / 5) * 5;
   return {
@@ -905,6 +913,23 @@ export function cctpInboundPlan(p: {
         )
       ),
       step(recordStep(t)),
+      ...(onStellar
+        ? [
+            step({
+              id: 'stellar-sign',
+              title:
+                onStellar.kind === 'xlm'
+                  ? t('Approve the swap to XLM')
+                  : t('Approve the deposit into Savings'),
+              detail: t(
+                'Your passkey signs, now, what happens on Stellar when the money lands, so there is nothing to sign later. Nothing moves yet.'
+              ),
+              actor: t('You'),
+              money: 'here',
+              signature: true,
+            }),
+          ]
+        : []),
       step({
         id: 'sign',
         title: t('Approve with your passkey'),
@@ -1046,6 +1071,67 @@ export function cctpInboundPlan(p: {
         actor: t('Stellar network'),
         money: 'here',
       }),
+      ...(onStellar?.kind === 'xlm'
+        ? [
+            step({
+              id: 'then-swap',
+              title: t('Swap to XLM'),
+              detail: t(
+                'Normal sends the swap you signed: Stellar’s own exchange swaps {{swapIn}} for at least {{min}}, with Normal’s {{fee}} fee in the same transaction. If the price moved too far, it does not happen and your money stays as digital dollars.',
+                { swapIn: onStellar.swapIn, min: onStellar.xlmMin, fee: onStellar.swapFee }
+              ),
+              actor: t('Normal'),
+              money: 'moving',
+              eta: t('Seconds'),
+            }),
+            place(
+              walletPlace(
+                'xlm',
+                t('Your Stellar wallet'),
+                p.stellarWallet,
+                'XLM',
+                onStellar.xlmOut,
+                'stellar'
+              )
+            ),
+          ]
+        : onStellar?.kind === 'savings'
+          ? [
+              step({
+                id: 'then-deposit',
+                title: t('Put it in Savings'),
+                detail: t(
+                  'Normal sends the deposit you signed: {{deposit}} goes into the savings vault. Normal pays its network fee.',
+                  { deposit: onStellar.deposit }
+                ),
+                actor: t('Normal'),
+                money: 'moving',
+                eta: t('Seconds'),
+              }),
+              place({
+                id: 'vault',
+                label: t('Normal Savings'),
+                detail: t('The savings vault, lending to Blend’s USDC pool.'),
+                asset: 'USDC',
+                glyph: 'vault',
+                amount: onStellar.deposit,
+              }),
+              ...(onStellar.depositFee
+                ? [
+                    step({
+                      id: 'then-fee',
+                      title: t('Savings fee'),
+                      detail: t(
+                        'Normal’s {{fee}} deposit fee, sent right after the deposit, as with any deposit.',
+                        { fee: onStellar.depositFee }
+                      ),
+                      actor: t('Normal'),
+                      money: 'here',
+                    }),
+                  ]
+                : []),
+            ]
+          : []),
       step(balanceStep(t, t('Your wallets show the new amounts.'))),
     ],
   };

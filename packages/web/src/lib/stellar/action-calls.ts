@@ -94,6 +94,12 @@ export interface ClassicSwapWithFee {
   /** The network fee per operation, in stroops. */
   baseFee?: string;
   timeoutSeconds: number;
+  /**
+   * Doc 129 Phase 6 (CAP-21 precondition): valid while the account's own
+   * sequence number is at least this and below the transaction's, so using
+   * the wallet in between does not break a transaction signed in advance.
+   */
+  minSequence?: bigint;
 }
 
 /**
@@ -123,6 +129,7 @@ export function classicSwapWithFeeTx(p: ClassicSwapWithFee): Transaction {
   const builder = new TransactionBuilder(new Account(p.source, (p.sequence - 1n).toString()), {
     fee: p.baseFee ?? '10000',
     networkPassphrase: p.networkPassphrase,
+    ...(p.minSequence !== undefined ? { minAccountSequence: p.minSequence.toString() } : {}),
   }).addOperation(swap);
   if (p.fee.units > 0n) {
     builder.addOperation(

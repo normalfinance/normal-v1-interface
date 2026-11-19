@@ -374,6 +374,22 @@ export default function SwapCard({
   const canSavingsToXlm =
     savingsXlmOffered && fromSymbol === 'USDC' && toSymbol === 'XLM' && savingsSwapValue.gt(0);
   const savingsChosen = stellarSavingsPair === `${fromSymbol}-${toSymbol}`;
+  // Doc 129 Phase 6: BTC/ETH/SOL straight into Savings (→ XLM is its own pair).
+  const fromCoin = fromSymbol === 'BTC' || fromSymbol === 'ETH' || fromSymbol === 'SOL';
+  const canBridgeToSavings =
+    pairType === 'cctp' &&
+    fromCoin &&
+    toSymbol === 'USDC' &&
+    ONE_SIGNATURE_TRANSFERS &&
+    !isExternalWallet;
+  const cctpThen: 'xlm' | 'savings' | null =
+    pairType === 'cctp' && fromCoin
+      ? toSymbol === 'XLM'
+        ? 'xlm'
+        : canBridgeToSavings && savingsChosen
+          ? 'savings'
+          : null
+      : null;
   const savingsXlmMode: SavingsXlmMode | null =
     canXlmToSavings && savingsChosen
       ? 'xlm_to_savings'
@@ -733,6 +749,7 @@ export default function SwapCard({
     onNeedsSetup: isExternalWallet ? () => setSetupOpen(true) : undefined,
     fundFromExternal,
     fromSavings: cctpSourceActive === 'savings' ? fromSavings : null,
+    thenStep: cctpThen,
   });
   // Doc 129 Phase 5c: XLM into Savings, or Savings to XLM.
   const savingsXlm = useSavingsXlmEngine({
@@ -1093,7 +1110,7 @@ export default function SwapCard({
 
           {/* Doc 129 Phase 5c: XLM straight into Savings, or Savings straight
               to XLM, with one signature. */}
-          {(canXlmToSavings || canSavingsToXlm) && (
+          {(canXlmToSavings || canSavingsToXlm || canBridgeToSavings) && (
             <Box
               sx={{
                 display: 'flex',
@@ -1104,13 +1121,13 @@ export default function SwapCard({
               }}
             >
               <Typography component="span" sx={{ fontSize: '11.5px', color: FAINT, mr: '2px' }}>
-                {canXlmToSavings ? t('Into') : t('From')}
+                {canSavingsToXlm ? t('From') : t('Into')}
               </Typography>
               {[
                 {
                   key: 'wallet',
-                  label: canXlmToSavings ? t('Wallet') : t('Normal wallet'),
-                  bal: canXlmToSavings ? null : fromBalance,
+                  label: canSavingsToXlm ? t('Normal wallet') : t('Wallet'),
+                  bal: canSavingsToXlm ? fromBalance : null,
                   picked: !savingsChosen,
                 },
                 {

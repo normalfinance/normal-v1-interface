@@ -505,8 +505,17 @@ export async function commitPermissionSignatures(
   let transfer: CctpTransfer | null = null;
   let savings: SavingsRules | null = null;
   let savingsAmountText: string | null = null;
-  if (parent.type === 'action' && !firstXdrs.length && !parent.row.firstTxHash) {
+  // Doc 129 Phase 6: a bridge action waits for its Circle transfer instead.
+  const bridge = parent.type === 'action' && actions!.isBridgeKind(parent.row.kind);
+  if (parent.type === 'action' && !bridge && !firstXdrs.length && !parent.row.firstTxHash) {
     return { ok: false, status: 400, error: 'The first transaction is missing' };
+  }
+  if (bridge && firstXdrs.length) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'This step has no transaction of its own to send first',
+    };
   }
   if (firstXdrs.length) {
     const network = parent.row.network as NetworkType;
@@ -618,6 +627,12 @@ export async function commitPermissionSignatures(
       data: { signedXdr: s.signedXdr, status: 'READY' },
     });
   }
+  if (bridge) {
+    await prisma.relayedAction.updateMany({
+      where: { id: transferId, status: 'CREATED' },
+      data: { status: 'RUNNING' },
+    });
+  }
   if (firstTx) {
     const server = serverFor(steps[0].network as NetworkType);
     const words =
@@ -659,6 +674,8 @@ type FirstTxGate = 'none' | 'confirmed' | 'pending' | 'failed';
 const FIRST_TX_NEVER_LANDS_MS = 10 * 60_000;
 
 async function firstTxGate(transferId: string): Promise<FirstTxGate> {
+  const bridged = await bridgeGate(transferId);
+  if (bridged) return bridged;
   const origin = await firstTxOf(transferId);
   if (!origin?.hash) return 'none';
   let status: string;
@@ -771,6 +788,35 @@ async function settleFirstTx(
     }).catch(() => {});
   }
   return wordsFor(transfer.srcAsset);
+}
+
+/**
+ * Doc 129 Phase 6: a bridge action runs once its Circle transfer has landed on
+ * Stellar, stops if it failed or was refunded, and stops waiting after its
+ * window (the signatures have expired by then). Null for anything else.
+ */
+async function bridgeGate(id: string): Promise<FirstTxGate | null> {
+  const action = await prisma.relayedAction.findUnique({
+    where: { id },
+    select: { kind: true, planJson: true, createdAt: true },
+  });
+  if (!action) return null;
+  const actions = await import('@/server/relayed-actions');
+  if (!actions.isBridgeKind(action.kind)) return null;
+  const after = actions.planOf(action).afterTransferId;
+  const transfer = after
+    ? await prisma.cctpTransfer.findUnique({ where: { id: after }, select: { status: true } })
+    : null;
+  if (transfer?.status === 'COMPLETED') return 'confirmed';
+  if (!transfer || transfer.status === 'FAILED' || transfer.status === 'REFUNDED') return 'failed';
+  if (Date.now() - action.createdAt.getTime() > actions.BRIDGE_ACTION_MAX_MS) return 'failed';
+  // Still on its way: move to the back of the cron's queue, so a few long
+  // waits never crowd out the steps that can go now.
+  await prisma.relayedStep.updateMany({
+    where: { transferId: id, status: 'READY' },
+    data: { status: 'READY' },
+  });
+  return 'pending';
 }
 
 /** Stop every step not yet done: nothing more will be sent for this transfer. */
@@ -982,12 +1028,30 @@ async function sendUserTx(step: RelayedStep): Promise<boolean> {
       );
       return true;
     }
-    const hash = tx.hash().toString('hex');
+    // Doc 129 Phase 6: a bridge swap runs while the person may hold no spare
+    // XLM; Normal's relayer pays its network fee from outside it (fee bump).
+    let sendable: Transaction | FeeBumpTransaction = tx;
+    const parent = await prisma.relayedAction.findUnique({
+      where: { id: step.transferId },
+      select: { kind: true },
+    });
+    const secret = process.env.CCTP_RELAYER_STELLAR_SECRET;
+    if (parent?.kind === 'bridge_to_xlm' && secret && tx instanceof Transaction) {
+      const relayer = Keypair.fromSecret(secret);
+      sendable = TransactionBuilder.buildFeeBumpTransaction(
+        relayer,
+        '20000',
+        tx,
+        passphraseOf(network)
+      );
+      sendable.sign(relayer);
+    }
+    const hash = sendable.hash().toString('hex');
     await prisma.relayedStep.update({
       where: { id: step.id },
       data: { txHash: hash, status: 'SUBMITTED' },
     });
-    const sent = await server.sendTransaction(tx);
+    const sent = await server.sendTransaction(sendable);
     if (sent.status === 'PENDING' || sent.status === 'DUPLICATE') {
       await confirmStep(
         { ...step, txHash: hash, status: 'SUBMITTED', updatedAt: new Date() },

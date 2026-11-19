@@ -16,7 +16,11 @@ import { xdr, Keypair, Networks, TransactionBuilder } from '@stellar/stellar-sdk
 //      whatever this page does not live to see).
 // ---------------------------------------------------------------------------
 
-export type ActionKind = 'xlm_to_savings' | 'savings_to_xlm';
+export type ActionKind =
+  | 'xlm_to_savings'
+  | 'savings_to_xlm'
+  | 'bridge_to_xlm'
+  | 'bridge_to_savings';
 
 export interface CreatedAction {
   id: string;
@@ -49,6 +53,55 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 /** The server prices it and builds what to sign. Nothing moves. */
 export function createAction(body: Record<string, unknown>): Promise<CreatedAction> {
   return post<CreatedAction>('/api/stellar/actions', body);
+}
+
+/**
+ * Doc 129 Phase 6: sign an action's steps now (one passkey prompt) and hand
+ * them to the server; they run once its Circle transfer lands on Stellar.
+ */
+export async function signAndCommitAction(p: {
+  network: 'mainnet' | 'testnet';
+  account: string;
+  created: CreatedAction;
+  onSigning?: () => void;
+}): Promise<ActionState> {
+  const { getTurnkeyWalletInfo } = await import('@/lib/turnkey/wallet-info');
+  const tk = await getTurnkeyWalletInfo().catch(() => null);
+  if (!tk?.subOrgId || tk.stellarAddress !== p.account) {
+    throw new Error('This needs your Normal wallet with its passkey. Nothing was sent.');
+  }
+  p.onSigning?.();
+  const { signStellarHashesWithTurnkey } = await import('@/lib/turnkey/stellar-signer');
+  const signatures = await signStellarHashesWithTurnkey(
+    p.created.steps.map((s) => Buffer.from(s.payloadHash, 'hex')),
+    tk.subOrgId,
+    p.account
+  );
+  return post<ActionState>('/api/stellar/permissions/commit', {
+    actionId: p.created.id,
+    signatures: p.created.steps.map((s, i) => ({
+      id: s.id,
+      signature: signatures[i].toString('hex'),
+    })),
+  });
+}
+
+/** Follow an action until it lands or stops (the cron finishes what a page does not see). */
+export async function followAction(
+  actionId: string,
+  onState?: (state: ActionState) => void,
+  polls = 60
+): Promise<ActionState> {
+  let state = await post<ActionState>('/api/stellar/permissions/advance', { actionId });
+  onState?.(state);
+  for (let i = 0; i < polls && !state.done && !state.failed; i++) {
+    await new Promise((r) => {
+      setTimeout(r, 3_000);
+    });
+    state = await post<ActionState>('/api/stellar/permissions/advance', { actionId });
+    onState?.(state);
+  }
+  return state;
 }
 
 /**

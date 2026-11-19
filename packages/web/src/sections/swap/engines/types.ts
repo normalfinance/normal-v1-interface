@@ -66,7 +66,9 @@ export const canPair = (from: SwapSymbol, to: SwapSymbol): boolean =>
   groupOf(from) === groupOf(to) ||
   (groupOf(from) === 'crosschain' && to === 'USDC') ||
   (from === 'USDC' && groupOf(to) === 'crosschain') ||
-  (XLM_TO_CROSSCHAIN && from === 'XLM' && groupOf(to) === 'crosschain');
+  (XLM_TO_CROSSCHAIN && from === 'XLM' && groupOf(to) === 'crosschain') ||
+  // Doc 129 Phase 6: and back, the swap to XLM signed at the start.
+  (ONE_SIGNATURE_TRANSFERS && groupOf(from) === 'crosschain' && to === 'XLM');
 
 export const pairTypeOf = (from: SwapSymbol, to: SwapSymbol): PairType =>
   groupOf(from) === groupOf(to) ? groupOf(from) : 'cctp';

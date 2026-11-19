@@ -654,6 +654,50 @@ Later: Base USDC arrivals from outside (an exchange withdrawal to the Base addre
     - Seen on screen through `/app/dev/flow?s=xlm-savings` and `?s=savings-xlm`.
   - **Not run anywhere live.** Testnet cannot: its Savings uses Blend's test USDC, which has no exchange market. The first real run should be small, on mainnet.
 
+- 2026-11-19, **Phase 5c committed** (`69016e86`). Niko ran no SQL besides `relayed_steps` and `relayed_actions`; the older scripts are already in the database (the live app uses those tables).
+- 2026-11-19, **Phase 6 decisions (Niko):**
+  1. **Two face scans at the start, nothing later.** Turnkey signs with one key per request and each request needs its own passkey ceremony (the app has no Turnkey sessions); the coin (BTC/ETH/SOL) and the Stellar step are different keys. The plan's "asks once" was not possible without a session key, which would break the passkey-only rule.
+  2. **The XLM swap runs on Stellar's own exchange** as a pre-signed classic transaction, not through Soroswap's shallow pool.
+- **Phase 6 design:**
+  - **Order:** the Stellar step is signed first (declining it costs nothing), then the coin, as today.
+  - **Amount:** the bridge's quoted minimum (`amountWire`, LI.FI's minimum at Base). Circle's fee is zero (`CCTP_MAX_FEE = 0`), and the Base burn takes at least that much whenever it arrived. Anything above stays as digital dollars.
+  - **→ Savings:** the deposit permission and the deposit-fee permission, signed for about 3 hours (2,160 ledgers).
+  - **→ XLM:**
+    - One classic transaction: path payment strict-send of the amount less 0.5%, with the 0.5% fee in USDC, at least the quote less 3% (it runs 20 to 90 minutes later).
+    - It carries a CAP-21 `minAccountSequence` precondition, with its own sequence number 1,000 ahead, so using the wallet in between does not break it.
+    - Normal's relayer fee-bumps it, so it needs no spare XLM.
+  - **Gate:** these actions wait on their Circle transfer (`planJson.afterTransferId`):
+    - `COMPLETED` → run;
+    - `FAILED` or `REFUNDED` → stop;
+    - still pending after 3 hours → stop. Anything that arrives later stays as digital dollars.
+
+- 2026-11-19, **Phase 6 code done: BTC/ETH/SOL → XLM and → Savings** (behind the same switch; uncommitted; no new SQL).
+  - **What you see:**
+    - In Swap, Bitcoin, Ethereum or Solana → XLM is a new pair.
+    - Bitcoin, Ethereum or Solana → Digital dollars gets **Into: Wallet | Savings**.
+    - The review:
+      - starts with "Approve the swap to XLM" or "Approve the deposit into Savings" (your Stellar face scan), then the coin's own approval;
+      - ends with "Swap to XLM" or "Put it in Savings" and "Savings fee", sent by Normal after "USDC arrived";
+      - summary: "Then on Stellar", and "Signatures: Two, both now" with auto-finish.
+  - **Engine** (`use-cctp-engine.tsx`, inbound with `thenStep`):
+    1. Creates the action right after the transfer row (`POST /api/stellar/actions`, `bridge_to_xlm` or `bridge_to_savings`, with `transferId`).
+    2. Refuses a server price more than 0.5% under the review's.
+    3. Signs its steps with one Stellar prompt and commits them (`signAndCommitAction`), all before `executeLifiSwap`.
+    4. After "USDC arrived", follows it (`followAction`). Failure or no answer in about 3 minutes ends calmly: the money is in the wallet as digital dollars, and the cron finishes what the page does not see.
+  - **Server** (`server/relayed-actions.ts`, `server/relayed-steps.ts`):
+    - `createBridgeAction` checks the transfer: the person's own, inbound, from BTC/ETH/SOL, landing in their own Normal wallet, still `CREATED`, one action per transfer.
+    - **→ Savings:** permissions for the deposit and its fee. Savings must take exactly Circle's USDC.
+    - **→ XLM:** the classic swap (Circle's USDC), built on the CAP-21 minimum sequence with its own number 1,000 ahead and a 3-hour window. It is stored as a `user_tx` step and fee-bumped by Normal's relayer when sent.
+    - The gate (`bridgeGate`) waits on the transfer (`COMPLETED` runs, `FAILED` or `REFUNDED` stops, 3 hours stops). While it waits it moves its steps to the back of the cron's queue, so long waits never crowd out other steps.
+    - Records are written as the steps land: the swap (`SwapLog`, by its own hash, since the fee bump changes the outer hash) or the deposit (`VaultDeposit`).
+    - The commit takes no first transaction for these.
+  - **Fees:** the coin leg's 0.5% (LI.FI, as today), then the swap's 0.5% or the Savings deposit fee: exactly the steps one by one.
+  - **Checks:**
+    - jest 1,449 passed + 2 opt-in skipped (new: the pair, the inbound journey with its Stellar step, the CAP-21 transaction, bridge kinds and words);
+    - tsc clean, prettier clean, eslint clean except the old warning.
+    - Seen on screen through `/app/dev/flow?s=btc-xlm` (and `?s=btc-savings`).
+  - **Not run anywhere live.** Inbound Circle swaps are mainnet-only (LI.FI has no testnet liquidity), so the first real run should be a small one on mainnet with auto-finish on.
+
 ## 12. In plain words
 
 - **A signature** is your face or fingerprint saying "yes" to a sealed instruction. Turnkey seals it with your key.

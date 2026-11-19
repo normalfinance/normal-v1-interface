@@ -15,7 +15,9 @@ jest.mock('@/lib/prisma', () => ({ prisma: {} }));
 jest.mock('@normalfinance/utils', () => ({ getStellarConfigForNetwork: () => ({}) }));
 
 const {
+  isBridgeKind,
   withSlippage,
+  actionFirstTxWords,
   planXlmToSavings,
   savingsSwapAmounts,
   actionFirstTxRefusal,
@@ -115,5 +117,19 @@ describe('a step that is one of the person’s own transactions', () => {
     expect(() =>
       attachUserTxSignature(xdr, Keypair.random().publicKey(), Networks.PUBLIC, good)
     ).toThrow();
+  });
+});
+
+describe('doc 129 Phase 6: steps that wait for a Circle transfer', () => {
+  it('are the two bridge kinds only', () => {
+    expect(isBridgeKind('bridge_to_xlm')).toBe(true);
+    expect(isBridgeKind('bridge_to_savings')).toBe(true);
+    expect(isBridgeKind('xlm_to_savings')).toBe(false);
+    expect(isBridgeKind('savings_to_xlm')).toBe(false);
+  });
+
+  it('say that what arrives stays as digital dollars when the transfer never lands', () => {
+    expect(actionFirstTxWords('bridge_to_xlm').failed).toMatch(/stays there as digital dollars/);
+    expect(actionFirstTxWords('xlm_to_savings').failed).toMatch(/your XLM is still in your wallet/);
   });
 });

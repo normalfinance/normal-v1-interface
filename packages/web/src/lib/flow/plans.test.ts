@@ -401,6 +401,56 @@ describe('the steps each engine reports against', () => {
     expect(ids(noCommission)).not.toContain('commission');
   });
 
+  it('doc 129 Phase 6: the Stellar step is signed first and runs after the money lands', () => {
+    const toXlm = cctpInboundPlan({
+      t,
+      from: 'BTC',
+      amountIn: '0.001 BTC',
+      usdcOut: '≈ 87 USDC',
+      tool: 'Chainflip',
+      autopilot: true,
+      onStellar: {
+        kind: 'xlm',
+        swapIn: '86.13 USDC',
+        swapFee: '0.43 USDC',
+        xlmOut: '≈ 647.9 XLM',
+        xlmMin: '628.4 XLM',
+      },
+    });
+    const order = ids(toXlm);
+    expect(order.slice(0, 3)).toEqual(['record', 'stellar-sign', 'sign']);
+    expect(order.slice(-3)).toEqual(['arrived', 'then-swap', 'balance']);
+    expect(
+      stepsOf(toXlm)
+        .filter((s) => s.signature)
+        .map((s) => s.id)
+    ).toEqual(['stellar-sign', 'sign']);
+    expect(placesOf(toXlm).at(-1)).toMatchObject({ id: 'xlm', asset: 'XLM' });
+
+    const toSavings = cctpInboundPlan({
+      t,
+      from: 'ETH',
+      amountIn: '0.03 ETH',
+      usdcOut: '≈ 100 USDC',
+      tool: 'NEAR',
+      autopilot: true,
+      onStellar: { kind: 'savings', deposit: '99.50 USDC', depositFee: '0.50 USDC' },
+    });
+    expect(ids(toSavings).slice(-4)).toEqual(['arrived', 'then-deposit', 'then-fee', 'balance']);
+    expect(placesOf(toSavings).at(-1)).toMatchObject({ id: 'vault' });
+
+    const plain = cctpInboundPlan({
+      t,
+      from: 'ETH',
+      amountIn: '0.03 ETH',
+      usdcOut: '≈ 100 USDC',
+      tool: 'NEAR',
+      autopilot: true,
+    });
+    expect(ids(plain)).not.toContain('stellar-sign');
+    expect(ids(plain).some((id) => id.startsWith('then-'))).toBe(false);
+  });
+
   it('cross-chain swap: wallet, exchange, other wallet', () => {
     const plan = ALL[4][1];
     expect(ids(plan)).toEqual([

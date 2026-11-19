@@ -166,3 +166,44 @@ describe('the swap and its fee, one classic transaction', () => {
     expect(tx.operations[1]).toMatchObject({ destination: FEES, amount: '0.0500000' });
   });
 });
+
+describe('a swap signed now and sent later (doc 129 Phase 6)', () => {
+  it('stays valid while the account moves on: CAP-21 minimum sequence, its own number ahead', () => {
+    const tx = classicSwapWithFeeTx({
+      source: person.publicKey(),
+      sequence: 1_500n,
+      minSequence: 500n,
+      networkPassphrase: Networks.PUBLIC,
+      path: [],
+      mode: 'strict-send',
+      sendAsset: usdc,
+      sendUnits: 99_500_000n,
+      destAsset: Asset.native(),
+      destUnits: 720_000_000n,
+      fee: { asset: usdc, units: 500_000n, to: FEES },
+      timeoutSeconds: 3 * 60 * 60,
+    });
+    expect(tx.sequence).toBe('1500');
+    expect(tx.minAccountSequence).toBe('500');
+    expect(tx.operations.map((op) => op.type)).toEqual(['pathPaymentStrictSend', 'payment']);
+    const window = Number(tx.timeBounds?.maxTime) - Math.floor(Date.now() / 1000);
+    expect(window).toBeGreaterThan(3 * 60 * 60 - 60);
+  });
+
+  it('carries no precondition unless asked', () => {
+    const tx = classicSwapWithFeeTx({
+      source: person.publicKey(),
+      sequence: 7n,
+      networkPassphrase: Networks.PUBLIC,
+      path: [],
+      mode: 'strict-send',
+      sendAsset: usdc,
+      sendUnits: 99_500_000n,
+      destAsset: Asset.native(),
+      destUnits: 740_000_000n,
+      fee: { asset: usdc, units: 500_000n, to: FEES },
+      timeoutSeconds: 900,
+    });
+    expect(tx.minAccountSequence).toBeUndefined();
+  });
+});

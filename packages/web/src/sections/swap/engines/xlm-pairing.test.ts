@@ -36,3 +36,19 @@ describe('XLM as a Circle source', () => {
     expect(canPair('BTC', 'XLM')).toBe(false);
   });
 });
+
+describe('BTC/ETH/SOL → XLM (doc 129 Phase 6)', () => {
+  it('is offered with one-signature transfers on, as a Circle pair', () => {
+    const { canPair, pairTypeOf } = load('1');
+    expect(canPair('BTC', 'XLM')).toBe(true);
+    expect(canPair('ETH', 'XLM')).toBe(true);
+    expect(canPair('SOL', 'XLM')).toBe(true);
+    expect(pairTypeOf('BTC', 'XLM')).toBe('cctp');
+  });
+
+  it('is not offered with them off', () => {
+    const { canPair } = load(undefined);
+    expect(canPair('ETH', 'XLM')).toBe(false);
+    expect(canPair('SOL', 'XLM')).toBe(false);
+  });
+});

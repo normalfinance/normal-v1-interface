@@ -49,7 +49,7 @@ import { FlowView, FlowNotice } from '@/components/_common/flow';
 //
 //   /app/dev/flow?s=usdc-btc&mode=running&at=attest
 //   s     deposit | withdraw | xlm-usdc | btc-eth | usdc-btc | xlm-btc | savings-btc
-//         | xlm-savings | savings-xlm | btc-usdc
+//         | xlm-savings | savings-xlm | btc-xlm | btc-savings | btc-usdc
 //         | refund | index
 //   mode  review | running | done | failed | stopped | handed-off
 //   at    a step id (running, failed, stopped)
@@ -83,6 +83,8 @@ type Scenario =
   | 'savings-btc'
   | 'xlm-savings'
   | 'savings-xlm'
+  | 'btc-xlm'
+  | 'btc-savings'
   | 'btc-usdc'
   | 'refund'
   | 'index';
@@ -412,6 +414,54 @@ function sample(
         titles: swapTitles(t),
         doneNote: 'Your XLM is in your wallet.',
       };
+    case 'btc-xlm':
+    case 'btc-savings': {
+      // Doc 129 Phase 6: BTC → XLM or → Savings, the Stellar step signed first.
+      const toXlm = s === 'btc-xlm';
+      return {
+        plan: cctpInboundPlan({
+          t,
+          from: 'BTC',
+          amountIn: '0.001 BTC',
+          usdcOut: '≈ 87.00 USDC',
+          tool: 'Chainflip',
+          srcWallet: { address: BTC },
+          baseWallet: { address: ETH },
+          stellarWallet: { address: G },
+          autopilot: amounts.autopilot,
+          onStellar: toXlm
+            ? {
+                kind: 'xlm',
+                swapIn: '86.57 USDC',
+                swapFee: '0.43 USDC',
+                xlmOut: '≈ 651.00 XLM',
+                xlmMin: '631.47 XLM',
+              }
+            : { kind: 'savings', deposit: '86.57 USDC', depositFee: '0.43 USDC' },
+        }),
+        summary: rows([
+          ['You pay', '0.001 BTC', '$87.40'],
+          ['You receive', '≈ 87.00 USDC', 'In your Stellar wallet'],
+          toXlm
+            ? [
+                'Then on Stellar',
+                '≈ 651.00 XLM',
+                'Swapped to XLM when it lands, at least 631.47 XLM. Normal fee (0.5%): 0.43 USDC.',
+              ]
+            : ['Then into Savings', '86.57 USDC', 'When it lands. Savings fee (0.5%): 0.43 USDC.'],
+          [
+            'Signatures',
+            amounts.autopilot ? 'Two, both now' : 'Two now, one or two later',
+            'On Bitcoin and on Stellar now, so nothing waits for you later.',
+          ],
+        ]),
+        lede: toXlm
+          ? '0.001 BTC for about 651.00 XLM, over Chainflip, Circle and Stellar’s own exchange.'
+          : '0.001 BTC into Savings as about 86.57 USDC, over Chainflip and Circle.',
+        titles: swapTitles(t),
+        doneNote: toXlm ? 'Your XLM is in your wallet.' : 'Your money is in Savings.',
+      };
+    }
     case 'index': {
       const usd = amounts.usd ?? 100;
       const legs: NonNullable<Amounts['legs']> = amounts.legs ?? [
@@ -636,6 +686,8 @@ const SCENARIOS: Scenario[] = [
   'savings-btc',
   'xlm-savings',
   'savings-xlm',
+  'btc-xlm',
+  'btc-savings',
   'btc-usdc',
   'refund',
   'index',

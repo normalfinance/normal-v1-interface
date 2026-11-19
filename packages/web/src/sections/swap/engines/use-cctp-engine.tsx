@@ -19,6 +19,7 @@
 
 import type { BridgeProgress } from '@/lib/flow/lifi-status';
 import type { FlowPlan, FlowSummary } from '@/lib/flow/types';
+import type { CreatedAction } from '@/lib/stellar/run-action';
 
 import { logger } from '@/utils/logger';
 import { BigNumber } from 'bignumber.js';
@@ -176,6 +177,12 @@ export interface CctpEngineProps {
    * it guarantees. Kept stable by the caller (it feeds the quote).
    */
   fromSavings?: { currentValue: string; earnings: string } | null;
+  /**
+   * Doc 129 Phase 6: BTC/ETH/SOL → XLM or → Savings. The Stellar step is
+   * signed at the start (its own face scan, before the coin's) and sent by
+   * Normal once the money lands, for the bridge's quoted minimum.
+   */
+  thenStep?: 'xlm' | 'savings' | null;
   /** Dynamic gas (2026-08-21): writes the affordable amount back into the
    *  card when a gas spike beats the reserve on the ETH source leg. */
   onAmountAdjusted?: (amountEth: string) => void;
@@ -269,6 +276,7 @@ export function useCctpEngine({
   onNeedsSetup,
   fundFromExternal,
   fromSavings,
+  thenStep,
   onAmountAdjusted,
 }: CctpEngineProps): SwapEngineResult {
   const { t } = useTranslate();
@@ -588,9 +596,68 @@ export function useCctpEngine({
 
   const usdcOutMin =
     quote && direction === 'in' ? BigNumber(quote.estimate.toAmountMin).dividedBy(1e6) : null;
+
+  // Doc 129 Phase 6: the Stellar step after an inbound swap. It runs on the
+  // bridge's quoted minimum; its 0.5% (a swap's fee, or the Savings deposit
+  // fee) comes off that, as the server works it out.
+  const thenOn = direction === 'in' ? (thenStep ?? null) : null;
+  const stellarSignsOnce = burnsWithPermissions(turnkeyAddresses?.stellarAddress, stellarAddress);
+  const thenFee =
+    thenOn && usdcOutMin
+      ? usdcOutMin.multipliedBy(0.005).decimalPlaces(7, BigNumber.ROUND_DOWN)
+      : null;
+  const thenNet = thenOn && usdcOutMin && thenFee ? usdcOutMin.minus(thenFee) : null;
+  const [thenXlm, setThenXlm] = useState<{ xlmOut: BigNumber; xlmMin: BigNumber } | null>(null);
+  const thenActionRef = useRef<CreatedAction | null>(null);
+  const thenNetKey = thenOn === 'xlm' && thenNet ? thenNet.toFixed(7) : '';
+  useEffect(() => {
+    if (!thenNetKey) {
+      setThenXlm(null);
+      return undefined;
+    }
+    let stale = false;
+    (async () => {
+      try {
+        const { Horizon } = await import('@stellar/stellar-sdk');
+        const horizon = new Horizon.Server(config.HORIZON_URL, {
+          allowHttp: config.HORIZON_URL.startsWith('http://'),
+        });
+        const page = await horizon
+          .strictSendPaths(new Asset('USDC', STELLAR_CCTP[network].usdcIssuer), thenNetKey, [
+            Asset.native(),
+          ])
+          .call();
+        const best = page.records.reduce<BigNumber | null>((top, r) => {
+          const out = BigNumber(r.destination_amount);
+          return !top || out.gt(top) ? out : top;
+        }, null);
+        if (!stale) {
+          setThenXlm(
+            best
+              ? {
+                  xlmOut: best,
+                  // The server keeps 3% room: it runs 20 to 90 minutes later.
+                  xlmMin: best.multipliedBy(0.97).decimalPlaces(7, BigNumber.ROUND_DOWN),
+                }
+              : null
+          );
+        }
+      } catch {
+        if (!stale) setThenXlm(null);
+      }
+    })();
+    return () => {
+      stale = true;
+    };
+  }, [thenNetKey, config.HORIZON_URL, network]);
+
   const toAmount =
     direction === 'in'
-      ? usdcOutMin // inbound always delivers USDC on Stellar
+      ? thenOn === 'xlm'
+        ? (thenXlm?.xlmOut ?? null)
+        : thenOn === 'savings'
+          ? thenNet
+          : usdcOutMin // inbound always delivers USDC on Stellar
       : quote
         ? BigNumber(quote.estimate.toAmountMin).dividedBy(
             BigNumber(10).pow(NATIVE_DECIMALS[toSymbol as CrosschainSymbol])
@@ -996,6 +1063,36 @@ export function useCctpEngine({
         fromSymbol as CrosschainSymbol
       ];
       try {
+        // Doc 129 Phase 6: first the Stellar step, its own face scan (declining
+        // it costs nothing: the coin has not moved).
+        thenActionRef.current = null;
+        if (thenOn) {
+          if (!stellarAddress) throw new Error(t('Your Normal wallet on Stellar is needed.'));
+          startStep('stellar-sign');
+          const runAction = await import('@/lib/stellar/run-action');
+          const created = await runAction.createAction({
+            kind: thenOn === 'xlm' ? 'bridge_to_xlm' : 'bridge_to_savings',
+            transferId,
+          });
+          if (
+            thenOn === 'xlm' &&
+            thenXlm &&
+            BigNumber(created.plan.xlmMin ?? 0).lt(thenXlm.xlmMin.multipliedBy(0.995))
+          ) {
+            throw new Error(
+              t('The price moved while this was open, so nothing was sent. Review the swap again.')
+            );
+          }
+          await runAction.signAndCommitAction({
+            network: network === 'mainnet' ? 'mainnet' : 'testnet',
+            account: stellarAddress,
+            created,
+            onSigning: () => updateStep('stellar-sign', { waiting: true }),
+          });
+          doneStep('stellar-sign');
+          thenActionRef.current = created;
+        }
+
         setStage('lifi');
         const srcTx = await executeLifiSwap(
           lifiQuote,
@@ -1222,6 +1319,40 @@ export function useCctpEngine({
         // Delivered amount for the activity feed — the USDC that landed on Stellar.
         const dstAmount = wireToUsdc(arrivedWire);
         await patch({ dstAmount });
+
+        // Doc 129 Phase 6: the Stellar step signed at the start runs now.
+        const thenAction = thenActionRef.current;
+        if (thenAction) {
+          const ids =
+            thenAction.kind === 'bridge_to_xlm'
+              ? ['then-swap']
+              : thenAction.steps.map((s) => (s.kind === 'deposit' ? 'then-deposit' : 'then-fee'));
+          startStep(ids[0]);
+          const { followAction } = await import('@/lib/stellar/run-action');
+          const final = await followAction(thenAction.id, (state) => {
+            state.steps.forEach((s, i) => {
+              if (!ids[i] || (s.status !== 'SUBMITTED' && s.status !== 'DONE')) return;
+              const links = s.txHash ? { links: [stellarTxLink(t, s.txHash)] } : {};
+              if (s.status === 'DONE') doneStep(ids[i], links);
+              else startStep(ids[i], links);
+            });
+          });
+          if (final.failed || !final.done) {
+            // The money is in the person's own wallet as digital dollars:
+            // a calm ending, never an alarm.
+            throw Object.assign(
+              new Error(
+                final.failed ??
+                  t('Your money arrived. The step on Stellar finishes on its own in a moment.')
+              ),
+              { __calmEnd: true }
+            );
+          }
+          if (thenAction.kind === 'bridge_to_savings' && stellarAddress) {
+            bumpSavingsReadEpoch(stellarAddress);
+            window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
+          }
+        }
         await finish();
       } catch (e: any) {
         // Solana refused the transaction because its blockhash expired
@@ -1328,6 +1459,8 @@ export function useCctpEngine({
       finish,
       t,
       fromSymbol,
+      thenOn,
+      thenXlm,
       refetchChain,
       startStep,
       updateStep,
@@ -2179,6 +2312,20 @@ export function useCctpEngine({
       return { label: t('Add XLM to cover the network fee'), action: null, loading: false };
     // Doc 129 Phase 5b: Savings goes straight to a coin only on one-signature
     // transfers (the swap card offers it only then; this is the backstop).
+    // Doc 129 Phase 6: the Stellar step is the Normal wallet's own signature.
+    if (thenOn && !stellarSignsOnce)
+      return {
+        label: t('Not available from this wallet'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
+            {t('Swap to digital dollars first, then from there.')}
+          </Typography>
+        ),
+      };
+    if (thenOn === 'xlm' && quote && !thenXlm)
+      return { label: t('Fetching quote…'), action: null, loading: false };
     if (savingsSource && !oneSignature)
       return {
         label: t('Not available from Savings'),
@@ -2296,6 +2443,9 @@ export function useCctpEngine({
     oneSignature,
     xlmCannotPayFee,
     savingsSource,
+    thenOn,
+    stellarSignsOnce,
+    thenXlm,
   ]);
 
   const routeLabel =
@@ -2441,6 +2591,22 @@ export function useCctpEngine({
           baseWallet: baseRef,
           stellarWallet: stellarRef,
           autopilot,
+          onStellar:
+            thenOn === 'xlm' && thenXlm && thenNet && thenFee
+              ? {
+                  kind: 'xlm',
+                  swapIn: formatCoin(thenNet.toNumber(), 'USDC'),
+                  swapFee: formatCoin(thenFee.toNumber(), 'USDC'),
+                  xlmOut: `≈ ${formatCoin(thenXlm.xlmOut.toNumber(), 'XLM')}`,
+                  xlmMin: formatCoin(thenXlm.xlmMin.toNumber(), 'XLM'),
+                }
+              : thenOn === 'savings' && thenNet && thenFee
+                ? {
+                    kind: 'savings',
+                    deposit: formatCoin(thenNet.toNumber(), 'USDC'),
+                    depositFee: thenFee.gt(0) ? formatCoin(thenFee.toNumber(), 'USDC') : null,
+                  }
+                : null,
         });
   };
 
@@ -2505,6 +2671,34 @@ export function useCctpEngine({
           value: `≈ ${formatCoin(expectedOut.toNumber(), outSymbol)}`,
           detail: direction === 'in' ? t('In your Stellar wallet') : undefined,
         },
+        // Doc 129 Phase 6: then, on Stellar.
+        ...(thenOn === 'xlm' && thenXlm && thenFee
+          ? [
+              {
+                key: 'then',
+                label: t('Then on Stellar'),
+                value: `≈ ${formatCoin(thenXlm.xlmOut.toNumber(), 'XLM')}`,
+                detail: t(
+                  'Swapped to XLM when it lands, at least {{min}}. Normal fee (0.5%): {{fee}}.',
+                  {
+                    min: formatCoin(thenXlm.xlmMin.toNumber(), 'XLM'),
+                    fee: formatCoin(thenFee.toNumber(), 'USDC'),
+                  }
+                ),
+              },
+            ]
+          : thenOn === 'savings' && thenNet && thenFee
+            ? [
+                {
+                  key: 'then',
+                  label: t('Then into Savings'),
+                  value: formatCoin(thenNet.toNumber(), 'USDC'),
+                  detail: t('When it lands. Savings fee (0.5%): {{fee}}.', {
+                    fee: formatCoin(thenFee.toNumber(), 'USDC'),
+                  }),
+                },
+              ]
+            : []),
         {
           key: 'min',
           label: t('At least'),
@@ -2568,14 +2762,24 @@ export function useCctpEngine({
             : {
                 key: 'signatures',
                 label: t('Signatures'),
-                value: autopilot ? t('One') : t('One now, one or two later'),
-                detail: autopilot
-                  ? t('On {{chain}} only. Auto-finish signs on Base.', {
+                value: thenOn
+                  ? autopilot
+                    ? t('Two, both now')
+                    : t('Two now, one or two later')
+                  : autopilot
+                    ? t('One')
+                    : t('One now, one or two later'),
+                detail: thenOn
+                  ? t('On {{chain}} and on Stellar now, so nothing waits for you later.', {
                       chain: CHAINS[nativeChain].name,
                     })
-                  : t('On {{chain}} now, then on Base when the money gets there.', {
-                      chain: CHAINS[nativeChain].name,
-                    }),
+                  : autopilot
+                    ? t('On {{chain}} only. Auto-finish signs on Base.', {
+                        chain: CHAINS[nativeChain].name,
+                      })
+                    : t('On {{chain}} now, then on Base when the money gets there.', {
+                        chain: CHAINS[nativeChain].name,
+                      }),
               },
       ],
       note: t(
@@ -2604,11 +2808,23 @@ export function useCctpEngine({
                 get: formatCoin(expectedOut.toNumber(), toSymbol),
                 tool: toolName,
               })
-            : t('{{pay}} for about {{get}} in your Stellar wallet, over {{tool}} and Circle.', {
-                pay: formatCoin(amount.toNumber(), fromSymbol),
-                get: formatCoin(expectedOut.toNumber(), 'USDC'),
-                tool: toolName,
-              })
+            : thenOn === 'xlm' && thenXlm
+              ? t('{{pay}} for about {{get}}, over {{tool}}, Circle and Stellar’s own exchange.', {
+                  pay: formatCoin(amount.toNumber(), fromSymbol),
+                  get: formatCoin(thenXlm.xlmOut.toNumber(), 'XLM'),
+                  tool: toolName,
+                })
+              : thenOn === 'savings' && thenNet
+                ? t('{{pay}} into Savings as about {{get}}, over {{tool}} and Circle.', {
+                    pay: formatCoin(amount.toNumber(), fromSymbol),
+                    get: formatCoin(thenNet.toNumber(), 'USDC'),
+                    tool: toolName,
+                  })
+                : t('{{pay}} for about {{get}} in your Stellar wallet, over {{tool}} and Circle.', {
+                    pay: formatCoin(amount.toNumber(), fromSymbol),
+                    get: formatCoin(expectedOut.toNumber(), 'USDC'),
+                    tool: toolName,
+                  })
       : '';
 
   const handleConfirm = async () => {
