@@ -13,7 +13,9 @@ export const maxDuration = 60;
 export const POST = withAuth(async (req: Request, { user }) => {
   if (!PERMISSIONS_ENABLED) return NextResponse.json({ error: 'Not available' }, { status: 404 });
   const body = await req.json().catch(() => null);
-  const transferId = typeof body?.transferId === 'string' ? body.transferId : '';
+  // A Circle transfer's id, or (doc 129 Phase 5c) a RelayedAction's.
+  const parentId = body?.transferId ?? body?.actionId;
+  const transferId = typeof parentId === 'string' ? parentId : '';
   if (!transferId) return NextResponse.json({ error: 'transferId is required' }, { status: 400 });
 
   // Doc 129 Phase 5: the person's own transactions that must land before the

@@ -39,17 +39,19 @@ export function randomNonce(): xdr.Int64 {
 }
 
 /**
- * An unsigned permission for exactly `call`, with no inner calls: the trees
- * this module builds are root-only, which is what Circle's contract and the
- * token's `approve` require (recorded on testnet and read from real mainnet
- * burns, doc 129 §11). A contract that needs an inner call approved would
- * need its own builder.
+ * An unsigned permission for exactly `call`, and for exactly the `inner`
+ * calls it makes on the account's behalf (none by default). Circle's contract
+ * and the token's `approve` need none (recorded on testnet and read from real
+ * mainnet burns); a Savings deposit needs one, the USDC transfer into the
+ * vault (read from a mainnet simulation, doc 129 §11). A call made with any
+ * other inner call does not match the signature and fails.
  */
 export function buildPermission(
   account: string,
   call: xdr.InvokeContractArgs,
   expiryLedger: number,
-  nonce: xdr.Int64 = randomNonce()
+  nonce: xdr.Int64 = randomNonce(),
+  inner: xdr.InvokeContractArgs[] = []
 ): xdr.SorobanAuthorizationEntry {
   return new xdr.SorobanAuthorizationEntry({
     credentials: xdr.SorobanCredentials.sorobanCredentialsAddress(
@@ -62,7 +64,13 @@ export function buildPermission(
     ),
     rootInvocation: new xdr.SorobanAuthorizedInvocation({
       function: xdr.SorobanAuthorizedFunction.sorobanAuthorizedFunctionTypeContractFn(call),
-      subInvocations: [],
+      subInvocations: inner.map(
+        (c) =>
+          new xdr.SorobanAuthorizedInvocation({
+            function: xdr.SorobanAuthorizedFunction.sorobanAuthorizedFunctionTypeContractFn(c),
+            subInvocations: [],
+          })
+      ),
     }),
   });
 }

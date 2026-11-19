@@ -575,6 +575,84 @@ Later: Base USDC arrivals from outside (an exchange withdrawal to the Base addre
     - `buildPermission` takes inner calls (today it always writes `subInvocations: []`).
     - Relayed steps must belong to something other than a Circle transfer: a Savings deposit has no `CctpTransfer`, and the gate reads `srcSwapTxHash` from one.
   - **Product decision for Niko, before 5c is priced:** the swap leg's 0.5% in XLM → Savings and Savings → XLM. The locked composite rule (no fee on the Soroswap leg) was written for flows that pay 0.5% on LI.FI; these two have no LI.FI leg.
+  - **Decided (Niko, 2026-11-19): "it should pay the fee to us".** The XLM ⇄ USDC part pays Normal's 0.5% on the coin paid with, exactly as a swap does today (`getSwapFeeAmount`). The Savings deposit fee and the commission on earnings apply as usual. A combined flow costs exactly what the same steps cost done one by one.
+- 2026-11-19, **Phase 5c spike 2 (read-only): what a Soroswap swap asks its owner to authorize.**
+  - Simulated `router.swap_exact_tokens_for_tokens(10 USDC, 0, [USDC, XLM], to, deadline)` on mainnet. Router `CAG5LRYQ…JDDH`, from Soroswap's own `public/mainnet.contracts.json`. `to` was Circle's issuer.
+  - **One tree:**
+    - `router.swap_exact_tokens_for_tokens(...)`
+      - one inner call: USDC.`transfer(to, pair CAM7DY53…OABP, amount)`
+  - The direct USDC/XLM pool paid 74.23 XLM for 10 USDC. The deadline is part of what is signed.
+- **Phase 5c plan (XLM → Savings, Savings → XLM), one face scan each.** Revised the same day: Soroswap's direct USDC/XLM pool is shallow (read-only `router_get_amounts_out`: 10 USDC → 74.23 XLM, but 100 USDC → 690.19 XLM, about 7% worse per dollar). A relayed swap through it would cost people real money, so both swap legs use Stellar's own exchange (SDEX order book and classic pools) through **classic path payments**:
+  - A classic path payment needs no simulation. It can be signed in advance and runs when it is sent, chained by sequence number behind the transaction that funds it.
+  - The swap and its 0.5% fee are two operations of **one** classic transaction. A transaction is atomic: no swap, no fee.
+  - The minimum out (or maximum in) comes from Horizon's path finding at signing, with 1% room.
+
+  | Flow | Your own transactions (one face scan, chained, sent in order by the server) | Permissions Normal relays after they land |
+  |---|---|---|
+  | XLM → Savings | the swap to exactly the USDC needed (path payment strict-receive) with its 0.5% fee in XLM, one transaction | the deposit (`vault.deposit` + USDC transfer), then the deposit fee (USDC transfer to Normal) |
+  | Savings → XLM | the withdrawal, then its commission, then the swap (path payment strict-send) with its 0.5% fee in USDC, one transaction | none |
+
+  - **A fee is never sent before the thing it pays for:**
+    - the swap fee is inside the swap's own transaction;
+    - the commission follows the withdrawal by sequence number;
+    - a relayed deposit fee is the step right after the deposit, and stops with it.
+  - **New relay step kind `user_tx`:** one of your own signed transactions that the relay sends as it is, in order, after the one before it has landed. It sits next to the permission steps.
+  - **Parent records:** a new additive table `relayed_actions` (kind, account, first transaction hash, the plan, status), because these flows have no `CctpTransfer`. It needs one more manual SQL.
+  - **Server-built swaps:** the server builds the swap transaction at your sequence number and keeps its hash. At commit it accepts only that exact transaction, signed by you.
+  - **Finding for today's product (not changed here):** the regular XLM ⇄ USDC swap asks Soroswap's API for `protocols: ['soroswap']` only (`app/api/swap/quote/route.ts:13`). Read-only quotes, 2026-11-19:
+
+    | Swap | Stellar's own exchange (Horizon path finding) | Soroswap's direct pool | Difference |
+    |---|---|---|---|
+    | 10 USDC → XLM | 75.19 XLM | 74.23 XLM | about 1.3% less |
+    | 100 USDC → XLM | 751.95 XLM | 690.19 XLM | about 8% less |
+
+    If the API's Soroswap-only route matches the direct pool, larger swaps in the app cost people several percent. **To confirm:** type 100 USDC → XLM in Swap and compare with about 752 XLM. The fix would be a separate change (more protocols or SDEX, with its own fee-pair checks).
+  - **Records:**
+    - the swap (`SwapLog`) and the withdrawal (`VaultDeposit`) are written at commit, before anything is sent;
+    - a relayed deposit is written when it lands;
+    - the reconcilers settle them by hash as usual.
+
+- 2026-11-19, **Phase 5b committed** (`551e799c`).
+- 2026-11-19, **Phase 5c code done: XLM → Savings and Savings → XLM, one face scan each** (behind the same switch; uncommitted).
+  - **What you see** (switch on, Normal wallet):
+    - In Swap, XLM → Digital dollars gets **Into: Wallet | Savings** chips.
+    - Digital dollars → XLM gets **From: Normal wallet | Savings** (when there is money in Savings).
+    - Picking Savings switches to a new engine (`sections/swap/engines/use-savings-xlm-engine.tsx`). It quotes on Stellar's own exchange (Horizon path finding from the page), and its review shows every fee and "Signatures: One".
+  - **On Confirm:**
+    1. The two-factor code.
+    2. (Savings → XLM) the withdrawal built with a 0.1% minimum, as in 5b.
+    3. `POST /api/stellar/actions` (new; on the two-factor route list): the server prices it again and builds what to sign.
+    4. The page refuses a server price more than 0.5% worse than reviewed.
+    5. One Turnkey prompt signs everything.
+    6. `permissions/commit` (now takes `actionId`).
+    7. The page follows `permissions/advance` until done (`lib/stellar/run-action.ts`).
+  - **Server** (`server/relayed-actions.ts`, new):
+    - XLM → Savings:
+      - the server builds the person's swap: path payment strict-receive of exactly the USDC needed, plus the 0.5% XLM fee, one transaction, 5-minute window;
+      - then the deposit permission (`vault.deposit` + inner USDC transfer, `lib/stellar/action-calls.ts`);
+      - then the deposit-fee permission.
+    - Savings → XLM:
+      - the server takes the withdrawal (must be this vault's, by this wallet, within 5% of the amount asked; commission at most a fifth of it);
+      - builds the commission payment and the swap (path payment strict-send plus the 0.5% USDC fee), chained by sequence number;
+      - stores them as `user_tx` steps, signed by the person over their hashes and sent as signed after the withdrawal lands.
+    - **At commit, only exactly the transaction the action was built for is accepted first**, signed by the wallet (`actionFirstTxRefusal`).
+    - **Records:**
+      - the swap, or the withdrawal and the swap, are written before broadcast;
+      - a relayed deposit is written when it lands, and its fee step fills in its fee hash;
+      - a stopped step stops the action and every step after it, so no fee goes without what it pays for.
+  - **Relay engine** (`server/relayed-steps.ts`):
+    - steps belong to a `CctpTransfer` or a `RelayedAction` (`parentOf`);
+    - the gate reads either;
+    - new step kind `user_tx` (sent as is, hash known before broadcast);
+    - the state now lists every step (additive);
+    - the Circle path is unchanged.
+  - `buildPermission` takes inner calls. It is checked byte for byte against the SDK's `authorizeEntry` with the vault's inner transfer.
+  - **New table** `relayed_actions` (`prisma/migrations-manual/2026-11-19_relayed_actions.sql`): **Niko runs it before the switch goes on.**
+  - **Checks:**
+    - jest 1,442 passed + 2 opt-in skipped (new: amounts, first-transaction checks, the user transaction signature check, permission trees, the classic swap transaction, both journeys);
+    - tsc clean, prettier clean, eslint clean except the old `autopilotActive` warning.
+    - Seen on screen through `/app/dev/flow?s=xlm-savings` and `?s=savings-xlm`.
+  - **Not run anywhere live.** Testnet cannot: its Savings uses Blend's test USDC, which has no exchange market. The first real run should be small, on mainnet.
 
 ## 12. In plain words
 

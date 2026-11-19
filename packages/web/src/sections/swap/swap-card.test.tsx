@@ -166,6 +166,9 @@ jest.mock('./engines/use-lifi-engine', () => ({
     return mockEngine('lifi');
   },
 }));
+jest.mock('./engines/use-savings-xlm-engine', () => ({
+  useSavingsXlmEngine: () => mockEngine('savings-xlm'),
+}));
 jest.mock('./engines/use-cctp-engine', () => ({
   useCctpEngine: (props: unknown) => {
     mockEngineCalls.cctp.push(props);

@@ -1,4 +1,4 @@
-import type { RelayedStep, CctpTransfer } from '@prisma/client';
+import type { RelayedStep, CctpTransfer, RelayedAction } from '@prisma/client';
 
 import { prisma } from '@/lib/prisma';
 import { wireToStellar7 } from '@/lib/cctp/decimals';
@@ -93,6 +93,8 @@ export interface RelayState {
   failed: string | null;
   /** A burn sent and not yet confirmed: its hash, so nobody sends a second one. */
   pendingBurnTxHash: string | null;
+  /** Every step in order (doc 129 Phase 5c: an action's page follows these). */
+  steps: { kind: string; status: string; txHash: string | null }[];
 }
 
 const passphraseOf = (network: NetworkType) =>
@@ -347,7 +349,38 @@ export function relayStateOf(
         'The transfer did not go out, so your USDC is still in your wallet.')
       : null,
     pendingBurnTxHash: burn?.status === 'SUBMITTED' ? burn.txHash : null,
+    steps: steps.map((s) => ({ kind: s.kind, status: s.status, txHash: s.txHash })),
   };
+}
+
+// ---- what the steps belong to -----------------------------------------------------
+
+/**
+ * Relayed steps belong to a Circle transfer (approve, burn) or, since doc 129
+ * Phase 5c, to a RelayedAction (XLM → Savings, Savings → XLM); `transferId`
+ * holds either id.
+ */
+type Parent = { type: 'transfer'; row: CctpTransfer } | { type: 'action'; row: RelayedAction };
+
+async function parentOf(id: string): Promise<Parent | null> {
+  const transfer = await prisma.cctpTransfer.findUnique({ where: { id } });
+  if (transfer) return { type: 'transfer', row: transfer };
+  const action = await prisma.relayedAction.findUnique({ where: { id } });
+  return action ? { type: 'action', row: action } : null;
+}
+
+/** The person's first transaction for this parent, if it has one. */
+async function firstTxOf(id: string): Promise<{ hash: string | null; network: string } | null> {
+  const transfer = await prisma.cctpTransfer.findUnique({
+    where: { id },
+    select: { srcSwapTxHash: true, network: true },
+  });
+  if (transfer) return { hash: transfer.srcSwapTxHash, network: transfer.network };
+  const action = await prisma.relayedAction.findUnique({
+    where: { id },
+    select: { firstTxHash: true, network: true },
+  });
+  return action ? { hash: action.firstTxHash, network: action.network } : null;
 }
 
 // ---- prepare ----------------------------------------------------------------
@@ -458,6 +491,11 @@ export async function commitPermissionSignatures(
   });
   if (!steps.length) return { ok: false, status: 404, error: 'Nothing to sign for this transfer' };
   const given = Array.isArray(signatures) ? signatures : [];
+  const parent = await parentOf(transferId);
+  if (!parent || parent.row.userId !== userId) {
+    return { ok: false, status: 404, error: 'Not found' };
+  }
+  const actions = parent.type === 'action' ? await import('@/server/relayed-actions') : null;
 
   // Doc 129 Phase 5: the person's own transactions that go first (an XLM
   // swap, or a Savings withdrawal and its commission), checked before
@@ -467,12 +505,11 @@ export async function commitPermissionSignatures(
   let transfer: CctpTransfer | null = null;
   let savings: SavingsRules | null = null;
   let savingsAmountText: string | null = null;
+  if (parent.type === 'action' && !firstXdrs.length && !parent.row.firstTxHash) {
+    return { ok: false, status: 400, error: 'The first transaction is missing' };
+  }
   if (firstXdrs.length) {
-    transfer = await prisma.cctpTransfer.findUnique({ where: { id: transferId } });
-    if (!transfer || transfer.userId !== userId) {
-      return { ok: false, status: 404, error: 'Not found' };
-    }
-    const network = transfer.network as NetworkType;
+    const network = parent.row.network as NetworkType;
     const parsed: (Transaction | FeeBumpTransaction)[] = [];
     for (const one of firstXdrs) {
       try {
@@ -481,10 +518,18 @@ export async function commitPermissionSignatures(
         return { ok: false, status: 400, error: 'A transaction could not be read' };
       }
     }
-    savings = transfer.srcAsset === 'USDC' ? await savingsRulesFor(network) : null;
-    const refusal = firstTxsRefusal(parsed, transfer, savings);
-    if (refusal) return refusal;
-    firstTxs = parsed as Transaction[];
+    if (parent.type === 'action') {
+      // Doc 129 Phase 5c: exactly the transaction the action was built for.
+      const refusal = actions!.actionFirstTxRefusal(parsed, parent.row);
+      if (refusal) return refusal;
+      firstTxs = parsed as Transaction[];
+    } else {
+      transfer = parent.row;
+      savings = transfer.srcAsset === 'USDC' ? await savingsRulesFor(network) : null;
+      const refusal = firstTxsRefusal(parsed, transfer, savings);
+      if (refusal) return refusal;
+      firstTxs = parsed as Transaction[];
+    }
     if (savings) {
       // The amount the Savings record shows: what was asked for, which the
       // withdrawal's own guaranteed minimum must be within 5% of.
@@ -512,6 +557,19 @@ export async function commitPermissionSignatures(
       return { ok: false, status: 400, error: 'Every step needs its signature' };
     }
     try {
+      if (step.kind === 'user_tx') {
+        // Doc 129 Phase 5c: one of the person's own transactions, sent as signed.
+        signed.push({
+          id: step.id,
+          signedXdr: actions!.attachUserTxSignature(
+            step.entryXdr,
+            step.account,
+            passphraseOf(step.network as NetworkType),
+            Buffer.from(sig, 'hex')
+          ),
+        });
+        continue;
+      }
       const entry = attachPermissionSignature(
         xdr.SorobanAuthorizationEntry.fromXDR(step.entryXdr, 'base64'),
         step.account,
@@ -528,11 +586,26 @@ export async function commitPermissionSignatures(
   const firstTx = firstTxs[0] ?? null;
   let firstIsNew = false;
   if (firstTx) {
-    const claimed = await prisma.cctpTransfer.updateMany({
-      where: { id: transferId, srcSwapTxHash: null },
-      data: { srcSwapTxHash: firstTx.hash().toString('hex') },
-    });
+    const hash = firstTx.hash().toString('hex');
+    const claimed =
+      parent.type === 'action'
+        ? await prisma.relayedAction.updateMany({
+            where: { id: transferId, firstTxHash: null },
+            data: { firstTxHash: hash, status: 'RUNNING' },
+          })
+        : await prisma.cctpTransfer.updateMany({
+            where: { id: transferId, srcSwapTxHash: null },
+            data: { srcSwapTxHash: hash },
+          });
     firstIsNew = claimed.count === 1;
+  }
+  // Doc 129 Phase 5c: an action's records (its swap, or its withdrawal and
+  // swap), BEFORE anything is broadcast.
+  if (firstTx && parent.type === 'action' && firstIsNew) {
+    await actions!.recordActionStart({
+      ...parent.row,
+      firstTxHash: firstTx.hash().toString('hex'),
+    });
   }
   // Doc 129 Phase 5b: a Savings withdrawal is recorded, and its commission
   // held, BEFORE anything is broadcast, exactly as the pair route does.
@@ -547,7 +620,10 @@ export async function commitPermissionSignatures(
   }
   if (firstTx) {
     const server = serverFor(steps[0].network as NetworkType);
-    const words = wordsFor(transfer?.srcAsset ?? 'XLM');
+    const words =
+      parent.type === 'action'
+        ? actions!.actionFirstTxWords(parent.row.kind)
+        : wordsFor(transfer?.srcAsset ?? 'XLM');
     try {
       // A busy source account asks to try again: the same signed envelope can
       // only ever apply once, so sending it again is safe.
@@ -583,16 +659,11 @@ type FirstTxGate = 'none' | 'confirmed' | 'pending' | 'failed';
 const FIRST_TX_NEVER_LANDS_MS = 10 * 60_000;
 
 async function firstTxGate(transferId: string): Promise<FirstTxGate> {
-  const transfer = await prisma.cctpTransfer.findUnique({
-    where: { id: transferId },
-    select: { srcSwapTxHash: true, network: true },
-  });
-  if (!transfer?.srcSwapTxHash) return 'none';
+  const origin = await firstTxOf(transferId);
+  if (!origin?.hash) return 'none';
   let status: string;
   try {
-    status = (
-      await serverFor(transfer.network as NetworkType).getTransaction(transfer.srcSwapTxHash)
-    ).status;
+    status = (await serverFor(origin.network as NetworkType).getTransaction(origin.hash)).status;
   } catch {
     return 'pending';
   }
@@ -676,12 +747,18 @@ async function recordSavingsWithdrawal(
 async function settleFirstTx(
   transferId: string,
   outcome: 'confirmed' | 'failed'
-): Promise<string | null> {
+): Promise<{ refused: string; failed: string }> {
   const transfer = await prisma.cctpTransfer.findUnique({
     where: { id: transferId },
     select: { srcAsset: true, srcSwapTxHash: true, srcAddress: true, network: true },
   });
-  if (!transfer) return null;
+  if (!transfer) {
+    // Doc 129 Phase 5c: an action's first transaction.
+    const action = await prisma.relayedAction.findUnique({ where: { id: transferId } });
+    const actions = await import('@/server/relayed-actions');
+    if (action) await actions.settleActionFirstTx(action, outcome);
+    return actions.actionFirstTxWords(action?.kind ?? '');
+  }
   if (transfer.srcAsset === 'USDC' && transfer.srcSwapTxHash) {
     const { settleRecord } = await import('@/server/tx-records');
     await settleRecord({
@@ -693,7 +770,7 @@ async function settleFirstTx(
       network: transfer.network,
     }).catch(() => {});
   }
-  return transfer.srcAsset;
+  return wordsFor(transfer.srcAsset);
 }
 
 /** Stop every step not yet done: nothing more will be sent for this transfer. */
@@ -701,6 +778,11 @@ async function failOpenSteps(transferId: string, detail: string) {
   await prisma.relayedStep.updateMany({
     where: { transferId, status: { in: ['AWAITING_SIGNATURE', 'READY', 'SUBMITTING'] } },
     data: { status: 'FAILED', errorDetail: detail },
+  });
+  // Doc 129 Phase 5c: an action stops with its steps (no row for a transfer id).
+  await prisma.relayedAction.updateMany({
+    where: { id: transferId, status: { in: ['CREATED', 'RUNNING'] } },
+    data: { status: 'FAILED', errorDetail: detail.slice(0, 500) },
   });
 }
 
@@ -726,8 +808,8 @@ export async function relayTransferSteps(transferId: string): Promise<RelayState
       const gate = await firstTxGate(transferId);
       if (gate === 'pending') return relayStateOf(steps);
       if (gate === 'failed') {
-        const srcAsset = await settleFirstTx(transferId, 'failed');
-        await failOpenSteps(transferId, wordsFor(srcAsset ?? 'XLM').failed);
+        const words = await settleFirstTx(transferId, 'failed');
+        await failOpenSteps(transferId, words.failed);
         return relayStateOf(await stepsOf(transferId));
       }
       if (gate === 'confirmed') await settleFirstTx(transferId, 'confirmed');
@@ -757,10 +839,19 @@ const stepsOf = (transferId: string) =>
   prisma.relayedStep.findMany({ where: { transferId }, orderBy: { order: 'asc' } });
 
 async function stopStep(id: string, status: 'FAILED' | 'EXPIRED' | 'READY', detail?: string) {
-  await prisma.relayedStep.update({
+  const step = await prisma.relayedStep.update({
     where: { id },
     data: { status, ...(detail ? { errorDetail: detail.slice(0, 500) } : {}) },
   });
+  if (status === 'READY') return;
+  // Doc 129 Phase 5c: an action's later steps can never follow one that
+  // stopped (a fee never goes without what it pays for): they stop too.
+  const action = await prisma.relayedAction.findUnique({ where: { id: step.transferId } });
+  if (action) {
+    const { onActionStepStopped } = await import('@/server/relayed-actions');
+    await onActionStepStopped(step, action, detail ?? null);
+    await failOpenSteps(step.transferId, detail ?? 'An earlier step did not go through.');
+  }
 }
 
 /** Claim, build, simulate, record, send. True when the step moved on. */
@@ -770,6 +861,7 @@ async function submitStep(step: RelayedStep): Promise<boolean> {
     data: { status: 'SUBMITTING', attempts: { increment: 1 } },
   });
   if (claimed.count === 0) return false;
+  if (step.kind === 'user_tx') return sendUserTx(step);
 
   const network = step.network as NetworkType;
   const passphrase = passphraseOf(network);
@@ -870,6 +962,67 @@ async function submitStep(step: RelayedStep): Promise<boolean> {
   }
 }
 
+/**
+ * Doc 129 Phase 5c: send one of the person's own signed transactions as it
+ * is (a commission, a swap with its fee). Its hash is known and recorded
+ * before broadcast; the same envelope can only ever apply once, so sending
+ * it again is safe. Claimed already (SUBMITTING).
+ */
+async function sendUserTx(step: RelayedStep): Promise<boolean> {
+  const network = step.network as NetworkType;
+  const server = serverFor(network);
+  try {
+    const tx = TransactionBuilder.fromXDR(step.signedXdr!, passphraseOf(network));
+    const maxTime = Number((tx as Transaction).timeBounds?.maxTime ?? '0');
+    if (maxTime && Date.now() / 1000 > maxTime) {
+      await stopStep(
+        step.id,
+        'EXPIRED',
+        'Its time ran out before it could be sent. Your money is in your wallet as digital dollars.'
+      );
+      return true;
+    }
+    const hash = tx.hash().toString('hex');
+    await prisma.relayedStep.update({
+      where: { id: step.id },
+      data: { txHash: hash, status: 'SUBMITTED' },
+    });
+    const sent = await server.sendTransaction(tx);
+    if (sent.status === 'PENDING' || sent.status === 'DUPLICATE') {
+      await confirmStep(
+        { ...step, txHash: hash, status: 'SUBMITTED', updatedAt: new Date() },
+        20_000
+      );
+      return true;
+    }
+    if (sent.status === 'TRY_AGAIN_LATER') {
+      await prisma.relayedStep.update({
+        where: { id: step.id },
+        data: { txHash: null, status: 'READY' },
+      });
+      return false;
+    }
+    console.warn(
+      '[relayed-steps] own transaction refused:',
+      JSON.stringify(sent.errorResult ?? sent)
+    );
+    await stopStep(
+      step.id,
+      'FAILED',
+      'Stellar did not accept this step. Your money is in your wallet as digital dollars.'
+    );
+    return true;
+  } catch (e) {
+    console.warn(
+      '[relayed-steps] own transaction interrupted:',
+      String((e as Error)?.message ?? e)
+    );
+    const fresh = await prisma.relayedStep.findUnique({ where: { id: step.id } });
+    if (fresh?.status === 'SUBMITTING') await stopStep(step.id, 'READY');
+    return false;
+  }
+}
+
 /** Follow a sent step until it lands or `waitMs` passes. True when it moved on. */
 async function confirmStep(step: RelayedStep, waitMs: number): Promise<boolean> {
   if (!step.txHash) {
@@ -886,7 +1039,20 @@ async function confirmStep(step: RelayedStep, waitMs: number): Promise<boolean> 
       status = 'UNKNOWN';
     }
     if (status === 'SUCCESS') {
-      await prisma.relayedStep.update({ where: { id: step.id }, data: { status: 'DONE' } });
+      const moved = await prisma.relayedStep.updateMany({
+        where: { id: step.id, status: { not: 'DONE' } },
+        data: { status: 'DONE' },
+      });
+      // Doc 129 Phase 5c: an action's step writes its record, once.
+      if (moved.count === 1 && step.kind !== 'approve' && step.kind !== 'burn') {
+        const action = await prisma.relayedAction.findUnique({ where: { id: step.transferId } });
+        if (action) {
+          const { onActionStepLanded } = await import('@/server/relayed-actions');
+          await onActionStepLanded({ ...step, status: 'DONE' }, action).catch((e) =>
+            console.warn('[relayed-steps] action record failed:', String(e?.message ?? e))
+          );
+        }
+      }
       if (step.kind === 'burn') {
         // The transfer follows the burn from here (lib/cctp/state.ts), exactly
         // as if the person's own transaction had sent it.

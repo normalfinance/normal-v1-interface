@@ -54,6 +54,7 @@ import { useLifiEngine } from './engines/use-lifi-engine';
 import { useCctpEngine } from './engines/use-cctp-engine';
 import { defaultStellarSource } from './engines/stellar-source';
 import { useSoroswapEngine } from './engines/use-soroswap-engine';
+import { useSavingsXlmEngine, type SavingsXlmMode } from './engines/use-savings-xlm-engine';
 import {
   canPair,
   pairTypeOf,
@@ -82,6 +83,25 @@ const ZERO = BigNumber(0);
 
 /** A chip naming where a swap's money comes from (#32 chunk 4b/4f, doc 129 Phase 5b). */
 type SourceOption = { key: 'normal' | 'external' | 'savings'; label: string; bal: BigNumber };
+
+/** A chip's look: the one picked is filled (#32 chunk 4b/4f, doc 129 Phase 5c). */
+const chipSx = (selected: boolean) => ({
+  appearance: 'none',
+  border: selected
+    ? '1px solid rgba(var(--nf-ink-rgb),0.9)'
+    : '1px solid rgba(var(--nf-ink-rgb),0.14)',
+  borderRadius: 'var(--radius-sm)',
+  px: '11px',
+  py: '5px',
+  fontSize: '11.5px',
+  fontWeight: 500,
+  fontFamily: 'inherit',
+  cursor: 'pointer',
+  bgcolor: selected ? INK : 'transparent',
+  color: selected ? PAPER : MUTED,
+  transition: 'all .15s ease',
+  '&:hover': selected ? {} : { borderColor: 'rgba(var(--nf-ink-rgb),0.3)' },
+});
 
 // Which chain's pending outflows affect each swappable asset (#62 spendable).
 // Partial on purpose: pivot-only symbols (e.g. USDC_BASE) have no send flows.
@@ -125,6 +145,9 @@ export default function SwapCard({
   const [setupOpen, setSetupOpen] = useState(false);
   // #32 chunk 4b: which wallet funds a cctp swap (decision: the user picks).
   const [cctpSource, setCctpSource] = useState<'normal' | 'external' | 'savings'>('normal');
+  // Doc 129 Phase 5c: Savings picked for this pair ("XLM-USDC": into Savings,
+  // "USDC-XLM": from Savings). Keyed by pair, so another pair starts fresh.
+  const [stellarSavingsPair, setStellarSavingsPair] = useState<string | null>(null);
   // #32 chunk 4c: where inbound USDC lands (decision: the user picks).
   const [cctpDeliverTo, setCctpDeliverTo] = useState<'normal' | 'external'>('normal');
   // #32 chunk 4f: which wallet a Stellar↔Stellar (Soroswap) swap runs from.
@@ -344,6 +367,20 @@ export default function SwapCard({
             companionSpendableFrom
           : fromBalance;
 
+  // Doc 129 Phase 5c: XLM straight into Savings, and Savings straight to XLM,
+  // one signature each, from the Normal wallet (on one-signature transfers).
+  const savingsXlmOffered = pairType === 'stellar' && !isExternalWallet && ONE_SIGNATURE_TRANSFERS;
+  const canXlmToSavings = savingsXlmOffered && fromSymbol === 'XLM' && toSymbol === 'USDC';
+  const canSavingsToXlm =
+    savingsXlmOffered && fromSymbol === 'USDC' && toSymbol === 'XLM' && savingsSwapValue.gt(0);
+  const savingsChosen = stellarSavingsPair === `${fromSymbol}-${toSymbol}`;
+  const savingsXlmMode: SavingsXlmMode | null =
+    canXlmToSavings && savingsChosen
+      ? 'xlm_to_savings'
+      : canSavingsToXlm && savingsChosen
+        ? 'savings_to_xlm'
+        : null;
+
   // #32 chunk 4f: Stellar↔Stellar swaps get the same wallet choice. Soroswap
   // is ONE transaction from whichever wallet is picked — no funding move, no
   // bridge: Normal wallet → passkey signs, external → kit signs (the useSwap
@@ -374,11 +411,13 @@ export default function SwapCard({
   // The balance of whichever wallet the ACTIVE pair's swap will spend from —
   // the one number the header, the red states and validation must agree on.
   const activeFromBalance =
-    pairType === 'cctp'
-      ? cctpFromBalance
-      : pairType === 'stellar'
-        ? stellarFromBalance
-        : fromBalance;
+    savingsXlmMode === 'savings_to_xlm'
+      ? savingsSwapValue
+      : pairType === 'cctp'
+        ? cctpFromBalance
+        : pairType === 'stellar'
+          ? stellarFromBalance
+          : fromBalance;
   const insufficient = amount.gt(0) && amount.gt(activeFromBalance);
 
   const addresses = useMemo(
@@ -550,10 +589,11 @@ export default function SwapCard({
   const soroswap = useSoroswapEngine({
     fromSymbol: (pairType === 'stellar' ? fromSymbol : 'XLM') as StellarSymbol,
     toSymbol: (pairType === 'stellar' ? toSymbol : 'USDC') as StellarSymbol,
-    amount: pairType === 'stellar' ? amount : ZERO,
+    amount: pairType === 'stellar' && !savingsXlmMode ? amount : ZERO,
     fromBalance: pairType === 'stellar' ? stellarFromBalance : ZERO,
     fromPrice: pairType === 'stellar' ? fromPrice : ZERO,
-    enabled: pairType === 'stellar',
+    // Doc 129 Phase 5c: quiet while Savings is picked (its own engine runs).
+    enabled: pairType === 'stellar' && !savingsXlmMode,
     resetInput,
     // #32 chunk 4f: Normal-wallet source — build + sign from the companion.
     stellarAddressOverride: pairType === 'stellar' ? stellarSwapAddress : null,
@@ -694,7 +734,24 @@ export default function SwapCard({
     fundFromExternal,
     fromSavings: cctpSourceActive === 'savings' ? fromSavings : null,
   });
-  const engine = pairType === 'stellar' ? soroswap : pairType === 'crosschain' ? lifi : cctp;
+  // Doc 129 Phase 5c: XLM into Savings, or Savings to XLM.
+  const savingsXlm = useSavingsXlmEngine({
+    mode: savingsXlmMode,
+    amount: savingsXlmMode ? amount : ZERO,
+    fromBalance: savingsXlmMode === 'savings_to_xlm' ? savingsSwapValue : fromBalance,
+    fromPrice,
+    savings: savingsXlmMode === 'savings_to_xlm' ? fromSavings : null,
+    stellarAddress: wallet.address ?? null,
+    resetInput,
+    refreshAggregate: refreshFresh,
+  });
+  const engine = savingsXlmMode
+    ? savingsXlm
+    : pairType === 'stellar'
+      ? soroswap
+      : pairType === 'crosschain'
+        ? lifi
+        : cctp;
   const { toAmount, quoteLoading, quoteError } = engine;
 
   // The gate CTA (#32 chunk 3): instead of a dead button, external-wallet
@@ -941,9 +998,13 @@ export default function SwapCard({
               )}
               {/* #32 chunk 4a/4b/4f: name the wallet this number belongs to —
                   the swap spends exactly the SELECTED wallet's balance. */}
-              {(showCctpSourcePicker || showStellarSourcePicker || canSwapFromSavings) && (
+              {(showCctpSourcePicker ||
+                showStellarSourcePicker ||
+                canSwapFromSavings ||
+                savingsXlmMode === 'savings_to_xlm') && (
                 <Box component="span" sx={{ color: FAINT }}>
-                  {pairType === 'cctp' && cctpSourceActive === 'savings'
+                  {(pairType === 'cctp' && cctpSourceActive === 'savings') ||
+                  savingsXlmMode === 'savings_to_xlm'
                     ? t('· Savings')
                     : (pairType === 'cctp' ? cctpSourceActive : stellarSourceActive) === 'normal'
                       ? t('· Normal wallet')
@@ -1027,6 +1088,53 @@ export default function SwapCard({
                   </Box>
                 );
               })}
+            </Box>
+          )}
+
+          {/* Doc 129 Phase 5c: XLM straight into Savings, or Savings straight
+              to XLM, with one signature. */}
+          {(canXlmToSavings || canSavingsToXlm) && (
+            <Box
+              sx={{
+                display: 'flex',
+                gap: '6px',
+                mb: '10px',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+              }}
+            >
+              <Typography component="span" sx={{ fontSize: '11.5px', color: FAINT, mr: '2px' }}>
+                {canXlmToSavings ? t('Into') : t('From')}
+              </Typography>
+              {[
+                {
+                  key: 'wallet',
+                  label: canXlmToSavings ? t('Wallet') : t('Normal wallet'),
+                  bal: canXlmToSavings ? null : fromBalance,
+                  picked: !savingsChosen,
+                },
+                {
+                  key: 'savings',
+                  label: t('Savings'),
+                  bal: savingsSwapValue,
+                  picked: savingsChosen,
+                },
+              ].map((opt) => (
+                <Box
+                  key={opt.key}
+                  component="button"
+                  onClick={() =>
+                    setStellarSavingsPair(
+                      opt.key === 'savings' ? `${fromSymbol}-${toSymbol}` : null
+                    )
+                  }
+                  sx={chipSx(opt.picked)}
+                >
+                  {opt.bal
+                    ? `${opt.label} · ${opt.bal.toFixed(2, BigNumber.ROUND_DOWN)}`
+                    : opt.label}
+                </Box>
+              ))}
             </Box>
           )}
 

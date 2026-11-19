@@ -1436,3 +1436,195 @@ export function refundedPlan(
     ],
   };
 }
+
+// ---- XLM ⇄ Savings, one signature (doc 129 Phase 5c) ------------------------------
+
+const savingsVaultPlace = (t: Translate, amount: string) =>
+  place({
+    id: 'vault',
+    label: t('Normal Savings'),
+    detail: t('The savings vault, lending to Blend’s USDC pool.'),
+    asset: 'USDC',
+    glyph: 'vault',
+    amount,
+  });
+
+/**
+ * XLM → Savings: your swap (with its fee, one transaction) goes first; then
+ * Normal sends the deposit you signed, and its fee right after it.
+ */
+export function xlmToSavingsPlan(p: {
+  t: Translate;
+  /** "100 XLM": what you pay, the fee included. */
+  amountXlm: string;
+  swapFee: string;
+  /** Exactly what the swap buys. */
+  usdc: string;
+  /** null when there is no deposit fee. */
+  depositFee: string | null;
+  /** What goes into Savings. */
+  deposit: string;
+  wallet?: WalletRef;
+}): FlowPlan {
+  const { t } = p;
+  return {
+    items: [
+      place(walletPlace('from', t('Your Stellar wallet'), p.wallet, 'XLM', p.amountXlm, 'stellar')),
+      step(recordStep(t)),
+      step({
+        id: 'prepare',
+        title: t('Lock in the price'),
+        detail: t(
+          'Normal prices the swap on Stellar’s own exchange and writes the deposit for you to approve. If the swap would give less than {{usdc}}, it does not happen.',
+          { usdc: p.usdc }
+        ),
+        actor: t('Normal'),
+        money: 'here',
+        eta: t('A few seconds'),
+      }),
+      step({
+        id: 'sign',
+        title: t('Approve the swap and the deposit'),
+        detail: t(
+          'Your passkey signs once: the swap with its {{fee}} fee, and the deposit into Savings. Nothing moves yet, and turning it down cancels all of it.',
+          { fee: p.swapFee }
+        ),
+        actor: t('You'),
+        money: 'here',
+        eta: t('One signature'),
+        signature: true,
+      }),
+      step({
+        id: 'swap',
+        title: t('Swap your XLM to USDC'),
+        detail: t(
+          'Stellar’s exchange buys exactly {{usdc}} with your XLM, and Normal’s {{fee}} fee is in the same transaction: both happen, or neither.',
+          { usdc: p.usdc, fee: p.swapFee }
+        ),
+        actor: t('Stellar network'),
+        money: 'moving',
+        eta: t('About 5 seconds'),
+      }),
+      place(walletPlace('wallet', t('Your Stellar wallet'), p.wallet, 'USDC', p.usdc, 'stellar')),
+      step({
+        id: 'deposit',
+        title: t('Put it in Savings'),
+        detail: t(
+          'Normal sends the deposit you signed: {{deposit}} goes into the savings vault. Normal pays its network fee.',
+          { deposit: p.deposit }
+        ),
+        actor: t('Normal'),
+        money: 'moving',
+        eta: t('Seconds'),
+      }),
+      savingsVaultPlace(t, p.deposit),
+      ...(p.depositFee
+        ? [
+            step({
+              id: 'deposit-fee',
+              title: t('Savings fee'),
+              detail: t(
+                'Normal’s {{fee}} deposit fee, sent right after the deposit, as with any deposit.',
+                { fee: p.depositFee }
+              ),
+              actor: t('Normal'),
+              money: 'here',
+            }),
+          ]
+        : []),
+      step(balanceStep(t, t('Your wallet and your savings show the new amounts.'))),
+    ],
+  };
+}
+
+/**
+ * Savings → XLM: your withdrawal, its commission and the swap (with its fee,
+ * one transaction), signed at once and sent in that order.
+ */
+export function savingsToXlmPlan(p: {
+  t: Translate;
+  /** What comes out of Savings. */
+  amount: string;
+  /** null when this withdrawal carries no earnings to charge. */
+  commission: string | null;
+  /** What the swap sells, and its fee. */
+  swapIn: string;
+  swapFee: string;
+  /** "≈ 3,720 XLM" and the least the swap accepts. */
+  xlmOut: string;
+  xlmMin: string;
+  wallet?: WalletRef;
+}): FlowPlan {
+  const { t, commission } = p;
+  return {
+    items: [
+      savingsVaultPlace(t, p.amount),
+      step(recordStep(t)),
+      step({
+        id: 'prepare',
+        title: t('Lock in the price'),
+        detail: t(
+          'Normal prices the swap on Stellar’s own exchange and writes it, with the withdrawal, for you to approve. If the swap would give less than {{min}}, it does not happen.',
+          { min: p.xlmMin }
+        ),
+        actor: t('Normal'),
+        money: 'here',
+        eta: t('A few seconds'),
+      }),
+      step({
+        id: 'sign',
+        title: t('Approve the withdrawal and the swap'),
+        detail: commission
+          ? t(
+              'Your passkey signs once: the withdrawal, its {{commission}} commission and the swap with its {{fee}} fee. Nothing moves yet.',
+              { commission, fee: p.swapFee }
+            )
+          : t(
+              'Your passkey signs once: the withdrawal and the swap with its {{fee}} fee. Nothing moves yet.',
+              { fee: p.swapFee }
+            ),
+        actor: t('You'),
+        money: 'here',
+        eta: t('One signature'),
+        signature: true,
+      }),
+      step({
+        id: 'withdraw',
+        title: t('Take it out of Savings'),
+        detail: t('The savings vault sends {{amount}} to your Stellar wallet.', {
+          amount: p.amount,
+        }),
+        actor: t('Stellar network'),
+        money: 'moving',
+        eta: t('About 5 seconds'),
+      }),
+      place(walletPlace('wallet', t('Your Stellar wallet'), p.wallet, 'USDC', p.amount, 'stellar')),
+      ...(commission
+        ? [
+            step({
+              id: 'commission',
+              title: t('Commission paid'),
+              detail: t('{{commission}} of your earnings goes to Normal, as with any withdrawal.', {
+                commission,
+              }),
+              actor: t('Stellar network'),
+              money: 'here',
+            }),
+          ]
+        : []),
+      step({
+        id: 'swap',
+        title: t('Swap your USDC to XLM'),
+        detail: t(
+          'Stellar’s exchange swaps {{swapIn}} for at least {{min}}, and Normal’s {{fee}} fee is in the same transaction: both happen, or neither.',
+          { swapIn: p.swapIn, min: p.xlmMin, fee: p.swapFee }
+        ),
+        actor: t('Stellar network'),
+        money: 'moving',
+        eta: t('About 5 seconds'),
+      }),
+      place(walletPlace('dest', t('Your Stellar wallet'), p.wallet, 'XLM', p.xlmOut, 'stellar')),
+      step(balanceStep(t, t('Your wallet and your savings show the new amounts.'))),
+    ],
+  };
+}

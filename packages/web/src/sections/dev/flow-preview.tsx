@@ -30,6 +30,8 @@ import {
   stellarSwapPlan,
   cctpInboundPlan,
   cctpOutboundPlan,
+  savingsToXlmPlan,
+  xlmToSavingsPlan,
   indexPurchasePlan,
   crossChainSwapPlan,
 } from '@/lib/flow/plans';
@@ -46,7 +48,8 @@ import { FlowView, FlowNotice } from '@/components/_common/flow';
 // without a wallet or a signature.
 //
 //   /app/dev/flow?s=usdc-btc&mode=running&at=attest
-//   s     deposit | withdraw | xlm-usdc | btc-eth | usdc-btc | xlm-btc | savings-btc | btc-usdc
+//   s     deposit | withdraw | xlm-usdc | btc-eth | usdc-btc | xlm-btc | savings-btc
+//         | xlm-savings | savings-xlm | btc-usdc
 //         | refund | index
 //   mode  review | running | done | failed | stopped | handed-off
 //   at    a step id (running, failed, stopped)
@@ -78,6 +81,8 @@ type Scenario =
   | 'usdc-btc'
   | 'xlm-btc'
   | 'savings-btc'
+  | 'xlm-savings'
+  | 'savings-xlm'
   | 'btc-usdc'
   | 'refund'
   | 'index';
@@ -350,6 +355,63 @@ function sample(
         doneNote: 'Your BTC is in your Bitcoin wallet.',
       };
     }
+    case 'xlm-savings':
+      // Doc 129 Phase 5c: XLM straight into Savings, one signature.
+      return {
+        plan: xlmToSavingsPlan({
+          t,
+          amountXlm: '100 XLM',
+          swapFee: '0.5 XLM',
+          usdc: '13.10 USDC',
+          depositFee: '0.07 USDC',
+          deposit: '13.03 USDC',
+          wallet: { address: G },
+        }),
+        summary: rows([
+          ['You pay', '100 XLM', '$13.30'],
+          ['Normal fee (0.5%)', '0.5 XLM', 'In the swap’s own transaction'],
+          ['Swapped to USDC', '13.10 USDC', 'Exactly this, on Stellar’s own exchange'],
+          ['Savings fee', '0.07 USDC', 'As with any deposit'],
+          ['Into Savings', '13.03 USDC'],
+          ['Signatures', 'One', 'Your passkey signs it all at once.'],
+        ]),
+        lede: '100 XLM into Savings as 13.03 USDC, over Stellar’s own exchange.',
+        titles: swapTitles(t),
+        doneNote: 'Your money is in Savings.',
+      };
+    case 'savings-xlm':
+      // Doc 129 Phase 5c: Savings straight to XLM, one signature.
+      return {
+        plan: savingsToXlmPlan({
+          t,
+          amount: '500 USDC',
+          commission: '2 USDC',
+          swapIn: '495.01 USDC',
+          swapFee: '2.49 USDC',
+          xlmOut: '≈ 3,722.48 XLM',
+          xlmMin: '3,685.25 XLM',
+          wallet: { address: G },
+        }),
+        summary: rows([
+          ['You pay', '500 USDC', 'From Savings'],
+          [
+            'Commission on earnings',
+            '2 USDC',
+            'Normal’s share of what Savings earned, as with any withdrawal',
+          ],
+          ['Normal fee (0.5%)', '2.49 USDC', 'In the swap’s own transaction'],
+          ['You receive', '≈ 3,722.48 XLM'],
+          [
+            'At least',
+            '3,685.25 XLM',
+            'Or the swap does not happen, and your money stays as digital dollars',
+          ],
+          ['Signatures', 'One', 'Your passkey signs it all at once.'],
+        ]),
+        lede: '500 USDC from Savings for about 3,722.48 XLM, over Stellar’s own exchange.',
+        titles: swapTitles(t),
+        doneNote: 'Your XLM is in your wallet.',
+      };
     case 'index': {
       const usd = amounts.usd ?? 100;
       const legs: NonNullable<Amounts['legs']> = amounts.legs ?? [
@@ -572,6 +634,8 @@ const SCENARIOS: Scenario[] = [
   'usdc-btc',
   'xlm-btc',
   'savings-btc',
+  'xlm-savings',
+  'savings-xlm',
   'btc-usdc',
   'refund',
   'index',

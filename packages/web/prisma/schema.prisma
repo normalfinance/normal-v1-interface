@@ -212,7 +212,9 @@ model RelayedStep {
   transferId    String
   /// Order within the transfer: lower runs first (approve before burn).
   order         Int
-  /// 'approve' | 'burn'
+  /// 'approve' | 'burn' (a Circle transfer); 'deposit' | 'fee' | 'user_tx'
+  /// (a RelayedAction: a user_tx is the person's own signed transaction, sent
+  /// as it is)
   kind          String
   /// The Stellar address that signs: the person's own (wallet row).
   account       String
@@ -237,6 +239,35 @@ model RelayedStep {
   @@index([status])
   @@index([userId])
   @@map("relayed_steps")
+}
+
+/// Doc 129 Phase 5c: a combined Stellar action one signature covers (XLM →
+/// Savings, Savings → XLM): the person's own transactions first, then the
+/// steps Normal sends for them. Its RelayedStep rows point here (transferId),
+/// as a Circle transfer's point to the CctpTransfer.
+model RelayedAction {
+  id          String   @id @default(cuid())
+  userId      String // supabase uid
+  network     String   @default("mainnet")
+  /// 'xlm_to_savings' | 'savings_to_xlm'
+  kind        String
+  /// The person's own Stellar address, from their wallet row.
+  account     String
+  /// What they reviewed and signed for: amounts, fees, the transactions the
+  /// server built (JSON).
+  planJson    String
+  /// Their first transaction (the one that funds the rest), recorded BEFORE
+  /// it is broadcast.
+  firstTxHash String?
+  /// CREATED → RUNNING → DONE, or FAILED
+  status      String   @default("CREATED")
+  errorDetail String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("relayed_actions")
 }
 
 // Our record of a MoneyGram SEP-24 transaction, written when our server

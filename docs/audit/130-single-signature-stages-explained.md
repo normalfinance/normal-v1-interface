@@ -193,7 +193,7 @@ The burn cannot be prepared until the approve has landed, so the two can never b
 **What it is.** Swaps that need two networks and used to be impossible or two-step, each with one face scan:
 - **XLM → BTC/ETH/SOL:** the XLM is swapped to exactly the USDC needed, then sent by Circle.
 - **Savings → BTC/ETH/SOL:** the money comes out of Savings (with the usual commission on earnings), then Circle sends it.
-- **XLM ⇄ Savings**: in a later part of this stage.
+- **XLM → Savings and Savings → XLM:** straight between XLM and Savings, with the usual fees.
 
 **How it works.** Your swap transaction and the Circle permissions are signed with one face scan. The server sends your swap first, and the relayer sends the Circle transfer once the swap's USDC exists. Fees follow the locked rule: one 0.5% on the Base exchange, nothing extra on the Stellar swap.
 
@@ -222,6 +222,23 @@ The burn cannot be prepared until the approve has landed, so the two can never b
   - Anything over the guaranteed amount stays in your wallet as digital dollars.
 - **How to test it** (mainnet, switch on): with at least $11 in Savings, swap $11 from Savings to Bitcoin. If you then look at Activity, you will see a Savings withdrawal and a swap. Your Savings balance goes down by $11, and the Bitcoin arrives as usual.
 
+
+**Status of XLM ⇄ Savings** (2026-11-19):
+- **Built**, checked on screen through the dev preview (`/app/dev/flow?s=xlm-savings` and `?s=savings-xlm`). Not run anywhere live yet.
+- **What you will see** (switch on, Normal wallet):
+  - **XLM → Digital dollars** gets **Into: Wallet | Savings**. Pick Savings and type 100. The review shows the 0.5% swap fee, exactly the USDC bought, the Savings fee, what goes into Savings, and one face scan.
+  - **Digital dollars → XLM** gets **From: Normal wallet | Savings**. Pick Savings. The review shows the commission on earnings, the 0.5% swap fee, the XLM you get at least, and one face scan.
+- **Prices** come from Stellar's own exchange. Soroswap's direct pool gave about 8% less for 100 USDC.
+- **Fees** are what the same steps cost one by one (your call: "it should pay the fee to us").
+- **How it stays safe:**
+  - The swap and its fee are one transaction: no swap, no fee.
+  - Each later step is sent only after the one before it has landed.
+  - A step that does not go through stops everything after it, so a fee is never sent without what it pays for, and your money waits in your wallet as digital dollars.
+- **Setup:** one more table. Run `packages/web/prisma/migrations-manual/2026-11-19_relayed_actions.sql` before the switch goes on.
+- **How to test it** (mainnet, switch on, small amounts):
+  - Swap 20 XLM into Savings. You will see one face scan, and Savings goes up by about the USDC shown.
+  - Then take $2 from Savings to XLM. You will see one face scan, and your XLM goes up.
+
 ---
 
 ## Stage 6 (later): bridge first, then Stellar
@@ -248,6 +265,7 @@ Until then it keeps working exactly as today.
 | ✅ | Code for Stages 0 to 4, pushed | Done |
 | ✅ | `relayed_steps` table | Done |
 | ☐ | If production does NOT share staging's database, run the same SQL there | Niko or coworker |
+| ☐ | Run `prisma/migrations-manual/2026-11-19_relayed_actions.sql` (XLM ⇄ Savings) | Niko |
 | ☐ | `yarn db:generate` once locally, with the dev server stopped | Niko |
 | ☐ | Open a pull request to `develop`, then deploy to staging | Niko |
 | ☐ | Set `NEXT_PUBLIC_STELLAR_PERMISSIONS=1` on staging, then redeploy | Coworker |

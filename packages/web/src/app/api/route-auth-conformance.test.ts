@@ -67,6 +67,7 @@ const ACTION_CODE_ROUTES = [
   'savings/withdraw',
   'send/execute',
   'send/stellar',
+  'stellar/actions',
   'swap/submit-single',
   'turnkey/broadcast-btc',
   'turnkey/build-btc-tx',

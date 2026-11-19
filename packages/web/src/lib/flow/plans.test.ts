@@ -9,6 +9,8 @@ import {
   cctpInboundPlan,
   stellarSwapPlan,
   cctpOutboundPlan,
+  savingsToXlmPlan,
+  xlmToSavingsPlan,
   indexPurchasePlan,
   crossChainSwapPlan,
 } from './plans';
@@ -325,6 +327,78 @@ describe('the steps each engine reports against', () => {
     ).toEqual(['burn-sign']);
     expect(stepsOf(plan).find((s) => s.id === 'src-withdraw')?.detail).toContain('2 USDC');
     expect(stepsOf(plan).find((s) => s.id === 'burn')?.detail).toContain('497.50 USDC');
+  });
+
+  it('doc 129 Phase 5c: XLM → Savings: one signature, the swap, the deposit, then its fee', () => {
+    const plan = xlmToSavingsPlan({
+      t,
+      amountXlm: '100 XLM',
+      swapFee: '0.5 XLM',
+      usdc: '13.10 USDC',
+      depositFee: '0.07 USDC',
+      deposit: '13.03 USDC',
+    });
+    expect(ids(plan)).toEqual([
+      'record',
+      'prepare',
+      'sign',
+      'swap',
+      'deposit',
+      'deposit-fee',
+      'balance',
+    ]);
+    expect(placesOf(plan).map((p) => p.id)).toEqual(['from', 'wallet', 'vault']);
+    expect(
+      stepsOf(plan)
+        .filter((s) => s.signature)
+        .map((s) => s.id)
+    ).toEqual(['sign']);
+    const noFee = xlmToSavingsPlan({
+      t,
+      amountXlm: '100 XLM',
+      swapFee: '0.5 XLM',
+      usdc: '13.10 USDC',
+      depositFee: null,
+      deposit: '13.10 USDC',
+    });
+    expect(ids(noFee)).not.toContain('deposit-fee');
+  });
+
+  it('doc 129 Phase 5c: Savings → XLM: one signature, the withdrawal, its commission, the swap', () => {
+    const plan = savingsToXlmPlan({
+      t,
+      amount: '500 USDC',
+      commission: '2 USDC',
+      swapIn: '495.50 USDC',
+      swapFee: '2.49 USDC',
+      xlmOut: '≈ 3,720 XLM',
+      xlmMin: '3,683 XLM',
+    });
+    expect(ids(plan)).toEqual([
+      'record',
+      'prepare',
+      'sign',
+      'withdraw',
+      'commission',
+      'swap',
+      'balance',
+    ]);
+    expect(placesOf(plan).map((p) => p.id)).toEqual(['vault', 'wallet', 'dest']);
+    expect(
+      stepsOf(plan)
+        .filter((s) => s.signature)
+        .map((s) => s.id)
+    ).toEqual(['sign']);
+    const noCommission = savingsToXlmPlan({
+      t,
+      amount: '500 USDC',
+      commission: null,
+      swapIn: '497.50 USDC',
+      swapFee: '2.50 USDC',
+      xlmOut: '≈ 3,740 XLM',
+      xlmMin: '3,702 XLM',
+    });
+    expect(ids(noCommission)).not.toContain('commission');
   });
 
   it('cross-chain swap: wallet, exchange, other wallet', () => {
