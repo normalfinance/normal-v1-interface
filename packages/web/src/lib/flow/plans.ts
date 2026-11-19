@@ -562,6 +562,25 @@ export function crossChainSwapPlan(p: {
 
 const AUTO = (t: Translate) => t('Auto-finish');
 
+/**
+ * Doc 129 Phase 3: with pre-signed permissions, Circle's permission to collect
+ * the USDC is part of the one signature. Normal's relayer sends it after the
+ * signature (and after the person's own first transaction), only when the
+ * standing allowance falls short, for exactly this transfer's amount and for
+ * about 20 minutes (server/relayed-steps.ts). It is never a prompt of its own.
+ */
+const relayedApproveStep = (t: Translate): FlowItem =>
+  step({
+    id: 'approve',
+    title: t('Allow Circle to collect it'),
+    detail: t(
+      'Part of your one signature: Circle’s contract may collect exactly this USDC, for about 20 minutes. Normal sends it and pays its network fee.'
+    ),
+    actor: t('Normal'),
+    money: 'here',
+    optional: t('When needed'),
+  });
+
 export function cctpOutboundPlan(p: {
   t: Translate;
   to: Coin;
@@ -580,8 +599,21 @@ export function cctpOutboundPlan(p: {
    * Soroswap swap to exactly `amountUsdc` and the transfer to Circle.
    */
   fromXlm?: { amountXlm: string } | null;
+  /**
+   * Doc 129 Phase 3: the Stellar side goes out as pre-signed permissions: one
+   * prompt, and Normal's relayer sends Circle's permission and the transfer.
+   * Always so from XLM.
+   */
+  oneSignature?: boolean;
+  /**
+   * Doc 129 Phase 5b: the USDC comes out of Savings first. The withdrawal (and
+   * its commission on earnings) is part of the one signature; `amount` is what
+   * leaves Savings, and `amountUsdc` is then what Circle moves.
+   */
+  fromSavings?: { amount: string; commission: string | null } | null;
 }): FlowPlan {
   const { t, tool, autopilot } = p;
+  const relayed = !!p.oneSignature || !!p.fromXlm || !!p.fromSavings;
   const destChain = chainName(p.to);
   const coin = assetNoun(p.to);
   return {
@@ -611,16 +643,25 @@ export function cctpOutboundPlan(p: {
             }),
           ]
         : []),
-      place(
-        walletPlace(
-          'stellar',
-          t('Your Stellar wallet'),
-          p.stellarWallet,
-          p.fromXlm ? 'XLM' : 'USDC',
-          p.fromXlm ? p.fromXlm.amountXlm : p.amountUsdc,
-          'stellar'
-        )
-      ),
+      p.fromSavings
+        ? place({
+            id: 'vault',
+            label: t('Normal Savings'),
+            detail: t('The savings vault, lending to Blend’s USDC pool.'),
+            asset: 'USDC',
+            glyph: 'vault',
+            amount: p.fromSavings.amount,
+          })
+        : place(
+            walletPlace(
+              'stellar',
+              t('Your Stellar wallet'),
+              p.stellarWallet,
+              p.fromXlm ? 'XLM' : 'USDC',
+              p.fromXlm ? p.fromXlm.amountXlm : p.amountUsdc,
+              'stellar'
+            )
+          ),
       step(recordStep(t)),
       step({
         id: 'prepare',
@@ -632,23 +673,38 @@ export function cctpOutboundPlan(p: {
         money: 'here',
         eta: t('A few seconds'),
       }),
-      step({
-        id: 'approve',
-        title: t('Allow Circle to collect it'),
-        detail: t(
-          'A one-time permission for Circle’s contract to take the USDC you send. Later swaps skip this.'
-        ),
-        actor: t('You'),
-        money: 'here',
-        optional: t('First time only'),
-        signature: true,
-      }),
+      ...(relayed
+        ? []
+        : [
+            step({
+              id: 'approve',
+              title: t('Allow Circle to collect it'),
+              detail: t(
+                'A one-time permission for Circle’s contract to take the USDC you send. Later swaps skip this.'
+              ),
+              actor: t('You'),
+              money: 'here',
+              optional: t('First time only'),
+              signature: true,
+            }),
+          ]),
       step({
         id: 'burn-sign',
-        title: p.fromXlm ? t('Approve the swap') : t('Approve the transfer'),
-        detail: p.fromXlm
-          ? t('Your passkey signs once: the swap on Stellar and the transfer to Circle.')
-          : t('Your passkey signs the transfer to Circle.'),
+        title: p.fromXlm || p.fromSavings ? t('Approve the swap') : t('Approve the transfer'),
+        detail: p.fromSavings
+          ? p.fromSavings.commission
+            ? t(
+                'Your passkey signs once: the withdrawal from Savings, its {{commission}} commission and the transfer to Circle.',
+                { commission: p.fromSavings.commission }
+              )
+            : t('Your passkey signs once: the withdrawal from Savings and the transfer to Circle.')
+          : p.fromXlm
+            ? t('Your passkey signs once: the swap on Stellar and the transfer to Circle.')
+            : relayed
+              ? t(
+                  'Your passkey signs once for the whole transfer. Normal sends it and pays the Stellar network fees.'
+                )
+              : t('Your passkey signs the transfer to Circle.'),
         actor: t('You'),
         money: 'here',
         signature: true,
@@ -668,6 +724,37 @@ export function cctpOutboundPlan(p: {
             }),
           ]
         : []),
+      ...(p.fromSavings
+        ? [
+            step({
+              id: 'src-withdraw',
+              title: t('Take it out of Savings'),
+              detail: p.fromSavings.commission
+                ? t(
+                    'The savings vault sends {{amount}} to your Stellar wallet, and Normal’s {{commission}} commission on your earnings follows it, as with any withdrawal.',
+                    { amount: p.fromSavings.amount, commission: p.fromSavings.commission }
+                  )
+                : t(
+                    'The savings vault sends {{amount}} to your Stellar wallet. There is no commission on this one.',
+                    { amount: p.fromSavings.amount }
+                  ),
+              actor: t('Stellar network'),
+              money: 'moving',
+              eta: t('About 5 seconds'),
+            }),
+            place(
+              walletPlace(
+                'stellar',
+                t('Your Stellar wallet'),
+                p.stellarWallet,
+                'USDC',
+                p.amountUsdc,
+                'stellar'
+              )
+            ),
+          ]
+        : []),
+      ...(relayed ? [relayedApproveStep(t)] : []),
       step({
         id: 'burn',
         title: t('Hand it to Circle'),
@@ -1101,6 +1188,8 @@ export function indexPurchasePlan(p: {
    * itself (Core 4's XLM): "86.40 USDC". Defaults to the whole purchase.
    */
   bridgedUsdc?: string;
+  /** Doc 129 Phase 3: one prompt; Normal's relayer sends Circle's permission and the transfer. */
+  oneSignature?: boolean;
 }): FlowPlan {
   const { t } = p;
   // Doc 129: a Stellar coin (XLM) is bought on Stellar at once, from the same
@@ -1159,17 +1248,21 @@ export function indexPurchasePlan(p: {
         money: 'here',
         eta: t('A few seconds'),
       }),
-      step({
-        id: 'approve',
-        title: t('Allow Circle to collect it'),
-        detail: t(
-          'A one-time permission for Circle’s contract to take the USDC you send. Later purchases skip this.'
-        ),
-        actor: t('You'),
-        money: 'here',
-        optional: t('First time only'),
-        signature: true,
-      }),
+      ...(p.oneSignature
+        ? []
+        : [
+            step({
+              id: 'approve',
+              title: t('Allow Circle to collect it'),
+              detail: t(
+                'A one-time permission for Circle’s contract to take the USDC you send. Later purchases skip this.'
+              ),
+              actor: t('You'),
+              money: 'here',
+              optional: t('First time only'),
+              signature: true,
+            }),
+          ]),
       step({
         id: 'burn-sign',
         title: t('Approve the purchase'),
@@ -1180,6 +1273,7 @@ export function indexPurchasePlan(p: {
         money: 'here',
         signature: true,
       }),
+      ...(p.oneSignature ? [relayedApproveStep(t)] : []),
       step({
         id: 'burn',
         title: t('Hand it to Circle'),

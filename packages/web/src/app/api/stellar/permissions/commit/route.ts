@@ -16,13 +16,15 @@ export const POST = withAuth(async (req: Request, { user }) => {
   const transferId = typeof body?.transferId === 'string' ? body.transferId : '';
   if (!transferId) return NextResponse.json({ error: 'transferId is required' }, { status: 400 });
 
-  // Doc 129 Phase 5: an optional first transaction (the person's own XLM →
-  // USDC swap) that must land before the Circle steps.
+  // Doc 129 Phase 5: the person's own transactions that must land before the
+  // Circle steps: an XLM → USDC swap (5a), or a Savings withdrawal and its
+  // commission (5b, with the amount the Savings record shows).
   const out = await commitPermissionSignatures(
     user.id,
     transferId,
     body?.signatures,
-    body?.firstTx
+    body?.firstTxs ?? body?.firstTx,
+    body?.savingsAmount
   );
   if (!out.ok) return NextResponse.json({ error: out.error }, { status: out.status });
   return NextResponse.json(out);

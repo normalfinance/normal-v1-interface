@@ -12,8 +12,12 @@
 
 import { signStellarTxForMgi } from '@/lib/mgi/kit-signer';
 import { BroadcastUncertainError } from '@/lib/chains/broadcast-safety';
-import { batchesStellar, signStellarTxsInOrder } from '@/lib/stellar/batch-sign';
 import { type NetworkType, getStellarConfigForNetwork } from '@normalfinance/utils';
+import {
+  STELLAR_PERMISSIONS,
+  burnsWithPermissions,
+  signStellarTxsInOrder,
+} from '@/lib/stellar/batch-sign';
 import {
   rpc,
   xdr,
@@ -77,20 +81,20 @@ export interface StellarBurnParams {
     submit: (signed: string[]) => Promise<void>;
   };
   /**
-   * Doc 129 Phase 5: the person's own transaction that must land BEFORE the
-   * transfer, because it makes the USDC the burn spends (XLM → exactly this
-   * USDC on Soroswap). Signed in the same prompt; the server sends it first
-   * and only then lets the relayer burn. Permission path only.
+   * Doc 129 Phase 5: the person's own transactions that must land BEFORE the
+   * transfer, because they make the USDC the burn spends: XLM → exactly this
+   * USDC on Soroswap (5a), or a Savings withdrawal and its commission (5b).
+   * Signed in the same prompt; the server sends them first and only then lets
+   * the relayer burn. Permission path only.
    */
   first?: {
-    build: () => Promise<string>;
-    /** The server has sent it (its hash), unless it was refused. */
+    build: () => Promise<string | string[]>;
+    /** From Savings: the amount asked for, which the Savings record shows. */
+    savingsAmount?: string;
+    /** The server has sent the first one (its hash), unless it was refused. */
     onSent?: (hash: string) => void;
   };
 }
-
-/** Doc 129 Phase 3 switch, default off. */
-const STELLAR_PERMISSIONS = process.env.NEXT_PUBLIC_STELLAR_PERMISSIONS === '1';
 
 interface PermissionState {
   ok?: boolean;
@@ -126,13 +130,16 @@ async function burnWithPermissions(
   // The person's own transactions that go with it: one that must land first
   // (doc 129 Phase 5: XLM → USDC), and any that follow (Core 4's XLM).
   const passphrase = params.network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
-  const firstTx = params.first
-    ? TransactionBuilder.fromXDR(await params.first.build(), passphrase)
-    : null;
+  const firstTxs = params.first
+    ? ([] as string[])
+        .concat(await params.first.build())
+        .map((x) => TransactionBuilder.fromXDR(x, passphrase))
+    : [];
+  const firstTx = firstTxs[0] ?? null;
   const extras = params.alongside
     ? (await params.alongside.build()).map((x) => TransactionBuilder.fromXDR(x, passphrase))
     : [];
-  const ownTxs = [...(firstTx ? [firstTx] : []), ...extras];
+  const ownTxs = [...firstTxs, ...extras];
 
   // One prompt covers the approve (when there is one), the burn and the person's own transactions.
   params.onStep?.('burn');
@@ -154,8 +161,8 @@ async function burnWithPermissions(
     );
     return tx.toXDR();
   });
-  const signedFirst = firstTx ? signedOwn[0] : null;
-  const signedExtras = firstTx ? signedOwn.slice(1) : signedOwn;
+  const signedFirsts = signedOwn.slice(0, firstTxs.length);
+  const signedExtras = signedOwn.slice(firstTxs.length);
 
   let state = await post('/api/stellar/permissions/commit', {
     transferId: params.transferId,
@@ -163,14 +170,30 @@ async function burnWithPermissions(
       id: st.id,
       signature: signatures[i].toString('hex'),
     })),
-    // The server sends this first and waits for it to land.
-    ...(signedFirst ? { firstTx: signedFirst } : {}),
+    // The server sends these first and waits for them to land.
+    ...(signedFirsts.length
+      ? {
+          firstTxs: signedFirsts,
+          ...(params.first?.savingsAmount ? { savingsAmount: params.first.savingsAmount } : {}),
+        }
+      : {}),
   });
   if (firstTx && !state.failed) params.first?.onSent?.(firstTx.hash().toString('hex'));
+  // Circle's permission, once the relayer has landed it: the page shows it as
+  // its own step, after the signature and before the burn.
+  let approveShown = false;
+  const showApprove = () => {
+    const hash = state.approveTxHash;
+    if (approveShown || !hash) return;
+    approveShown = true;
+    params.onSubmitted?.('approve', hash);
+  };
+  showApprove();
   // The relayer sends the approve, then the burn; follow it until the burn lands.
   for (let i = 0; i < 40 && !state.burnTxHash && !state.failed; i++) {
     await new Promise((r) => setTimeout(r, 3_000));
     state = await post('/api/stellar/permissions/advance', { transferId: params.transferId });
+    showApprove();
   }
   if (state.failed) throw new Error(state.failed);
   if (!state.burnTxHash) {
@@ -276,7 +299,7 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
   if (STELLAR_PERMISSIONS && params.transferId) {
     const { getTurnkeyWalletInfo } = await import('@/lib/turnkey/wallet-info');
     const tk = await getTurnkeyWalletInfo().catch(() => null);
-    if (tk?.subOrgId && batchesStellar(tk.stellarAddress, params.stellarAddress)) {
+    if (tk?.subOrgId && burnsWithPermissions(tk.stellarAddress, params.stellarAddress)) {
       return burnWithPermissions({
         ...params,
         transferId: params.transferId,

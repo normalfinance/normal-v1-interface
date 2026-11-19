@@ -46,7 +46,8 @@ import { FlowView, FlowNotice } from '@/components/_common/flow';
 // without a wallet or a signature.
 //
 //   /app/dev/flow?s=usdc-btc&mode=running&at=attest
-//   s     deposit | withdraw | xlm-usdc | btc-eth | usdc-btc | btc-usdc | refund
+//   s     deposit | withdraw | xlm-usdc | btc-eth | usdc-btc | xlm-btc | savings-btc | btc-usdc
+//         | refund | index
 //   mode  review | running | done | failed | stopped | handed-off
 //   at    a step id (running, failed, stopped)
 //   wait  1: the step at `at` waits on a signature
@@ -60,6 +61,8 @@ import { FlowView, FlowNotice } from '@/components/_common/flow';
 //   legs  the index split, SYMBOL:usd:weight:amountOut joined by ';', e.g.
 //         BTC:414.45:82.9:0.006658;ETH:71.30:14.3:0.040473;SOL:14.25:2.9:0.195366
 //   autopilot 1: usdc-btc with auto-finish on (one signature, no Base prompt)
+//   one   1: usdc-btc and index on one-signature transfers (doc 129 Phase 3;
+//         xlm-btc always is)
 // ---------------------------------------------------------------------------
 
 const G = 'GB2YWVAJQ6IY3PSV6ZL44KZ2GVQDWYIPJVDP4MTFPB7FQWIE3WJ7CTJF';
@@ -73,6 +76,8 @@ type Scenario =
   | 'xlm-usdc'
   | 'btc-eth'
   | 'usdc-btc'
+  | 'xlm-btc'
+  | 'savings-btc'
   | 'btc-usdc'
   | 'refund'
   | 'index';
@@ -102,6 +107,7 @@ interface Amounts {
   out: string | null;
   legs: { symbol: LegCoin; usd: number; weight: string; amountOut: string }[] | null;
   autopilot: boolean;
+  one: boolean;
 }
 
 const COIN_NAMES: Record<LegCoin, string> = {
@@ -132,6 +138,7 @@ function amountsOf(params: { get: (name: string) => string | null }): Amounts {
     out: params.get('out'),
     legs: legs.length ? legs : null,
     autopilot: params.get('autopilot') === '1',
+    one: params.get('one') === '1',
   };
 }
 
@@ -254,6 +261,7 @@ function sample(
           baseWallet: { address: ETH },
           destWallet: { address: BTC },
           autopilot: amounts.autopilot,
+          oneSignature: amounts.one,
         }),
         summary: rows([
           ['You pay', `${usd} USDC`, dollars(usd)],
@@ -261,6 +269,83 @@ function sample(
           ['Circle bridge', 'Free', 'Normal pays its network fees'],
         ]),
         lede: `${usd} USDC for about ${out} BTC, over Circle and Chainflip.`,
+        titles: swapTitles(t),
+        doneNote: 'Your BTC is in your Bitcoin wallet.',
+      };
+    }
+    case 'xlm-btc': {
+      // Doc 129 Phase 5: the XLM buys exactly this USDC first, then Circle.
+      const usd = amounts.usd ?? 24.87;
+      const out = amounts.out ?? '0.000282';
+      const fee = usd * 0.005;
+      return {
+        plan: cctpOutboundPlan({
+          t,
+          to: 'BTC',
+          amountUsdc: `${usd} USDC`,
+          fromXlm: { amountXlm: '100 XLM' },
+          amountOut: `≈ ${out} BTC`,
+          tool: 'Chainflip',
+          stellarWallet: { address: G },
+          baseWallet: { address: ETH },
+          destWallet: { address: BTC },
+          autopilot: amounts.autopilot,
+        }),
+        summary: rows([
+          ['You pay', '100 XLM', '$25.10'],
+          [
+            'Swapped to USDC first',
+            `${usd} USDC`,
+            'On Soroswap, in your own wallet. No Normal fee on this part.',
+          ],
+          ['You receive', `≈ ${out} BTC`],
+          ['Normal fee (0.5%)', `${fee.toFixed(2)} USDC`, dollars(fee)],
+          ['Circle bridge', 'Free', 'Normal pays its network fees'],
+          ['Signatures', amounts.autopilot ? 'One' : 'Two, sometimes three'],
+        ]),
+        lede: `100 XLM for about ${out} BTC, over Soroswap, Circle and Chainflip.`,
+        titles: swapTitles(t),
+        doneNote: 'Your BTC is in your Bitcoin wallet.',
+      };
+    }
+    case 'savings-btc': {
+      // Doc 129 Phase 5b: out of Savings, then Circle, with one signature.
+      const asked = amounts.usd ?? 500;
+      const commission = +(asked * 0.004).toFixed(2);
+      const moved = +(asked * 0.999 - commission).toFixed(2);
+      const out = amounts.out ?? '0.005631';
+      const fee = moved * 0.005;
+      return {
+        plan: cctpOutboundPlan({
+          t,
+          to: 'BTC',
+          amountUsdc: `${moved} USDC`,
+          fromSavings: { amount: `${asked} USDC`, commission: `${commission} USDC` },
+          amountOut: `≈ ${out} BTC`,
+          tool: 'Chainflip',
+          stellarWallet: { address: G },
+          baseWallet: { address: ETH },
+          destWallet: { address: BTC },
+          autopilot: amounts.autopilot,
+        }),
+        summary: rows([
+          ['You pay', `${asked} USDC`, 'From Savings'],
+          [
+            'Commission on earnings',
+            `${commission} USDC`,
+            'Normal’s share of what Savings earned, as with any withdrawal',
+          ],
+          [
+            'Moved by Circle',
+            `${moved} USDC`,
+            'Savings guarantees at least this much. Anything over stays in your wallet as digital dollars.',
+          ],
+          ['You receive', `≈ ${out} BTC`],
+          ['Normal fee (0.5%)', `${fee.toFixed(2)} USDC`, dollars(fee)],
+          ['Circle bridge', 'Free', 'Normal pays its network fees'],
+          ['Signatures', amounts.autopilot ? 'One' : 'Two, sometimes three'],
+        ]),
+        lede: `${asked} USDC from Savings for about ${out} BTC, over Circle and Chainflip.`,
         titles: swapTitles(t),
         doneNote: 'Your BTC is in your Bitcoin wallet.',
       };
@@ -284,6 +369,7 @@ function sample(
           })),
           stellarWallet: { address: G },
           baseWallet: { address: ETH },
+          oneSignature: amounts.one,
         }),
         // As the real review lays it out (crypto-index/index.tsx): each coin
         // with its logo, "Bitcoin · 60%".
@@ -387,6 +473,8 @@ function finishedPatch(step: FlowStepDef) {
   const base = { label: 'View on basescan.org', href: `https://basescan.org/tx/0x${HASH}` };
   switch (step.id) {
     case 'submit':
+    case 'src-swap':
+    case 'src-withdraw':
     case 'burn':
       return { links: [step.actor === 'Base network' ? base : stellar] };
     case 'confirmed':
@@ -482,6 +570,8 @@ const SCENARIOS: Scenario[] = [
   'xlm-usdc',
   'btc-eth',
   'usdc-btc',
+  'xlm-btc',
+  'savings-btc',
   'btc-usdc',
   'refund',
   'index',

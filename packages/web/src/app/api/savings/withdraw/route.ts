@@ -6,7 +6,10 @@ import { rateLimiter } from '@/server/rateLimiter';
 import { networkFromCookie } from '@/server/network-cookie';
 import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 import { DefindexSDK, SupportedNetworks } from '@defindex/sdk';
+import { vaultWithdrawOf } from '@/lib/stellar/vault-withdraw';
 import { isValidStellarAddress } from '@/utils/stellar-address';
+import { getStellarConfigForNetwork } from '@normalfinance/utils';
+import { Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 import { inspectRateLimit, withRateLimitRetry } from '@/server/defindex';
 
 // A cold savings load bursts ~5 DeFindex calls and their limit is per second;
@@ -43,7 +46,13 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
       ? process.env.NEXT_PUBLIC_MAINNET_DEFINDEX_VAULT || ''
       : process.env.NEXT_PUBLIC_TESTNET_DEFINDEX_VAULT || '';
 
-    const { amount, caller } = await request.json();
+    const { amount, caller, slippageBps: askedSlippage } = await request.json();
+    // Doc 129 Phase 5b: Savings → coin asks for a tight minimum (its USDC is
+    // what Circle moves); everything else keeps 1%.
+    const slippageBps =
+      Number.isInteger(askedSlippage) && askedSlippage >= 10 && askedSlippage <= 100
+        ? askedSlippage
+        : 100;
 
     if (amount === undefined || amount === null || amount === '' || !caller) {
       return NextResponse.json(
@@ -84,7 +93,7 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
         sdk.withdrawFromVault(VAULT_ADDRESS, {
           amounts: [Number(amountInStroops)],
           caller,
-          slippageBps: 100, // 1% slippage
+          slippageBps,
         }),
       'withdrawFromVault'
     );
@@ -96,9 +105,25 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
       );
     }
 
+    // Doc 129 Phase 5b: the minimum the vault guarantees to pay out, read from
+    // the transaction itself (7-decimal units); null if it is not a plain
+    // withdrawal of this vault.
+    let minOut: string | null = null;
+    try {
+      const tx = TransactionBuilder.fromXDR(
+        result.xdr,
+        getStellarConfigForNetwork(network).NETWORK_PASSPHRASE
+      );
+      const call = tx instanceof Transaction ? vaultWithdrawOf(tx, VAULT_ADDRESS) : null;
+      minOut = call && call.from === caller ? call.minOut.toString() : null;
+    } catch {
+      minOut = null;
+    }
+
     return NextResponse.json({
       success: true,
       xdr: result.xdr,
+      minOut,
     });
   } catch (error: any) {
     console.error('Withdraw error:', error);

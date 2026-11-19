@@ -192,7 +192,8 @@ The burn cannot be prepared until the approve has landed, so the two can never b
 
 **What it is.** Swaps that need two networks and used to be impossible or two-step, each with one face scan:
 - **XLM → BTC/ETH/SOL:** the XLM is swapped to exactly the USDC needed, then sent by Circle.
-- **Savings → BTC/ETH/SOL**, and **XLM ⇄ Savings**: in later parts of this stage.
+- **Savings → BTC/ETH/SOL:** the money comes out of Savings (with the usual commission on earnings), then Circle sends it.
+- **XLM ⇄ Savings**: in a later part of this stage.
 
 **How it works.** Your swap transaction and the Circle permissions are signed with one face scan. The server sends your swap first, and the relayer sends the Circle transfer once the swap's USDC exists. Fees follow the locked rule: one 0.5% on the Base exchange, nothing extra on the Stellar swap.
 
@@ -204,8 +205,22 @@ The burn cannot be prepared until the approve has landed, so the two can never b
 
 **How to test it** (switch on). In Swap, pick XLM, then Bitcoin, and type 100. You will see:
 - the quote in BTC
-- a review with "Approve the swap", then "Swap your XLM to USDC", then Circle
+- a review with "Approve the swap", then "Swap your XLM to USDC", then "Allow Circle to collect it" (Normal's step), then Circle
 - one face scan, after which the swap finishes like a USDC → BTC swap
+
+**Status of Savings → BTC/ETH/SOL** (2026-11-19):
+- **Built**, checked on screen through the dev preview (`/app/dev/flow?s=savings-btc`). Not live-tested.
+- **What you will see** (switch on, with money in Savings): Digital dollars → Bitcoin gets a third chip, **Savings · 500.00**. Pick it and type 500. The review:
+  - starts at "Normal Savings"
+  - shows the commission on earnings, as with any withdrawal
+  - shows "Moved by Circle", the amount Savings guarantees
+  - asks for one face scan
+- **How it stays safe:**
+  - The server reads the guaranteed amount from the signed withdrawal itself, and refuses anything that is not a withdrawal from your own Savings.
+  - The withdrawal is recorded, and its commission held, before anything is sent, like any withdrawal.
+  - Circle only moves money once the withdrawal has landed. If it does not land, nothing moved and your money is still in Savings.
+  - Anything over the guaranteed amount stays in your wallet as digital dollars.
+- **How to test it** (mainnet, switch on): with at least $11 in Savings, swap $11 from Savings to Bitcoin. If you then look at Activity, you will see a Savings withdrawal and a swap. Your Savings balance goes down by $11, and the Bitcoin arrives as usual.
 
 ---
 

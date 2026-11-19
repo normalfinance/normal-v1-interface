@@ -12,7 +12,7 @@ import { it, jest, expect, describe } from '@jest/globals';
 jest.mock('@/lib/prisma', () => ({ prisma: {} }));
 jest.mock('@normalfinance/utils', () => ({ getStellarConfigForNetwork: () => ({}) }));
 
-const { relayStateOf, firstTxRefusal, permissionBurnRefusal } =
+const { relayStateOf, firstTxRefusal, firstTxsRefusal, permissionBurnRefusal } =
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@/server/relayed-steps') as typeof RelayedStepsModule;
 
@@ -166,5 +166,132 @@ describe('firstTxRefusal (doc 129 Phase 5: the XLM swap that goes first)', () =>
     expect(
       firstTxRefusal(tx, { ...xlmTransfer, srcSwapTxHash: tx.hash().toString('hex') })
     ).toBeNull();
+  });
+});
+
+describe('firstTxsRefusal (doc 129 Phase 5b: a Savings withdrawal and its commission go first)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const sdk = require('@stellar/stellar-sdk') as typeof StellarSdk;
+  const person = sdk.Keypair.random();
+  const feeAddress = sdk.Keypair.random().publicKey();
+  const issuer = sdk.Keypair.random().publicKey();
+  const usdc = new sdk.Asset('USDC', issuer);
+  const vault = sdk.StrKey.encodeContract(Buffer.alloc(32, 5));
+  const rules = { vault, feeAddress, usdc };
+  const NOW = 1_800_000_000_000;
+  const i128 = (v: bigint) => sdk.nativeToScVal(v, { type: 'i128' });
+  const withdrawal = (minOut: bigint, seq = '10') => {
+    const tx = new sdk.TransactionBuilder(new sdk.Account(person.publicKey(), seq), {
+      fee: '100',
+      networkPassphrase: sdk.Networks.PUBLIC,
+    })
+      .addOperation(
+        new sdk.Contract(vault).call(
+          'withdraw',
+          i128(1_000n),
+          sdk.xdr.ScVal.scvVec([i128(minOut)]),
+          new sdk.Address(person.publicKey()).toScVal()
+        )
+      )
+      .setTimeout(300)
+      .build();
+    tx.sign(person);
+    return tx;
+  };
+  // 100.00 USDC guaranteed (7 decimals); the transfer moves 98.00 (6-decimal wire).
+  const guaranteed = 1_000_000_000n;
+  const savingsTransfer = {
+    srcAddress: person.publicKey(),
+    srcAsset: 'USDC',
+    srcSwapTxHash: null,
+    amountWire: '98000000',
+  };
+  const commissionTx = (
+    over: Partial<{
+      seq: string;
+      to: string;
+      asset: StellarSdk.Asset;
+      amount: string;
+      until: number;
+    }> = {}
+  ) => {
+    const tx = new sdk.TransactionBuilder(new sdk.Account(person.publicKey(), over.seq ?? '11'), {
+      fee: '100',
+      networkPassphrase: sdk.Networks.PUBLIC,
+      timebounds: { minTime: 0, maxTime: over.until ?? NOW / 1000 + 900 },
+    })
+      .addOperation(
+        sdk.Operation.payment({
+          destination: over.to ?? feeAddress,
+          asset: over.asset ?? usdc,
+          amount: over.amount ?? '1.5000000',
+        })
+      )
+      .build();
+    tx.sign(person);
+    return tx;
+  };
+
+  it('accepts a withdrawal that guarantees the transfer plus its commission', () => {
+    // 98.00 + 1.50 = 99.50 <= 100.00 guaranteed.
+    expect(
+      firstTxsRefusal([withdrawal(guaranteed), commissionTx()], savingsTransfer, rules, NOW)
+    ).toBeNull();
+    // No earnings, no commission: the withdrawal alone.
+    expect(firstTxsRefusal([withdrawal(guaranteed)], savingsTransfer, rules, NOW)).toBeNull();
+  });
+
+  it('refuses a withdrawal that does not guarantee enough', () => {
+    // 98.00 + 2.50 = 100.50 > 100.00.
+    const short = firstTxsRefusal(
+      [withdrawal(guaranteed), commissionTx({ amount: '2.5000000' })],
+      savingsTransfer,
+      rules,
+      NOW
+    );
+    expect(short?.status).toBe(400);
+    expect(firstTxsRefusal([withdrawal(970_000_000n)], savingsTransfer, rules, NOW)?.status).toBe(
+      400
+    );
+  });
+
+  it('refuses a commission that is not Normal’s, not USDC, not chained, or about to expire', () => {
+    const w = withdrawal(guaranteed);
+    const cases = [
+      commissionTx({ to: sdk.Keypair.random().publicKey() }),
+      commissionTx({ asset: sdk.Asset.native() }),
+      commissionTx({ seq: '12' }),
+      commissionTx({ until: NOW / 1000 + 30 }),
+    ];
+    for (const c of cases) {
+      expect(firstTxsRefusal([w, c], savingsTransfer, rules, NOW)?.status).toBe(400);
+    }
+  });
+
+  it('refuses anything that is not a withdrawal of this vault, or without Savings here', () => {
+    const otherVault = { ...rules, vault: sdk.StrKey.encodeContract(Buffer.alloc(32, 6)) };
+    expect(
+      firstTxsRefusal([withdrawal(guaranteed)], savingsTransfer, otherVault, NOW)?.status
+    ).toBe(400);
+    expect(firstTxsRefusal([withdrawal(guaranteed)], savingsTransfer, null, NOW)?.status).toBe(400);
+    expect(
+      firstTxsRefusal(
+        [withdrawal(guaranteed), commissionTx(), commissionTx({ seq: '12' })],
+        savingsTransfer,
+        rules,
+        NOW
+      )?.status
+    ).toBe(400);
+  });
+
+  it('an XLM transfer never takes a withdrawal pair', () => {
+    expect(
+      firstTxsRefusal(
+        [withdrawal(guaranteed), commissionTx()],
+        { ...savingsTransfer, srcAsset: 'XLM' },
+        rules,
+        NOW
+      )?.status
+    ).toBe(400);
   });
 });

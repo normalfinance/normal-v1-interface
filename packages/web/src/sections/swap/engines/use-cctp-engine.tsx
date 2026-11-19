@@ -39,11 +39,19 @@ import { confirmAction } from '@/lib/auth/action-code';
 import { assetNoun } from '@/lib/portfolio/asset-names';
 import { executePivotSwap } from '@/lib/cctp/pivot-swap';
 import { evmAddressToBytes } from '@/lib/cctp/addresses';
+import { getYieldCommission } from '@/utils/normal-fees';
 import { requestLifiQuote } from '@/lib/lifi/request-quote';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { usdcToWire, wireToUsdc } from '@/lib/cctp/decimals';
+import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
+import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
+import { bumpSavingsReadEpoch } from '@/lib/savings-read-guard';
+import { getTransactionSequence } from '@/lib/stellar/fee-pair';
+import { burnsWithPermissions } from '@/lib/stellar/batch-sign';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
+import { POSITION_SYNC_EVENT } from '@/hooks/use-savings-position';
+import { FEE_PAIR_TIMEOUT_SECONDS } from '@/lib/build-fee-payment';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { parseDeliveredAmount } from '@/lib/cctp/delivered-amount';
@@ -63,11 +71,6 @@ import { maxAffordableEth, GasShortfallError } from '@/lib/lifi/gas-shortfall';
 import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { setActiveCctpTransfer, getActiveCctpTransfer } from '@/lib/cctp/active-transfer';
 import {
-  xlmAvailableForFees,
-  maxXlmForSorobanSwap,
-  MIN_XLM_FOR_SAVINGS_TX,
-} from '@/utils/stellar-reserve';
-import {
   uncertainBurnHash,
   isBroadcastUncertain,
   UNCERTAIN_SEND_MESSAGE,
@@ -79,6 +82,12 @@ import {
   cctpInboundPlan,
   cctpOutboundPlan,
 } from '@/lib/flow/plans';
+import {
+  canPaySorobanFee,
+  xlmAvailableForFees,
+  maxXlmForSorobanSwap,
+  MIN_XLM_FOR_SAVINGS_TX,
+} from '@/utils/stellar-reserve';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -120,6 +129,13 @@ type CctpStage =
 
 const MONO = { fontFamily: '"Geist Mono", ui-monospace, monospace' } as const;
 
+/**
+ * Doc 129 Phase 5b: the minimum a Savings withdrawal for a swap must pay out,
+ * below what was asked (0.1%). The vault's share price only grows with yield,
+ * so this is a hair of room; what is over stays in the wallet as dollars.
+ */
+const SAVINGS_SWAP_SLIPPAGE_BPS = 10;
+
 export interface CctpEngineProps {
   fromSymbol: SwapSymbol;
   toSymbol: SwapSymbol;
@@ -153,6 +169,13 @@ export interface CctpEngineProps {
    * modal both announce the move — never a silent transfer.
    */
   fundFromExternal?: { label: string; execute: (amountUsdc: string) => Promise<boolean> };
+  /**
+   * Doc 129 Phase 5b: the USDC comes out of the Normal wallet's Savings. The
+   * withdrawal (and the usual commission on earnings) is signed in the same
+   * prompt as the transfer; the server sends it first, and Circle moves what
+   * it guarantees. Kept stable by the caller (it feeds the quote).
+   */
+  fromSavings?: { currentValue: string; earnings: string } | null;
   /** Dynamic gas (2026-08-21): writes the affordable amount back into the
    *  card when a gas spike beats the reserve on the ETH source leg. */
   onAmountAdjusted?: (amountEth: string) => void;
@@ -245,6 +268,7 @@ export function useCctpEngine({
   stellarAddressOverride,
   onNeedsSetup,
   fundFromExternal,
+  fromSavings,
   onAmountAdjusted,
 }: CctpEngineProps): SwapEngineResult {
   const { t } = useTranslate();
@@ -355,6 +379,71 @@ export function useCctpEngine({
   // sends the swap first, the relayer burns once it has landed).
   const fromXlm = direction === 'out' && fromSymbol === 'XLM';
   const [xlmUsdcWire, setXlmUsdcWire] = useState<bigint | null>(null);
+  /** From XLM: the USDC the typed XLM is guaranteed to buy (null until quoted). */
+  const xlmUsdc =
+    fromXlm && xlmUsdcWire !== null ? BigNumber(xlmUsdcWire.toString()).dividedBy(1e6) : null;
+  // Doc 129 Phase 5b: Savings → BTC/ETH/SOL. The typed amount leaves Savings;
+  // Circle moves what the withdrawal guarantees, less the usual commission on
+  // earnings. Anything over stays in the wallet as digital dollars.
+  const savingsSource =
+    direction === 'out' && fromSymbol === 'USDC' && fromSavings ? fromSavings : null;
+  const savingsCommissionOf = useCallback(
+    (value: BigNumber): BigNumber =>
+      savingsSource && value.gt(0)
+        ? BigNumber(
+            getYieldCommission({
+              withdrawAmount: value.toNumber(),
+              currentValue: Number(savingsSource.currentValue),
+              earnings: Number(savingsSource.earnings),
+            })
+          ).decimalPlaces(7, BigNumber.ROUND_DOWN)
+        : BigNumber(0),
+    [savingsSource]
+  );
+  // What a withdrawal guarantees per dollar asked: assumed from the slippage
+  // we ask DeFindex for, then learned from the first withdrawal it builds
+  // (its minimum is read from the transaction), so a different rule on their
+  // side costs one "review again", never a stuck swap.
+  const [savingsRatio, setSavingsRatio] = useState(1 - SAVINGS_SWAP_SLIPPAGE_BPS / 10_000);
+  const savingsUsdcOf = useCallback(
+    (value: BigNumber): BigNumber =>
+      BigNumber.max(
+        value
+          .multipliedBy(savingsRatio)
+          .minus(savingsCommissionOf(value))
+          .decimalPlaces(6, BigNumber.ROUND_DOWN),
+        0
+      ),
+    [savingsCommissionOf, savingsRatio]
+  );
+  const savingsCommission = savingsSource && amount.gt(0) ? savingsCommissionOf(amount) : null;
+  const savingsUsdc = savingsSource && amount.gt(0) ? savingsUsdcOf(amount) : null;
+  /** The USDC Circle moves when it is not the typed amount (from XLM or Savings). */
+  const movedUsdc = xlmUsdc ?? savingsUsdc;
+  /** The withdrawal built at confirm: its guaranteed minimum sets the transfer. */
+  const savingsWithdrawalRef = useRef<{
+    xdr: string;
+    commission: BigNumber;
+    amount: string;
+  } | null>(null);
+  // Doc 129 Phase 3: the Stellar side goes out as pre-signed permissions (one
+  // prompt; Normal's relayer sends Circle's permission and the transfer). The
+  // burn asks the same question (lib/cctp/burn-stellar.ts).
+  const { addresses: turnkeyAddresses } = useTurnkeyWallet();
+  const oneSignature =
+    direction === 'out' && burnsWithPermissions(turnkeyAddresses?.stellarAddress, stellarAddress);
+  // Normal's fee is taken on the USDC at the exchange. From XLM that is the
+  // USDC the XLM buys first, so it is shown in USDC, never as XLM.
+  const feeCoin = fromXlm ? 'USDC' : fromSymbol;
+  const feeAmount = (fromXlm || savingsSource ? (movedUsdc ?? BigNumber(0)) : amount).multipliedBy(
+    feePercent
+  );
+  const feeUsd =
+    fromXlm || savingsSource
+      ? feeAmount
+      : fromPrice.gt(0)
+        ? feeAmount.multipliedBy(fromPrice)
+        : null;
   const usdcSac = useMemo(
     () => new Asset('USDC', STELLAR_CCTP[network].usdcIssuer).contractId(config.NETWORK_PASSPHRASE),
     [network, config.NETWORK_PASSPHRASE]
@@ -461,6 +550,8 @@ export function useCctpEngine({
           usdcValue = BigNumber(wire.toString()).dividedBy(1e6);
         } else {
           setXlmUsdcWire(null);
+          // Doc 129 Phase 5b: from Savings, quote what Circle will move.
+          if (savingsSource) usdcValue = savingsUsdcOf(value);
         }
         const got = await requestLifiQuote(quoteBody(usdcValue), {
           signal: controller.signal,
@@ -484,7 +575,16 @@ export function useCctpEngine({
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, debouncedAmount, direction, fromSymbol, toSymbol, nativeAddress, evmAddress]);
+  }, [
+    enabled,
+    debouncedAmount,
+    direction,
+    fromSymbol,
+    toSymbol,
+    nativeAddress,
+    evmAddress,
+    savingsUsdcOf,
+  ]);
 
   const usdcOutMin =
     quote && direction === 'in' ? BigNumber(quote.estimate.toAmountMin).dividedBy(1e6) : null;
@@ -515,6 +615,14 @@ export function useCctpEngine({
     !isCheckingAccount &&
     accountExists &&
     xlmAvailableForFees(xlmBalance).lt(MIN_XLM_FOR_SAVINGS_TX);
+  // Doc 129 Phase 5: from XLM, the swap's own Soroban fee is paid from what is
+  // left after the XLM itself (the Soroswap engine's check, doc 95 Wave 6).
+  const xlmCannotPayFee =
+    fromXlm &&
+    amount.gt(0) &&
+    !isCheckingAccount &&
+    accountExists &&
+    !canPaySorobanFee(xlmBalance, 1, amount);
 
   // MAX leaves the source chain's network fee behind. Outbound USDC needs no
   // reserve (Soroban fees are paid in XLM); inbound mirrors the LI.FI engine,
@@ -1275,7 +1383,49 @@ export function useCctpEngine({
                 },
                 onSent: (hash) => startStep('src-swap', { links: [stellarTxLink(t, hash)] }),
               }
-            : undefined,
+            : savingsWithdrawalRef.current
+              ? {
+                  // Doc 129 Phase 5b: the withdrawal, then (on earnings) its
+                  // commission chained right behind it, as any withdrawal.
+                  build: async () => {
+                    const { xdr: withdrawalXdr, commission } = savingsWithdrawalRef.current!;
+                    if (commission.lte(0)) return [withdrawalXdr];
+                    const res = await fetch('/api/fees/build-payment', {
+                      method: 'POST',
+                      headers: {
+                        ...(await buildAuthHeaders()),
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        caller: stellarAddress,
+                        amount: commission.toFixed(7, BigNumber.ROUND_DOWN),
+                        assetCode: 'USDC',
+                        assetIssuer: getSavingsUsdcIssuer(config),
+                        sourceSequence: getTransactionSequence(
+                          withdrawalXdr,
+                          config.NETWORK_PASSPHRASE
+                        ),
+                        timeoutSeconds: FEE_PAIR_TIMEOUT_SECONDS,
+                      }),
+                    });
+                    const data = await res.json().catch(() => null);
+                    if (!res.ok || !data?.success || !data.xdr) {
+                      throw new Error(
+                        data?.error ?? t('The commission could not be prepared, so nothing moved.')
+                      );
+                    }
+                    return [withdrawalXdr, data.xdr as string];
+                  },
+                  savingsAmount: savingsWithdrawalRef.current.amount,
+                  onSent: (hash) => {
+                    startStep('src-withdraw', { links: [stellarTxLink(t, hash)] });
+                    // Savings changed: re-read it everywhere (the server has
+                    // already dropped its cached position on confirm).
+                    if (stellarAddress) bumpSavingsReadEpoch(stellarAddress);
+                    window.dispatchEvent(new CustomEvent(POSITION_SYNC_EVENT));
+                  },
+                }
+              : undefined,
           stellarAddress: stellarAddress!,
           amountWire,
           destinationDomain: CCTP_DOMAIN.base,
@@ -1286,10 +1436,14 @@ export function useCctpEngine({
             updateStep(flowStateRef.current.activeId ?? 'burn-sign', { waiting: true });
           },
           onSubmitted: (st, hash) => {
-            if (st === 'approve')
+            const permissionLink = stellarTxLink(t, hash, t('View the permission'));
+            if (st === 'approve' && oneSignature)
+              // Sent by Normal's relayer from the one signature, and landed.
+              startStep('approve', { links: [permissionLink] });
+            else if (st === 'approve')
               updateStep('approve', {
                 waiting: false,
-                links: [stellarTxLink(t, hash, t('View the permission'))],
+                links: [permissionLink],
                 note: t('Sent. Waiting for Stellar to confirm it.'),
               });
             else startStep('burn', { links: [stellarTxLink(t, hash)] });
@@ -1297,7 +1451,7 @@ export function useCctpEngine({
         });
         broadcastStarted = true;
         movedRef.current = true;
-        if (approveTxHash && approveTxHash !== 'skipped')
+        if (approveTxHash && approveTxHash !== 'skipped' && !oneSignature)
           doneStep('approve', { note: t('Done. Later swaps skip this.') });
         doneStep('burn', { links: [stellarTxLink(t, burnTxHash)] });
         if (!(await patch({ burnTxHash }))) {
@@ -1588,6 +1742,8 @@ export function useCctpEngine({
       toSymbol,
       fromXlm,
       usdcSac,
+      oneSignature,
+      config,
       makePatcher,
       finish,
       t,
@@ -1688,12 +1844,66 @@ export function useCctpEngine({
       if (fromXlm && !xlmUsdcWire) {
         throw new Error(t('Get a fresh price first: the XLM to USDC part has none yet.'));
       }
+      // Doc 129 Phase 5b: from Savings, the withdrawal is built now. What it
+      // guarantees (its minimum out, read by the server from the transaction),
+      // less the commission, is exactly what Circle moves.
+      let savingsWire: bigint | null = null;
+      savingsWithdrawalRef.current = null;
+      if (savingsSource) {
+        if (fundFromExternal) {
+          throw new Error(t('Swap from Savings with your Normal wallet: switch to it first.'));
+        }
+        const asked = amount.toFixed(7, BigNumber.ROUND_DOWN);
+        const commission = savingsCommissionOf(amount);
+        const built = await fetch('/api/savings/withdraw', {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: asked,
+            caller: stellarAddress,
+            slippageBps: SAVINGS_SWAP_SLIPPAGE_BPS,
+          }),
+        });
+        const withdrawal = await built.json().catch(() => null);
+        if (!built.ok || !withdrawal?.success || !withdrawal.xdr || !withdrawal.minOut) {
+          throw new Error(
+            withdrawal?.error ??
+              t(
+                'Savings could not prepare this withdrawal, so nothing moved. Try again in a moment.'
+              )
+          );
+        }
+        const commission7 = BigInt(
+          commission.multipliedBy(1e7).integerValue(BigNumber.ROUND_DOWN).toFixed(0)
+        );
+        savingsWire = (BigInt(withdrawal.minOut) - commission7) / 10n;
+        const quoted = BigInt(
+          savingsUsdcOf(amount).multipliedBy(1e6).integerValue(BigNumber.ROUND_DOWN).toFixed(0)
+        );
+        // The price was quoted for `quoted`; never move noticeably less. The
+        // ratio this withdrawal really guarantees is kept, so the new price
+        // (the quote refreshes on it) is right the next time.
+        if (savingsWire <= 0n || savingsWire * 1000n < quoted * 997n) {
+          const asked7 = BigInt(
+            amount.multipliedBy(1e7).integerValue(BigNumber.ROUND_DOWN).toFixed(0)
+          );
+          if (asked7 > 0n) setSavingsRatio(Number(BigInt(withdrawal.minOut)) / Number(asked7));
+          throw new Error(
+            t(
+              'Savings would pay out a little less than this price assumed, so nothing moved. Review the swap again.'
+            )
+          );
+        }
+        savingsWithdrawalRef.current = { xdr: withdrawal.xdr, commission, amount: asked };
+      }
       const amountWire =
         direction === 'in'
           ? BigInt(live.estimate.toAmountMin) // USDC that will reach Base
           : fromXlm
             ? xlmUsdcWire! // what the XLM is guaranteed to buy, exactly
-            : usdcToWire(amount.toFixed(6, BigNumber.ROUND_DOWN));
+            : savingsWire !== null
+              ? savingsWire // what the Savings withdrawal guarantees, less its commission
+              : usdcToWire(amount.toFixed(6, BigNumber.ROUND_DOWN));
       const res = await fetch('/api/cctp/transfers', {
         method: 'POST',
         headers,
@@ -1718,6 +1928,8 @@ export function useCctpEngine({
             // wallet, because rows were tagged by feed, not by source).
             // Inbound always spends the Normal wallet's chain address.
             fundedFrom: direction === 'out' && fundFromExternal ? 'external' : 'normal',
+            // Doc 129 Phase 5b: the USDC came out of Savings first.
+            ...(savingsSource ? { fromSavings: true } : {}),
           },
         }),
       });
@@ -1764,6 +1976,9 @@ export function useCctpEngine({
   }, [
     fromXlm,
     xlmUsdcWire,
+    savingsSource,
+    savingsCommissionOf,
+    savingsUsdcOf,
     quote,
     direction,
     amount,
@@ -1804,7 +2019,9 @@ export function useCctpEngine({
   const minUsdShort =
     direction === 'in'
       ? !!quote && BigNumber(quote.estimate.toAmountMin).dividedBy(1e6).lt(10)
-      : amount.gt(0) && fromPrice.gt(0) && amount.multipliedBy(fromPrice).lt(10);
+      : movedUsdc
+        ? movedUsdc.lt(10) // from XLM or Savings: the USDC Circle will move
+        : amount.gt(0) && fromPrice.gt(0) && amount.multipliedBy(fromPrice).lt(10);
 
   const button = useMemo(() => {
     if (!enabled) return { label: t('Enter an amount'), action: null, loading: false };
@@ -1943,6 +2160,36 @@ export function useCctpEngine({
     // step to resume at (create / activate / trustline / top-up).
     if (amount.lte(0)) return { label: t('Enter an amount'), action: null, loading: false };
     if (insufficient) return { label: t('Insufficient balance'), action: null, loading: false };
+    // Doc 129 Phase 5: XLM goes straight to BTC/ETH/SOL only on one-signature
+    // transfers (a Normal wallet with a passkey, the switch on).
+    if (fromXlm && !oneSignature)
+      return {
+        label: t('Not available from this wallet'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
+            {t('Swap your XLM to USDC first, then USDC to {{coin}}.', {
+              coin: assetNoun(toSymbol),
+            })}
+          </Typography>
+        ),
+      };
+    if (xlmCannotPayFee)
+      return { label: t('Add XLM to cover the network fee'), action: null, loading: false };
+    // Doc 129 Phase 5b: Savings goes straight to a coin only on one-signature
+    // transfers (the swap card offers it only then; this is the backstop).
+    if (savingsSource && !oneSignature)
+      return {
+        label: t('Not available from Savings'),
+        action: null,
+        loading: false,
+        helper: (
+          <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
+            {t('Take it out of Savings first, then swap the digital dollars.')}
+          </Typography>
+        ),
+      };
     if (stage && stage !== 'done')
       return { label: t('Swap in progress…'), action: null, loading: true };
     if (quoteError) return { label: t('Try a different amount'), action: null, loading: false };
@@ -2002,6 +2249,17 @@ export function useCctpEngine({
       action: () => handleConfirmRef.current(),
       loading: false,
       review: true,
+      // Doc 129 Phase 5: with an external wallet connected, the XLM leaves the
+      // Normal wallet (the swap card shows that balance).
+      ...(fromXlm && onNeedsSetup
+        ? {
+            helper: (
+              <Typography sx={{ fontSize: '12px', color: MUTED, textAlign: 'center' }}>
+                {t('The XLM comes from your Normal wallet.')}
+              </Typography>
+            ),
+          }
+        : {}),
     };
   }, [
     gasShare,
@@ -2034,12 +2292,20 @@ export function useCctpEngine({
     direction,
     fromSymbol,
     toSymbol,
+    fromXlm,
+    oneSignature,
+    xlmCannotPayFee,
+    savingsSource,
   ]);
 
   const routeLabel =
     direction === 'in'
       ? `${fromSymbol} → USDC (Base) → Stellar`
-      : `USDC → Base (Circle) → ${toSymbol}`;
+      : fromXlm
+        ? `XLM → USDC (Soroswap) → Base (Circle) → ${toSymbol}`
+        : savingsSource
+          ? `Savings → USDC → Base (Circle) → ${toSymbol}`
+          : `USDC → Base (Circle) → ${toSymbol}`;
 
   const details = quote ? (
     <Stack spacing={0.75}>
@@ -2080,16 +2346,14 @@ export function useCctpEngine({
           })}
         </Typography>
       )}
-      {feePercent > 0 && amount.gt(0) && (
+      {feePercent > 0 && feeAmount.gt(0) && (
         <Stack direction="row" justifyContent="space-between">
           <Typography sx={{ fontSize: '12px', color: MUTED }}>
             {t('Normal fee ({{pct}}%)', { pct: +(feePercent * 100).toFixed(2) })}
           </Typography>
           <Typography sx={{ fontSize: '12px', fontWeight: 500, color: INK, ...MONO }}>
-            −{amount.multipliedBy(feePercent).toFixed(6)} {fromSymbol}
-            {fromPrice.gt(0)
-              ? ` (${fCurrency(amount.multipliedBy(feePercent).multipliedBy(fromPrice))})`
-              : ''}
+            −{feeAmount.toFixed(6)} {feeCoin}
+            {feeUsd ? ` (${fCurrency(feeUsd)})` : ''}
           </Typography>
         </Stack>
       )}
@@ -2142,11 +2406,18 @@ export function useCctpEngine({
       ? cctpOutboundPlan({
           t,
           to: toSymbol as CrosschainSymbol,
-          amountUsdc: formatCoin(
-            fromXlm && xlmUsdcWire !== null ? Number(xlmUsdcWire) / 1e6 : amount.toNumber(),
-            'USDC'
-          ),
+          amountUsdc: formatCoin((movedUsdc ?? amount).toNumber(), 'USDC'),
           fromXlm: fromXlm ? { amountXlm: formatCoin(amount.toNumber(), 'XLM') } : null,
+          fromSavings: savingsSource
+            ? {
+                amount: formatCoin(amount.toNumber(), 'USDC'),
+                commission:
+                  savingsCommission && savingsCommission.gt(0)
+                    ? formatCoin(savingsCommission.toNumber(), 'USDC')
+                    : null,
+              }
+            : null,
+          oneSignature,
           amountOut: `≈ ${formatCoin(expectedOut.toNumber(), toSymbol)}`,
           tool: toolName,
           stellarWallet: stellarRef,
@@ -2177,7 +2448,7 @@ export function useCctpEngine({
   const rateRow =
     expectedOut && amount.gt(0)
       ? readableRate(
-          direction === 'in' ? fromSymbol : 'USDC',
+          fromSymbol, // USDC or XLM out, the source coin in
           outSymbol,
           expectedOut.dividedBy(amount).toNumber()
         )
@@ -2194,8 +2465,40 @@ export function useCctpEngine({
           key: 'pay',
           label: t('You pay'),
           value: formatCoin(amount.toNumber(), fromSymbol),
-          detail: payUsd,
+          detail: savingsSource ? t('From Savings') : payUsd,
         },
+        ...(savingsCommission && savingsCommission.gt(0)
+          ? [
+              {
+                key: 'commission',
+                label: t('Commission on earnings'),
+                value: formatCoin(savingsCommission.toNumber(), 'USDC'),
+                detail: t('Normal’s share of what Savings earned, as with any withdrawal'),
+              },
+            ]
+          : []),
+        ...(savingsUsdc
+          ? [
+              {
+                key: 'usdc',
+                label: t('Moved by Circle'),
+                value: formatCoin(savingsUsdc.toNumber(), 'USDC'),
+                detail: t(
+                  'Savings guarantees at least this much. Anything over stays in your wallet as digital dollars.'
+                ),
+              },
+            ]
+          : []),
+        ...(xlmUsdc
+          ? [
+              {
+                key: 'usdc',
+                label: t('Swapped to USDC first'),
+                value: formatCoin(xlmUsdc.toNumber(), 'USDC'),
+                detail: t('On Soroswap, in your own wallet. No Normal fee on this part.'),
+              },
+            ]
+          : []),
         {
           key: 'get',
           label: t('You receive'),
@@ -2209,15 +2512,13 @@ export function useCctpEngine({
           detail: t('The exchange’s price protection'),
         },
         ...(rateRow ? [{ key: 'rate', label: t('Rate'), value: rateRow }] : []),
-        ...(feePercent > 0 && amount.gt(0)
+        ...(feePercent > 0 && feeAmount.gt(0)
           ? [
               {
                 key: 'fee',
                 label: t('Normal fee ({{pct}}%)', { pct: +(feePercent * 100).toFixed(2) }),
-                value: formatCoin(amount.multipliedBy(feePercent).toNumber(), fromSymbol),
-                detail: fromPrice.gt(0)
-                  ? formatUsd(amount.multipliedBy(feePercent).multipliedBy(fromPrice).toNumber())
-                  : undefined,
+                value: formatCoin(feeAmount.toNumber(), feeCoin),
+                detail: feeUsd ? formatUsd(feeUsd.toNumber()) : undefined,
               },
             ]
           : []),
@@ -2242,29 +2543,40 @@ export function useCctpEngine({
         ...(etaMinutes
           ? [{ key: 'time', label: t('Time'), value: t('About {{n}} min', { n: etaMinutes }) }]
           : []),
-        direction === 'out'
+        direction === 'out' && oneSignature
           ? {
               key: 'signatures',
               label: t('Signatures'),
-              value: autopilot ? t('One, sometimes two') : t('Two, sometimes four'),
+              value: autopilot ? t('One') : t('Two, sometimes three'),
               detail: autopilot
-                ? t('On Stellar only. Auto-finish signs on Base.')
+                ? t('One on Stellar covers everything there. Auto-finish signs on Base.')
                 : t(
-                    'On Stellar now, then on Base after the bridge. A first swap adds a one-time permission on each.'
+                    'One on Stellar now, then on Base after the bridge. A first swap adds a one-time permission on Base.'
                   ),
             }
-          : {
-              key: 'signatures',
-              label: t('Signatures'),
-              value: autopilot ? t('One') : t('One now, one or two later'),
-              detail: autopilot
-                ? t('On {{chain}} only. Auto-finish signs on Base.', {
-                    chain: CHAINS[nativeChain].name,
-                  })
-                : t('On {{chain}} now, then on Base when the money gets there.', {
-                    chain: CHAINS[nativeChain].name,
-                  }),
-            },
+          : direction === 'out'
+            ? {
+                key: 'signatures',
+                label: t('Signatures'),
+                value: autopilot ? t('One, sometimes two') : t('Two, sometimes four'),
+                detail: autopilot
+                  ? t('On Stellar only. Auto-finish signs on Base.')
+                  : t(
+                      'On Stellar now, then on Base after the bridge. A first swap adds a one-time permission on each.'
+                    ),
+              }
+            : {
+                key: 'signatures',
+                label: t('Signatures'),
+                value: autopilot ? t('One') : t('One now, one or two later'),
+                detail: autopilot
+                  ? t('On {{chain}} only. Auto-finish signs on Base.', {
+                      chain: CHAINS[nativeChain].name,
+                    })
+                  : t('On {{chain}} now, then on Base when the money gets there.', {
+                      chain: CHAINS[nativeChain].name,
+                    }),
+              },
       ],
       note: t(
         'Your money is only ever at your own addresses, with Circle, or with the exchange while it works. Normal never holds it.'
@@ -2274,17 +2586,29 @@ export function useCctpEngine({
 
   const liveLede =
     quote && expectedOut
-      ? direction === 'out'
-        ? t('{{pay}} for about {{get}}, over Circle and {{tool}}.', {
-            pay: formatCoin(amount.toNumber(), 'USDC'),
+      ? fromXlm
+        ? t('{{pay}} for about {{get}}, over Soroswap, Circle and {{tool}}.', {
+            pay: formatCoin(amount.toNumber(), 'XLM'),
             get: formatCoin(expectedOut.toNumber(), toSymbol),
             tool: toolName,
           })
-        : t('{{pay}} for about {{get}} in your Stellar wallet, over {{tool}} and Circle.', {
-            pay: formatCoin(amount.toNumber(), fromSymbol),
-            get: formatCoin(expectedOut.toNumber(), 'USDC'),
-            tool: toolName,
-          })
+        : savingsSource
+          ? t('{{pay}} from Savings for about {{get}}, over Circle and {{tool}}.', {
+              pay: formatCoin(amount.toNumber(), 'USDC'),
+              get: formatCoin(expectedOut.toNumber(), toSymbol),
+              tool: toolName,
+            })
+          : direction === 'out'
+            ? t('{{pay}} for about {{get}}, over Circle and {{tool}}.', {
+                pay: formatCoin(amount.toNumber(), 'USDC'),
+                get: formatCoin(expectedOut.toNumber(), toSymbol),
+                tool: toolName,
+              })
+            : t('{{pay}} for about {{get}} in your Stellar wallet, over {{tool}} and Circle.', {
+                pay: formatCoin(amount.toNumber(), fromSymbol),
+                get: formatCoin(expectedOut.toNumber(), 'USDC'),
+                tool: toolName,
+              })
       : '';
 
   const handleConfirm = async () => {

@@ -27,7 +27,7 @@ jest.mock('@normalfinance/state', () => ({
 import { Keypair } from '@stellar/stellar-sdk';
 import { toVerifiedSignatures } from '@/lib/turnkey/stellar-signatures';
 
-const { batchesStellar, isPasskeyRefusal, signStellarTxsInOrder } =
+const { batchesStellar, burnsWithPermissions, isPasskeyRefusal, signStellarTxsInOrder } =
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@/lib/stellar/batch-sign') as typeof BatchSignModule;
 
@@ -45,6 +45,19 @@ describe('batchesStellar', () => {
 
   it('never batches with the kill switch off', () => {
     expect(batchesStellar(ME, ME, false)).toBe(false);
+  });
+});
+
+describe('burnsWithPermissions (doc 129 Phase 3)', () => {
+  it('only for the person’s own Turnkey Stellar address, with the switch on', () => {
+    expect(burnsWithPermissions(ME, ME, true)).toBe(true);
+    expect(burnsWithPermissions(ME, OTHER, true)).toBe(false);
+    expect(burnsWithPermissions(undefined, ME, true)).toBe(false);
+  });
+
+  it('is off by default (the switch is a build setting, unset in tests)', () => {
+    expect(burnsWithPermissions(ME, ME)).toBe(false);
+    expect(burnsWithPermissions(ME, ME, false)).toBe(false);
   });
 });
 

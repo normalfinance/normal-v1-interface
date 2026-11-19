@@ -28,6 +28,7 @@ import { CoinStack } from '@/sections/indexes/index-parts';
 import { useIndexWeights } from '@/hooks/use-index-weights';
 import { burnUsdcOnStellar } from '@/lib/cctp/burn-stellar';
 import { mintLanded, heldReasonOfLeg } from '@/lib/index/legs';
+import { burnsWithPermissions } from '@/lib/stellar/batch-sign';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
@@ -260,6 +261,8 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
         },
         // Doc 129: Circle moves only what is bought on Base.
         bridgedUsdc: formatCoin(wireToUsdNumber(bridgedWire(slices)), 'USDC'),
+        // Doc 129 Phase 3: the burn asks the same question.
+        oneSignature: burnsWithPermissions(info?.stellarAddress, info?.stellarAddress),
       });
     },
     [t, markets, info]
@@ -699,6 +702,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
         : undefined;
       // Which signature is open: the one-time permission, or the transfer.
       let signing: 'approve' | 'burn-sign' = 'burn-sign';
+      const oneSignature = burnsWithPermissions(info?.stellarAddress, info?.stellarAddress);
       const { approveTxHash, burnTxHash } = await burnUsdcOnStellar({
         network,
         transferId: id,
@@ -713,7 +717,10 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
         },
         onSigning: () => flow.update(signing, { waiting: true }),
         onSubmitted: (st, hash) => {
-          if (st === 'approve') {
+          if (st === 'approve' && oneSignature) {
+            // Sent by Normal's relayer from the one signature, and landed.
+            flow.start('approve', { links: [stellarTxLink(t, hash, t('View the permission'))] });
+          } else if (st === 'approve') {
             flow.update('approve', {
               waiting: false,
               links: [stellarTxLink(t, hash, t('View the permission'))],
@@ -725,7 +732,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
         },
       });
       movedRef.current = true;
-      if (approveTxHash && approveTxHash !== 'skipped') {
+      if (approveTxHash && approveTxHash !== 'skipped' && !oneSignature) {
         flow.done('approve', { note: t('Done. Later purchases skip this.') });
       }
       flow.done('burn', { links: [stellarTxLink(t, burnTxHash)] });

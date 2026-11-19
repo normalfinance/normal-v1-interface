@@ -517,6 +517,64 @@ Later: Base USDC arrivals from outside (an exchange withdrawal to the Base addre
   - **Checks:** jest 1,411 passed + 2 opt-in skipped, tsc, prettier, eslint.
   - **NOT yet seen on screen.** A temporary second dev server on :8093 shared `packages/web/.next` with Niko's running :8082 server and broke both (React "Missing ActionQueueContext", hydration errors). Lesson: never run a second `next dev` in `packages/web` while another one runs.
   - **Ops note:** `prisma generate` could not replace the query engine binary while Niko's dev server on 8082 held it. The client types and JS did regenerate, and the engine binary is unchanged. Run `yarn db:generate` once with the dev server stopped. About 17 old `.tmp` engine copies from earlier attempts sit in `node_modules/.prisma/client`. They are harmless and can be deleted.
+- 2026-11-19, **Phase 5a committed** (`d8a60b7b`). Niko restarted the dev server, and it is healthy again.
+- 2026-11-19, **Phase 5a review fixes** (found by checking the screens, before any live run). Parts of the Circle swap engine still assumed an outbound swap is always paid in USDC:
+  - **Wrong text and numbers, fixed:**
+    - The headline said "100 USDC for about …" for 100 XLM. It now says "100 XLM for about … BTC, over Soroswap, Circle and …".
+    - The rate was labelled USDC; it now uses the coin paid.
+    - The Normal fee showed as XLM; it now shows in USDC, where it is taken.
+    - The $10 minimum checked the XLM price; it now checks the USDC Circle moves.
+    - The route label now reads XLM → USDC (Soroswap) → Base (Circle) → coin.
+  - **New review row:** "Swapped to USDC first · 24.87 USDC · On Soroswap, in your own wallet. No Normal fee on this part."
+  - **Steps in the real order** with permissions (both the Circle swap and Core 4): sign once → (your XLM swap) → "Allow Circle to collect it" as Normal's step, "When needed" → hand it to Circle.
+    - It had been listed before the signature as a "First time only" prompt of your own. With permissions it is relayed, for exactly the amount, for about 20 minutes, and only when the allowance is short (`relayedApproveStep` in `lib/flow/plans.ts`).
+    - `burnWithPermissions` now reports the relayed approve once it has landed, so the journey shows it in place.
+  - **Signatures row** with permissions: "One" with auto-finish, else "Two, sometimes three".
+  - **One shared question:** `burnsWithPermissions()` in `lib/stellar/batch-sign.ts` decides whether a transfer goes out as permissions. The review pages and the burn all ask it, so they show and do the same.
+  - **Guards before the click:**
+    - XLM → coin from a wallet without one-signature transfers says "Not available from this wallet · Swap your XLM to USDC first".
+    - Too little XLM left for the swap's own Soroban fee says "Add XLM to cover the network fee" (the Soroswap engine's check).
+  - **Outside-wallet users:** XLM → coin spends the Normal wallet's XLM, so the swap card now shows that balance, and the button says "The XLM comes from your Normal wallet."
+  - **Checked on screen** through the dev preview `/app/dev/flow?s=xlm-btc` (new scenario; `one=1` shows USDC → BTC and Core 4 on permissions). Still not live-tested.
+- 2026-11-19, **Phase 5b code done: Savings → BTC/ETH/SOL with one face scan** (behind the same switch).
+  - **What you see:**
+    - In Swap, Digital dollars → Bitcoin/Ethereum/Solana gets a third "pay from" chip, **Savings · 500.00**, when the Normal wallet has Savings.
+    - The review starts at "Normal Savings": sign once (the withdrawal, its commission on earnings and the transfer) → "Take it out of Savings" → your Stellar wallet → Circle's permission (Normal) → hand it to Circle.
+    - The summary shows "From Savings", "Commission on earnings", and "Moved by Circle · Savings guarantees at least this much. Anything over stays in your wallet as digital dollars."
+  - **The amount Circle moves is read from the withdrawal itself.**
+    - The DeFindex vault has one way out, `withdraw(shares, min_amounts_out, from)`. It pays `total × shares ÷ supply` and fails outright below the minimum (`paltalabs/defindex` vault `lib.rs`). So the minimum written into the signed withdrawal is a hard floor, whoever built it.
+    - `lib/stellar/vault-withdraw.ts` decodes it.
+    - `/api/savings/withdraw` now also returns `minOut` and accepts `slippageBps` (10 to 100, default 100, so the Savings page is unchanged). Swaps ask for 10 (0.1%).
+    - The engine sets the transfer to `minOut − commission` (6-decimal floor).
+  - **If DeFindex sets the minimum differently than assumed:** the confirm stops with "review again" (nothing sent), keeps the ratio that withdrawal really guaranteed, and re-quotes with it. One retry, never a stuck swap. The on-chain shape of real withdrawals could not be checked here: the public RPC's window had no vault events and stellar.expert's API is now paid.
+  - **Server** (`firstTxsRefusal`, `commitPermissionSignatures`):
+    - Every first transaction must come from the transfer's own wallet and carry its signature.
+    - The withdrawal must be exactly this vault's `withdraw`, by that wallet.
+    - The commission (optional) must be the next sequence number, one USDC payment to Normal's fee address, with at least 60 seconds of window left.
+    - The guarantee must hold: `minOut ≥ transfer + commission`.
+    - Savings must pay out Circle's own USDC on that network, otherwise refused (true on mainnet; testnet Savings uses Blend's test USDC).
+    - The asked amount must be within 5% of the minimum (it is what the Savings record shows).
+  - **Recorded like any withdrawal, before broadcast:** a `VaultDeposit` withdraw row and the commission held in the fee escrow, exactly as `api/fees/execute-pair` does.
+    - **One deliberate difference:** the held entry says the withdrawal's own window is already closed. So the fee sweeper never sends the withdrawal itself; it only collects the commission once the withdrawal has landed.
+    - **Why:** the transfer's gate gives up on a first transaction after 10 minutes. A withdrawal the sweeper could still send after that would move Savings to the wallet after the transfer had stopped.
+  - **The gate** settles the Savings record (confirmed or failed) and uses Savings words: "Taking it out of Savings did not go through, so nothing moved: your money is still in Savings."
+  - **Also:** a busy account (`TRY_AGAIN_LATER`) gets the same signed first transaction resent up to 3 times (5a too).
+  - **Not a new source coin:** the transfer stays a USDC transfer (it is USDC that crosses), so Activity, swap details and metrics need no change. `quoteJson.fromSavings` marks it. Activity shows the Savings withdrawal and the swap as two rows.
+  - **Checks:**
+    - jest 1,424 passed + 2 opt-in skipped (new: the decoder, five Savings checks, the plan order); tsc clean; eslint clean except the old `autopilotActive` warning.
+    - Seen on screen through `/app/dev/flow?s=savings-btc`.
+    - Not live-tested. Mainnet only, like every Circle swap.
+- 2026-11-19, **Phase 5c spike (read-only): what a Savings deposit asks its depositor to authorize.**
+  - Simulated `deposit([100 USDC], [99 USDC], from, invest: true)` on the real mainnet vault (`CAWM7NKS…IMWR`) in record mode. `from` was Circle's USDC issuer, so no person's address was used. Nothing was signed or sent.
+  - **One authorization tree:**
+    - `vault.deposit(...)`
+      - one inner call: USDC SAC `CCW67TSZ…MI75`.`transfer(from, vault, amount)`
+  - Investing into the Blend strategy (`CDB2WMKQ…ZSAP`) is authorized by the vault itself.
+  - So an XLM → Savings deposit can be a pre-signed permission like the Circle ones, with that one inner call, and the exact amount known in advance (the swap is strict-receive).
+  - **Needed for 5c:**
+    - `buildPermission` takes inner calls (today it always writes `subInvocations: []`).
+    - Relayed steps must belong to something other than a Circle transfer: a Savings deposit has no `CctpTransfer`, and the gate reads `srcSwapTxHash` from one.
+  - **Product decision for Niko, before 5c is priced:** the swap leg's 0.5% in XLM → Savings and Savings → XLM. The locked composite rule (no fee on the Soroswap leg) was written for flows that pay 0.5% on LI.FI; these two have no LI.FI leg.
 
 ## 12. In plain words
 

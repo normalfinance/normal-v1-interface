@@ -57,7 +57,8 @@ export const counterpartOf = (symbol: SwapSymbol): SwapSymbol =>
 // ---------------------------------------------------------------------------
 
 /** Doc 129 Phase 5: XLM → BTC/ETH/SOL rides on one-signature transfers. */
-export const XLM_TO_CROSSCHAIN = process.env.NEXT_PUBLIC_STELLAR_PERMISSIONS === '1';
+export const ONE_SIGNATURE_TRANSFERS = process.env.NEXT_PUBLIC_STELLAR_PERMISSIONS === '1';
+export const XLM_TO_CROSSCHAIN = ONE_SIGNATURE_TRANSFERS;
 
 export type PairType = SwapGroup | 'cctp';
 

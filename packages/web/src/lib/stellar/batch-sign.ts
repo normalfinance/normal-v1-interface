@@ -37,6 +37,23 @@ export function batchesStellar(
   return enabled && !!account && !!turnkeyStellarAddress && turnkeyStellarAddress === account;
 }
 
+/** Doc 129 Phase 3 switch (build-time, like every NEXT_PUBLIC_ value), default off. */
+export const STELLAR_PERMISSIONS = process.env.NEXT_PUBLIC_STELLAR_PERMISSIONS === '1';
+
+/**
+ * Pure: does a Circle transfer from `account` go out as pre-signed permissions
+ * (one prompt; Normal's relayer sends Circle's permission and the transfer)?
+ * The review pages and lib/cctp/burn-stellar.ts both ask this, so they show
+ * and do the same.
+ */
+export function burnsWithPermissions(
+  turnkeyStellarAddress: string | null | undefined,
+  account: string | null | undefined,
+  enabled: boolean = STELLAR_PERMISSIONS
+): boolean {
+  return enabled && batchesStellar(turnkeyStellarAddress, account);
+}
+
 /**
  * The person turned the passkey prompt down (or let it time out). That is
  * their answer: it is never retried another way.

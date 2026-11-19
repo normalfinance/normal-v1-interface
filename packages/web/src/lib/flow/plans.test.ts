@@ -239,8 +239,18 @@ describe('the steps each engine reports against', () => {
       fromXlm: { amountXlm: '100 XLM' },
     });
     const order = ids(plan);
-    expect(order.indexOf('src-swap')).toBe(order.indexOf('burn-sign') + 1);
-    expect(order.indexOf('burn')).toBe(order.indexOf('src-swap') + 1);
+    // As it happens: one signature, the person's own swap, then Circle's
+    // permission (sent by Normal, only when needed), then the transfer.
+    expect(order.slice(order.indexOf('burn-sign'), order.indexOf('burn') + 1)).toEqual([
+      'burn-sign',
+      'src-swap',
+      'approve',
+      'burn',
+    ]);
+    const approve = stepsOf(plan).find((s) => s.id === 'approve')!;
+    expect(approve.signature).toBeFalsy();
+    expect(approve.actor).toBe('Normal');
+    expect(approve.optional).toBe('When needed');
     expect(placesOf(plan)[0]).toMatchObject({ id: 'stellar' });
     expect(stepsOf(plan).find((s) => s.id === 'burn-sign')?.title).toBe('Approve the swap');
     const plain = cctpOutboundPlan({
@@ -252,6 +262,69 @@ describe('the steps each engine reports against', () => {
       autopilot: true,
     });
     expect(ids(plain)).not.toContain('src-swap');
+  });
+
+  it('doc 129 Phase 3: one signature first, then Circle’s permission as Normal’s step', () => {
+    const swap = cctpOutboundPlan({
+      t,
+      to: 'BTC',
+      amountUsdc: '25 USDC',
+      amountOut: '≈ 0.00028 BTC',
+      tool: 'NEAR',
+      autopilot: true,
+      oneSignature: true,
+    });
+    expect(ids(swap).slice(ids(swap).indexOf('prepare'), ids(swap).indexOf('burn') + 1)).toEqual([
+      'prepare',
+      'burn-sign',
+      'approve',
+      'burn',
+    ]);
+    // With auto-finish too, the whole swap asks for exactly one signature.
+    expect(
+      stepsOf(swap)
+        .filter((s) => s.signature)
+        .map((s) => s.id)
+    ).toEqual(['burn-sign']);
+    const purchase = indexPurchasePlan({
+      t,
+      amountUsdc: '100 USDC',
+      legs: [{ symbol: 'BTC', amountUsdc: '100 USDC', weight: '100%' }],
+      oneSignature: true,
+    });
+    const order = ids(purchase);
+    expect(order.indexOf('approve')).toBe(order.indexOf('burn-sign') + 1);
+    expect(order.indexOf('burn')).toBe(order.indexOf('approve') + 1);
+    expect(stepsOf(purchase).find((s) => s.id === 'approve')?.signature).toBeFalsy();
+  });
+
+  it('doc 129 Phase 5b: from Savings, one signature, the withdrawal, then Circle', () => {
+    const plan = cctpOutboundPlan({
+      t,
+      to: 'BTC',
+      amountUsdc: '497.50 USDC',
+      amountOut: '≈ 0.0056 BTC',
+      tool: 'NEAR',
+      autopilot: true,
+      fromSavings: { amount: '500 USDC', commission: '2 USDC' },
+    });
+    const order = ids(plan);
+    expect(order.slice(order.indexOf('burn-sign'), order.indexOf('burn') + 1)).toEqual([
+      'burn-sign',
+      'src-withdraw',
+      'approve',
+      'burn',
+    ]);
+    // The money starts in Savings and reaches the wallet with the withdrawal.
+    const places = placesOf(plan).map((p) => p.id);
+    expect(places.slice(0, 2)).toEqual(['vault', 'stellar']);
+    expect(
+      stepsOf(plan)
+        .filter((s) => s.signature)
+        .map((s) => s.id)
+    ).toEqual(['burn-sign']);
+    expect(stepsOf(plan).find((s) => s.id === 'src-withdraw')?.detail).toContain('2 USDC');
+    expect(stepsOf(plan).find((s) => s.id === 'burn')?.detail).toContain('497.50 USDC');
   });
 
   it('cross-chain swap: wallet, exchange, other wallet', () => {

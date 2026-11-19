@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { wireToStellar7 } from '@/lib/cctp/decimals';
 import { evmAddressToBytes } from '@/lib/cctp/addresses';
 import { CCTP_DOMAIN, STELLAR_CCTP } from '@/lib/cctp/config';
+import { savingsVaultOf, vaultWithdrawOf } from '@/lib/stellar/vault-withdraw';
 import { type NetworkType, getStellarConfigForNetwork } from '@normalfinance/utils';
 import { approveArgs, readSacAllowance, depositForBurnArgs } from '@/lib/cctp/stellar-burn-calls';
 import {
@@ -150,40 +151,184 @@ export function permissionBurnRefusal(
   return null;
 }
 
-/**
- * Doc 129 Phase 5: the person's own Stellar transaction that must land before
- * the Circle steps (XLM → USDC on Soroswap, for an XLM → BTC/ETH/SOL swap).
- * Relayed as signed, never altered: it must come from the transfer's own
- * wallet and carry that wallet's signature, be one Soroban call, and belong to
- * a transfer whose source is XLM. Pure.
- */
-export function firstTxRefusal(
-  tx: Transaction | FeeBumpTransaction,
-  transfer: Pick<CctpTransfer, 'srcAddress' | 'srcAsset' | 'srcSwapTxHash'>
-): Refusal | null {
-  if (!(tx instanceof Transaction)) {
-    return { ok: false, status: 400, error: 'The swap must be a plain transaction' };
-  }
-  if (transfer.srcAsset !== 'XLM') {
-    return { ok: false, status: 400, error: 'Only a swap from XLM goes before the transfer' };
-  }
-  if (tx.source !== transfer.srcAddress) {
-    return { ok: false, status: 403, error: 'The swap must come from the transfer’s own wallet' };
-  }
-  if (tx.operations.length !== 1 || tx.operations[0].type !== 'invokeHostFunction') {
-    return { ok: false, status: 400, error: 'The swap must be one Soroban call' };
-  }
+/** What a Savings-funded transfer is checked against (doc 129 Phase 5b). */
+export interface SavingsRules {
+  /** The DeFindex vault behind Savings. */
+  vault: string;
+  /** Normal's fee address: the commission must pay it. */
+  feeAddress: string;
+  /** The USDC the vault pays out, which is the USDC Circle burns. */
+  usdc: Asset;
+}
+
+type FirstTxTransfer = Pick<CctpTransfer, 'srcAddress' | 'srcAsset' | 'srcSwapTxHash'> & {
+  amountWire?: string;
+};
+
+/** A commission window this short is not worth sending (the pair route's rule). */
+const MIN_COMMISSION_RUNWAY_MS = 60_000;
+
+/** A classic amount ("12.3456789") in 7-decimal units. */
+function units7(amount: string): bigint {
+  const [whole = '0', frac = ''] = amount.split('.');
+  return BigInt(whole) * 10_000_000n + BigInt(`${frac}0000000`.slice(0, 7));
+}
+
+function signedBySource(tx: Transaction): boolean {
   const hash = tx.hash();
   const key = Keypair.fromPublicKey(tx.source);
-  const signed = tx.signatures.some(
+  return tx.signatures.some(
     (d) => d.hint().equals(key.signatureHint()) && key.verify(hash, d.signature())
   );
-  if (!signed) return { ok: false, status: 400, error: 'The swap is not signed by its wallet' };
-  if (transfer.srcSwapTxHash && transfer.srcSwapTxHash !== hash.toString('hex')) {
-    return { ok: false, status: 409, error: 'This transfer already has its swap' };
+}
+
+/**
+ * Doc 129 Phase 5: the person's own Stellar transactions that must land before
+ * the Circle steps, because they make the USDC the burn spends:
+ * - from XLM: one Soroswap swap (XLM → exactly this USDC);
+ * - from Savings (5b): the vault withdrawal, then, when earnings are taken,
+ *   Normal's commission chained right behind it.
+ * Relayed as signed, never altered: every one must come from the transfer's
+ * own wallet and carry that wallet's signature. A withdrawal must guarantee
+ * (its own minimum out, which the vault enforces) at least the transfer plus
+ * the commission. Pure.
+ */
+export function firstTxsRefusal(
+  txs: (Transaction | FeeBumpTransaction)[],
+  transfer: FirstTxTransfer,
+  savings: SavingsRules | null,
+  nowMs: number = Date.now()
+): Refusal | null {
+  if (!txs.length) return { ok: false, status: 400, error: 'Nothing to send first' };
+  const plain: Transaction[] = [];
+  for (const tx of txs) {
+    if (!(tx instanceof Transaction)) {
+      return { ok: false, status: 400, error: 'Each transaction must be a plain transaction' };
+    }
+    if (tx.source !== transfer.srcAddress) {
+      return {
+        ok: false,
+        status: 403,
+        error: 'Each transaction must come from the transfer’s own wallet',
+      };
+    }
+    if (!signedBySource(tx)) {
+      return { ok: false, status: 400, error: 'A transaction is not signed by its wallet' };
+    }
+    plain.push(tx);
+  }
+  const [first, commission] = plain;
+  if (transfer.srcSwapTxHash && transfer.srcSwapTxHash !== first.hash().toString('hex')) {
+    return { ok: false, status: 409, error: 'This transfer already has its first transaction' };
+  }
+
+  if (transfer.srcAsset === 'XLM') {
+    if (plain.length !== 1) {
+      return { ok: false, status: 400, error: 'A swap from XLM goes first on its own' };
+    }
+    if (first.operations.length !== 1 || first.operations[0].type !== 'invokeHostFunction') {
+      return { ok: false, status: 400, error: 'The swap must be one Soroban call' };
+    }
+    return null;
+  }
+
+  if (transfer.srcAsset !== 'USDC' || !savings) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Only a swap from XLM or a withdrawal from Savings goes before the transfer',
+    };
+  }
+  if (plain.length > 2) {
+    return { ok: false, status: 400, error: 'A withdrawal goes first with at most its commission' };
+  }
+  const withdrawal = vaultWithdrawOf(first, savings.vault);
+  if (!withdrawal) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'The first transaction must be a withdrawal from your Savings',
+    };
+  }
+  let commission7 = 0n;
+  if (commission) {
+    if (BigInt(commission.sequence) !== BigInt(first.sequence) + 1n) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'The commission must directly follow the withdrawal',
+      };
+    }
+    const op = commission.operations[0];
+    if (commission.operations.length !== 1 || op.type !== 'payment') {
+      return { ok: false, status: 400, error: 'The commission must be one payment' };
+    }
+    if (op.destination !== savings.feeAddress || !op.asset.equals(savings.usdc)) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'The commission must pay Normal’s fee address in USDC',
+      };
+    }
+    commission7 = units7(op.amount);
+    const maxTime = Number(commission.timeBounds?.maxTime ?? '0') * 1000;
+    if (commission7 <= 0n || !maxTime || maxTime < nowMs + MIN_COMMISSION_RUNWAY_MS) {
+      return { ok: false, status: 400, error: 'The commission is not usable: start again' };
+    }
+  }
+  const burn7 = wireToStellar7(BigInt(transfer.amountWire ?? '0'));
+  if (burn7 <= 0n || withdrawal.minOut < burn7 + commission7) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'The withdrawal does not guarantee enough for this transfer and its commission',
+    };
   }
   return null;
 }
+
+/** Doc 129 Phase 5a: the XLM swap alone (kept for its callers and tests). */
+export function firstTxRefusal(
+  tx: Transaction | FeeBumpTransaction,
+  transfer: FirstTxTransfer
+): Refusal | null {
+  return firstTxsRefusal([tx], transfer, null);
+}
+
+/**
+ * Savings on this network pays out the very USDC Circle burns, or the
+ * Savings → coin path does not exist here (testnet Savings uses Blend's test
+ * USDC). Loaded lazily: the fee address module reads the shared config.
+ */
+async function savingsRulesFor(network: NetworkType): Promise<SavingsRules | null> {
+  const vault = savingsVaultOf(network === 'mainnet' ? 'mainnet' : 'testnet');
+  const config = getStellarConfigForNetwork(network) as {
+    BLEND_USDC_ISSUER?: string;
+    USDC_ISSUER?: string;
+  };
+  const issuer = config.BLEND_USDC_ISSUER || config.USDC_ISSUER;
+  if (!vault || !issuer || issuer !== STELLAR_CCTP[network].usdcIssuer) return null;
+  const { getFeesDepositAddress } = await import('@/lib/build-fee-payment');
+  return { vault, feeAddress: getFeesDepositAddress(), usdc: new Asset('USDC', issuer) };
+}
+
+/** What the person reads when the first transaction did not go through. */
+const FIRST_TX_WORDS = {
+  XLM: {
+    refused: 'The swap from XLM was refused, so nothing moved: your XLM is still in your wallet.',
+    failed:
+      'The swap from XLM did not go through, so nothing moved: your XLM is still in your wallet.',
+  },
+  SAVINGS: {
+    refused:
+      'Taking it out of Savings was refused, so nothing moved: your money is still in Savings.',
+    failed:
+      'Taking it out of Savings did not go through, so nothing moved: your money is still in Savings.',
+  },
+} as const;
+
+const wordsFor = (srcAsset: string) =>
+  srcAsset === 'XLM' ? FIRST_TX_WORDS.XLM : FIRST_TX_WORDS.SAVINGS;
 
 /** Where a transfer's steps stand, for the page and the client. */
 export function relayStateOf(
@@ -304,7 +449,8 @@ export async function commitPermissionSignatures(
   userId: string,
   transferId: string,
   signatures: unknown,
-  firstTxXdr?: unknown
+  firstTxXdr?: unknown,
+  savingsAmount?: unknown
 ): Promise<RelayState | Refusal> {
   const steps = await prisma.relayedStep.findMany({
     where: { transferId, userId },
@@ -313,26 +459,46 @@ export async function commitPermissionSignatures(
   if (!steps.length) return { ok: false, status: 404, error: 'Nothing to sign for this transfer' };
   const given = Array.isArray(signatures) ? signatures : [];
 
-  // Doc 129 Phase 5: the person's own swap that goes first, checked before
+  // Doc 129 Phase 5: the person's own transactions that go first (an XLM
+  // swap, or a Savings withdrawal and its commission), checked before
   // anything is stored or sent.
-  let firstTx: Transaction | null = null;
-  if (firstTxXdr != null) {
-    const transfer = await prisma.cctpTransfer.findUnique({ where: { id: transferId } });
+  const firstXdrs = firstTxXdr == null ? [] : Array.isArray(firstTxXdr) ? firstTxXdr : [firstTxXdr];
+  let firstTxs: Transaction[] = [];
+  let transfer: CctpTransfer | null = null;
+  let savings: SavingsRules | null = null;
+  let savingsAmountText: string | null = null;
+  if (firstXdrs.length) {
+    transfer = await prisma.cctpTransfer.findUnique({ where: { id: transferId } });
     if (!transfer || transfer.userId !== userId) {
       return { ok: false, status: 404, error: 'Not found' };
     }
-    let parsed: Transaction | FeeBumpTransaction;
-    try {
-      parsed = TransactionBuilder.fromXDR(
-        String(firstTxXdr),
-        passphraseOf(transfer.network as NetworkType)
-      );
-    } catch {
-      return { ok: false, status: 400, error: 'The swap could not be read' };
+    const network = transfer.network as NetworkType;
+    const parsed: (Transaction | FeeBumpTransaction)[] = [];
+    for (const one of firstXdrs) {
+      try {
+        parsed.push(TransactionBuilder.fromXDR(String(one), passphraseOf(network)));
+      } catch {
+        return { ok: false, status: 400, error: 'A transaction could not be read' };
+      }
     }
-    const refusal = firstTxRefusal(parsed, transfer);
+    savings = transfer.srcAsset === 'USDC' ? await savingsRulesFor(network) : null;
+    const refusal = firstTxsRefusal(parsed, transfer, savings);
     if (refusal) return refusal;
-    firstTx = parsed as Transaction;
+    firstTxs = parsed as Transaction[];
+    if (savings) {
+      // The amount the Savings record shows: what was asked for, which the
+      // withdrawal's own guaranteed minimum must be within 5% of.
+      const minOut = vaultWithdrawOf(firstTxs[0], savings.vault)!.minOut;
+      const asked =
+        typeof savingsAmount === 'string' && /^\d+(\.\d{1,7})?$/.test(savingsAmount)
+          ? units7(savingsAmount)
+          : 0n;
+      const near = asked * 100n >= minOut * 95n && asked * 100n <= minOut * 105n;
+      if (!near) {
+        return { ok: false, status: 400, error: 'The amount does not match the withdrawal' };
+      }
+      savingsAmountText = savingsAmount as string;
+    }
   }
 
   // Check EVERY signature before marking any step signed: half a signed set
@@ -359,11 +525,19 @@ export async function commitPermissionSignatures(
   }
   // The first transaction's hash goes on the transfer BEFORE it is broadcast,
   // so the relay gate (and Activity) can follow it whatever happens next.
+  const firstTx = firstTxs[0] ?? null;
+  let firstIsNew = false;
   if (firstTx) {
-    await prisma.cctpTransfer.updateMany({
+    const claimed = await prisma.cctpTransfer.updateMany({
       where: { id: transferId, srcSwapTxHash: null },
       data: { srcSwapTxHash: firstTx.hash().toString('hex') },
     });
+    firstIsNew = claimed.count === 1;
+  }
+  // Doc 129 Phase 5b: a Savings withdrawal is recorded, and its commission
+  // held, BEFORE anything is broadcast, exactly as the pair route does.
+  if (firstTx && savings && transfer && firstIsNew) {
+    await recordSavingsWithdrawal(userId, transfer, savings, firstTxs, savingsAmountText!);
   }
   for (const s of signed) {
     await prisma.relayedStep.updateMany({
@@ -373,14 +547,22 @@ export async function commitPermissionSignatures(
   }
   if (firstTx) {
     const server = serverFor(steps[0].network as NetworkType);
+    const words = wordsFor(transfer?.srcAsset ?? 'XLM');
     try {
-      const sent = await server.sendTransaction(firstTx);
-      if (sent.status === 'ERROR') {
-        await failOpenSteps(
-          transferId,
-          'The swap from XLM was refused, so nothing moved: your XLM is still in your wallet.'
-        );
-        return relayStateOf(await stepsOf(transferId));
+      // A busy source account asks to try again: the same signed envelope can
+      // only ever apply once, so sending it again is safe.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const sent = await server.sendTransaction(firstTx);
+        if (sent.status === 'TRY_AGAIN_LATER') {
+          await sleep(2_000);
+          continue;
+        }
+        if (sent.status === 'ERROR') {
+          await settleFirstTx(transferId, 'failed');
+          await failOpenSteps(transferId, words.refused);
+          return relayStateOf(await stepsOf(transferId));
+        }
+        break;
       }
     } catch {
       // Unknown: the gate follows the recorded hash and decides.
@@ -432,6 +614,88 @@ async function firstTxGate(transferId: string): Promise<FirstTxGate> {
   return 'pending';
 }
 
+/**
+ * Doc 129 Phase 5b: record a Savings withdrawal (and hold its commission) the
+ * way the pair route does (app/api/fees/execute-pair), before broadcast.
+ *
+ * One difference, on purpose: the held entry says the withdrawal's own window
+ * has already closed, so the fee sweeper never sends the withdrawal itself.
+ * This transfer's gate is its only sender, and gives up on it after
+ * FIRST_TX_NEVER_LANDS_MS; a withdrawal the sweeper could send later than
+ * that would move Savings to the wallet after the transfer had stopped. The
+ * sweeper still collects the commission once the withdrawal has landed.
+ */
+async function recordSavingsWithdrawal(
+  userId: string,
+  transfer: CctpTransfer,
+  savings: SavingsRules,
+  txs: Transaction[],
+  amount: string
+): Promise<void> {
+  const network = transfer.network as NetworkType;
+  const [withdrawal, commission] = txs;
+  const serviceHash = withdrawal.hash().toString('hex');
+  const feeHash = commission ? commission.hash().toString('hex') : null;
+  const feeOp = commission?.operations[0] as { amount: string } | undefined;
+  const { createPendingRecord } = await import('@/server/tx-records');
+  await createPendingRecord({
+    input: {
+      kind: 'savings_withdraw',
+      record: { vaultAddress: savings.vault, amount, feeAmount: feeOp?.amount ?? null },
+    },
+    walletAddress: transfer.srcAddress,
+    network,
+    serviceHash,
+    feeHash,
+  });
+  if (commission && feeHash) {
+    const { escrowFeePair } = await import('@/server/fee-escrow');
+    const nowMs = Date.now();
+    await escrowFeePair({
+      feeXdr: commission.toXDR(),
+      feeHash,
+      serviceXdr: withdrawal.toXDR(),
+      serviceHash,
+      network,
+      userId,
+      walletAddress: transfer.srcAddress,
+      kind: 'savings_withdraw',
+      createdAtMs: nowMs,
+      feeExpiresAtMs: Number(commission.timeBounds?.maxTime ?? '0') * 1000,
+      serviceExpiresAtMs: nowMs,
+      status: 'pending',
+    });
+  }
+}
+
+/**
+ * The first transaction landed or never will: settle its Savings record (an
+ * XLM swap has none). Idempotent: a settled record is never rewritten.
+ * Returns the transfer's source asset, for the words.
+ */
+async function settleFirstTx(
+  transferId: string,
+  outcome: 'confirmed' | 'failed'
+): Promise<string | null> {
+  const transfer = await prisma.cctpTransfer.findUnique({
+    where: { id: transferId },
+    select: { srcAsset: true, srcSwapTxHash: true, srcAddress: true, network: true },
+  });
+  if (!transfer) return null;
+  if (transfer.srcAsset === 'USDC' && transfer.srcSwapTxHash) {
+    const { settleRecord } = await import('@/server/tx-records');
+    await settleRecord({
+      kind: 'savings_withdraw',
+      serviceHash: transfer.srcSwapTxHash,
+      status: outcome,
+      ...(outcome === 'failed' ? { reason: 'did not land before its transfer gave up' } : {}),
+      walletAddress: transfer.srcAddress,
+      network: transfer.network,
+    }).catch(() => {});
+  }
+  return transfer.srcAsset;
+}
+
 /** Stop every step not yet done: nothing more will be sent for this transfer. */
 async function failOpenSteps(transferId: string, detail: string) {
   await prisma.relayedStep.updateMany({
@@ -462,12 +726,11 @@ export async function relayTransferSteps(transferId: string): Promise<RelayState
       const gate = await firstTxGate(transferId);
       if (gate === 'pending') return relayStateOf(steps);
       if (gate === 'failed') {
-        await failOpenSteps(
-          transferId,
-          'The swap from XLM did not go through, so nothing moved: your XLM is still in your wallet.'
-        );
+        const srcAsset = await settleFirstTx(transferId, 'failed');
+        await failOpenSteps(transferId, wordsFor(srcAsset ?? 'XLM').failed);
         return relayStateOf(await stepsOf(transferId));
       }
+      if (gate === 'confirmed') await settleFirstTx(transferId, 'confirmed');
     }
 
     if (next.status === 'SUBMITTED') {
