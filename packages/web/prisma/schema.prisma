@@ -72,16 +72,16 @@ model VaultDeposit {
   id            String   @id @default(cuid())
   walletAddress String
   vaultAddress  String
-  type          String   // "deposit" or "withdraw"
-  amount        String   // USDC amount (human-readable, not stroops)
-  feeAmount     String?  // Normal fee (deposit) or commission (withdraw), human-readable USDC
-  feeTxHash     String?  // Hash of the classic fee payment transaction
+  type          String // "deposit" or "withdraw"
+  amount        String // USDC amount (human-readable, not stroops)
+  feeAmount     String? // Normal fee (deposit) or commission (withdraw), human-readable USDC
+  feeTxHash     String? // Hash of the classic fee payment transaction
   txHash        String?
   // #27 record-before-broadcast: pending | submitted | confirmed | failed | abandoned.
   // Legacy rows (written only after success) default to confirmed via the SQL default.
   status        String   @default("confirmed")
-  statusReason  String?  // e.g. Horizon result codes on failure
-  network       String?  // "mainnet" | "testnet"; null on legacy rows
+  statusReason  String? // e.g. Horizon result codes on failure
+  network       String? // "mainnet" | "testnet"; null on legacy rows
   createdAt     DateTime @default(now())
 
   @@index([walletAddress, vaultAddress])
@@ -91,30 +91,30 @@ model VaultDeposit {
 }
 
 model SwapLog {
-  id               String   @id @default(cuid())
-  walletAddress    String
-  tokenInAddress   String
-  tokenOutAddress  String
-  tokenInSymbol    String?
-  tokenOutSymbol   String?
-  amountIn         String
-  amountOut        String
-  feeAmount        String?  // 0.5% fee charged in tokenIn (human-readable)
-  feeTxHash        String?  // Hash of the classic fee payment transaction
-  txHash           String?
+  id              String    @id @default(cuid())
+  walletAddress   String
+  tokenInAddress  String
+  tokenOutAddress String
+  tokenInSymbol   String?
+  tokenOutSymbol  String?
+  amountIn        String
+  amountOut       String
+  feeAmount       String? // 0.5% fee charged in tokenIn (human-readable)
+  feeTxHash       String? // Hash of the classic fee payment transaction
+  txHash          String?
   // #27 record-before-broadcast: pending | submitted | confirmed | failed | abandoned.
   // Legacy rows (written only after success) default to confirmed via the SQL default.
-  status           String   @default("confirmed")
-  statusReason     String?  // e.g. Horizon result codes on failure
-  network          String?  // "mainnet" | "testnet"; null on legacy rows
+  status          String    @default("confirmed")
+  statusReason    String? // e.g. Horizon result codes on failure
+  network         String? // "mainnet" | "testnet"; null on legacy rows
   /// LI.FI rows only (tokenInAddress 'lifi:*'): bridge delivery as last seen —
   /// 'PENDING' | 'DONE' | 'REFUNDED' | 'FAILED'. Set PENDING by /api/lifi/record,
   /// advanced by the push-notify cron. null on Soroswap and legacy rows.
-  bridgeStatus     String?
-  bridgeCheckedAt  DateTime?
+  bridgeStatus    String?
+  bridgeCheckedAt DateTime?
   /// Push sent for the terminal bridge state; CAS-claimed like cctp_transfers.
-  notifiedAt       DateTime?
-  createdAt        DateTime @default(now())
+  notifiedAt      DateTime?
+  createdAt       DateTime  @default(now())
 
   @@index([walletAddress])
   @@index([status])
@@ -131,36 +131,36 @@ model SwapLog {
 //       | MINT_SUBMITTED | MINT_CONFIRMED | DST_SWAP_PENDING | COMPLETED
 //       | NEEDS_REATTEST | FAILED
 model CctpTransfer {
-  id             String   @id @default(cuid())
-  userId         String   // supabase uid
-  network        String   @default("mainnet") // 'mainnet' | 'testnet' — cron advances rows without request context
-  direction      String   // 'stellar_to_evm' | 'evm_to_stellar' | 'stellar_to_solana' | ...
-  status         String   @default("CREATED")
-  sourceDomain   Int      // CCTP domain id of the burn chain
-  destDomain     Int      // CCTP domain id of the mint chain
-  amountWire     String   // canonical 6-dp integer units, as string
-  srcAsset       String   // user-facing source asset symbol (e.g. 'XLM')
-  dstAsset       String   // user-facing destination asset symbol (e.g. 'BTC')
-  srcAmount      String?  // human source amount for the activity feed (e.g. '0.5')
-  dstAmount      String?  // human delivered amount, set on completion
+  id             String    @id @default(cuid())
+  userId         String // supabase uid
+  network        String    @default("mainnet") // 'mainnet' | 'testnet' — cron advances rows without request context
+  direction      String // 'stellar_to_evm' | 'evm_to_stellar' | 'stellar_to_solana' | ...
+  status         String    @default("CREATED")
+  sourceDomain   Int // CCTP domain id of the burn chain
+  destDomain     Int // CCTP domain id of the mint chain
+  amountWire     String // canonical 6-dp integer units, as string
+  srcAsset       String // user-facing source asset symbol (e.g. 'XLM')
+  dstAsset       String // user-facing destination asset symbol (e.g. 'BTC')
+  srcAmount      String? // human source amount for the activity feed (e.g. '0.5')
+  dstAmount      String? // human delivered amount, set on completion
   srcAddress     String
   destAddress    String
-  srcSwapTxHash  String?  // Soroswap/LI.FI leg before the burn
+  srcSwapTxHash  String? // Soroswap/LI.FI leg before the burn
   burnTxHash     String?
   eventNonce     String?
   messageHex     String?
   attestationHex String?
   mintTxHash     String?
-  dstSwapTxHash  String?  // LI.FI/Soroswap leg after the mint
-  gasTopUpTxHash String?  // relayer dust-gas send on the burn chain (once)
-  quoteJson      String?  // full quote snapshot incl. fee breakdown
+  dstSwapTxHash  String? // LI.FI/Soroswap leg after the mint
+  gasTopUpTxHash String? // relayer dust-gas send on the burn chain (once)
+  quoteJson      String? // full quote snapshot incl. fee breakdown
   errorDetail    String?
-  retryCount     Int      @default(0)
+  retryCount     Int       @default(0)
   /// Push notification sent for the user-visible terminal state (doc: push).
   /// null = not yet; claimed with a CAS updateMany so exactly one push goes out.
   notifiedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -199,6 +199,46 @@ model IndexLeg {
   @@map("index_legs")
 }
 
+/// Doc 129 Phase 3: a step the person pre-signed as a Soroban permission
+/// (an authorization entry: exactly this call, once, until this ledger), which
+/// Normal's Stellar relayer submits when its turn comes. The server builds the
+/// entry; the person signs only its hash; the server checks that signature
+/// against the person's own Stellar address before it is ever stored as signed.
+model RelayedStep {
+  id            String   @id @default(cuid())
+  userId        String // supabase uid
+  network       String   @default("mainnet")
+  /// The CctpTransfer this step belongs to.
+  transferId    String
+  /// Order within the transfer: lower runs first (approve before burn).
+  order         Int
+  /// 'approve' | 'burn'
+  kind          String
+  /// The Stellar address that signs: the person's own (wallet row).
+  account       String
+  /// The unsigned permission the server built (base64 XDR).
+  entryXdr      String
+  /// What the person signs: sha256 of the authorization preimage (hex).
+  payloadHash   String
+  /// The signed permission (base64 XDR), once its signature checked out.
+  signedXdr     String?
+  /// The last ledger the signature is valid in.
+  expiresLedger Int
+  /// AWAITING_SIGNATURE → READY → SUBMITTING → SUBMITTED → DONE, or FAILED / EXPIRED
+  status        String   @default("AWAITING_SIGNATURE")
+  /// The relayer's transaction, recorded BEFORE it is broadcast.
+  txHash        String?
+  errorDetail   String?
+  attempts      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([transferId, order])
+  @@index([status])
+  @@index([userId])
+  @@map("relayed_steps")
+}
+
 // Our record of a MoneyGram SEP-24 transaction, written when our server
 // initiates it. MoneyGram stays the source of truth for status — this row is a
 // cache so the activity feed can render MGI history without a SEP-10 passkey
@@ -227,20 +267,20 @@ model MoneyGramTransaction {
 // wallet+chain — the structural double-send guard. Not wired into activity
 // feeds (sends already surface via chain activity APIs + #47 pending rows).
 model SendLog {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   walletAddress String
-  chain         String   // registry ChainId: 'ethereum' | 'solana'
+  chain         String // registry ChainId: 'ethereum' | 'solana'
   symbol        String?
   amount        String
   destination   String
   txHash        String?
-  nonce         Int?     // EVM only — the double-send key
-  status        String   @default("pending")
+  nonce         Int? // EVM only — the double-send key
+  status        String    @default("pending")
   statusReason  String?
   network       String?
   /// Push sent for the terminal status; CAS-claimed like cctp_transfers.
   notifiedAt    DateTime?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
 
   @@index([walletAddress])
   @@index([status])

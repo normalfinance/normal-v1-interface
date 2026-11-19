@@ -11,7 +11,9 @@ import { useRouter } from 'next/navigation';
 import { useFlowRun } from '@/hooks/use-flow-run';
 import { chainOfActivityEvent } from '@/lib/tx-events';
 import { usePersistStore } from '@normalfinance/state';
+import { batchesStellar } from '@/lib/stellar/batch-sign';
 import { useStellarTokens } from '@/hooks/use-stellar-tokens';
+import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { awaitTxRecord } from '@/lib/stellar/await-tx-visible';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useWalletBalances } from '@/hooks/use-wallet-balances';
@@ -77,6 +79,8 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
+  // Doc 129: which wallet signs decides one prompt or two on the review page.
+  const { addresses: turnkeyAddresses } = useTurnkeyWallet();
   const stellarTokens = useStellarTokens();
   const config = useStellarConfig();
   const savingsUsdcIssuer = getSavingsUsdcIssuer(config);
@@ -357,6 +361,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
   } | null>(null);
 
   const actingAddress = savingsTargetAddress ?? wallet.address;
+  const batchedSigning = batchesStellar(turnkeyAddresses?.stellarAddress, actingAddress);
   const walletLabel = savingsTargetAddress
     ? t('Your Normal wallet')
     : isExternalConnected
@@ -377,6 +382,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
       : mode === 'deposit'
         ? depositPlan({
             t,
+            batched: batchedSigning,
             amount: formatCoin(parsedAmount, 'USDC'),
             fee: formatCoin(depositFee, 'USDC'),
             net: formatCoin(netDepositAmount, 'USDC'),
@@ -385,6 +391,7 @@ const SavingsCard: React.FC<SavingsCardProps> = ({ sx: sxProp, hideHeader = fals
           })
         : withdrawPlan({
             t,
+            batched: batchedSigning,
             amount: formatCoin(parsedAmount, 'USDC'),
             commission: commissionOwed ? formatCoin(yieldCommission, 'USDC') : null,
             net: formatCoin(withdrawNet, 'USDC'),

@@ -14,6 +14,12 @@ export const BASE_RPC_URLS: string[] = [
   'https://base-rpc.publicnode.com',
 ];
 
+// Base Sepolia, for testnet reads (doc 129: the portfolio reads Base too).
+export const BASE_SEPOLIA_RPC_URLS: string[] = [
+  'https://sepolia.base.org',
+  'https://base-sepolia-rpc.publicnode.com',
+];
+
 export const ETH_RPC_URLS: string[] = [
   ...(process.env.CCTP_RPC_URL_ETHEREUM ? [process.env.CCTP_RPC_URL_ETHEREUM] : []),
   process.env.NEXT_PUBLIC_ETH_RPC_URL ?? 'https://ethereum-rpc.publicnode.com',

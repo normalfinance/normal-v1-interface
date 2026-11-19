@@ -17,7 +17,14 @@ import { useWalletBalances } from '@/hooks/use-wallet-balances';
 import { useSavingsPosition } from '@/hooks/use-savings-position';
 import { useAppStore, usePersistStore } from '@normalfinance/state';
 import { useEthPortfolio, useSolPortfolio } from '@/hooks/use-chain-portfolio';
-import { assetColor, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
+import {
+  assetColor,
+  isBaseToken,
+  placeBaseRows,
+  baseAssetToToken,
+  connectedWalletLabel,
+  portfolioAssetToToken,
+} from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -47,7 +54,7 @@ export default function AssetsView() {
   // the companion Normal wallet's rows and the Savings row. This page read
   // the legacy slot store and showed $2.21 for a $52 account (observed live
   // 2026-08-18: Lobstr's 2 XLM while everything else sat in the companion).
-  const { assets: aggAssets, companionStellar } = useWalletBalances(true);
+  const { assets: aggAssets, companionStellar, base } = useWalletBalances(true);
   const savings = useSavingsPosition(true);
   const savingsUsd = savings.value + savings.companionValue;
 
@@ -172,12 +179,20 @@ export default function AssetsView() {
       solToken ?? synthesize('SOL', 'Solana', '__sol__', cdn('tokens/solana.webp'), 9, solUsd),
     ];
 
-    return [...natives, ...stellar, ...companion, ...savingsRow].sort((a, b) => {
-      const aValue = BigNumber(a.balance).multipliedBy(a.price);
-      const bValue = BigNumber(b.balance).multipliedBy(b.price);
-      return bValue.minus(aValue).toNumber();
-    });
+    // Doc 129: what sits on the person's Base address, when there is any.
+    const baseRows: Token[] = (base?.assets ?? [])
+      .filter((a) => a.balance != null && Number(a.balance) > 0)
+      .map(baseAssetToToken);
+
+    return placeBaseRows(
+      [...natives, ...stellar, ...companion, ...savingsRow, ...baseRows].sort((a, b) => {
+        const aValue = BigNumber(a.balance).multipliedBy(a.price);
+        const bValue = BigNumber(b.balance).multipliedBy(b.price);
+        return bValue.minus(aValue).toNumber();
+      })
+    );
   }, [
+    base,
     aggAssets,
     companionStellar,
     savingsUsd,
@@ -248,7 +263,11 @@ export default function AssetsView() {
       : formatCoin(BigNumber(token.balance).toNumber(), token.symbol);
     return {
       key: token.contract,
-      href: savingsRow ? paths.savings : paths.assets.details(token.symbol),
+      href: savingsRow
+        ? paths.savings
+        : isBaseToken(token)
+          ? paths.assets.base
+          : paths.assets.details(token.symbol),
       icon: <AssetAvatar token={token} size={40} />,
       name,
       ticker: [savingsRow ? t('Normal Savings') : token.symbol, wallets]

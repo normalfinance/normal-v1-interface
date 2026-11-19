@@ -11,23 +11,23 @@
 // crash-safety rule that makes every burn recoverable.
 
 import { signStellarTxForMgi } from '@/lib/mgi/kit-signer';
+import { BroadcastUncertainError } from '@/lib/chains/broadcast-safety';
+import { batchesStellar, signStellarTxsInOrder } from '@/lib/stellar/batch-sign';
 import { type NetworkType, getStellarConfigForNetwork } from '@normalfinance/utils';
 import {
   rpc,
   xdr,
   Asset,
-  Account,
-  Address,
+  Keypair,
   Contract,
   Networks,
-  nativeToScVal,
-  scValToNative,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 
+import { STELLAR_CCTP } from './config';
 import { wireToStellar7 } from './decimals';
 import { type StellarLeg, submitStellarLeg } from './stellar-submit';
-import { STELLAR_CCTP, CCTP_MAX_FEE, CCTP_MIN_FINALITY_THRESHOLD } from './config';
+import { approveArgs, readSacAllowance, depositForBurnArgs } from './stellar-burn-calls';
 
 // Persist the burn approval so repeat swaps skip its extra signature: approve a
 // large amount with a long (but finite) expiry, and skip re-approving while the
@@ -36,38 +36,6 @@ import { STELLAR_CCTP, CCTP_MAX_FEE, CCTP_MIN_FINALITY_THRESHOLD } from './confi
 // large value adds no custody risk.
 const APPROVE_AMOUNT_7 = 10_000_000_000_000_000n; // 1e16 in 7-dp SAC units (~$1B ceiling)
 const APPROVE_EXPIRY_LEDGERS = 500_000; // ≈ 1 month; well under mainnet max_entry_ttl
-
-/** Read the current SAC allowance (0 if none/expired) via a read-only simulate. */
-async function readSacAllowance(
-  server: rpc.Server,
-  usdcSac: string,
-  from: string,
-  spender: string,
-  passphrase: string
-): Promise<bigint> {
-  try {
-    const tx = new TransactionBuilder(new Account(from, '0'), {
-      fee: '1000',
-      networkPassphrase: passphrase,
-      timebounds: { minTime: 0, maxTime: 0 },
-    })
-      .addOperation(
-        new Contract(usdcSac).call(
-          'allowance',
-          new Address(from).toScVal(),
-          new Address(spender).toScVal()
-        )
-      )
-      .build();
-    const sim = await server.simulateTransaction(tx);
-    if (rpc.Api.isSimulationSuccess(sim) && sim.result?.retval) {
-      return BigInt(scValToNative(sim.result.retval));
-    }
-  } catch {
-    /* treat as no allowance → approve */
-  }
-  return 0n;
-}
 
 export interface StellarBurnParams {
   network: NetworkType;
@@ -88,6 +56,116 @@ export interface StellarBurnParams {
   /** Fires once a signed transaction is on the network, before its result is
    *  known: the money is moving from that moment (the review page's step). */
   onSubmitted?: (step: 'approve' | 'burn', hash: string) => void;
+  /**
+   * Doc 129 Phase 3: the CctpTransfer row this burn belongs to. With it, a
+   * Turnkey wallet signs the approve (when needed) and the burn as pre-signed
+   * permissions in ONE passkey prompt, and Normal's relayer sends them, while
+   * NEXT_PUBLIC_STELLAR_PERMISSIONS is on. Without it, or for any other
+   * wallet, the burn runs exactly as before.
+   */
+  transferId?: string;
+  /**
+   * Doc 129: more of the person's own Stellar transactions that go with this
+   * burn (Core 4's XLM swap and its fee). On the permission path they are
+   * signed in the SAME prompt and sent once the burn has landed; otherwise
+   * they are built after the burn (so their sequence numbers follow it) and
+   * signed together in one more prompt. `submit` reports its own failures:
+   * the burn is out either way.
+   */
+  alongside?: {
+    build: () => Promise<string[]>;
+    submit: (signed: string[]) => Promise<void>;
+  };
+}
+
+/** Doc 129 Phase 3 switch, default off. */
+const STELLAR_PERMISSIONS = process.env.NEXT_PUBLIC_STELLAR_PERMISSIONS === '1';
+
+interface PermissionState {
+  ok?: boolean;
+  error?: string;
+  approveTxHash?: string | null;
+  burnTxHash?: string | null;
+  pendingBurnTxHash?: string | null;
+  failed?: string | null;
+}
+
+/**
+ * The permission path: the server builds the permissions from the transfer
+ * row and the wallet row; the person signs their hashes with ONE passkey
+ * prompt; the server checks the signatures and its relayer sends the steps in
+ * order. Returns once the burn has landed.
+ */
+async function burnWithPermissions(
+  params: StellarBurnParams & { transferId: string; subOrgId: string }
+): Promise<{ approveTxHash: string; burnTxHash: string }> {
+  const { buildAuthHeaders } = await import('@/utils/http');
+  const headers = { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' };
+  const post = async (path: string, body: unknown): Promise<PermissionState> => {
+    const res = await fetch(path, { method: 'POST', headers, body: JSON.stringify(body) });
+    const data = (await res.json().catch(() => null)) as PermissionState | null;
+    if (!res.ok || !data?.ok) throw new Error(data?.error ?? 'The transfer could not be prepared.');
+    return data;
+  };
+
+  const prepared = (await post('/api/stellar/permissions/prepare', {
+    transferId: params.transferId,
+  })) as PermissionState & { steps: { id: string; kind: string; payloadHash: string }[] };
+
+  // The person's own transactions that go with it (doc 129: Core 4's XLM).
+  const passphrase = params.network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+  const extras = params.alongside
+    ? (await params.alongside.build()).map((x) => TransactionBuilder.fromXDR(x, passphrase))
+    : [];
+
+  // One prompt covers the approve (when there is one), the burn and the extras.
+  params.onStep?.('burn');
+  params.onSigning?.();
+  const { signStellarHashesWithTurnkey } = await import('@/lib/turnkey/stellar-signer');
+  const all = await signStellarHashesWithTurnkey(
+    [
+      ...prepared.steps.map((st) => Buffer.from(st.payloadHash, 'hex')),
+      ...extras.map((tx) => tx.hash()),
+    ],
+    params.subOrgId,
+    params.stellarAddress
+  );
+  const signatures = all.slice(0, prepared.steps.length);
+  const hint = Keypair.fromPublicKey(params.stellarAddress).signatureHint();
+  const signedExtras = extras.map((tx, i) => {
+    tx.signatures.push(
+      new xdr.DecoratedSignature({ hint, signature: all[prepared.steps.length + i] })
+    );
+    return tx.toXDR();
+  });
+
+  let state = await post('/api/stellar/permissions/commit', {
+    transferId: params.transferId,
+    signatures: prepared.steps.map((st, i) => ({
+      id: st.id,
+      signature: signatures[i].toString('hex'),
+    })),
+  });
+  // The relayer sends the approve, then the burn; follow it until the burn lands.
+  for (let i = 0; i < 40 && !state.burnTxHash && !state.failed; i++) {
+    await new Promise((r) => setTimeout(r, 3_000));
+    state = await post('/api/stellar/permissions/advance', { transferId: params.transferId });
+  }
+  if (state.failed) throw new Error(state.failed);
+  if (!state.burnTxHash) {
+    // A burn that went out and has not been confirmed: keep its hash, offer no
+    // second send (the cron finishes it, the row follows it).
+    if (state.pendingBurnTxHash) {
+      throw new BroadcastUncertainError('stellar', state.pendingBurnTxHash, 'burn');
+    }
+    throw new Error(
+      'Your transfer is taking longer than usual. It finishes on its own: check Activity before you try again.'
+    );
+  }
+  params.onSubmitted?.('burn', state.burnTxHash);
+  // The burn landed: now the extras, from the same signature.
+  if (params.alongside && signedExtras.length) await params.alongside.submit(signedExtras);
+  return { approveTxHash: state.approveTxHash ?? 'skipped', burnTxHash: state.burnTxHash };
 }
 
 // Send and follow one signed leg (lib/cctp/stellar-submit.ts holds the rules).
@@ -173,6 +251,19 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
     throw new Error('refusing to burn: invalid mint recipient');
   }
 
+  // Doc 129 Phase 3: one prompt for a Turnkey wallet, when switched on.
+  if (STELLAR_PERMISSIONS && params.transferId) {
+    const { getTurnkeyWalletInfo } = await import('@/lib/turnkey/wallet-info');
+    const tk = await getTurnkeyWalletInfo().catch(() => null);
+    if (tk?.subOrgId && batchesStellar(tk.stellarAddress, params.stellarAddress)) {
+      return burnWithPermissions({
+        ...params,
+        transferId: params.transferId,
+        subOrgId: tk.subOrgId,
+      });
+    }
+  }
+
   const cfg = STELLAR_CCTP[params.network];
   const stellarCfg = getStellarConfigForNetwork(params.network);
   const passphrase = params.network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
@@ -203,12 +294,12 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
       source: params.stellarAddress,
       contractId: usdcSac,
       method: 'approve',
-      args: [
-        new Address(params.stellarAddress).toScVal(),
-        new Address(cfg.tokenMessengerMinter).toScVal(),
-        nativeToScVal(APPROVE_AMOUNT_7, { type: 'i128' }),
-        nativeToScVal(sequence + APPROVE_EXPIRY_LEDGERS, { type: 'u32' }),
-      ],
+      args: approveArgs(
+        params.stellarAddress,
+        cfg.tokenMessengerMinter,
+        APPROVE_AMOUNT_7,
+        sequence + APPROVE_EXPIRY_LEDGERS
+      ),
       onSigning: params.onSigning,
       onSubmitted: (hash) => params.onSubmitted?.('approve', hash),
       label: 'approve',
@@ -224,21 +315,31 @@ export async function burnUsdcOnStellar(params: StellarBurnParams): Promise<{
     source: params.stellarAddress,
     contractId: cfg.tokenMessengerMinter,
     method: 'deposit_for_burn',
-    args: [
-      new Address(params.stellarAddress).toScVal(),
-      nativeToScVal(amount7, { type: 'i128' }),
-      nativeToScVal(params.destinationDomain, { type: 'u32' }),
-      xdr.ScVal.scvBytes(Buffer.from(params.mintRecipient)),
-      new Address(usdcSac).toScVal(),
-      xdr.ScVal.scvBytes(Buffer.alloc(32)),
-      nativeToScVal(CCTP_MAX_FEE, { type: 'i128' }),
-      nativeToScVal(CCTP_MIN_FINALITY_THRESHOLD, { type: 'u32' }),
-    ],
+    args: depositForBurnArgs({
+      caller: params.stellarAddress,
+      amount7,
+      destinationDomain: params.destinationDomain,
+      mintRecipient: params.mintRecipient,
+      usdcSac,
+    }),
     onSigning: params.onSigning,
     onSubmitted: (hash) => params.onSubmitted?.('burn', hash),
     label: 'deposit_for_burn',
     leg: 'burn',
   });
+
+  // Doc 129: the extras, built now so their sequence numbers follow the burn.
+  if (params.alongside) {
+    const xdrs = await params.alongside.build();
+    params.onSigning?.();
+    const { signed } = await signStellarTxsInOrder({
+      xdrs,
+      networkPassphrase: passphrase,
+      account: params.stellarAddress,
+      signOne: (x) => signStellarTxForMgi(x, passphrase, params.stellarAddress),
+    });
+    await params.alongside.submit(signed);
+  }
 
   return { approveTxHash, burnTxHash };
 }

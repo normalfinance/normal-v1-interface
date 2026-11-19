@@ -14,6 +14,7 @@ import { isValidStellarAddress } from '@/utils/stellar-address';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
 import { settleRecord, createPendingRecord } from '@/server/tx-records';
+import { claimStellarLeg, settleStellarLeg } from '@/server/index-stellar-leg';
 import { Horizon, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 import { resolveEscrow, escrowFeePair, submitSignedXdr } from '@/server/fee-escrow';
 
@@ -144,7 +145,7 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
     const network = networkFromCookie(cookieStore);
     const config = getStellarConfigForNetwork(network);
 
-    const { serviceXdr, feeXdr, kind, record } = await request.json();
+    const { serviceXdr, feeXdr, kind, record, indexLeg } = await request.json();
 
     if (!VALID_KINDS.includes(kind)) {
       return NextResponse.json(
@@ -251,6 +252,32 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
     const serviceHash = serviceTx.hash().toString('hex');
     const feeHash = feeTx ? feeTx.hash().toString('hex') : null;
 
+    // Doc 129: a Core 4 purchase's Stellar coin. Its leg is claimed and stamped
+    // with this swap's hash BEFORE anything is recorded or broadcast; a swap
+    // that is not exactly that coin's share is refused here, with nothing sent.
+    let stellarLegId: string | null = null;
+    if (indexLeg != null) {
+      if (kind !== 'swap' || recordInput.kind !== 'swap') {
+        return NextResponse.json(
+          { success: false, error: 'indexLeg only goes with a swap' },
+          { status: 400 }
+        );
+      }
+      const claim = await claimStellarLeg({
+        userId: user.id,
+        purchaseId: indexLeg?.purchaseId,
+        symbol: indexLeg?.symbol,
+        walletAddress,
+        serviceHash,
+        amountIn: recordInput.record.amountIn,
+        feeAmount: recordInput.record.feeAmount,
+      });
+      if (!claim.ok) {
+        return NextResponse.json({ success: false, error: claim.error }, { status: claim.status });
+      }
+      stellarLegId = claim.legId;
+    }
+
     // Record BEFORE broadcast (#27). If this write fails, the request aborts
     // with nothing on-chain and the signed pair still valid — retry is free.
     await createPendingRecord({
@@ -297,6 +324,7 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
       const reason = formatResultCodes(serviceResult.resultCodes);
       if (feeHash) await resolveEscrow(network, feeHash, 'service_failed');
       await settleRecord({ kind, serviceHash, status: 'failed', reason, walletAddress, network });
+      if (stellarLegId) await settleStellarLeg(stellarLegId, { sent: false }).catch(() => {});
       return NextResponse.json(
         {
           success: false,
@@ -326,6 +354,12 @@ export const POST = withAuth(async (request: NextRequest, { user, accessToken })
     // for savings), then collect the fee. A fee failure here is NOT an error
     // for the user: the sweeper retries until the window closes.
     await settleRecord({ kind, serviceHash, status: 'confirmed', walletAddress, network });
+    if (stellarLegId && recordInput.kind === 'swap') {
+      await settleStellarLeg(stellarLegId, {
+        sent: true,
+        amountOut: recordInput.record.amountOut,
+      }).catch(() => {});
+    }
 
     let feeSubmitted = false;
     if (feeTx && feeHash) {

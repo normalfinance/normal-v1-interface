@@ -23,10 +23,15 @@ export interface WalletRef {
   label?: string;
 }
 
-type Coin = 'BTC' | 'ETH' | 'SOL';
-type ChainOfCoin = 'bitcoin' | 'ethereum' | 'solana';
+type Coin = 'BTC' | 'ETH' | 'SOL' | 'XLM';
+type ChainOfCoin = 'bitcoin' | 'ethereum' | 'solana' | 'stellar';
 
-const CHAIN_OF: Record<Coin, ChainOfCoin> = { BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' };
+const CHAIN_OF: Record<Coin, ChainOfCoin> = {
+  BTC: 'bitcoin',
+  ETH: 'ethereum',
+  SOL: 'solana',
+  XLM: 'stellar',
+};
 
 export const shortAddress = (address?: string | null): string | undefined =>
   address
@@ -131,6 +136,8 @@ export function depositPlan(p: {
   wallet?: WalletRef;
   /** "7.20% a year", when known. */
   rate?: string | null;
+  /** Doc 129: one passkey prompt signs the action and Normal's fee together. */
+  batched?: boolean;
 }): FlowPlan {
   const { t } = p;
   return {
@@ -157,27 +164,44 @@ export function depositPlan(p: {
         money: 'here',
         eta: t('A few seconds'),
       }),
-      step({
-        id: 'sign-deposit',
-        title: t('Approve the deposit'),
-        detail: t('Your passkey signs the deposit. Nothing moves yet.'),
-        actor: t('You'),
-        money: 'here',
-        eta: t('Signature 1 of 2'),
-        signature: true,
-      }),
-      step({
-        id: 'sign-fee',
-        title: t('Approve the fee'),
-        detail: t(
-          'Your passkey signs the {{fee}} fee. Turning down either prompt cancels both, and nothing is charged.',
-          { fee: p.fee }
-        ),
-        actor: t('You'),
-        money: 'here',
-        eta: t('Signature 2 of 2'),
-        signature: true,
-      }),
+      ...(p.batched
+        ? [
+            step({
+              id: 'sign-deposit',
+              title: t('Approve the deposit and the fee'),
+              detail: t(
+                'Your passkey signs both at once: the deposit and the {{fee}} fee. Nothing moves yet, and turning it down cancels both.',
+                { fee: p.fee }
+              ),
+              actor: t('You'),
+              money: 'here',
+              eta: t('One signature'),
+              signature: true,
+            }),
+          ]
+        : [
+            step({
+              id: 'sign-deposit',
+              title: t('Approve the deposit'),
+              detail: t('Your passkey signs the deposit. Nothing moves yet.'),
+              actor: t('You'),
+              money: 'here',
+              eta: t('Signature 1 of 2'),
+              signature: true,
+            }),
+            step({
+              id: 'sign-fee',
+              title: t('Approve the fee'),
+              detail: t(
+                'Your passkey signs the {{fee}} fee. Turning down either prompt cancels both, and nothing is charged.',
+                { fee: p.fee }
+              ),
+              actor: t('You'),
+              money: 'here',
+              eta: t('Signature 2 of 2'),
+              signature: true,
+            }),
+          ]),
       step({
         id: 'submit',
         title: t('Send to Stellar'),
@@ -228,6 +252,8 @@ export function withdrawPlan(p: {
   /** What lands in the wallet after the commission. */
   net: string;
   wallet?: WalletRef;
+  /** Doc 129: one passkey prompt signs the action and Normal's fee together. */
+  batched?: boolean;
 }): FlowPlan {
   const { t, commission } = p;
   return {
@@ -255,14 +281,23 @@ export function withdrawPlan(p: {
       }),
       step({
         id: 'sign-withdraw',
-        title: t('Approve the withdrawal'),
-        detail: t('Your passkey signs it. Nothing moves yet.'),
+        title:
+          commission && p.batched
+            ? t('Approve the withdrawal and the commission')
+            : t('Approve the withdrawal'),
+        detail:
+          commission && p.batched
+            ? t(
+                'Your passkey signs both at once: the withdrawal and the {{commission}} commission. Nothing moves yet, and turning it down cancels both.',
+                { commission }
+              )
+            : t('Your passkey signs it. Nothing moves yet.'),
         actor: t('You'),
         money: 'here',
-        eta: commission ? t('Signature 1 of 2') : t('One signature'),
+        eta: commission && !p.batched ? t('Signature 1 of 2') : t('One signature'),
         signature: true,
       }),
-      ...(commission
+      ...(commission && !p.batched
         ? [
             step({
               id: 'sign-fee',
@@ -323,6 +358,8 @@ export function stellarSwapPlan(p: {
   /** One transaction with the fee inside it (one signature). */
   embedded: boolean;
   wallet?: WalletRef;
+  /** Doc 129: one passkey prompt signs the action and Normal's fee together. */
+  batched?: boolean;
 }): FlowPlan {
   const { t, embedded } = p;
   const fromNoun = coinWords(p.from);
@@ -348,14 +385,20 @@ export function stellarSwapPlan(p: {
       }),
       step({
         id: 'sign-swap',
-        title: t('Approve the swap'),
-        detail: t('Your passkey signs it. Nothing moves yet.'),
+        title: !embedded && p.batched ? t('Approve the swap and the fee') : t('Approve the swap'),
+        detail:
+          !embedded && p.batched
+            ? t(
+                'Your passkey signs both at once: the swap and the {{fee}} fee. Nothing moves yet, and turning it down cancels both.',
+                { fee: p.fee }
+              )
+            : t('Your passkey signs it. Nothing moves yet.'),
         actor: t('You'),
         money: 'here',
-        eta: embedded ? t('One signature') : t('Signature 1 of 2'),
+        eta: embedded || p.batched ? t('One signature') : t('Signature 1 of 2'),
         signature: true,
       }),
-      ...(embedded
+      ...(embedded || p.batched
         ? []
         : [
             step({
@@ -905,24 +948,40 @@ export function cctpRefundPlan(p: {
   amountUsdc?: string;
   baseWallet?: WalletRef;
   stellarWallet?: WalletRef;
+  /** Doc 129: 'move' is "Move to Stellar" on the On Base page (no failed swap behind it). */
+  kind?: 'refund' | 'move';
 }): FlowPlan {
   const { t } = p;
+  const move = p.kind === 'move';
   const finalityMinutes = Math.round(CCTP_ETA_SECONDS.fromEvm / 60 / 5) * 5;
   return {
     items: [
-      place(basePlace(t, p.baseWallet, p.amountUsdc)),
+      place(
+        move
+          ? {
+              ...basePlace(t, p.baseWallet, p.amountUsdc),
+              detail: t(
+                'The network your Circle swaps and Autoinvest pass through. Only you control this address.'
+              ),
+            }
+          : basePlace(t, p.baseWallet, p.amountUsdc)
+      ),
       step({
         id: 'refund-gas',
         title: t('Cover the network fee'),
-        detail: t('Normal sends a few cents of ETH to your {{chain}} address for the return.', {
-          chain: PIVOT_CHAIN.name,
-        }),
+        detail: move
+          ? t('Normal sends a few cents of ETH to your {{chain}} address for the move.', {
+              chain: PIVOT_CHAIN.name,
+            })
+          : t('Normal sends a few cents of ETH to your {{chain}} address for the return.', {
+              chain: PIVOT_CHAIN.name,
+            }),
         actor: t('Normal'),
         money: 'here',
       }),
       step({
         id: 'refund-sign',
-        title: t('Approve the return'),
+        title: move ? t('Approve the move') : t('Approve the return'),
         detail: t('Your passkey signs the transfer back to Circle.'),
         actor: t('You'),
         money: 'here',
@@ -970,8 +1029,10 @@ export function cctpRefundPlan(p: {
       ),
       step({
         id: 'refund-arrived',
-        title: t('Your USDC is back'),
-        detail: t('It is in your Stellar wallet.'),
+        title: move ? t('In your Stellar wallet') : t('Your USDC is back'),
+        detail: move
+          ? t('Your digital dollars are in your Stellar wallet.')
+          : t('It is in your Stellar wallet.'),
         actor: t('Stellar network'),
         money: 'here',
       }),
@@ -1013,8 +1074,18 @@ export function indexPurchasePlan(p: {
   legs: IndexPlanLeg[];
   stellarWallet?: WalletRef;
   baseWallet?: WalletRef;
+  /**
+   * Doc 129: what Circle moves to Base when some coins are bought on Stellar
+   * itself (Core 4's XLM): "86.40 USDC". Defaults to the whole purchase.
+   */
+  bridgedUsdc?: string;
 }): FlowPlan {
   const { t } = p;
+  // Doc 129: a Stellar coin (XLM) is bought on Stellar at once, from the same
+  // signature; only the other coins cross to Base.
+  const stellarLegs = p.legs.filter((l) => CHAIN_OF[l.symbol] === 'stellar');
+  const baseLegs = p.legs.filter((l) => CHAIN_OF[l.symbol] !== 'stellar');
+  const bridged = p.bridgedUsdc ?? p.amountUsdc;
   const coins = listWords(
     t,
     p.legs.map((l) => assetNoun(l.symbol))
@@ -1024,7 +1095,7 @@ export function indexPurchasePlan(p: {
     p.legs.map((l) => chainName(l.symbol))
   );
   // The slowest network sets how long delivery can take.
-  const slowest = p.legs.reduce<Coin | null>(
+  const slowest = baseLegs.reduce<Coin | null>(
     (worst, l) =>
       !worst ||
       CHAINS[CHAIN_OF[l.symbol]].settlement.maxMinutes >
@@ -1092,12 +1163,25 @@ export function indexPurchasePlan(p: {
         title: t('Hand it to Circle'),
         detail: t(
           'Circle takes {{amount}} off Stellar. The same amount can only be created at your own {{chain}} address.',
-          { amount: p.amountUsdc, chain: PIVOT_CHAIN.name }
+          { amount: bridged, chain: PIVOT_CHAIN.name }
         ),
         actor: t('Stellar network'),
         money: 'moving',
         eta: t('Seconds'),
       }),
+      ...stellarLegs.map((leg) =>
+        step({
+          id: indexBuyStepId(leg.symbol),
+          title: t('Buy {{coin}}', { coin: assetNoun(leg.symbol) }),
+          detail: t(
+            '{{amount}} ({{weight}}) is exchanged for {{coin}} on Stellar and lands in your Stellar wallet within seconds. Normal’s 0.5% fee on it is sent right after.',
+            { amount: leg.amountUsdc, weight: leg.weight, coin: assetNoun(leg.symbol) }
+          ),
+          actor: t('Soroswap'),
+          money: 'moving',
+          eta: t('Seconds'),
+        })
+      ),
       place(circlePlace(t)),
       step({
         id: 'attest',
@@ -1114,13 +1198,13 @@ export function indexPurchasePlan(p: {
         title: t('Created on {{chain}}', { chain: PIVOT_CHAIN.name }),
         detail: t(
           'Normal delivers Circle’s release to {{chain}}, which creates {{amount}} at your address. Normal pays this network fee.',
-          { chain: PIVOT_CHAIN.name, amount: p.amountUsdc }
+          { chain: PIVOT_CHAIN.name, amount: bridged }
         ),
         actor: t('Normal'),
         money: 'moving',
         eta: t('Seconds'),
       }),
-      place(basePlace(t, p.baseWallet, p.amountUsdc)),
+      place(basePlace(t, p.baseWallet, bridged)),
       step({
         id: 'gas',
         title: t('Cover the exchange fees'),
@@ -1128,7 +1212,7 @@ export function indexPurchasePlan(p: {
         actor: t('Normal'),
         money: 'here',
       }),
-      ...p.legs.map((leg) =>
+      ...baseLegs.map((leg) =>
         step({
           id: indexBuyStepId(leg.symbol),
           title: t('Buy {{coin}}', { coin: assetNoun(leg.symbol) }),

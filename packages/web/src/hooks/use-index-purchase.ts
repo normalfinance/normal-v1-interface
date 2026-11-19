@@ -11,7 +11,7 @@ import type {
 import useSWR from 'swr';
 import { buildAuthHeaders } from '@/utils/http';
 import { readBridgeStatus } from '@/lib/flow/lifi-status';
-import { heldSymbolOf, INDEX_DIRECTION } from '@/lib/index/legs';
+import { heldSymbolOf, INDEX_DIRECTION, purchaseTotalWire } from '@/lib/index/legs';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { purchaseStatus } from '@/sections/crypto-index/purchase-journey';
 import { LIFI_CHAIN_IDS, BASE_LIFI_CHAIN_ID } from '@/lib/lifi/chain-ids';
@@ -202,7 +202,7 @@ export function useIndexPurchasesInProgress(): PurchaseInProgress[] {
           return {
             id: row.id,
             indexId: indexIdOf(row),
-            amountWire: row.amountWire,
+            amountWire: purchaseTotalWire(row),
             standing: journey.standing,
             stage: journey.stage,
             heldCoin: journey.heldCoin,

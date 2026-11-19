@@ -1,4 +1,4 @@
-import { CRYPTO_INDEX } from './basket';
+import { CORE_INDEX, CRYPTO_INDEX } from './basket';
 
 import type { IndexDef } from './basket';
 
@@ -20,6 +20,10 @@ export interface IndexMeta {
   def: IndexDef;
 }
 
+/**
+ * The first plan (2026-11-09 to 2026-11-19). No longer offered: kept so its
+ * purchases still read as what they were.
+ */
 export const TOP_3: IndexMeta = {
   id: CRYPTO_INDEX.id,
   slug: 'top-3',
@@ -28,18 +32,40 @@ export const TOP_3: IndexMeta = {
   def: CRYPTO_INDEX,
 };
 
-export const INDEXES: IndexMeta[] = [TOP_3];
+/**
+ * Core 4 (doc 129, Niko 2026-11-19): Top 3 plus Stellar, each coin by the
+ * square root of its market size, so bigger coins still get bigger shares.
+ */
+export const CORE_4: IndexMeta = {
+  id: CORE_INDEX.id,
+  slug: 'core-4',
+  name: 'Core 4',
+  tagline: 'Bitcoin, Ethereum, Solana and Stellar in one purchase. Bigger coins get bigger shares.',
+  def: CORE_INDEX,
+};
 
-export const indexBySlug = (slug: string) => INDEXES.find((i) => i.slug === slug) ?? null;
+/** The plans offered today, in page order. */
+export const INDEXES: IndexMeta[] = [CORE_4];
+
+/** Plans no longer offered, still named on their purchases. */
+const RETIRED: IndexMeta[] = [TOP_3];
+
+/** Old addresses that now open another plan: /app/autoinvest/top-3 → Core 4. */
+const SLUG_MOVED: Record<string, string> = { 'top-3': CORE_4.slug };
+
+export const indexBySlug = (slug: string) =>
+  INDEXES.find((i) => i.slug === (SLUG_MOVED[slug] ?? slug)) ?? null;
 export const indexById = (id: string | null | undefined) =>
-  INDEXES.find((i) => i.id === id) ?? null;
+  [...INDEXES, ...RETIRED].find((i) => i.id === id) ?? null;
 
 // ---------------------------------------------------------------------------
-// How an index moves. It is weighted by market size, so it moves exactly as
-// its coins' combined market size does: today's coin counts (market cap over
-// price) at each moment's prices. Every line and figure below is that sum,
-// which also means the weights drift with prices between purchases, as a
-// market-cap index's do.
+// How an index moves: as a purchase made at today's shares would. Each coin
+// holds `units` = its size (market cap, or its square root: IndexWeighting)
+// over its price, and the index is the sum of units × price at each moment.
+// For a market-cap index the units are the coins in circulation, so the line
+// is exactly the coins' combined market size; for Core 4's square-root split
+// it is the value of today's split, held. Every line and figure below is
+// that sum.
 // ---------------------------------------------------------------------------
 
 /** What the index reads of a coin's market (AssetMarket satisfies it). */
@@ -51,10 +77,14 @@ export interface IndexCoinMarket {
   sparkline24h: number[];
 }
 
-/** Coins in circulation today: market cap over price. Null when unknown. */
-const supplyOf = (m: IndexCoinMarket | undefined) =>
+/** A coin's size in the index: its market cap, or that cap's square root. */
+const sizeOf = (def: IndexDef, marketCap: number) =>
+  def.weighting === 'sqrt-market-cap' ? Math.sqrt(marketCap) : marketCap;
+
+/** A coin's units in the index today: its size over its price. Null when unknown. */
+const unitsOf = (def: IndexDef, m: IndexCoinMarket | undefined) =>
   m && m.price > 0 && typeof m.marketCap === 'number' && m.marketCap > 0
-    ? m.marketCap / m.price
+    ? sizeOf(def, m.marketCap) / m.price
     : null;
 
 /**
@@ -71,9 +101,10 @@ export function basketChange(
   for (const symbol of def.coins) {
     const m = marketOf(symbol);
     const c = m?.change24h;
-    if (!supplyOf(m) || c == null || !Number.isFinite(c) || c <= -100) return null;
-    now += m!.marketCap!;
-    before += m!.marketCap! / (1 + c / 100);
+    if (!unitsOf(def, m) || c == null || !Number.isFinite(c) || c <= -100) return null;
+    const size = sizeOf(def, m!.marketCap!);
+    now += size;
+    before += size / (1 + c / 100);
   }
   return (now / before - 1) * 100;
 }
@@ -89,7 +120,7 @@ export function basketSeries(
   marketOf: (symbol: string) => IndexCoinMarket | undefined
 ): number[] {
   const coins = def.coins.map((symbol) => marketOf(symbol));
-  const supplies = coins.map(supplyOf);
+  const supplies = coins.map((m) => unitsOf(def, m));
   if (supplies.some((s) => s === null)) return [];
   const lines = coins.map((m) => m!.sparkline24h);
   const length = Math.min(...lines.map((l) => l.length));
@@ -114,7 +145,7 @@ export function basketHistory(
   marketOf: (symbol: string) => IndexCoinMarket | undefined,
   historyOf: (symbol: string) => [number, number][] | undefined
 ): [number, number][] {
-  const supplies = def.coins.map((symbol) => supplyOf(marketOf(symbol)));
+  const supplies = def.coins.map((symbol) => unitsOf(def, marketOf(symbol)));
   if (supplies.some((s) => s === null)) return [];
   const lines = def.coins.map((symbol) => historyOf(symbol) ?? []);
   if (lines.some((l) => l.length < 2)) return [];

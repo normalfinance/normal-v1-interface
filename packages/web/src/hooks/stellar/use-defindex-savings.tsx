@@ -18,6 +18,7 @@ import { confirmAction } from '@/lib/auth/action-code';
 import { signStellarTxForMgi } from '@/lib/mgi/kit-signer';
 import { getSavingsUsdcIssuer } from '@/utils/token-selectors';
 import { bumpSavingsReadEpoch } from '@/lib/savings-read-guard';
+import { signStellarTxsInOrder } from '@/lib/stellar/batch-sign';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { FEE_PAIR_TIMEOUT_SECONDS } from '@/lib/build-fee-payment';
@@ -370,12 +371,24 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
         // 3. Collect BOTH signatures before anything is submitted. Rejecting
         // either prompt (or a wallet jam, or closing the tab) aborts the whole
         // action with nothing charged and nothing moved — retry costs nothing.
-        setTxStep('deposit_sign');
-        onProgress?.({ type: 'step', id: 'sign-deposit', waiting: true });
-        const signedDepositXdr = await signOnly(depositData.xdr);
-        setTxStep('fee_sign');
-        onProgress?.({ type: 'step', id: 'sign-fee', waiting: true });
-        const signedFeeXdr = await signOnly(feeData.xdr);
+        // Doc 129: a Turnkey-held key signs both with ONE passkey prompt;
+        // any other wallet signs one by one, as before.
+        const {
+          signed: [signedDepositXdr, signedFeeXdr],
+        } = await signStellarTxsInOrder({
+          xdrs: [depositData.xdr, feeData.xdr],
+          networkPassphrase: config.NETWORK_PASSPHRASE,
+          account: walletAddress,
+          signOne: signOnly,
+          onPrompt: (i) => {
+            setTxStep(i === 0 ? 'deposit_sign' : 'fee_sign');
+            onProgress?.({
+              type: 'step',
+              id: i === 0 ? 'sign-deposit' : 'sign-fee',
+              waiting: true,
+            });
+          },
+        });
 
         // 4. Hand the signed pair to the server: it records the deposit BEFORE
         // broadcasting (#27 — no client-side logging anymore), escrows the
@@ -624,12 +637,23 @@ export function useDefindexSavings(targetAddress?: string): UseDefindexSavingsRe
             throw new Error(commissionData.error || 'Failed to build commission transaction');
           }
 
-          setTxStep('withdraw_sign');
-          onProgress?.({ type: 'step', id: 'sign-withdraw', waiting: true });
-          const signedWithdrawXdr = await signOnly(withdrawData.xdr);
-          setTxStep('commission_sign');
-          onProgress?.({ type: 'step', id: 'sign-fee', waiting: true });
-          const signedCommissionXdr = await signOnly(commissionData.xdr);
+          // Doc 129: one passkey prompt for both on a Turnkey-held key.
+          const {
+            signed: [signedWithdrawXdr, signedCommissionXdr],
+          } = await signStellarTxsInOrder({
+            xdrs: [withdrawData.xdr, commissionData.xdr],
+            networkPassphrase: config.NETWORK_PASSPHRASE,
+            account: walletAddress,
+            signOne: signOnly,
+            onPrompt: (i) => {
+              setTxStep(i === 0 ? 'withdraw_sign' : 'commission_sign');
+              onProgress?.({
+                type: 'step',
+                id: i === 0 ? 'sign-withdraw' : 'sign-fee',
+                waiting: true,
+              });
+            },
+          });
 
           setTxStep('withdraw_broadcast');
           onProgress?.({ type: 'step', id: 'submit' });

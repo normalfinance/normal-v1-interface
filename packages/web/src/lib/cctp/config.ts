@@ -103,6 +103,8 @@ export const PIVOT_CHAIN = {
   name: 'Base',
   explorerTx: (hash: string) => `https://basescan.org/tx/${hash}`,
   explorerAddress: (address: string) => `https://basescan.org/address/${address}`,
+  /** Doc 129: the wallet's Base page links the address on either network. */
+  testnetExplorerAddress: (address: string) => `https://sepolia.basescan.org/address/${address}`,
 } as const;
 
 /** LI.FI's own explorer for a bridged transaction. */

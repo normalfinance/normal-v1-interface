@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/with-auth';
 import { NextResponse } from 'next/server';
 import { advanceTransfer } from '@/lib/cctp/state';
-import { purchasePhase, INDEX_DIRECTION } from '@/lib/index/legs';
+import { purchasePhase, INDEX_DIRECTION, purchaseTotalWire } from '@/lib/index/legs';
 
 // ---------------------------------------------------------------------------
 // GET /api/index/purchases/:id: where a crypto index purchase is. The open
@@ -37,7 +37,8 @@ export const GET = withAuth(async (_req, { user, params }) => {
     purchase: {
       id: purchase.id,
       status: purchase.status,
-      amountWire: purchase.amountWire,
+      // What the person paid (doc 129: Core 4's row carries Circle's part).
+      amountWire: purchaseTotalWire(purchase),
       burnTxHash: purchase.burnTxHash,
       mintTxHash: purchase.mintTxHash,
       destAddress: purchase.destAddress,

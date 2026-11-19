@@ -9,6 +9,7 @@ import {
   cctpInboundPlan,
   stellarSwapPlan,
   cctpOutboundPlan,
+  indexPurchasePlan,
   crossChainSwapPlan,
 } from './plans';
 
@@ -148,6 +149,83 @@ describe('the steps each engine reports against', () => {
       'fee',
       'balance',
     ]);
+  });
+
+  it('doc 129: one passkey prompt shows as ONE approve step, the fee still settles after', () => {
+    const deposit = depositPlan({
+      t,
+      amount: '100 USDC',
+      fee: '0.5 USDC',
+      net: '99.5 USDC',
+      batched: true,
+    });
+    expect(ids(deposit)).not.toContain('sign-fee');
+    const signDeposit = stepsOf(deposit).find((s) => s.id === 'sign-deposit');
+    expect(signDeposit?.title).toBe('Approve the deposit and the fee');
+    expect(signDeposit?.eta).toBe('One signature');
+
+    const withdraw = withdrawPlan({
+      t,
+      amount: '100 USDC',
+      commission: '0.4 USDC',
+      net: '99.6 USDC',
+      batched: true,
+    });
+    expect(ids(withdraw)).not.toContain('sign-fee');
+    expect(ids(withdraw)).toContain('fee');
+    expect(stepsOf(withdraw).find((s) => s.id === 'sign-withdraw')?.eta).toBe('One signature');
+
+    const swap = stellarSwapPlan({
+      t,
+      from: 'USDC',
+      to: 'XLM',
+      amountIn: '5 USDC',
+      amountOut: '≈ 16 XLM',
+      minOut: '15.8 XLM',
+      fee: '0.025 USDC',
+      embedded: false,
+      batched: true,
+    });
+    expect(ids(swap)).toEqual(['prepare', 'sign-swap', 'submit', 'confirmed', 'fee', 'balance']);
+    expect(stepsOf(swap).find((s) => s.id === 'sign-swap')?.title).toBe(
+      'Approve the swap and the fee'
+    );
+  });
+
+  it('doc 129: Move to Stellar reads as a move, the refund as a return', () => {
+    const move = cctpRefundPlan({ t, kind: 'move' });
+    const refund = cctpRefundPlan({ t });
+    const title = (plan: FlowPlan, id: string) => stepsOf(plan).find((s) => s.id === id)?.title;
+    expect(title(move, 'refund-sign')).toBe('Approve the move');
+    expect(title(move, 'refund-arrived')).toBe('In your Stellar wallet');
+    expect(title(refund, 'refund-sign')).toBe('Approve the return');
+    expect(title(refund, 'refund-arrived')).toBe('Your USDC is back');
+    expect(ids(move)).toEqual(ids(refund));
+  });
+
+  it('doc 129: without batching the plans are exactly as before', () => {
+    expect(ids(ALL[0][1])).toContain('sign-fee');
+    expect(ids(ALL[1][1])).toContain('sign-fee');
+  });
+
+  it('doc 129: Core 4 buys XLM on Stellar right after the burn; Circle carries the rest', () => {
+    const plan = indexPurchasePlan({
+      t,
+      amountUsdc: '100 USDC',
+      bridgedUsdc: '96.29 USDC',
+      legs: [
+        { symbol: 'BTC', amountUsdc: '60.15 USDC', weight: '60.15%' },
+        { symbol: 'ETH', amountUsdc: '24.95 USDC', weight: '24.95%' },
+        { symbol: 'SOL', amountUsdc: '11.19 USDC', weight: '11.19%' },
+        { symbol: 'XLM', amountUsdc: '3.71 USDC', weight: '3.71%' },
+      ],
+    });
+    const order = ids(plan);
+    expect(order.indexOf('buy-xlm')).toBe(order.indexOf('burn') + 1);
+    expect(order.indexOf('buy-btc')).toBeGreaterThan(order.indexOf('gas'));
+    expect(stepsOf(plan).find((s) => s.id === 'burn')?.detail).toContain('96.29 USDC');
+    const wallets = placesOf(plan).find((p) => p.id === 'wallets');
+    expect(wallets?.assets).toEqual(['BTC', 'ETH', 'SOL', 'XLM']);
   });
 
   it('cross-chain swap: wallet, exchange, other wallet', () => {

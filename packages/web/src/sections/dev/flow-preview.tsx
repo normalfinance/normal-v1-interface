@@ -1,5 +1,6 @@
 'use client';
 
+import type { IndexPlanLeg } from '@/lib/flow/plans';
 import type { RunState, FlowPlan, RunPhase, FlowSummary, FlowStepDef } from '@/lib/flow/types';
 
 import { useTranslate } from '@/locales';
@@ -50,7 +51,15 @@ import { FlowView, FlowNotice } from '@/components/_common/flow';
 //   at    a step id (running, failed, stopped)
 //   wait  1: the step at `at` waits on a signature
 //   play  1: walk through every step, one every 1.6 seconds
+//   once  1: with play, start at the first step (unless `at`), stop after
+//         the last one and show the journey done
+//   every ms between steps when playing (default 1600)
 //   bar   0: hide this page's own scenario links (for screenshots)
+//   usd   the amount in digital dollars (usdc-btc, index), e.g. 500
+//   out   what the usdc-btc swap gives in BTC, e.g. 0.007886
+//   legs  the index split, SYMBOL:usd:weight:amountOut joined by ';', e.g.
+//         BTC:414.45:82.9:0.006658;ETH:71.30:14.3:0.040473;SOL:14.25:2.9:0.195366
+//   autopilot 1: usdc-btc with auto-finish on (one signature, no Base prompt)
 // ---------------------------------------------------------------------------
 
 const G = 'GB2YWVAJQ6IY3PSV6ZL44KZ2GVQDWYIPJVDP4MTFPB7FQWIE3WJ7CTJF';
@@ -85,7 +94,52 @@ const swapTitles = (t: (k: string) => string): Record<RunPhase, string> => ({
   'handed-off': t('On its way back'),
 });
 
-function sample(t: (k: string, o?: Record<string, unknown>) => string, s: Scenario): Sample {
+type LegCoin = IndexPlanLeg['symbol'];
+
+/** Sample amounts from the address bar (usd, out, legs, autopilot), when given. */
+interface Amounts {
+  usd: number | null;
+  out: string | null;
+  legs: { symbol: LegCoin; usd: number; weight: string; amountOut: string }[] | null;
+  autopilot: boolean;
+}
+
+const COIN_NAMES: Record<LegCoin, string> = {
+  BTC: 'Bitcoin',
+  ETH: 'Ethereum',
+  SOL: 'Solana',
+  XLM: 'Stellar',
+};
+
+const isLegCoin = (s: string): s is LegCoin => s in COIN_NAMES;
+
+const dollars = (n: number) => `$${n.toFixed(2)}`;
+
+function amountsOf(params: { get: (name: string) => string | null }): Amounts {
+  const usd = Number(params.get('usd'));
+  const legs = (params.get('legs') ?? '')
+    .split(';')
+    .map((leg) => leg.split(':'))
+    .filter((parts) => parts.length === 4 && isLegCoin(parts[0]) && Number(parts[1]) > 0)
+    .map(([symbol, legUsd, weight, amountOut]) => ({
+      symbol: symbol as LegCoin,
+      usd: Number(legUsd),
+      weight: `${weight}%`,
+      amountOut,
+    }));
+  return {
+    usd: usd > 0 ? usd : null,
+    out: params.get('out'),
+    legs: legs.length ? legs : null,
+    autopilot: params.get('autopilot') === '1',
+  };
+}
+
+function sample(
+  t: (k: string, o?: Record<string, unknown>) => string,
+  s: Scenario,
+  amounts: Amounts
+): Sample {
   const rows = (pairs: [string, string, string?][]): FlowSummary => ({
     rows: pairs.map(([label, value, detail], i) => ({ key: String(i), label, value, detail })),
   });
@@ -186,56 +240,91 @@ function sample(t: (k: string, o?: Record<string, unknown>) => string, s: Scenar
         titles: swapTitles(t),
         doneNote: 'Your ETH is in your Ethereum wallet.',
       };
-    case 'usdc-btc':
+    case 'usdc-btc': {
+      const usd = amounts.usd ?? 25;
+      const out = amounts.out ?? '0.000284';
       return {
         plan: cctpOutboundPlan({
           t,
           to: 'BTC',
-          amountUsdc: '25 USDC',
-          amountOut: '≈ 0.000284 BTC',
+          amountUsdc: `${usd} USDC`,
+          amountOut: `≈ ${out} BTC`,
           tool: 'Chainflip',
           stellarWallet: { address: G },
           baseWallet: { address: ETH },
           destWallet: { address: BTC },
-          autopilot: false,
+          autopilot: amounts.autopilot,
         }),
         summary: rows([
-          ['You pay', '25 USDC', '$25.00'],
-          ['You receive', '≈ 0.000284 BTC'],
+          ['You pay', `${usd} USDC`, dollars(usd)],
+          ['You receive', `≈ ${out} BTC`],
           ['Circle bridge', 'Free', 'Normal pays its network fees'],
         ]),
-        lede: '25 USDC for about 0.000284 BTC, over Circle and Chainflip.',
+        lede: `${usd} USDC for about ${out} BTC, over Circle and Chainflip.`,
         titles: swapTitles(t),
         doneNote: 'Your BTC is in your Bitcoin wallet.',
       };
-    case 'index':
+    }
+    case 'index': {
+      const usd = amounts.usd ?? 100;
+      const legs: NonNullable<Amounts['legs']> = amounts.legs ?? [
+        { symbol: 'BTC', usd: 60, weight: '60%', amountOut: '0.000681' },
+        { symbol: 'ETH', usd: 25, weight: '25%', amountOut: '0.00982' },
+        { symbol: 'SOL', usd: 15, weight: '15%', amountOut: '0.1' },
+      ];
       return {
         plan: indexPurchasePlan({
           t,
-          amountUsdc: '100 USDC',
-          legs: [
-            { symbol: 'BTC', amountUsdc: '60 USDC', weight: '60%', amountOut: '≈ 0.000681 BTC' },
-            { symbol: 'ETH', amountUsdc: '25 USDC', weight: '25%', amountOut: '≈ 0.00982 ETH' },
-            { symbol: 'SOL', amountUsdc: '15 USDC', weight: '15%', amountOut: '≈ 0.1 SOL' },
-          ],
+          amountUsdc: `${usd} USDC`,
+          legs: legs.map((leg) => ({
+            symbol: leg.symbol,
+            amountUsdc: `${leg.usd} USDC`,
+            weight: leg.weight,
+            amountOut: `≈ ${leg.amountOut} ${leg.symbol}`,
+          })),
           stellarWallet: { address: G },
           baseWallet: { address: ETH },
         }),
-        summary: rows([
-          ['You pay', '$100.00', 'Digital dollars from your Stellar wallet'],
-          ['Bitcoin (60%)', '$60.00', '≈ 0.000681 BTC'],
-          ['Ethereum (25%)', '$25.00', '≈ 0.00982 ETH'],
-          ['Solana (15%)', '$15.00', '≈ 0.1 SOL'],
-          [
-            'Exchange fees',
-            'About 0.75% of each coin',
-            'Normal 0.5% and LI.FI 0.25%, taken in the exchange',
+        // As the real review lays it out (crypto-index/index.tsx): each coin
+        // with its logo, "Bitcoin · 60%".
+        summary: {
+          rows: [
+            {
+              key: 'pay',
+              label: 'You pay',
+              value: dollars(usd),
+              detail: 'Digital dollars from your Stellar wallet',
+            },
+            ...legs.map((leg) => ({
+              key: leg.symbol,
+              asset: leg.symbol,
+              label: `${COIN_NAMES[leg.symbol]} · ${leg.weight}`,
+              value: dollars(leg.usd),
+              detail: `≈ ${leg.amountOut} ${leg.symbol}`,
+            })),
+            {
+              key: 'fees',
+              label: 'Exchange fees',
+              value: 'About 0.75% of each coin',
+              detail: 'Normal 0.5% and LI.FI 0.25%, taken in the exchange',
+            },
+            {
+              key: 'network',
+              label: 'Network fees',
+              value: 'Paid by Normal',
+              detail: 'Except the Stellar fee, paid in XLM by your wallet',
+            },
+            { key: 'signatures', label: 'Signatures', value: 'One' },
+            {
+              key: 'time',
+              label: 'Time',
+              value: 'Usually 10 to 60 minutes',
+              detail: 'Bitcoin is the slowest to arrive',
+            },
           ],
-          ['Network fees', 'Paid by Normal', 'Except the Stellar fee, paid in XLM by your wallet'],
-          ['Signatures', 'One'],
-          ['Time', 'Usually 10 to 60 minutes', 'Bitcoin is the slowest to arrive'],
-        ]),
-        lede: '$100.00 split into Bitcoin, Ethereum and Solana.',
+          note: 'Prices move while the coins are bought. Each exchange guarantees a minimum, or that coin’s share comes back to you as digital dollars.',
+        },
+        lede: `${dollars(usd)} split into Bitcoin, Ethereum and Solana.`,
         titles: {
           review: t('Review your purchase'),
           running: t('Buying'),
@@ -246,6 +335,7 @@ function sample(t: (k: string, o?: Record<string, unknown>) => string, s: Scenar
         },
         doneNote: 'Your Bitcoin, Ethereum and Solana are in your wallets.',
       };
+    }
     case 'btc-usdc':
       return {
         plan: cctpInboundPlan({
@@ -408,30 +498,37 @@ export default function FlowPreview() {
     MODES.includes(params.get('mode') as RunPhase) ? params.get('mode') : 'running'
   ) as RunPhase;
   const play = params.get('play') === '1';
+  const once = params.get('once') === '1';
+  const every = Number(params.get('every')) || 1600;
   const showBar = params.get('bar') !== '0';
-  const data = useMemo(() => sample(t, scenario), [t, scenario]);
+  const amounts = useMemo(() => amountsOf(params), [params]);
+  const data = useMemo(() => sample(t, scenario, amounts), [t, scenario, amounts]);
   const ids = useMemo(() => stepsOf(data.plan).map((s) => s.id), [data.plan]);
-  const [at, setAt] = useState<string | null>(params.get('at') ?? ids[Math.floor(ids.length / 2)]);
+  const [at, setAt] = useState<string | null>(
+    params.get('at') ?? (once ? ids[0] : ids[Math.floor(ids.length / 2)])
+  );
+  const [finished, setFinished] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
-  // Play: one step every 1.6 seconds, signatures waiting on the way.
+  // Play: one step every `every` ms (1.6 seconds), signatures waiting on the
+  // way; with `once`, the journey ends done after its last step.
   useEffect(() => {
-    if (!play) return undefined;
-    const id = setInterval(() => {
-      setAt((current) => {
-        const index = ids.indexOf(current ?? '');
-        return ids[(index + 1) % ids.length];
-      });
+    if (!play || finished) return undefined;
+    const id = setTimeout(() => {
+      const index = ids.indexOf(at ?? '');
+      if (once && index + 1 >= ids.length) setFinished(true);
+      else setAt(ids[(index + 1) % ids.length]);
       setNow(Date.now());
-    }, 1600);
-    return () => clearInterval(id);
-  }, [play, ids]);
+    }, every);
+    return () => clearTimeout(id);
+  }, [play, once, every, finished, ids, at]);
+  const shownMode: RunPhase = finished ? 'done' : mode;
 
   // Stopped, on a swap through an exchange: the exchange sent it back, so the
   // journey is rewritten the way the engines rewrite it (refundedPlan), both
   // new steps settled.
   const bridge = stepsOf(data.plan).find((s) => s.id === 'bridge-send');
-  const sentBack = mode === 'stopped' && !!bridge;
+  const sentBack = shownMode === 'stopped' && !!bridge;
   const shownPlan = useMemo(
     () =>
       sentBack && bridge
@@ -448,12 +545,12 @@ export default function FlowPreview() {
     () =>
       runAt(
         shownPlan,
-        mode,
+        shownMode,
         sentBack ? REFUND_STEP.arrived : at,
         params.get('wait') === '1' || play,
         now
       ),
-    [shownPlan, mode, sentBack, at, params, play, now]
+    [shownPlan, shownMode, sentBack, at, params, play, now]
   );
 
   return (
@@ -498,15 +595,22 @@ export default function FlowPreview() {
         titles={data.titles}
         lede={data.lede}
         confirm={{ label: t('Confirm'), onClick: () => {} }}
-        back={{ label: t('Back to swap'), onClick: () => {} }}
+        back={{
+          label: scenario === 'index' ? t('Back to Top 3') : t('Back to swap'),
+          onClick: () => {},
+        }}
         doneActions={[
-          { label: t('Make another swap'), primary: true, onClick: () => {} },
+          {
+            label: scenario === 'index' ? t('Make another purchase') : t('Make another swap'),
+            primary: true,
+            onClick: () => {},
+          },
           { label: t('See it in Activity'), href: '/app/activity' },
         ]}
         doneNote={data.doneNote}
         failActions={[{ label: t('Try again'), primary: true, onClick: () => {} }]}
         notice={
-          scenario === 'usdc-btc' && mode === 'running' ? (
+          scenario === 'usdc-btc' && shownMode === 'running' && !amounts.autopilot ? (
             <FlowNotice action={{ label: t('Turn on auto-finish'), onClick: () => {} }}>
               {t(
                 'The next signature comes when the money reaches Base, which can take a while. Turn on auto-finish and this swap completes by itself.'

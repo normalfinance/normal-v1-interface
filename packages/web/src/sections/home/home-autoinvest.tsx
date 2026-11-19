@@ -5,7 +5,7 @@ import type { IndexWeight } from '@/lib/index/basket';
 import { cdn } from '@/utils/cdn';
 import { paths } from '@/routes/paths';
 import { TYPE } from '@/theme/type-scale';
-import { TOP_3 } from '@/lib/index/indexes';
+import { CORE_4 } from '@/lib/index/indexes';
 import { useIndexWeights } from '@/hooks/use-index-weights';
 import { wireToUsdNumber, minimumPurchaseWire } from '@/lib/index/basket';
 import { MUTED, BRAND_COLORS, HAIRLINE_COLOR } from '@/theme/brand-colors';
@@ -24,7 +24,8 @@ import { fade, DemoCard, useDemoStep } from './security-demos';
 // animation on homepage"): the words on the violet wash, and beside them the
 // purchase played on a loop, the way the Security demos play. It shows what
 // the product does today: one purchase of digital dollars split across
-// Bitcoin, Ethereum and Solana by today's market sizes (lib/index/basket.ts),
+// Bitcoin, Ethereum, Solana and Stellar by the square root of today's market
+// sizes (Core 4, doc 129; lib/index/basket.ts),
 // each coin bought into the person's own wallet. Shown only where Autoinvest
 // is switched on (lib/index/flag.ts), like the app's own pages.
 
@@ -32,17 +33,19 @@ const COINS: Record<string, { name: string; icon: string }> = {
   BTC: { name: 'Bitcoin', icon: cdn('tokens/bitcoin.webp') },
   ETH: { name: 'Ethereum', icon: cdn('tokens/ethereum.webp') },
   SOL: { name: 'Solana', icon: cdn('tokens/solana.webp') },
+  XLM: { name: 'Stellar', icon: cdn('tokens/XLM.webp') },
 };
 
-/** Until the market sizes load: the split of mid-November 2026, never shown as live. */
+/** Until the market sizes load: Core 4's split of 19 November 2026, never shown as live. */
 const EXAMPLE_WEIGHTS: IndexWeight[] = [
-  { symbol: 'BTC', weightBps: 8310 },
-  { symbol: 'ETH', weightBps: 1420 },
-  { symbol: 'SOL', weightBps: 270 },
+  { symbol: 'BTC', weightBps: 6015 },
+  { symbol: 'ETH', weightBps: 2495 },
+  { symbol: 'SOL', weightBps: 1119 },
+  { symbol: 'XLM', weightBps: 371 },
 ];
 
-/** The coins appear one by one, are bought, then the purchase is done. */
-const STEPS = [500, 900, 1300, 2400, 3400] as const;
+/** The coins appear one by one (one step each), are bought, then the purchase is done. */
+const STEPS = [500, 900, 1300, 1700, 2800, 3800] as const;
 const LOOP_MS = 7500;
 
 const usd = (value: number) =>
@@ -52,7 +55,7 @@ const percent = (weightBps: number) => `${(weightBps / 100).toFixed(1)}%`;
 
 function AutoinvestDemo() {
   const step = useDemoStep(STEPS, LOOP_MS);
-  const { weights: live } = useIndexWeights(TOP_3.def);
+  const { weights: live } = useIndexWeights(CORE_4.def);
   const weights = live ?? EXAMPLE_WEIGHTS;
   // A purchase the product would accept today: $500, or the minimum when the
   // smallest coin's share needs more (lib/index/basket.ts, $10 a coin).
@@ -61,7 +64,7 @@ function AutoinvestDemo() {
 
   return (
     <DemoCard>
-      <Typography sx={{ ...TYPE.caption, color: MUTED }}>Autoinvest · {TOP_3.name}</Typography>
+      <Typography sx={{ ...TYPE.caption, color: MUTED }}>Autoinvest · {CORE_4.name}</Typography>
       <Typography sx={{ mt: 0.5, fontSize: 32, fontWeight: 500, letterSpacing: '-0.03em' }}>
         {usd(amount)}
       </Typography>
@@ -95,7 +98,7 @@ function AutoinvestDemo() {
                 {usd((amount * weight.weightBps) / 10_000)}
               </Typography>
               <CheckRounded
-                sx={{ fontSize: 18, color: BRAND_COLORS.mint.deep, ...fade(step > 3) }}
+                sx={{ fontSize: 18, color: BRAND_COLORS.mint.deep, ...fade(step > weights.length) }}
               />
             </Box>
           );
@@ -110,7 +113,7 @@ function AutoinvestDemo() {
           mt: 3,
           pt: 2,
           borderTop: `1px solid ${HAIRLINE_COLOR}`,
-          ...fade(step > 4),
+          ...fade(step > weights.length + 1),
         }}
       >
         <CheckRounded sx={{ fontSize: 18, color: BRAND_COLORS.mint.deep }} />

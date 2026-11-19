@@ -56,6 +56,8 @@ export const paths = {
   assets: {
     root: '/app/assets',
     details: (symbol: string) => `/app/assets/${symbol}`,
+    /** Doc 129: what the person holds on Base (USDC, and ETH for network fees). */
+    base: '/app/assets/base',
   },
   settings: '/app/settings',
   auth: {

@@ -49,19 +49,28 @@ const CLUSTER = [
   { left: 0, top: 13 },
   { left: 13, top: 13 },
 ];
+// Four coins (doc 129: Core 4) sit two by two in the same slot.
+const GRID_4 = [
+  { left: 0, top: 0 },
+  { left: 13, top: 0 },
+  { left: 0, top: 13 },
+  { left: 13, top: 13 },
+];
+
+const layoutOf = (assets: string[] | undefined) => ((assets?.length ?? 0) >= 4 ? GRID_4 : CLUSTER);
 
 function PlaceIcon({ place }: { place: FlowPlace }) {
   if (place.assets?.length) {
     return (
       <Box aria-hidden="true" sx={{ position: 'relative', width: 32, height: 32, flexShrink: 0 }}>
-        {place.assets.slice(0, CLUSTER.length).map((symbol, i) => (
+        {place.assets.slice(0, layoutOf(place.assets).length).map((symbol, i) => (
           <Avatar
             key={symbol}
             src={getCryptoIconUrl(symbol)}
             alt=""
             sx={{
               position: 'absolute',
-              ...CLUSTER[i],
+              ...layoutOf(place.assets)[i],
               width: 19,
               height: 19,
               bgcolor: PAPER,

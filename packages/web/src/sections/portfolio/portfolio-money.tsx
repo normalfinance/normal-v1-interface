@@ -9,8 +9,8 @@ import { BigNumber } from 'bignumber.js';
 import { MUTED } from '@/theme/brand-colors';
 import { useMarkets } from '@/hooks/use-markets';
 import { minSpanFor } from '@/lib/prices/markets';
-import { assetColor } from '@/lib/portfolio/display';
 import { allocationColor } from '@/lib/portfolio/allocation';
+import { assetColor, isBaseToken } from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -42,14 +42,19 @@ function toHolding(
   const savings = token.symbol === 'Savings';
   const market = markets[token.symbol];
   // On an account with two wallets each row names its wallet:
-  // "0.13 ETH · Lobstr".
-  const owner = token.name.includes(' · ') ? token.name.split(' · ').pop() : null;
+  // "0.13 ETH · Lobstr". A Base row names its network the same way, and may
+  // carry more than one part: "ETH · Base · Network fees" (doc 129).
+  const owner = token.name.includes(' · ') ? token.name.split(' · ').slice(1).join(' · ') : null;
   const amount = savings
     ? 'Earning every day'
     : formatCoin(BigNumber(token.balance).toNumber(), token.symbol);
   return {
     key: token.contract,
-    href: savings ? paths.savings : paths.assets.details(token.symbol),
+    href: savings
+      ? paths.savings
+      : isBaseToken(token)
+        ? paths.assets.base
+        : paths.assets.details(token.symbol),
     icon: <AssetAvatar token={token} size={40} />,
     name: savings ? 'Savings' : assetName(token.symbol),
     // Savings is a product, not a coin: its second line names it, as on Assets.

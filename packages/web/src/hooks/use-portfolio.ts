@@ -137,12 +137,41 @@ export function usePortfolio(enabled = true): UsePortfolioResult {
       });
   }, [wallet.companionStellar]);
 
+  // Doc 129: what the person holds on Base (USDC, and the few cents of ETH
+  // Normal's relayer sends for network fees). Their own `base:` ids, so no
+  // consumer that looks up `wallet:USDC` or `wallet:ETH` ever picks them up.
+  const basePositions = useMemo<Position[]>(() => {
+    const base = wallet.base;
+    if (!base) return [];
+    return base.assets
+      .filter((a) => a.balance != null && Number(a.balance) > 0)
+      .map((a) => {
+        const d = assetDisplay(a.symbol);
+        return {
+          id: `base:${a.symbol}`,
+          kind: 'wallet' as const,
+          symbol: a.symbol,
+          name: `${d.name} · Base`,
+          iconUrl: d.icon,
+          chain: a.chain,
+          address: a.address,
+          balance: a.balance,
+          price: a.price,
+          usdValue: a.usdValue,
+          change24h: a.change24h,
+          decimals: a.decimals,
+          status: a.status as PositionStatus,
+        };
+      });
+  }, [wallet.base]);
+
   // Account-wide wallet positions — what every consumer should render. The
-  // slot wallet's assets plus the companion's (labeled). Companion rows carry
-  // `companion:` ids so views can label or special-case them.
+  // slot wallet's assets plus the companion's (labeled) plus Base's. Companion
+  // rows carry `companion:` ids and Base rows `base:` ids so views can label
+  // or special-case them.
   const walletPositions = useMemo<Position[]>(
-    () => [...slotPositions, ...companionPositions],
-    [slotPositions, companionPositions]
+    () => [...slotPositions, ...companionPositions, ...basePositions],
+    [slotPositions, companionPositions, basePositions]
   );
 
   // Positions shown to the user: wallet assets with a balance, plus savings when
@@ -158,7 +187,8 @@ export function usePortfolio(enabled = true): UsePortfolioResult {
     (acc, p) => acc + (p.usdValue ? Number(p.usdValue) : 0),
     0
   );
-  const walletUsd = wallet.totalUsd + companionUsd;
+  const baseUsd = basePositions.reduce((acc, p) => acc + (p.usdValue ? Number(p.usdValue) : 0), 0);
+  const walletUsd = wallet.totalUsd + companionUsd + baseUsd;
   const savingsUsd = savingsDisplayValue;
   const totalUsd = walletUsd + savingsUsd;
 

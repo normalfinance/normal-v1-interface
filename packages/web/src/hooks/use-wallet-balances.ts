@@ -65,6 +65,9 @@ export interface UseWalletBalancesResult {
    *  connected wallet is external; null otherwise. Displayed as its own
    *  drawer section — never merged into `assets`. */
   companionStellar: { address: string; assets: PortfolioAsset[] } | null;
+  /** Doc 129: USDC and ETH on the person's EVM address on Base; null when
+   *  they have no EVM address. Its own rows, never merged into `assets`. */
+  base: { address: string; assets: PortfolioAsset[] } | null;
 }
 
 // One activity-refresh loop per SWR key at a time, APP-WIDE. ~23 mounted
@@ -109,6 +112,8 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
         // #32 chunk 2: the companion Normal wallet's Stellar balances (only
         // present when the connected wallet is external).
         companionStellar: json.companionStellar ?? null,
+        // Doc 129: Base rows (USDC, ETH), their own field.
+        base: json.base ?? null,
       };
       const { floored: _floored, retryAfterMs: _retryAfterMs, ...snapshot } = payload;
       writeCachedPortfolio(cacheKey, snapshot);
@@ -219,6 +224,7 @@ export function useWalletBalances(enabled = true): UseWalletBalancesResult {
     getAsset,
     totalUsd,
     companionStellar: data?.companionStellar ?? null,
+    base: data?.base ?? null,
     updatedAt: data?.updatedAt ?? null,
     isLoading: (isLoading && !data) || (cacheMissingStellar && isValidating),
     isValidating,

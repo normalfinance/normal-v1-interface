@@ -3,11 +3,13 @@ import type { CctpTransfer } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { BigNumber } from 'bignumber.js';
 import { legAmountWire } from '@/lib/cctp/amounts';
+import { isStellarCoin } from '@/lib/index/basket';
 import { autopilotEnabled } from '@/server/autopilot-signer';
 import { autopilotPivotSwap } from '@/server/autopilot-pivot';
 import { CHAINS, chainForSymbol } from '@/lib/chains/registry';
 import { ensureTransferGas } from '@/server/cctp-transfer-gas';
 import { evmFallbackTransport } from '@/lib/chains/rpc-fallback';
+import { reconcileStellarLegs } from '@/server/index-stellar-leg';
 import {
   sanitizeTool,
   sanitizeTxHash,
@@ -85,8 +87,22 @@ export async function finishIndexPurchase(purchaseId: string): Promise<FinishInd
     orderBy: { weightBps: 'desc' },
   });
 
+  // Doc 129: a Stellar coin (Core 4's XLM) is bought on Stellar from the
+  // person's own signature (server/index-stellar-leg.ts); here it is only
+  // followed, never swapped on Base.
+  await reconcileStellarLegs(purchaseId).catch(() => {});
+
   const outcomes: LegOutcome[] = [];
   for (const leg of legs) {
+    if (isStellarCoin(leg.symbol)) {
+      outcomes.push({
+        id: leg.id,
+        symbol: leg.symbol,
+        result: 'skipped',
+        reason: 'bought on Stellar',
+      });
+      continue;
+    }
     if (!legRunnable(leg, Date.now())) {
       outcomes.push({ id: leg.id, symbol: leg.symbol, result: 'skipped', reason: leg.status });
       continue;
@@ -96,10 +112,18 @@ export async function finishIndexPurchase(purchaseId: string): Promise<FinishInd
     outcomes.push(await runLeg(purchase, wallet, leg));
   }
 
-  // Every coin's exchange is out (SENT: a hash alone can still be a swap
-  // that reverts and is cleared): mark the purchase settled the way an
-  // outbound swap is (its dstSwapTxHash), so Activity stops showing it as
-  // pending. The first coin's swap stands for the purchase.
+  await markPurchaseIfSettled(purchaseId);
+  return { ok: true, legs: outcomes };
+}
+
+/**
+ * Every coin's exchange is out (SENT: a hash alone can still be a swap that
+ * reverts and is cleared): mark the purchase settled the way an outbound swap
+ * is (its dstSwapTxHash), so Activity stops showing it as pending. The first
+ * coin's swap stands for the purchase. A held coin is written on the row.
+ * Called after the Base legs run and after a Stellar leg settles (doc 129).
+ */
+export async function markPurchaseIfSettled(purchaseId: string): Promise<void> {
   const after = await prisma.indexLeg.findMany({
     where: { purchaseId },
     orderBy: { weightBps: 'desc' },
@@ -125,7 +149,6 @@ export async function finishIndexPurchase(purchaseId: string): Promise<FinishInd
       })
       .catch(() => {});
   }
-  return { ok: true, legs: outcomes };
 }
 
 type Wallet = NonNullable<Awaited<ReturnType<typeof prisma.turnkeyWallet.findFirst>>>;

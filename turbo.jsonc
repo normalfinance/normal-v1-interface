@@ -79,6 +79,12 @@
     "NEXT_PUBLIC_STELLAR_FEE",
     "NEXT_PUBLIC_STELLAR_TIMEOUT",
     "NEXT_PUBLIC_STELLAR_STARTING_BALANCE",
+    // Doc 129: "0" puts every Stellar action back on one passkey prompt per transaction
+    "NEXT_PUBLIC_STELLAR_BATCH_SIGN",
+    // Doc 129 Phase 3: "1" sends a Turnkey user's Circle burn as pre-signed permissions (one prompt)
+    "NEXT_PUBLIC_STELLAR_PERMISSIONS",
+    // Doc 129: "1" runs the opt-in testnet end-to-end test of the relayer (never in a build)
+    "RUN_TESTNET_E2E",
 
     "ADMIN_SECRET",
 

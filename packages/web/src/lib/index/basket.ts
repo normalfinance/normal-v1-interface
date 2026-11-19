@@ -23,12 +23,20 @@
 // is integer USDC wire units (6 decimals), never a float.
 // ---------------------------------------------------------------------------
 
-export type IndexCoin = 'BTC' | 'ETH' | 'SOL';
+export type IndexCoin = 'BTC' | 'ETH' | 'SOL' | 'XLM';
+
+/**
+ * How an index turns market sizes into shares: in proportion to each coin's
+ * market cap, or (doc 129, Niko 2026-11-19) to its square root, which still
+ * follows market size but leaves smaller coins a visible share.
+ */
+export type IndexWeighting = 'market-cap' | 'sqrt-market-cap';
 
 export interface IndexDef {
   id: string;
   /** The coins it holds. Their shares follow their market sizes (marketWeights). */
   coins: IndexCoin[];
+  weighting: IndexWeighting;
 }
 
 /** One coin's share of a purchase, in basis points. */
@@ -37,11 +45,33 @@ export interface IndexWeight {
   weightBps: number;
 }
 
-/** The first index: the three largest coins we hold, weighted by market size. */
+/**
+ * The first index (2026-11-09 to 2026-11-19): Bitcoin, Ethereum and Solana by
+ * market cap. No longer offered; kept so its purchases read as they were.
+ */
 export const CRYPTO_INDEX: IndexDef = {
   id: 'crypto-3',
   coins: ['BTC', 'ETH', 'SOL'],
+  weighting: 'market-cap',
 };
+
+/**
+ * Core 4 (doc 129, Niko 2026-11-19): Bitcoin, Ethereum, Solana and Stellar,
+ * each by the square root of its market cap.
+ */
+export const CORE_INDEX: IndexDef = {
+  id: 'core-4',
+  coins: ['BTC', 'ETH', 'SOL', 'XLM'],
+  weighting: 'sqrt-market-cap',
+};
+
+/**
+ * Coins bought on Stellar itself (a Soroswap swap from the purchase's USDC):
+ * their slice never crosses a bridge. Every other coin is bought on Base after
+ * Circle's transfer (server/index-legs.ts).
+ */
+export const STELLAR_COINS: IndexCoin[] = ['XLM'];
+export const isStellarCoin = (symbol: string) => (STELLAR_COINS as string[]).includes(symbol);
 
 const BPS = 10_000n;
 const WIRE_PER_USD = 1_000_000n;
@@ -51,6 +81,12 @@ const WIRE_PER_USD = 1_000_000n;
  * same reasoning as the $10 minimum on a single Circle swap.
  */
 export const INDEX_MIN_SLICE_USD = 10;
+
+/** A slice bought on Stellar crosses no bridge: only dust is refused. */
+export const INDEX_MIN_STELLAR_SLICE_USD = 1;
+
+/** Normal's fee on a coin of an index purchase, the same 0.5% as a swap. */
+export const INDEX_FEE_BPS = 50;
 
 /**
  * How far the shares a person reviewed may be from the server's own reading
@@ -75,9 +111,11 @@ export function marketWeights(
   if (caps.some((c) => typeof c.cap !== 'number' || !Number.isFinite(c.cap) || c.cap <= 0)) {
     return null;
   }
-  const total = caps.reduce((sum, c) => sum + (c.cap as number), 0);
+  // A coin's size: its market cap, or its square root (IndexWeighting).
+  const sizeOf = (cap: number) => (def.weighting === 'sqrt-market-cap' ? Math.sqrt(cap) : cap);
+  const total = caps.reduce((sum, c) => sum + sizeOf(c.cap as number), 0);
   const shares = caps.map((c) => {
-    const exact = ((c.cap as number) / total) * 10_000;
+    const exact = (sizeOf(c.cap as number) / total) * 10_000;
     // Every coin the index holds is bought: at least one point each.
     const weightBps = Math.max(1, Math.floor(exact));
     return { symbol: c.symbol, weightBps, rest: exact - Math.floor(exact) };
@@ -173,18 +211,38 @@ export function splitPurchase(totalWire: bigint, weights: IndexWeight[]): IndexS
 }
 
 /**
- * The smallest purchase whose every slice reaches INDEX_MIN_SLICE_USD,
- * rounded up to whole dollars: the smallest coin sets it ($67 when it holds
- * 15%, $250 when it holds 4%).
+ * The smallest purchase whose every slice reaches its floor, rounded up to
+ * whole dollars: INDEX_MIN_SLICE_USD for a coin bought across the bridge
+ * ($67 when the smallest holds 15%, $250 when it holds 4%), and
+ * INDEX_MIN_STELLAR_SLICE_USD for one bought on Stellar.
  */
 export function minimumPurchaseWire(weights: IndexWeight[]): bigint {
   assertIndexWeights(weights);
-  const smallest = weights.reduce((a, b) => (b.weightBps < a.weightBps ? b : a)).weightBps;
-  const sliceWire = BigInt(INDEX_MIN_SLICE_USD) * WIRE_PER_USD;
-  // ceil(slice / weight), in whole dollars
-  const neededWire = (sliceWire * BPS + BigInt(smallest) - 1n) / BigInt(smallest);
+  let neededWire = 0n;
+  for (const w of weights) {
+    const floorUsd = isStellarCoin(w.symbol) ? INDEX_MIN_STELLAR_SLICE_USD : INDEX_MIN_SLICE_USD;
+    const sliceWire = BigInt(floorUsd) * WIRE_PER_USD;
+    // ceil(slice / weight)
+    const need = (sliceWire * BPS + BigInt(w.weightBps) - 1n) / BigInt(w.weightBps);
+    if (need > neededWire) neededWire = need;
+  }
   const dollars = (neededWire + WIRE_PER_USD - 1n) / WIRE_PER_USD;
   return dollars * WIRE_PER_USD;
+}
+
+/** What Circle moves to Base: the slices bought there, to the last unit. */
+export function bridgedWire(slices: IndexSlice[]): bigint {
+  return slices.filter((s) => !isStellarCoin(s.symbol)).reduce((sum, s) => sum + s.amountWire, 0n);
+}
+
+/**
+ * A Stellar slice: Normal's 0.5% (rounded down) and what the swap spends.
+ * They add up to the slice exactly, as every other coin's fee comes out of
+ * its own slice.
+ */
+export function stellarSliceAmounts(sliceWire: bigint): { feeWire: bigint; swapWire: bigint } {
+  const feeWire = (sliceWire * BigInt(INDEX_FEE_BPS)) / BPS;
+  return { feeWire, swapWire: sliceWire - feeWire };
 }
 
 export type PurchaseVerdict =

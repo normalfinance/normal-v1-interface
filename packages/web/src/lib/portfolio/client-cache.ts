@@ -1,4 +1,4 @@
-import type { PortfolioPayload } from '@/types/portfolio';
+import type { PortfolioAsset, PortfolioPayload } from '@/types/portfolio';
 
 // ---------------------------------------------------------------------------
 // The client-side portfolio snapshot (localStorage, stale-while-revalidate).
@@ -70,17 +70,26 @@ export function fillErroredFromKnown(
   incoming: PortfolioPayload,
   known: PortfolioPayload | undefined
 ): PortfolioPayload {
-  if (!known?.assets?.length || !incoming.assets?.length) return incoming;
-  const prior = new Map(known.assets.map((a) => [`${a.chain}:${a.symbol}`, a]));
+  if (!known) return incoming;
   let patched = false;
-  const assets = incoming.assets.map((a) => {
-    if (a.balance !== null) return a;
-    const p = prior.get(`${a.chain}:${a.symbol}`);
-    if (!p || p.balance === null) return a;
-    patched = true;
-    return { ...p, status: 'stale' as const, price: a.price ?? p.price };
-  });
-  return patched ? { ...incoming, assets } : incoming;
+  const fill = (rows: PortfolioAsset[], knownRows: PortfolioAsset[] | undefined) => {
+    if (!knownRows?.length) return rows;
+    const prior = new Map(knownRows.map((a) => [`${a.chain}:${a.symbol}`, a]));
+    return rows.map((a) => {
+      if (a.balance !== null) return a;
+      const p = prior.get(`${a.chain}:${a.symbol}`);
+      // Doc 129: a Base row keeps a known value only for the same address.
+      if (!p || p.balance === null || (a.chain === 'base' && p.address !== a.address)) return a;
+      patched = true;
+      return { ...p, status: 'stale' as const, price: a.price ?? p.price };
+    });
+  };
+  const assets = incoming.assets?.length ? fill(incoming.assets, known.assets) : incoming.assets;
+  const base =
+    incoming.base?.assets?.length && known.base
+      ? { ...incoming.base, assets: fill(incoming.base.assets, known.base.assets) }
+      : incoming.base;
+  return patched ? { ...incoming, assets, ...(base !== undefined ? { base } : {}) } : incoming;
 }
 
 export function writeCachedPortfolio(cacheKey: string, payload: PortfolioPayload): void {

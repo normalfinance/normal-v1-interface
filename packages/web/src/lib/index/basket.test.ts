@@ -1,14 +1,18 @@
 import { it, expect, describe } from '@jest/globals';
 
 import {
+  CORE_INDEX,
+  bridgedWire,
   weightLabel,
   CRYPTO_INDEX,
   parseWeights,
+  isStellarCoin,
   marketWeights,
   splitPurchase,
   weightsWithin,
   purchaseVerdict,
   assertIndexWeights,
+  stellarSliceAmounts,
   minimumPurchaseWire,
   INDEX_MIN_SLICE_USD,
   WEIGHT_TOLERANCE_BPS,
@@ -50,7 +54,7 @@ describe('marketWeights: each coin its share of the combined market size', () =>
     expect(marketWeights(CRYPTO_INDEX, (s) => (s === 'SOL' ? null : 1))).toBeNull();
     expect(marketWeights(CRYPTO_INDEX, (s) => (s === 'SOL' ? 0 : 1))).toBeNull();
     expect(marketWeights(CRYPTO_INDEX, (s) => (s === 'SOL' ? Number.NaN : 1))).toBeNull();
-    expect(marketWeights({ id: 'x', coins: [] }, () => 1)).toBeNull();
+    expect(marketWeights({ id: 'x', coins: [], weighting: 'market-cap' }, () => 1)).toBeNull();
   });
 
   it('keeps a dust coin in at one point, taken from the biggest', () => {
@@ -211,4 +215,51 @@ it('weightLabel', () => {
   expect(weightLabel(6000)).toBe('60%');
   expect(weightLabel(1250)).toBe('12.5%');
   expect(weightLabel(8174)).toBe('81.7%');
+});
+
+// ---- doc 129: Core 4 ----------------------------------------------------------
+
+describe('Core 4 (doc 129)', () => {
+  // Live market caps on 2026-11-19 (CoinGecko), the numbers Niko chose from.
+  const CAPS_19: Record<string, number> = {
+    BTC: 1284.877e9,
+    ETH: 221.065e9,
+    SOL: 44.457e9,
+    XLM: 4.892e9,
+  };
+  const core = marketWeights(CORE_INDEX, (s) => CAPS_19[s]) as IndexWeight[];
+  const bps = (s: string) => core.find((w) => w.symbol === s)!.weightBps;
+
+  it('is Bitcoin, Ethereum, Solana and Stellar, split by the square root of market cap', () => {
+    expect(CORE_INDEX.coins).toEqual(['BTC', 'ETH', 'SOL', 'XLM']);
+    expect(bps('BTC')).toBe(6015);
+    expect(bps('ETH')).toBe(2495);
+    expect(bps('SOL')).toBe(1119);
+    expect(bps('XLM')).toBe(371);
+    expect(core.reduce((sum, w) => sum + w.weightBps, 0)).toBe(10_000);
+  });
+
+  it('the old Top 3 still splits by plain market cap', () => {
+    expect(CRYPTO_INDEX.weighting).toBe('market-cap');
+  });
+
+  it('the bridge floor applies to bridged coins only: Solana sets the minimum, not Stellar', () => {
+    // $10 / 11.19% = $89.37 → $90; XLM's $1 floor needs only $27.
+    expect(minimumPurchaseWire(core)).toBe(usd(90));
+    expect(isStellarCoin('XLM')).toBe(true);
+    expect(isStellarCoin('SOL')).toBe(false);
+  });
+
+  it('Circle moves every slice but Stellar’s, to the last unit', () => {
+    const slices = splitPurchase(usd(100), core);
+    const xlm = slices.find((s) => s.symbol === 'XLM')!.amountWire;
+    expect(bridgedWire(slices) + xlm).toBe(usd(100));
+    expect(xlm).toBe(usd(3.71));
+  });
+
+  it('the Stellar slice pays the same 0.5%, out of its own slice', () => {
+    const { feeWire, swapWire } = stellarSliceAmounts(usd(3.71));
+    expect(feeWire).toBe(18_550n); // 0.5% of 3.71 USDC = 0.01855
+    expect(feeWire + swapWire).toBe(usd(3.71));
+  });
 });

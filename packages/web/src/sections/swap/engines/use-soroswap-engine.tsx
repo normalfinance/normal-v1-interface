@@ -13,6 +13,8 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { confirmAction } from '@/lib/auth/action-code';
 import { usePersistStore } from '@normalfinance/state';
 import { INK, MUTED, FAINT } from '@/theme/brand-colors';
+import { batchesStellar } from '@/lib/stellar/batch-sign';
+import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { awaitTxRecord } from '@/lib/stellar/await-tx-visible';
 import { connectedWalletLabel } from '@/lib/portfolio/display';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
@@ -87,6 +89,8 @@ export function useSoroswapEngine({
   const { t } = useTranslate();
   const { enqueueSnackbar } = useSnackbar();
   const { wallet } = usePersistStore();
+  // Doc 129: which wallet signs decides one prompt or two on the review page.
+  const { addresses: turnkeyAddresses } = useTurnkeyWallet();
   const { user } = useSupabaseAuth();
   const config = useStellarConfig();
   // Sweep 2026-08-21: a BTC/ETH/SOL-first Turnkey user reaches this DEFAULT
@@ -237,6 +241,7 @@ export function useSoroswapEngine({
 
   // ---- the review page ------------------------------------------------------
   const swapAddress = stellarAddressOverride ?? wallet.address;
+  const batchedSigning = batchesStellar(turnkeyAddresses?.stellarAddress, swapAddress);
   const isExternal = wallet.walletType != null && wallet.walletType !== 'normal-wallet';
   const walletLabel = overrideActive
     ? t('Your Normal wallet')
@@ -256,6 +261,7 @@ export function useSoroswapEngine({
             minOut: formatCoin(Number(q.minAmountOut), toSymbol),
             fee: formatCoin(Number(q.fee || 0), fromSymbol),
             embedded,
+            batched: batchedSigning,
             wallet: {
               address: swapAddress,
               href: stellarAccountHref(swapAddress),
@@ -263,7 +269,7 @@ export function useSoroswapEngine({
             },
           })
         : null,
-    [quote, t, fromSymbol, toSymbol, swapAddress, walletLabel]
+    [quote, t, fromSymbol, toSymbol, swapAddress, walletLabel, batchedSigning]
   );
 
   const buildSummary = useCallback(

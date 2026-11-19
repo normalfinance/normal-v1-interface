@@ -43,8 +43,11 @@ describe('what a wallet needs before an Autoinvest purchase', () => {
   });
 
   it('Ethereum even for a plan without Ether: the dollars pass through Base', () => {
-    expect(indexSetupNeeds({ id: 'x', coins: ['BTC'] }, holding('stellar', 'bitcoin'))).toEqual([
-      'ethereum',
-    ]);
+    expect(
+      indexSetupNeeds(
+        { id: 'x', coins: ['BTC'], weighting: 'market-cap' },
+        holding('stellar', 'bitcoin')
+      )
+    ).toEqual(['ethereum']);
   });
 });

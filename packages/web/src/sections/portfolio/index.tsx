@@ -11,7 +11,13 @@ import { usePersistStore } from '@normalfinance/state';
 import { useTurnkeyWallet } from '@/hooks/use-turnkey-wallet';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { INK, FAINT, MUTED, PAPER, CANVAS } from '@/theme/brand-colors';
-import { assetDisplay, connectedWalletLabel, portfolioAssetToToken } from '@/lib/portfolio/display';
+import {
+  assetDisplay,
+  placeBaseRows,
+  baseAssetToToken,
+  connectedWalletLabel,
+  portfolioAssetToToken,
+} from '@/lib/portfolio/display';
 
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
@@ -126,8 +132,12 @@ export default function PortfolioView() {
         contract: `__companion_${a.symbol.toLowerCase()}__`,
         name: `${assetDisplay(a.symbol).name} · Normal wallet`,
       }));
-    return [...slot, ...companion];
-  }, [getAsset, walletBalances.companionStellar, wallet.walletType]);
+    // Doc 129: what sits on the person's Base address (USDC, gas ETH).
+    const base = (walletBalances.base?.assets ?? [])
+      .filter((a) => a.balance != null && BigNumber(a.balance).gt(0))
+      .map(baseAssetToToken);
+    return [...slot, ...companion, ...base];
+  }, [getAsset, walletBalances.companionStellar, walletBalances.base, wallet.walletType]);
 
   // "Wallet" = everything the user holds outside of savings, on any chain
   const walletBalance = useMemo(
@@ -147,6 +157,7 @@ export default function PortfolioView() {
     const rows = [
       ...(['XLM', 'USDC', 'BTC', 'ETH', 'SOL'].map(getAsset) as (PortfolioAsset | undefined)[]),
       ...(walletBalances.companionStellar?.assets ?? []),
+      ...(walletBalances.base?.assets ?? []),
     ].filter((a): a is PortfolioAsset => !!a);
     const bySymbol: Record<string, number | null> = {};
     let delta = 0;
@@ -161,7 +172,7 @@ export default function PortfolioView() {
       delta += (value * a.change24h) / (100 + a.change24h);
     });
     return { change24h: known ? delta : null, changes: bySymbol };
-  }, [getAsset, walletBalances.companionStellar]);
+  }, [getAsset, walletBalances.companionStellar, walletBalances.base]);
 
   const holdingsData: HoldingData[] = useMemo(() => {
     const entries: HoldingData[] = walletTokens.map((tkn) => {
@@ -194,7 +205,10 @@ export default function PortfolioView() {
       });
     }
 
-    return entries.sort((a, b) => b.value - a.value);
+    // Biggest first; a Base row sits right under its coin's own row.
+    const sorted = entries.sort((a, b) => b.value - a.value);
+    const order = placeBaseRows(sorted.map((h) => h.token));
+    return order.map((token) => sorted.find((h) => h.token === token)!);
   }, [walletTokens, totalBalance, savingsValue]);
 
   // #75 round 2A: hybrid → one Holdings TAB per wallet (Niko's preference,

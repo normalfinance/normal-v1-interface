@@ -1,6 +1,7 @@
 'use client';
 
 import { PAPER } from '@/theme/brand-colors';
+import { isBaseToken } from '@/lib/portfolio/display';
 import { cdn, getCryptoIconUrl } from '@normalfinance/utils';
 
 import Box from '@mui/material/Box';
@@ -21,7 +22,8 @@ interface AssetAvatarProps {
 
 export function AssetAvatar({ token, size = 32 }: AssetAvatarProps) {
   const network = getAssetNetwork(token);
-  const showOverlay = network === 'Stellar' && token.symbol === 'USDC';
+  // Doc 129: USDC on Base is not Stellar USDC; its row names Base in words.
+  const showOverlay = network === 'Stellar' && token.symbol === 'USDC' && !isBaseToken(token);
   const overlaySize = Math.round(size * 0.5);
 
   return (

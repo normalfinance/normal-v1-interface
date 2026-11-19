@@ -2,6 +2,7 @@ import { it, expect, describe } from '@jest/globals';
 
 import {
   TOP_3,
+  CORE_4,
   INDEXES,
   indexById,
   indexBySlug,
@@ -14,14 +15,43 @@ import type { IndexCoinMarket } from './indexes';
 
 describe('the index registry', () => {
   it('finds an index by its address and by the id its purchases store', () => {
-    expect(indexBySlug('top-3')).toBe(TOP_3);
-    expect(indexById('crypto-3')).toBe(TOP_3);
+    expect(indexBySlug('core-4')).toBe(CORE_4);
+    expect(indexById('core-4')).toBe(CORE_4);
     expect(indexBySlug('nope')).toBeNull();
     expect(indexById(undefined)).toBeNull();
+  });
+  it('doc 129: Core 4 is offered; Top 3 still names its old purchases, and its address opens Core 4', () => {
+    expect(INDEXES).toEqual([CORE_4]);
+    expect(CORE_4.def.coins).toEqual(['BTC', 'ETH', 'SOL', 'XLM']);
+    expect(CORE_4.def.weighting).toBe('sqrt-market-cap');
+    expect(indexById('crypto-3')).toBe(TOP_3);
+    expect(indexBySlug('top-3')).toBe(CORE_4);
   });
   it('every slug and id is unique', () => {
     expect(new Set(INDEXES.map((i) => i.slug)).size).toBe(INDEXES.length);
     expect(new Set(INDEXES.map((i) => i.id)).size).toBe(INDEXES.length);
+  });
+});
+
+describe('doc 129: a square-root index moves as today’s split, held', () => {
+  // Caps 400 / 100 (sizes 20 / 10 by square root), both up 100% over the day:
+  // the split is held, so the index doubles too.
+  const def = {
+    id: 'sq',
+    coins: ['BTC', 'ETH'] as ('BTC' | 'ETH')[],
+    weighting: 'sqrt-market-cap' as const,
+  };
+  const m = (marketCap: number, change24h: number) => ({
+    price: 1,
+    marketCap,
+    change24h,
+    sparkline24h: [0.5, 1],
+  });
+  it('a 24-hour change weighted 2 : 1 by square root, not 4 : 1 by cap', () => {
+    // BTC +100%, ETH 0%: by square root 2/3 of it moved, so the index is up
+    // (20 + 10) / (10 + 10) - 1 = 50%; by cap it would be 400+100 / 200+100 - 1 = 66.7%.
+    const markets: Record<string, ReturnType<typeof m>> = { BTC: m(400, 100), ETH: m(100, 0) };
+    expect(basketChange(def, (s) => markets[s])).toBeCloseTo(50, 6);
   });
 });
 

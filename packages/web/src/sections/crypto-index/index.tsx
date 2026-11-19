@@ -7,8 +7,10 @@ import type { TurnkeyChain } from '@/lib/turnkey/add-account';
 import type { TurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 
 import { paths } from '@/routes/paths';
+import { logger } from '@/utils/logger';
 import { BigNumber } from 'bignumber.js';
 import { useTranslate } from '@/locales';
+import { useStellarConfig } from '@/hooks';
 import { CHAINS } from '@/lib/chains/registry';
 import { buildAuthHeaders } from '@/utils/http';
 import { CCTP_DOMAIN } from '@/lib/cctp/config';
@@ -31,13 +33,21 @@ import { getTurnkeyWalletInfo } from '@/lib/turnkey/wallet-info';
 import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
 import { useSupabaseAuth } from '@/providers/SupabaseAuthProvider';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
-import { indexBuyStepId, indexPurchasePlan } from '@/lib/flow/plans';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { listWords, indexBuyStepId, indexPurchasePlan } from '@/lib/flow/plans';
 import { IndexPurchasesInProgress } from '@/sections/indexes/purchases-in-progress';
 import { INK, FAINT, MUTED, CANVAS, DANGER, HAIRLINE_STRONG } from '@/theme/brand-colors';
 import {
+  buildStellarLeg,
+  submitStellarLeg,
+  type BuiltStellarLeg,
+  type StellarLegAmounts,
+} from '@/lib/index/stellar-leg';
+import {
   weightLabel,
+  bridgedWire,
   parseWeights,
+  isStellarCoin,
   splitPurchase,
   purchaseVerdict,
   wireToUsdNumber,
@@ -142,6 +152,9 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
   const { t } = useTranslate();
   const { user } = useSupabaseAuth();
   const network = useNetworkStore((s) => s.network);
+  const stellarConfig = useStellarConfig();
+  // "Bitcoin, Ethereum, Solana and Stellar": this index's own coins, in words.
+  const coinWords = listWords(t, meta.def.coins.map(assetName));
   // Each coin’s share follows its market size (lib/index/basket.ts), read
   // from the same market data the purchase is split by.
   const { weights: marketShares, markets } = useIndexWeights(meta.def);
@@ -245,6 +258,8 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
           address: info?.ethereumAddress,
           href: baseAddressHref(info?.ethereumAddress),
         },
+        // Doc 129: Circle moves only what is bought on Base.
+        bridgedUsdc: formatCoin(wireToUsdNumber(bridgedWire(slices)), 'USDC'),
       });
     },
     [t, markets, info]
@@ -274,12 +289,22 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
             detail: price ? `≈ ${formatCoin(usd / price, s.symbol)}` : undefined,
           };
         }),
-        {
-          key: 'fees',
-          label: t('Exchange fees'),
-          value: t('About 0.75% of each coin'),
-          detail: t('Normal 0.5% and LI.FI 0.25%, taken in the exchange'),
-        },
+        // Doc 129: a Stellar coin is exchanged on Soroswap, not through LI.FI.
+        meta.def.coins.some(isStellarCoin)
+          ? {
+              key: 'fees',
+              label: t('Exchange fees'),
+              value: t('Normal 0.5% on each coin'),
+              detail: t(
+                'Plus each exchange’s own fee, in its price: LI.FI 0.25% on Base, Soroswap’s pool fee on Stellar'
+              ),
+            }
+          : {
+              key: 'fees',
+              label: t('Exchange fees'),
+              value: t('About 0.75% of each coin'),
+              detail: t('Normal 0.5% and LI.FI 0.25%, taken in the exchange'),
+            },
         {
           key: 'network',
           label: t('Network fees'),
@@ -298,7 +323,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
         'Prices move while the coins are bought. Each exchange guarantees a minimum, or that coin’s share comes back to you as digital dollars.'
       ),
     }),
-    [t, markets]
+    [t, markets, meta.def.coins]
   );
 
   const liveWire = verdict?.ok ? wire : null;
@@ -313,8 +338,9 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
     [liveWire, liveWeights, buildSummary]
   );
   const liveLede = liveWire
-    ? t('{{pay}} split into Bitcoin, Ethereum and Solana.', {
+    ? t('{{pay}} split into {{coins}}.', {
         pay: formatUsd(wireToUsdNumber(liveWire)),
+        coins: coinWords,
       })
     : '';
   const shownPlan = flowState.phase === 'review' ? livePlan : (flow.plan ?? livePlan);
@@ -422,7 +448,10 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
 
         read = (await readPurchase(id)) ?? read;
         const legs = read?.legs ?? [];
-        const heldLeg = legs.find((l) => l.status === 'HELD');
+        // Doc 129: a Stellar coin (Core 4's XLM) is bought from the page's own
+        // signature, not on Base: its step is settled by its swap, and a held
+        // one never stops the wait for the coins still being bought on Base.
+        const heldLeg = legs.find((l) => l.status === 'HELD' && !isStellarCoin(l.symbol));
         if (heldLeg) {
           // Say which coin, what did arrive, and the real reason: an exchange
           // that kept failing (try again) or a share that was not there
@@ -462,11 +491,13 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
           if (leg.status === 'SENT' && leg.dstSwapTxHash && !legsDone.has(leg.symbol)) {
             legsDone.add(leg.symbol);
             flow.done(indexBuyStepId(leg.symbol), {
-              links: [baseTxLink(t, leg.dstSwapTxHash), lifiTrackLink(t, leg.dstSwapTxHash)],
+              links: isStellarCoin(leg.symbol)
+                ? [stellarTxLink(t, leg.dstSwapTxHash)]
+                : [baseTxLink(t, leg.dstSwapTxHash), lifiTrackLink(t, leg.dstSwapTxHash)],
             });
           }
         }
-        const next = legs.find((l) => l.status !== 'SENT');
+        const next = legs.find((l) => l.status !== 'SENT' && !isStellarCoin(l.symbol));
         if (!next) break;
         flow.start(indexBuyStepId(next.symbol));
         // A leg left waiting (a route that reverted) gets another try.
@@ -594,7 +625,12 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
         credentials: 'include',
         // The shares this review showed: the server takes them while they still
         // agree with the market sizes, else asks for a fresh look.
-        body: JSON.stringify({ amountWire: liveWire.toString(), weights: liveWeights }),
+        // Doc 129: say which index; the server buys Core 4 only when asked.
+        body: JSON.stringify({
+          index: meta.def.id,
+          amountWire: liveWire.toString(),
+          weights: liveWeights,
+        }),
       });
       const created = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -621,12 +657,54 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
       }
 
       flow.start('prepare');
+      // Doc 129: Circle moves what is bought on Base (the row's amount); a
+      // Stellar coin's share is swapped on Stellar from the same signature.
+      const burnWire = BigInt(created.purchase.amountWire ?? liveWire.toString());
+      const stellarLeg: StellarLegAmounts | undefined = created.stellarLegs?.[0];
+      let builtLeg: BuiltStellarLeg | null = null;
+      const alongside = stellarLeg
+        ? {
+            build: async () => {
+              builtLeg = await buildStellarLeg({
+                leg: stellarLeg,
+                account: info!.stellarAddress!,
+                network,
+                passphrase: stellarConfig.NETWORK_PASSPHRASE,
+              });
+              return builtLeg.xdrs;
+            },
+            submit: async (signed: string[]) => {
+              const stepId = indexBuyStepId(stellarLeg.symbol);
+              flow.start(stepId);
+              try {
+                const pair = await submitStellarLeg({
+                  signed,
+                  built: builtLeg!,
+                  purchaseId: id,
+                  symbol: stellarLeg.symbol,
+                  config: stellarConfig,
+                });
+                flow.done(stepId, { links: [stellarTxLink(t, pair.serviceHash)] });
+              } catch (legError) {
+                // The Circle part is out either way: say what happened to this
+                // coin and carry on with the others.
+                logger.warn('[index] Stellar leg did not go through:', legError);
+                flow.skip(
+                  stepId,
+                  heldWords(t, { coin: stellarLeg.symbol, reason: 'stellar', bought: [] }).body
+                );
+              }
+            },
+          }
+        : undefined;
       // Which signature is open: the one-time permission, or the transfer.
       let signing: 'approve' | 'burn-sign' = 'burn-sign';
       const { approveTxHash, burnTxHash } = await burnUsdcOnStellar({
         network,
+        transferId: id,
+        alongside,
         stellarAddress: info!.stellarAddress!,
-        amountWire: liveWire,
+        amountWire: burnWire,
         destinationDomain: CCTP_DOMAIN.base,
         mintRecipient: evmAddressToBytes(destAddress),
         onStep: (st) => {
@@ -686,6 +764,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
       flow.fail(friendlyAppError(e));
     }
   }, [
+    stellarConfig,
     liveWire,
     liveWeights,
     livePlan,
@@ -762,7 +841,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
           <CoinStack symbols={meta.def.coins} size={48} />
           <AppPageHeader
             title={meta.name}
-            subtitle={t('Bitcoin, Ethereum and Solana in one purchase, with one signature.')}
+            subtitle={t('{{coins}} in one purchase, with one signature.', { coins: coinWords })}
             sx={{ mb: 0 }}
           />
         </Box>
@@ -827,9 +906,13 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                 {[
                   {
                     title: t('You sign once'),
-                    line: t(
-                      'On Stellar. Circle moves your digital dollars to your own Base address.'
-                    ),
+                    line: meta.def.coins.some(isStellarCoin)
+                      ? t(
+                          'On Stellar. Your Stellar share is bought right there, and Circle moves the rest to your own Base address.'
+                        )
+                      : t(
+                          'On Stellar. Circle moves your digital dollars to your own Base address.'
+                        ),
                   },
                   {
                     title: t('Auto-finish buys each coin'),
@@ -1081,7 +1164,7 @@ export function CryptoIndexView({ meta }: { meta: IndexMeta }) {
                 { label: t('Make another purchase'), primary: true, onClick: exitFlow },
                 { label: t('See it in Activity'), href: paths.activity },
               ]}
-              doneNote={t('Your Bitcoin, Ethereum and Solana are in your wallets.')}
+              doneNote={t('Your {{coins}} are in your wallets.', { coins: coinWords })}
               notice={retryNote ? <FlowNotice>{retryNote}</FlowNotice> : undefined}
               failTitle={held?.title}
               failActions={

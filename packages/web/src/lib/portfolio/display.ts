@@ -87,3 +87,46 @@ export function portfolioAssetToToken(a: PortfolioAsset): Token {
     percentageChange: 0,
   } as Token;
 }
+
+// ---------------------------------------------------------------------------
+// Doc 129: the Base rows. Base is the network Circle swaps and Autoinvest pass
+// through; what sits on the person's own address there is theirs and counts.
+// Their own contract ids, so a Base row never collides with the Stellar
+// Digital dollars row or the Ethereum row (React keys, lookups, tabs).
+// ---------------------------------------------------------------------------
+
+export const BASE_TOKEN_CONTRACTS: Record<string, string> = {
+  USDC: '__base_usdc__',
+  ETH: '__base_eth__',
+};
+
+export const isBaseToken = (token: { contract: string }) =>
+  Object.values(BASE_TOKEN_CONTRACTS).includes(token.contract);
+
+/** A Base row as a Token. The " · " part of the name is the row's label. */
+export function baseAssetToToken(a: PortfolioAsset): Token {
+  const token = portfolioAssetToToken(a);
+  const label = a.symbol === 'ETH' ? 'Base · Network fees' : 'Base';
+  return {
+    ...token,
+    contract: BASE_TOKEN_CONTRACTS[a.symbol] ?? `__base_${a.symbol.toLowerCase()}__`,
+    name: `${token.name} · ${label}`,
+  } as Token;
+}
+
+/**
+ * Each Base row right under the last row of the same coin (USDC on Base under
+ * Digital dollars, ETH on Base under Ethereum), the rest in their order. A
+ * Base row whose coin has no row of its own goes last. Pure.
+ */
+export function placeBaseRows<T extends { symbol: string; contract: string }>(rows: T[]): T[] {
+  const out = rows.filter((r) => !isBaseToken(r));
+  for (const b of rows.filter(isBaseToken)) {
+    let at = -1;
+    out.forEach((r, i) => {
+      if (r.symbol === b.symbol) at = i;
+    });
+    out.splice(at === -1 ? out.length : at + 1, 0, b);
+  }
+  return out;
+}

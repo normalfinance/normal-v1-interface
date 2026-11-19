@@ -52,30 +52,63 @@ export function buildAsset(
   };
 }
 
+/** Doc 129: the coins the portfolio reads on Base, with their decimals there. */
+export const BASE_ASSET_DECIMALS = { USDC: 6, ETH: 18 } as const;
+export type BaseAssetSymbol = keyof typeof BASE_ASSET_DECIMALS;
+
+/** One Base row (USDC or ETH on the person's EVM address), same rules as buildAsset. */
+export function buildBaseAsset(
+  symbol: BaseAssetSymbol,
+  address: string,
+  balance: number | null,
+  price: number | null,
+  change24h: number | null = null
+): PortfolioAsset {
+  return {
+    ...buildAsset(symbol, address, balance, price, change24h),
+    chain: 'base',
+    decimals: BASE_ASSET_DECIMALS[symbol],
+  };
+}
+
 export interface PortfolioPayloadLike {
   updatedAt: number;
   assets: PortfolioAsset[];
+  base?: { address: string; assets: PortfolioAsset[] } | null;
 }
 
+/** The snapshot key of a Base row: never collides with a main asset's symbol. */
+export const baseSnapshotKey = (symbol: string) => `base:${symbol}`;
+
 /** Merge fresh assets with a last-good snapshot: an errored asset falls back to
- *  its prior value (marked `stale`); ok assets refresh the snapshot. */
+ *  its prior value (marked `stale`); ok assets refresh the snapshot. Base rows
+ *  follow the same rule under their own keys, for the same address only. */
 export function applyStaleFallback(
   fresh: PortfolioPayloadLike,
   lastGood: Record<string, PortfolioAsset> | null
 ): { merged: PortfolioPayloadLike; snapshot: Record<string, PortfolioAsset> } {
   const snapshot: Record<string, PortfolioAsset> = { ...(lastGood ?? {}) };
-  const assets = fresh.assets.map((a) => {
+  const settle = (a: PortfolioAsset, key: string, sameAddressOnly: boolean): PortfolioAsset => {
     if (a.status === 'ok') {
-      snapshot[a.symbol] = a;
+      snapshot[key] = a;
       return a;
     }
-    const prior = lastGood?.[a.symbol];
-    if (prior && prior.balance !== null) {
+    const prior = lastGood?.[key];
+    if (prior && prior.balance !== null && (!sameAddressOnly || prior.address === a.address)) {
       return { ...prior, status: 'stale' as AssetStatus, price: a.price ?? prior.price };
     }
     return a;
-  });
-  return { merged: { ...fresh, assets }, snapshot };
+  };
+  // Main assets: keyed by symbol, exactly as before.
+  const assets = fresh.assets.map((a) => settle(a, a.symbol, false));
+  // Base rows: their own keys, and a last-good value only for the same address.
+  const base = fresh.base
+    ? {
+        ...fresh.base,
+        assets: fresh.base.assets.map((a) => settle(a, baseSnapshotKey(a.symbol), true)),
+      }
+    : fresh.base;
+  return { merged: { ...fresh, assets, ...(base !== undefined ? { base } : {}) }, snapshot };
 }
 
 const ZERO_POSITION: SavingsPosition = {

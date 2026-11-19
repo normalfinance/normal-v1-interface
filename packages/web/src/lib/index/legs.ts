@@ -87,17 +87,42 @@ export const heldSymbolOf = (errorDetail: string | null | undefined): string | n
 export const NO_FUNDS_DETAIL = 'no USDC found on Base for this leg';
 
 /**
+ * Doc 129: what the person paid for a purchase. Since Core 4 the row's
+ * amountWire is what Circle moves (the Stellar coin's slice never crosses),
+ * and the total is in its quote; older purchases carry the total as
+ * amountWire.
+ */
+export function purchaseTotalWire(row: { amountWire: string; quoteJson?: string | null }): string {
+  try {
+    const total = row.quoteJson ? JSON.parse(row.quoteJson)?.totalWire : null;
+    if (typeof total === 'string' && /^\d+$/.test(total)) return total;
+  } catch {
+    /* no quote: the row's own amount */
+  }
+  return row.amountWire;
+}
+
+/** Doc 129: what a Stellar coin's leg records when its swap on Stellar did not go through. */
+export const STELLAR_SWAP_FAILED_DETAIL = 'the swap on Stellar did not go through';
+
+/**
  * Why a coin is held, from its leg's errorDetail.
  * - 'route': its exchange kept failing. Its share is still digital dollars at
  *   the person's own Base address, and trying again can buy it.
  * - 'missing': its share was not at the Base address when its turn came (live
  *   2026-11-11: an earlier coin had taken 5% over its share). Trying again
  *   cannot buy it; the person needs us.
+ * - 'stellar' (doc 129): a Stellar coin's swap did not go through (the price
+ *   moved past the limit). Its share never left the Stellar wallet.
  */
-export type HeldReason = 'route' | 'missing';
+export type HeldReason = 'route' | 'missing' | 'stellar';
 
 export const heldReasonOfLeg = (errorDetail: string | null | undefined): HeldReason =>
-  errorDetail?.startsWith(NO_FUNDS_DETAIL) ? 'missing' : 'route';
+  errorDetail?.startsWith(NO_FUNDS_DETAIL)
+    ? 'missing'
+    : errorDetail?.startsWith(STELLAR_SWAP_FAILED_DETAIL)
+      ? 'stellar'
+      : 'route';
 
 /** How the whole purchase reads, from its row and its legs. */
 export type PurchasePhase =

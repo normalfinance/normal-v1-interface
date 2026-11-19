@@ -20,6 +20,8 @@ export const CHAIN_OF_COIN: Record<IndexCoin, ChainId> = {
   BTC: 'bitcoin',
   ETH: 'ethereum',
   SOL: 'solana',
+  // Doc 129: Core 4's Stellar coin is bought and kept in the Stellar wallet.
+  XLM: 'stellar',
 };
 
 /**

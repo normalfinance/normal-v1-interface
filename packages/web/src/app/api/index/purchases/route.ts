@@ -9,12 +9,16 @@ import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
 import { autopilotStatusFor } from '@/server/autopilot-status';
 import { INDEX_DIRECTION, INDEX_DST_ASSET } from '@/lib/index/legs';
 import {
+  CORE_INDEX,
+  bridgedWire,
   CRYPTO_INDEX,
   parseWeights,
+  isStellarCoin,
   marketWeights,
   weightsWithin,
   purchaseVerdict,
   wireToUsdNumber,
+  stellarSliceAmounts,
   WEIGHT_TOLERANCE_BPS,
 } from '@/lib/index/basket';
 
@@ -51,13 +55,16 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
     );
   }
 
+  // Doc 129: the index this client buys. Core 4 only when the client asks for
+  // it by id: it runs a Stellar swap from the page, which a client that does
+  // not know Core 4 (an older app build) would never send. Any other client
+  // keeps buying Top 3, exactly as before, until it updates.
+  const INDEX_DEF = body?.index === CORE_INDEX.id ? CORE_INDEX : CRYPTO_INDEX;
+
   // The shares: market sizes from the cache the page read them from.
   const read = await readMarkets();
   const current = read
-    ? marketWeights(
-        CRYPTO_INDEX,
-        (symbol) => read.markets.find((m) => m.symbol === symbol)?.marketCap
-      )
+    ? marketWeights(INDEX_DEF, (symbol) => read.markets.find((m) => m.symbol === symbol)?.marketCap)
     : null;
   if (!current) {
     return NextResponse.json(
@@ -72,7 +79,7 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
   // The shares the person reviewed, when the page sends them (a client that
   // doesn't is split by the server's own reading).
   if (body?.weights !== undefined) {
-    const reviewed = parseWeights(CRYPTO_INDEX, body.weights);
+    const reviewed = parseWeights(INDEX_DEF, body.weights);
     if (!reviewed) {
       return NextResponse.json(
         { error: 'weights must be the index’s coins in whole basis points summing to 10,000' },
@@ -113,11 +120,12 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
   if (!wallet?.stellarAddress || !wallet.ethereumAddress) {
     return NextResponse.json({ error: 'Set up your wallet first' }, { status: 409 });
   }
-  const missing = CRYPTO_INDEX.coins.filter(
+  const missing = INDEX_DEF.coins.filter(
     (symbol) =>
       (symbol === 'BTC' && !wallet.bitcoinAddress) ||
       (symbol === 'ETH' && !wallet.ethereumAddress) ||
-      (symbol === 'SOL' && !wallet.solanaAddress)
+      (symbol === 'SOL' && !wallet.solanaAddress) ||
+      (symbol === 'XLM' && !wallet.stellarAddress)
   );
   if (missing.length) {
     return NextResponse.json(
@@ -139,6 +147,23 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
     );
   }
 
+  // Doc 129: a Stellar coin's slice is bought on Stellar from the same
+  // signature; only the other slices cross to Base. The row is Circle's
+  // transfer, so it carries the bridged amount; the purchase total and the
+  // Stellar slices' exact swap and fee live in its quote.
+  const bridged = bridgedWire(verdict.slices);
+  const stellarLegs = verdict.slices
+    .filter((sl) => isStellarCoin(sl.symbol))
+    .map((sl) => {
+      const { feeWire, swapWire } = stellarSliceAmounts(sl.amountWire);
+      return {
+        symbol: sl.symbol,
+        amountWire: sl.amountWire.toString(),
+        feeWire: feeWire.toString(),
+        swapWire: swapWire.toString(),
+      };
+    });
+
   const purchase = await prisma.$transaction(async (tx) => {
     const row = await tx.cctpTransfer.create({
       data: {
@@ -147,16 +172,18 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
         direction: INDEX_DIRECTION,
         sourceDomain: CCTP_DOMAIN.stellar,
         destDomain: CCTP_DOMAIN.base,
-        amountWire,
+        amountWire: bridged.toString(),
         srcAsset: 'USDC',
         dstAsset: INDEX_DST_ASSET,
         srcAmount: String(wireToUsdNumber(BigInt(amountWire))),
         srcAddress: wallet.stellarAddress!,
         destAddress: wallet.ethereumAddress!,
         quoteJson: JSON.stringify({
-          index: CRYPTO_INDEX.id,
-          weighting: 'market-cap',
+          index: INDEX_DEF.id,
+          weighting: INDEX_DEF.weighting,
+          totalWire: amountWire,
           legs: verdict.slices.map((sl) => ({ ...sl, amountWire: sl.amountWire.toString() })),
+          stellarLegs,
         }),
       },
     });
@@ -173,7 +200,14 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
   });
 
   return NextResponse.json({
-    purchase: { id: purchase.id, amountWire, destAddress: purchase.destAddress },
+    // amountWire: what Circle moves (the burn); totalWire: what the person pays.
+    purchase: {
+      id: purchase.id,
+      amountWire: bridged.toString(),
+      totalWire: amountWire,
+      destAddress: purchase.destAddress,
+    },
+    stellarLegs,
     legs: verdict.slices.map((s) => ({
       symbol: s.symbol,
       weightBps: s.weightBps,

@@ -1192,6 +1192,7 @@ export function useCctpEngine({
         startStep('prepare');
         const { approveTxHash, burnTxHash } = await burnUsdcOnStellar({
           network,
+          transferId,
           stellarAddress: stellarAddress!,
           amountWire,
           destinationDomain: CCTP_DOMAIN.base,

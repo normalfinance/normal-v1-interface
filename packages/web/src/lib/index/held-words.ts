@@ -41,6 +41,18 @@ export function heldWords(
             : t('{{coins}} were bought.', { coins })
         } `;
 
+  if (p.reason === 'stellar') {
+    return {
+      title: t('{{coin}} was not bought', { coin }),
+      body:
+        bought +
+        t(
+          'The price of {{coin}} moved before its swap on Stellar, so the swap did not happen and its share stays as digital dollars in your Stellar wallet. You can swap them to {{coin}} on the Swap page.',
+          { coin }
+        ),
+      canRetry: false,
+    };
+  }
   if (p.reason === 'missing') {
     return {
       title: t('{{coin}} was not bought', { coin }),

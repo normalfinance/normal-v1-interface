@@ -4,6 +4,10 @@
 // back to the user's own Stellar account via a fresh Base→Stellar bridge,
 // then retire the original swap as refunded. Extracted from the resume
 // banner so the progress popup can run the SAME flow with live steps.
+//
+// Doc 129: "Move to Stellar" on the On Base page is the same money movement
+// without a failed swap behind it (runBaseBringHome). Both run the one set of
+// steps below, so every safety rule here protects both.
 
 import type { NetworkType } from '@normalfinance/utils';
 
@@ -15,39 +19,50 @@ import { EVM_USDC, CCTP_DOMAIN } from '@/lib/cctp/config';
 import { uncertainBurnHash } from '@/lib/chains/broadcast-safety';
 import { baseFallbackTransport } from '@/lib/chains/rpc-fallback';
 
-export async function runCctpRefund(args: {
-  /** The FAILED outbound transfer being abandoned. */
-  transferId: string;
-  network: NetworkType;
-  /** User's Base address holding the minted USDC (outbound destAddress). */
-  baseAddress: string;
-  /** User's Stellar account (outbound srcAddress) — the refund recipient. */
-  stellarAddress: string;
-  /** Doc 93 0b: try the server-side autopilot burn first — the policy
-   *  allowlist already covers depositForBurn, so autopilot users get a
-   *  signature-less refund; any failure falls through to the passkey burn. */
-  tryAutopilotFirst?: boolean;
-  onStage?: (s: 'topup' | 'burn') => void;
-}): Promise<{ newId: string; burnTxHash: string }> {
-  const { transferId, network, baseAddress, stellarAddress, onStage } = args;
-  const headers = await buildAuthHeaders();
+type Stage = 'topup' | 'burn';
 
+async function readBaseUsdc(network: NetworkType, baseAddress: string): Promise<bigint> {
   const { http, erc20Abi, createPublicClient } = await import('viem');
   const { base, baseSepolia } = await import('viem/chains');
   const client = createPublicClient({
     chain: network === 'mainnet' ? base : baseSepolia,
     transport: network === 'mainnet' ? await baseFallbackTransport() : http(),
   });
-  const bal = (await client.readContract({
+  return (await client.readContract({
     address: EVM_USDC.base[network],
     abi: erc20Abi,
     functionName: 'balanceOf',
     args: [baseAddress as `0x${string}`],
   })) as bigint;
+}
+
+/**
+ * The whole Base USDC balance to the person's own Stellar account: a fresh
+ * Base→Stellar row written BEFORE anything moves, a gas top-up, then the burn
+ * (Autopilot first when asked, the passkey otherwise). Returns once the burn
+ * is sent; Circle and the cron finish it.
+ */
+async function bridgeBaseUsdcToStellar(args: {
+  network: NetworkType;
+  baseAddress: string;
+  stellarAddress: string;
+  tryAutopilotFirst?: boolean;
+  onStage?: (s: Stage) => void;
+  /** The row-creating request's extra fields (refund or move). */
+  rowFields: Record<string, unknown>;
+  words: { startFailed: string; unclear: string };
+}): Promise<{
+  newId: string;
+  burnTxHash: string;
+  amountWire: bigint;
+  signedBy: 'autopilot' | 'passkey';
+}> {
+  const { network, baseAddress, stellarAddress, onStage } = args;
+  const headers = await buildAuthHeaders();
+
+  const bal = await readBaseUsdc(network, baseAddress);
   if (bal === 0n) throw new Error('No USDC found on Base. It may already be moving.');
 
-  // Fresh Base→Stellar bridge to the user's own account. `refund` bypasses
-  // the $10 min / cap — this recovers existing funds, not a new swap.
   const createRes = await fetch('/api/cctp/transfers', {
     method: 'POST',
     headers,
@@ -62,15 +77,12 @@ export async function runCctpRefund(args: {
       srcAmount: wireToUsdc(bal),
       srcAddress: baseAddress,
       destAddress: stellarAddress,
-      refund: true,
-      // Doc 95 Wave 2: the server verifies this is the caller's own
-      // unfinished outbound swap before allowing the min/cap bypass.
-      refundOfTransferId: transferId,
+      ...args.rowFields,
     }),
   });
   const createData = await createRes.json().catch(() => null);
   if (!createRes.ok || !createData?.id)
-    throw new Error(createData?.error ?? 'Could not start the refund.');
+    throw new Error(createData?.error ?? args.words.startFailed);
   const newId: string = createData.id;
 
   onStage?.('topup');
@@ -95,14 +107,7 @@ export async function runCctpRefund(args: {
       const apData = await apRes.json().catch(() => null);
       if (apRes.ok && apData?.success && apData?.burnTxHash) {
         // Server already patched burnTxHash + BURN_SUBMITTED on the new row.
-        const patchOriginal = await fetch(`/api/cctp/transfers/${transferId}`, {
-          method: 'PATCH',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify({ markRefunded: 'true' }),
-        });
-        void patchOriginal;
-        return { newId, burnTxHash: apData.burnTxHash };
+        return { newId, burnTxHash: apData.burnTxHash, amountWire: bal, signedBy: 'autopilot' };
       }
     } catch {
       /* autopilot unavailable — fall through to the passkey burn */
@@ -121,9 +126,7 @@ export async function runCctpRefund(args: {
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null);
     if (!fresh?.transfer || fresh.transfer.burnTxHash) {
-      throw new Error(
-        "We couldn't tell whether this refund was sent. Check Activity before you try again, so you don't send it twice."
-      );
+      throw new Error(args.words.unclear);
     }
   }
   const patch = (id: string, body: Record<string, string>) =>
@@ -143,11 +146,10 @@ export async function runCctpRefund(args: {
       stellarRecipient: stellarAddress,
     }));
   } catch (e) {
-    // A refund burn whose send stayed unclear may be on its way: its hash
-    // goes on the refund row so Circle and the cron can follow it (a lost
-    // burn hash strands the money). The original swap is NOT retired here:
-    // if the burn never left, the swap still offers to finish or bring back,
-    // and that path reads the live balance, so it cannot spend twice.
+    // A burn whose send stayed unclear may be on its way: its hash goes on
+    // the new row so Circle and the cron can follow it (a lost burn hash
+    // strands the money). If the burn never left, the next try reads the
+    // live balance, so it cannot spend twice.
     const unclear = uncertainBurnHash(e);
     if (unclear) {
       await patch(newId, { burnTxHash: unclear, dstAmount: wireToUsdc(bal) }).catch(() => null);
@@ -155,8 +157,75 @@ export async function runCctpRefund(args: {
     throw e;
   }
   await patch(newId, { burnTxHash, dstAmount: wireToUsdc(bal) });
-  // Retire the original outbound swap as refunded.
-  await patch(transferId, { markRefunded: 'true' });
+  return { newId, burnTxHash, amountWire: bal, signedBy: 'passkey' };
+}
 
+export async function runCctpRefund(args: {
+  /** The FAILED outbound transfer being abandoned. */
+  transferId: string;
+  network: NetworkType;
+  /** User's Base address holding the minted USDC (outbound destAddress). */
+  baseAddress: string;
+  /** User's Stellar account (outbound srcAddress) — the refund recipient. */
+  stellarAddress: string;
+  /** Doc 93 0b: try the server-side autopilot burn first — the policy
+   *  allowlist already covers depositForBurn, so autopilot users get a
+   *  signature-less refund; any failure falls through to the passkey burn. */
+  tryAutopilotFirst?: boolean;
+  onStage?: (s: Stage) => void;
+}): Promise<{ newId: string; burnTxHash: string }> {
+  const { newId, burnTxHash } = await bridgeBaseUsdcToStellar({
+    network: args.network,
+    baseAddress: args.baseAddress,
+    stellarAddress: args.stellarAddress,
+    tryAutopilotFirst: args.tryAutopilotFirst,
+    onStage: args.onStage,
+    // `refund` bypasses the $10 min / cap — this recovers existing funds, not
+    // a new swap. Doc 95 Wave 2: the server verifies this is the caller's
+    // own unfinished outbound swap before allowing the bypass.
+    rowFields: { refund: true, refundOfTransferId: args.transferId },
+    words: {
+      startFailed: 'Could not start the refund.',
+      unclear:
+        "We couldn't tell whether this refund was sent. Check Activity before you try again, so you don't send it twice.",
+    },
+  });
+  // Retire the original outbound swap as refunded.
+  const headers = await buildAuthHeaders();
+  await fetch(`/api/cctp/transfers/${args.transferId}`, {
+    method: 'PATCH',
+    headers,
+    credentials: 'include',
+    body: JSON.stringify({ markRefunded: 'true' }),
+  });
   return { newId, burnTxHash };
+}
+
+/**
+ * Doc 129: "Move to Stellar" on the On Base page. Everything on the person's
+ * Base address comes home to their own Stellar wallet. The server pins both
+ * addresses to the wallet row and the amount to what Base holds
+ * (api/cctp/transfers, `bringHome`).
+ */
+export async function runBaseBringHome(args: {
+  network: NetworkType;
+  baseAddress: string;
+  stellarAddress: string;
+  tryAutopilotFirst?: boolean;
+  onStage?: (s: Stage) => void;
+}): Promise<{
+  newId: string;
+  burnTxHash: string;
+  amountWire: bigint;
+  signedBy: 'autopilot' | 'passkey';
+}> {
+  return bridgeBaseUsdcToStellar({
+    ...args,
+    rowFields: { bringHome: true },
+    words: {
+      startFailed: 'Could not start the move.',
+      unclear:
+        "We couldn't tell whether this move was sent. Check Activity before you try again, so you don't send it twice.",
+    },
+  });
 }

@@ -2,13 +2,20 @@ import type { NetworkType } from '@normalfinance/utils';
 import type { PortfolioAsset, PortfolioPayload } from '@/types/portfolio';
 
 import { redis } from '@/server/rateLimiter';
+import { EVM_USDC } from '@/lib/cctp/config';
+import { balanceOfCalldata } from '@/server/base-usdc';
 import { rpcFromPool } from '@/lib/portfolio/rpc-pool';
 import { getStellarConfigForNetwork } from '@normalfinance/utils';
-import { ETH_RPC_URLS, SOL_RPC_URLS } from '@/lib/chains/rpc-fallback';
 import { fetchStellarBalancesFromPool } from '@/lib/stellar/horizon-pool';
+import {
+  ETH_RPC_URLS,
+  SOL_RPC_URLS,
+  BASE_RPC_URLS,
+  BASE_SEPOLIA_RPC_URLS,
+} from '@/lib/chains/rpc-fallback';
 
-import { buildAsset } from './normalize';
 import { btcBalanceSats } from './btc-balance';
+import { buildAsset, buildBaseAsset } from './normalize';
 
 // Pure normalization + stale-fallback live in ./normalize (unit-tested).
 export { applyStaleFallback } from './normalize';
@@ -150,6 +157,56 @@ async function fetchEthBalance(address: string): Promise<number> {
   return Number(BigInt(value as string)) / 1e18;
 }
 
+/** Several JSON-RPC calls in ONE request; results in the order asked. */
+async function rpcBatch(
+  url: string,
+  calls: { method: string; params: unknown[] }[]
+): Promise<any[]> {
+  const res = await withTimeout(
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(
+        calls.map((c, i) => ({ jsonrpc: '2.0', id: i + 1, method: c.method, params: c.params }))
+      ),
+    })
+  );
+  if (!res.ok) throw new Error(`rpc batch ${res.status}`);
+  const data = await res.json();
+  if (!Array.isArray(data)) throw new Error('rpc batch: the node did not answer as a batch');
+  return calls.map((c, i) => {
+    const item = data.find((d: { id?: number }) => d?.id === i + 1);
+    if (!item || item.error) throw new Error(item?.error?.message ?? `rpc ${c.method}: no answer`);
+    return item.result;
+  });
+}
+
+/**
+ * Doc 129: USDC and ETH on the person's EVM address on Base (the same address
+ * as on Ethereum), in ONE batched request through the keyed-first pool the
+ * relayer uses. Throws when every node fails, so the row goes `error` (then
+ * `stale` from the last good read), never a made-up zero.
+ */
+async function fetchBaseBalances(
+  address: string,
+  network: NetworkType
+): Promise<{ usdc: number; eth: number }> {
+  const urls = network === 'mainnet' ? BASE_RPC_URLS : BASE_SEPOLIA_RPC_URLS;
+  const data = balanceOfCalldata(address);
+  const { value, servedBy } = await rpcFromPool(urls, (url) =>
+    rpcBatch(url, [
+      { method: 'eth_call', params: [{ to: EVM_USDC.base[network], data }, 'latest'] },
+      { method: 'eth_getBalance', params: [address, 'latest'] },
+    ])
+  );
+  warnOnFailover('base', urls, servedBy);
+  const [usdcRaw, ethRaw] = value as [string, string];
+  return {
+    usdc: Number(BigInt(usdcRaw === '0x' ? '0x0' : usdcRaw)) / 1e6,
+    eth: Number(BigInt(ethRaw)) / 1e18,
+  };
+}
+
 async function fetchSolBalance(address: string): Promise<number> {
   // 2026-09-02: Helius answered getHealth fine while 500-ing 2 of 5 getBalance
   // calls. One URL here meant a just-arrived SOL balance kept displaying the
@@ -233,7 +290,7 @@ export async function aggregatePortfolio(
   network: NetworkType,
   now: number
 ): Promise<PortfolioPayload> {
-  const [pricesR, btcR, ethR, solR, stellarR] = await Promise.allSettled([
+  const [pricesR, btcR, ethR, solR, stellarR, baseR] = await Promise.allSettled([
     getSpotPrices(),
     addresses.bitcoin ? fetchBtcBalance(addresses.bitcoin) : Promise.resolve<number | null>(null),
     addresses.ethereum ? fetchEthBalance(addresses.ethereum) : Promise.resolve<number | null>(null),
@@ -241,6 +298,9 @@ export async function aggregatePortfolio(
     addresses.stellar
       ? fetchStellarBalances(addresses.stellar, network)
       : Promise.resolve<{ xlm: number; usdc: number } | null>(null),
+    addresses.ethereum
+      ? fetchBaseBalances(addresses.ethereum, network)
+      : Promise.resolve<{ usdc: number; eth: number } | null>(null),
   ]);
 
   const spot = pricesR.status === 'fulfilled' ? pricesR.value : { prices: {}, changes: {} };
@@ -255,6 +315,7 @@ export async function aggregatePortfolio(
     ['eth', ethR],
     ['sol', solR],
     ['stellar', stellarR],
+    ['base', baseR],
   ];
   for (const [name, r] of named) {
     if (r.status === 'rejected') {
@@ -289,5 +350,29 @@ export async function aggregatePortfolio(
     ),
   ];
 
-  return { updatedAt: now, assets };
+  // Doc 129: Base rows, their own field (see PortfolioPayload.base).
+  const baseRead = baseR.status === 'fulfilled' ? baseR.value : null;
+  const base = addresses.ethereum
+    ? {
+        address: addresses.ethereum,
+        assets: [
+          buildBaseAsset(
+            'USDC',
+            addresses.ethereum,
+            baseRead ? baseRead.usdc : null,
+            priceOf('USDC'),
+            changeOf('USDC')
+          ),
+          buildBaseAsset(
+            'ETH',
+            addresses.ethereum,
+            baseRead ? baseRead.eth : null,
+            priceOf('ETH'),
+            changeOf('ETH')
+          ),
+        ],
+      }
+    : null;
+
+  return { updatedAt: now, assets, base };
 }

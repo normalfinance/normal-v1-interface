@@ -10,6 +10,7 @@ import { useState, useCallback } from 'react';
 import { buildAuthHeaders } from '@/utils/http';
 import { usePersistStore } from '@normalfinance/state';
 import { getSwapFeeAmount } from '@/utils/normal-fees';
+import { signStellarTxsInOrder } from '@/lib/stellar/batch-sign';
 import { normalizeSignedXDR } from '@/utils/normalize-signed-xdr';
 import { FEE_PAIR_TIMEOUT_SECONDS } from '@/lib/build-fee-payment';
 import { friendlyAppError } from '@/utils/errors/error-classifier';
@@ -392,10 +393,16 @@ export function useSwap(
 
         // 3. Collect BOTH signatures before anything is submitted — rejecting
         // either prompt aborts the whole swap with nothing charged.
-        onStage?.('sign-swap');
-        const signedSwapXdr = await signOnly(quoteData.xdr);
-        onStage?.('sign-fee');
-        const signedFeeXdr = await signOnly(feeData.xdr);
+        // Doc 129: a Turnkey-held key signs both with ONE passkey prompt.
+        const {
+          signed: [signedSwapXdr, signedFeeXdr],
+        } = await signStellarTxsInOrder({
+          xdrs: [quoteData.xdr, feeData.xdr],
+          networkPassphrase: config.NETWORK_PASSPHRASE,
+          account: walletAddress,
+          signOne: signOnly,
+          onPrompt: (i) => onStage?.(i === 0 ? 'sign-swap' : 'sign-fee'),
+        });
 
         // 4. Server submits the pair: it records the swap BEFORE broadcasting
         // (#27 — no client-side logging anymore), then swap first, fee

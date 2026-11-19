@@ -7,6 +7,14 @@ import { CCTP_DOMAIN } from '@/lib/cctp/config';
 import { PENDING_STATUSES } from '@/lib/cctp/state';
 import { networkFromCookie } from '@/server/network-cookie';
 import { withAuth, actionCodeRefusal } from '@/lib/with-auth';
+import {
+  BRING_HOME_KIND,
+  BRING_HOME_WORDS,
+  readBaseUsdcUnits,
+  BRING_HOME_STARTING_MS,
+  bringHomeAmountRefusal,
+  bringHomeOwnershipRefusal,
+} from '@/server/base-usdc';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,7 +85,55 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
       );
     }
   }
-  if (!refundApproved) {
+  // Doc 129: "Move to Stellar" on the On Base page. The person's own USDC on
+  // their own Base address, going to their own Stellar wallet: not a new
+  // swap, so (like a refund) no $10 minimum, no cap and no two-factor code
+  // (it brings money back). In exchange every part is pinned here: both
+  // addresses come from the person's wallet row, the amount is at most what
+  // Base holds right now and at least $1 (the relayer pays the fees), and
+  // only one move runs at a time.
+  let bringHomeApproved = false;
+  if (!refund && body?.bringHome === true) {
+    const wallet = await prisma.turnkeyWallet.findFirst({
+      where: { supabaseUid: user.id },
+      select: { ethereumAddress: true, stellarAddress: true },
+    });
+    const ownership = bringHomeOwnershipRefusal(
+      { direction, sourceDomain, destDomain, srcAsset, dstAsset, srcAddress, destAddress },
+      wallet,
+      CCTP_DOMAIN
+    );
+    if (ownership) {
+      return NextResponse.json({ error: ownership.error }, { status: ownership.status });
+    }
+    let onBase: bigint;
+    try {
+      onBase = await readBaseUsdcUnits(wallet!.ethereumAddress!, network);
+    } catch {
+      return NextResponse.json({ error: BRING_HOME_WORDS.baseDown }, { status: 503 });
+    }
+    const amountRefusal = bringHomeAmountRefusal(amount, onBase);
+    if (amountRefusal) {
+      return NextResponse.json({ error: amountRefusal.error }, { status: amountRefusal.status });
+    }
+    const open = await prisma.cctpTransfer.count({
+      where: {
+        userId: user.id,
+        direction: 'crosschain_to_stellar',
+        quoteJson: { contains: BRING_HOME_KIND },
+        OR: [
+          { status: { in: [...PENDING_STATUSES] } },
+          { status: 'CREATED', createdAt: { gt: new Date(Date.now() - BRING_HOME_STARTING_MS) } },
+        ],
+      },
+    });
+    if (open > 0) {
+      return NextResponse.json({ error: BRING_HOME_WORDS.busy }, { status: 409 });
+    }
+    bringHomeApproved = true;
+  }
+
+  if (!refundApproved && !bringHomeApproved) {
     // Not for a refund: it brings money back, so a lost phone must never block it.
     const refusal = actionCodeRefusal(user, accessToken);
     if (refusal) return refusal;
@@ -124,7 +180,11 @@ export const POST = withAuth(async (req: Request, { user, accessToken }) => {
       srcAmount: typeof srcAmount === 'string' ? srcAmount : null,
       srcAddress,
       destAddress,
-      quoteJson: quoteJson ? JSON.stringify(quoteJson) : null,
+      quoteJson: bringHomeApproved
+        ? JSON.stringify({ kind: BRING_HOME_KIND })
+        : quoteJson
+          ? JSON.stringify(quoteJson)
+          : null,
     },
   });
 

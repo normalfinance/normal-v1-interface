@@ -93,8 +93,10 @@ export async function submitFeePair(params: {
   kind: FeePairKind;
   record: FeePairRecord;
   config: NetworkConfig;
+  /** Doc 129: the Core 4 coin this swap buys; the server claims its leg before broadcast. */
+  indexLeg?: { purchaseId: string; symbol: string };
 }): Promise<FeePairResult> {
-  const { signedServiceXdr, signedFeeXdr, kind, record, config } = params;
+  const { signedServiceXdr, signedFeeXdr, kind, record, config, indexLeg } = params;
 
   const serviceTx = TransactionBuilder.fromXDR(signedServiceXdr, config.NETWORK_PASSPHRASE);
   const serviceHash = serviceTx.hash().toString('hex');
@@ -107,7 +109,13 @@ export async function submitFeePair(params: {
     response = await fetch('/api/fees/execute-pair', {
       method: 'POST',
       headers: { ...(await buildAuthHeaders()), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ serviceXdr: signedServiceXdr, feeXdr: signedFeeXdr, kind, record }),
+      body: JSON.stringify({
+        serviceXdr: signedServiceXdr,
+        feeXdr: signedFeeXdr,
+        kind,
+        record,
+        ...(indexLeg ? { indexLeg } : {}),
+      }),
     });
   } catch {
     // The request itself died — we cannot tell whether it reached the server.
